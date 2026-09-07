@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lily's Math</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Lily's Math">
+<meta name="theme-color" content="#F5F7FA">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAABvUlEQVR42u3cTQqCQBiA4Ry8hS0qkMBF0BFaSKfsDu2lS7Rt06JTWEIXiH4Q1Gme5wDqfL6M6MKsqHYzeCUYAeJAHIgDcSAOxIE4EAfiQBwgDsSBOBAH4kAciANxIA7EAeJAHIgDcSAOxIE4EAfiQBwgDsTB7/K4LnddLk/HQ8+DLDb1o+vcezsH4kAciANxIA7EgTgQB4gDcSAOxIE4EAfiQByIA3EgDhAH4kAciANxIA7EgTgQB+IAcSAOxIE4EAfiQByIA3EgDhAH4kAciANxIA7EgTgQB+JAHCAOxIE4EAfiQByIA3EgDsQB4kAciANxIA7EgTiIVp7gmq/nZuAztu19td3bOfBYQRyIA8SBOBAH4kAciANxIA7EgThAHIiDXrKi2pkCdg7EgTgQB+JAHIgDcSAOxAHiQByIA3EgDsSBOBAH4kAcIA7EgTgQB+JgfCP/3vrWlO7Be/P6kuLOoYyJTykoQx/TikMZUUwsKEMf3lYQB+JAHIgDcSCOD0b8Hhy14ecWElmnMmJ6rOhj+rMKCa5ZGV/yk1q8rSAOxIE4EAfiQByIA3EgDhAH4kAciANxIA7EgTj4W08NVCn0SkI9NAAAAABJRU5ErkJggg==">
+<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAABvUlEQVR42u3cTQqCQBiA4Ry8hS0qkMBF0BFaSKfsDu2lS7Rt06JTWEIXiH4Q1Gme5wDqfL6M6MKsqHYzeCUYAeJAHIgDcSAOxIE4EAfiQBwgDsSBOBAH4kAciANxIA7EAeJAHIgDcSAOxIE4EAfiQBwgDsTB7/K4LnddLk/HQ8+DLDb1o+vcezsH4kAciANxIA7EgTgQB4gDcSAOxIE4EAfiQByIA3EgDhAH4kAciANxIA7EgTgQB+IAcSAOxIE4EAfiQByIA3EgDhAH4kAciANxIA7EgTgQB+JAHCAOxIE4EAfiQByIA3EgDsQB4kAciANxIA7EgTiIVp7gmq/nZuAztu19td3bOfBYQRyIA8SBOBAH4kAciANxIA7EgThAHIiDXrKi2pkCdg7EgTgQB+JAHIgDcSAOxAHiQByIA3EgDsSBOBAH4kAcIA7EgTgQB+JgfCP/3vrWlO7Be/P6kuLOoYyJTykoQx/TikMZUUwsKEMf3lYQB+JAHIgDcSCOD0b8Hhy14ecWElmnMmJ6rOhj+rMKCa5ZGV/yk1q8rSAOxIE4EAfiQByIA3EgDhAH4kAciANxIA7EgTj4W08NVCn0SkI9NAAAAABJRU5ErkJggg==">
+<style>
+:root{
+  --paper:#F5F7FA; --card:#FFFFFF; --ink:#1B2A41; --graphite:#5F6B7A; --line:#C8D1DC;
+  --hi:#FFE566; --hi-ink:#6B5A00; --ok:#2F9E6B; --ok-bg:#E6F5EE; --no:#C9584F; --no-bg:#FBECEA;
+  --radius:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"Avenir Next","Segoe UI",Roboto,Helvetica,Arial,system-ui,sans-serif;
+  font-size:17px;line-height:1.45;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit}
+.app{max-width:600px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom))}
+button,input{touch-action:manipulation}
+.skills{display:grid;gap:10px}
+.card.two{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+.card.two .right{border-left:2px solid var(--line);padding-left:22px;min-height:100%}
+/* iPad Air 11" portrait is ~820px wide; landscape ~1180px */
+@media (min-width:700px){
+  .app{max-width:800px;padding-left:28px;padding-right:28px}
+  h1{font-size:34px} .muted{font-size:18px}
+  .skills{grid-template-columns:1fr 1fr}
+  .skill{margin:0;padding:18px 18px} .skill .name{font-size:20px} .skill .blurb{font-size:15px}
+  .btn{min-height:56px;font-size:18px;padding:14px 24px}
+  .card{padding:26px 28px 28px}
+  .prompt{font-size:22px} .big-num{font-size:48px} .big-words{font-size:30px}
+  input.ans{font-size:34px;padding:14px 18px}
+  .opt{font-size:19px;padding:16px 18px}
+  .opts{grid-template-columns:1fr 1fr}
+  .opts.long{grid-template-columns:1fr}
+  .step{font-size:18px}
+  .chart td{width:52px;height:56px;font-size:30px}
+  .chart th{font-size:12px} .chart th span{height:88px}
+  .chart td.point{font-size:34px}
+}
+@media (min-width:1000px){
+  .app{max-width:1120px}
+  .card.two{grid-template-columns:5fr 6fr}
+}
+@media (max-width:999px){ .card.two{grid-template-columns:1fr} .card.two .right{border-left:none;padding-left:0;border-top:2px solid var(--line);padding-top:16px} }
+h1{font-size:26px;margin:6px 0 2px;letter-spacing:-.01em}
+.muted{color:var(--graphite)}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.btn{border:2px solid var(--ink);background:var(--card);border-radius:12px;padding:12px 18px;font-weight:700;cursor:pointer;min-height:48px}
+.btn:focus-visible,.opt:focus-visible,input:focus-visible{outline:3px solid var(--hi);outline-offset:2px}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.quiet{border-color:var(--line);color:var(--graphite);font-weight:600}
+.btn:disabled{opacity:.45;cursor:default}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.spread{justify-content:space-between}
+
+/* home */
+.skill{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--card);border:2px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin:10px 0;cursor:pointer}
+.skill:hover{border-color:var(--ink)}
+.skill .name{font-weight:700;font-size:18px}
+.skill .blurb{color:var(--graphite);font-size:14px;margin-top:2px}
+.dots{display:flex;gap:5px;flex-shrink:0}
+.dot{width:10px;height:10px;border-radius:50%;border:2px solid var(--ink);background:transparent}
+.dot.on{background:var(--ink)}
+.mix{margin-top:14px;width:100%}
+.stats{margin-top:22px;font-size:14px}
+
+/* practice */
+.card{background:var(--card);border:2px solid var(--line);border-radius:var(--radius);padding:18px 18px 20px;margin-top:12px}
+.prompt{font-size:19px;margin:0 0 12px}
+.big-num,.big-words{display:block;font-weight:800;font-size:34px;letter-spacing:.01em;margin-top:8px;font-variant-numeric:tabular-nums;line-height:1.15}
+.big-words{font-size:24px;font-weight:700}
+sup{font-size:.6em}
+input.ans{width:100%;font-size:28px;font-weight:700;padding:12px 14px;border:2px solid var(--ink);border-radius:12px;background:#fff;font-variant-numeric:tabular-nums}
+input.ans::placeholder{color:#B5BEC9;font-weight:500}
+input.ans:disabled{background:#F0F3F7;color:var(--graphite);border-color:var(--line)}
+.yours{font-size:13px;color:var(--graphite);margin:10px 0 4px}
+.opts{display:grid;gap:10px;margin-top:6px}
+.opt{text-align:left;background:#fff;border:2px solid var(--line);border-radius:12px;padding:13px 14px;font-size:16px;cursor:pointer;line-height:1.35}
+.opt:hover{border-color:var(--ink)}
+.opt.sel{border-color:var(--ink);background:#F0F3F7}
+.opt.right{border-color:var(--ok);background:var(--ok-bg)}
+.opt.wrong{border-color:var(--no);background:var(--no-bg)}
+.actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.hint{margin-top:12px;color:var(--graphite);font-size:15px}
+.hint.hidden{display:none}
+
+/* chart : the hero */
+.chart{margin:14px 0 4px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.chart table{border-collapse:collapse;margin:0 auto;font-variant-numeric:tabular-nums}
+.chart th{font-weight:600;font-size:11px;color:var(--graphite);padding:0 3px 6px;vertical-align:bottom;line-height:1.1}
+.chart th span{display:inline-block;writing-mode:vertical-rl;transform:rotate(180deg);height:78px}
+.chart td{border:2px solid var(--ink);width:38px;height:44px;text-align:center;font-size:24px;font-weight:800;background:#fff;position:relative}
+.chart td.point{border:none;width:14px;background:transparent;font-size:28px;line-height:0;vertical-align:bottom;padding-bottom:6px}
+.chart th.point{width:14px}
+.chart td.ul{background:var(--hi)}
+.chart td.ul::after{content:"";position:absolute;left:6px;right:6px;bottom:5px;height:3px;background:var(--hi-ink);border-radius:2px}
+.chart td.circle::before{content:"";position:absolute;inset:4px;border:3px solid var(--ink);border-radius:50%}
+.chart td.slide{background:#EEF2F7}
+.chart .grp{font-size:10px;letter-spacing:.06em;color:var(--graphite);padding-bottom:4px;border-bottom:1px solid var(--line)}
+.chart-empty{margin-top:8px;text-align:center;font-size:13px;color:var(--graphite)}
+
+/* feedback */
+.banner{border-radius:12px;padding:12px 14px;margin-top:14px;font-weight:700;display:flex;gap:10px;align-items:flex-start}
+.banner.ok{background:var(--ok-bg);color:#1D6B47;border:2px solid var(--ok)}
+.banner.no{background:var(--no-bg);color:#8A2E27;border:2px solid var(--no)}
+.banner .mark{font-size:22px;line-height:1}
+.banner small{display:block;font-weight:500;margin-top:3px}
+
+/* walkthrough */
+.wt{margin-top:14px}
+.step{background:#fff;border-left:5px solid var(--hi);padding:12px 14px;border-radius:0 12px 12px 0;margin:10px 0;font-size:17px}
+.step.dim{opacity:.55;border-left-color:var(--line)}
+.step .n{display:inline-block;font-weight:800;color:var(--hi-ink);margin-right:6px}
+.progress{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:6px 0 0}
+.progress i{display:block;height:100%;background:var(--ink);width:0;transition:width .25s}
+.pill{display:inline-block;border:2px solid var(--line);border-radius:999px;padding:3px 10px;font-size:13px;font-weight:600;color:var(--graphite)}
+.streak{font-size:14px;color:var(--graphite)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:380px){.chart td{width:32px;height:40px;font-size:20px}}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<script>
+// ===== Number words =====
+const ONES = ["", "one","two","three","four","five","six","seven","eight","nine","ten",
+  "eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen"];
+const TENS = ["", "", "twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"];
+function words(n){
+  n = Math.floor(n);
+  if(n===0) return "zero";
+  if(n<20) return ONES[n];
+  if(n<100) return TENS[Math.floor(n/10)] + (n%10 ? "-"+ONES[n%10] : "");
+  if(n<1000) return ONES[Math.floor(n/100)]+" hundred"+(n%100 ? " "+words(n%100) : "");
+  if(n<1e6) return words(Math.floor(n/1000))+" thousand"+(n%1000 ? " "+words(n%1000) : "");
+  return words(Math.floor(n/1e6))+" million"+(n%1e6 ? " "+words(n%1e6) : "");
+}
+const DEC_PLACES = ["tenths","hundredths","thousandths"];
+const WHOLE_PLACES = ["ones","tens","hundreds","thousands","ten thousands","hundred thousands","millions"];
+const DEC_FRACTION = ["1/10","1/100","1/1000"];
+const WHOLE_VALUE = ["1","10","100","1,000","10,000","100,000","1,000,000"];
+
+// A decimal number is {w: integer whole, d: string of decimal digits ("" allowed)}
+function fmt(num){ // -> "12,075.058"
+  const w = num.w.toLocaleString("en-US");
+  return num.d ? w+"."+num.d : w;
+}
+function numValue(num){ return parseFloat(num.w+"."+(num.d||"0")); }
+function toWordForm(num){
+  const parts=[];
+  if(num.w>0) parts.push(words(num.w));
+  if(num.d){
+    const di = parseInt(num.d,10);
+    const dw = words(di)+" "+DEC_PLACES[num.d.length-1];
+    if(num.w>0) parts.push("and "+dw); else parts.push(dw);
+  }
+  if(!parts.length) return "zero";
+  return parts.join(" ");
+}
+function trimDec(d){ return d.replace(/0+$/,""); }
+function fromThousandths(V){ // integer count of thousandths -> num
+  const w = Math.floor(V/1000);
+  const d = String(V%1000).padStart(3,"0");
+  return {w, d: trimDec(d)};
+}
+function toThousandths(num){ return num.w*1000 + parseInt((num.d||"").padEnd(3,"0"),10); }
+
+// ===== random helpers =====
+const ri = (a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick = arr=>arr[ri(0,arr.length-1)];
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=ri(0,i);[a[i],a[j]]=[a[j],a[i]];} return a; }
+function nonZeroDigits(k){ let s=""; for(let i=0;i<k;i++) s+=ri(1,9); return s; }
+function digitsWithLeadingZeros(k, z){ // k total digits, z leading zeros
+  let s=""; for(let i=0;i<z;i++) s+="0"; s+=ri(1,9); for(let i=z+1;i<k;i++) s+=ri(0,9);
+  if(s.endsWith("0")) s=s.slice(0,-1)+ri(1,9); return s;
+}
+
+// ===== Chart model =====
+// returns {whole:[{place, digit, key}], dec:[{place,digit,key}]}  key like w2 / d1
+function chartModel(num, minWholeCols=1){
+  const ws = String(num.w);
+  const cols = Math.max(ws.length, minWholeCols);
+  const whole=[];
+  for(let i=cols-1;i>=0;i--){
+    const idx = ws.length-1-i;
+    whole.push({place:WHOLE_PLACES[i], digit: idx>=0 ? ws[idx] : "", key:"w"+i});
+  }
+  const dec=[];
+  for(let i=0;i<3;i++) dec.push({place:DEC_PLACES[i], digit: (num.d && num.d[i]) || "", key:"d"+(i+1)});
+  return {whole, dec};
+}
+
+// ===== Generators =====
+// Each returns {skill, level, prompt, type:'input'|'mc', answer, options?, correct?, steps:[{t, chart?, hl?}] , hint}
+// 'answer' for input: numeric value. For mc: correct index.
+
+function genStandard(level){
+  let w, d;
+  if(level===1){ w=ri(1,9); d=nonZeroDigits(ri(1,2)); }
+  else if(level===2){ w=ri(1,99); d=nonZeroDigits(3); }
+  else if(level===3){ w=ri(1,99); d=digitsWithLeadingZeros(ri(2,3), 1); }
+  else { const zeros=ri(1,2); const k=Math.max(zeros+1, ri(2,3)); w = Math.random()<0.5 ? 0 : ri(1,999); d=digitsWithLeadingZeros(k, zeros); }
+  const num={w,d};
+  const wf=toWordForm(num);
+  const k=d.length, di=parseInt(d,10), dgs=String(di).length, place=DEC_PLACES[k-1];
+  const steps=[];
+  if(w>0) steps.push({t:`Find the word <b>and</b>. That is the decimal point. Everything before it is the whole number: <b>${w.toLocaleString("en-US")}</b>.`});
+  else steps.push({t:`There is no word <b>and</b> in this problem. That means there is <b>no whole number</b>. A 0 will hold the ones seat.`});
+  steps.push({t:`The last word is <b>${place}</b>. So the last digit has to land in the ${place} seat, which is <b>${k}</b> place${k>1?"s":""} after the dot.`});
+  steps.push({t:`The decimal part says <b>${words(di)}</b>. As a plain number that is <b>${di}</b>, which has <b>${dgs}</b> digit${dgs>1?"s":""}.`});
+  if(dgs<k) steps.push({t:`${dgs} is fewer than ${k}. So <b>${k-dgs} zero${k-dgs>1?"s":""}</b> go in front, between the dot and the ${di}, to push the last digit into the ${place} seat.`});
+  else steps.push({t:`That is exactly ${k} digit${k>1?"s":""}, so <b>no zeros are needed</b>. The number drops right in.`});
+  steps.push({t:`Put it together: <b>${fmt(num)}</b>.`, chart:num});
+  return {skill:"standard", level, prompt:`Write the standard form for<br><span class="big-words">${wf}</span>`, type:"input", answer:numValue(num), display:fmt(num), steps,
+    hint:`"And" is the dot. The last word tells you which seat the last digit lands in.`};
+}
+
+function genWords(level){
+  let w, d;
+  if(level===1){ w=ri(1,20); d=nonZeroDigits(ri(1,2)); }
+  else if(level===2){ w=ri(10,99); d=nonZeroDigits(3); }
+  else if(level===3){ w=ri(1,99); d=digitsWithLeadingZeros(3,1); }
+  else { w=ri(100,999); d=digitsWithLeadingZeros(3, ri(1,2)); }
+  const num={w,d}; const correct=toWordForm(num);
+  const k=d.length, di=parseInt(d,10);
+  // distractors
+  const set=new Set([correct]);
+  const add=s=>{ if(s && !set.has(s)) set.add(s); };
+  if(k>1) add(words(w)+" and "+words(di)+" "+DEC_PLACES[k-2]);            // place name one too small
+  if(k<3) add(words(w)+" and "+words(di)+" "+DEC_PLACES[k]);              // one too big
+  add(words(w)+" and "+words(di));                                        // missing place name
+  if(d.length>=2){ const twoDigit=parseInt(d.slice(0,2),10); if(twoDigit!==di && twoDigit>0) add(words(w)+" and "+words(twoDigit)+" "+DEC_PLACES[k-1]); }
+  add(words(w)+" and "+words(di)+" "+DEC_PLACES[(k+1)%3]);
+  add(words(w+1)+" and "+words(di)+" "+DEC_PLACES[k-1]);
+  const options=shuffle(Array.from(set).slice(0,4));
+  const steps=[
+    {t:`Split at the decimal point. Whole part: <b>${w}</b>. Decimal part: <b>${d}</b>.`, chart:num},
+    {t:`Whole part in words: <b>${words(w)}</b>. The dot becomes the word <b>and</b>.`},
+    {t:`Count the digits after the dot: <b>${k}</b>. ${k} digit${k>1?"s":""} means the name is <b>${DEC_PLACES[k-1]}</b>. The last digit is sitting in the ${DEC_PLACES[k-1]} seat.`},
+    {t:`Read the decimal digits like a normal number: ${d} is <b>${words(di)}</b>.${d[0]==="0"?" The zero in front is silent, but it still counts as a digit, so it still pushes the name out to "+DEC_PLACES[k-1]+".":""}`},
+    {t:`Answer: <b>${correct}</b>.`}
+  ];
+  return {skill:"words", level, prompt:`Which is the word form for<br><span class="big-num">${fmt(num)}</span>`, type:"mc", options, answer:options.indexOf(correct), display:correct, steps,
+    hint:`Count the digits after the dot. That count is the name.`};
+}
+
+function termFor(digit, key){ // key w2 / d1
+  if(key[0]==="w"){ const i=+key[1]; return i===0 ? `(${digit} × 1)` : `(${digit} × ${WHOLE_VALUE[i]})`; }
+  const i=+key[1]; return `[${digit} × ${DEC_FRACTION[i-1]}]`;
+}
+function expandedFor(num){
+  const m=chartModel(num); const terms=[];
+  m.whole.forEach(c=>{ if(c.digit && c.digit!=="0") terms.push(termFor(c.digit,c.key)); });
+  m.dec.forEach(c=>{ if(c.digit && c.digit!=="0") terms.push(termFor(c.digit,c.key)); });
+  return terms.join(" + ");
+}
+function genExpanded(level){
+  let w,d;
+  if(level===1){ w=ri(1,9); d=nonZeroDigits(2); }
+  else if(level===2){ w=ri(10,99); d=nonZeroDigits(3); }
+  else if(level===3){ w=ri(1,99); d=digitsWithLeadingZeros(3,1); }
+  else { w=pick([ri(100,999), 100*ri(1,9)+ri(1,9), 100*ri(1,9)+10*ri(1,9)]); d=digitsWithLeadingZeros(3, ri(1,2)); }
+  const num={w,d}; const correct=expandedFor(num);
+  const m=chartModel(num);
+  const all=[...m.whole,...m.dec].filter(c=>c.digit!=="");
+  const nz=all.filter(c=>c.digit!=="0");
+  const set=new Set([correct]); const add=s=>{ if(s&&!set.has(s)) set.add(s); };
+  // distractor: drop last term
+  if(nz.length>1) add(nz.slice(0,-1).map(c=>termFor(c.digit,c.key)).join(" + "));
+  // distractor: include a zero term
+  const z=all.find(c=>c.digit==="0"); if(z) add(all.map(c=>termFor(c.digit,c.key)).join(" + "));
+  // distractor: shift one decimal term's place
+  const dec=nz.filter(c=>c.key[0]==="d");
+  if(dec.length){ const c=dec[dec.length-1]; const i=+c.key[1]; const nk="d"+(i===3?2:i+1);
+    add(nz.map(x=>x===c?termFor(x.digit,nk):termFor(x.digit,x.key)).join(" + ")); }
+  // distractor: wrong whole value
+  const wh=nz.filter(c=>c.key[0]==="w"); if(wh.length){ const c=wh[0]; const i=+c.key[1]; const nk="w"+(i===0?1:i-1);
+    add(nz.map(x=>x===c?termFor(x.digit,nk):termFor(x.digit,x.key)).join(" + ")); }
+  add(nz.map(c=>c.key[0]==="d"?termFor(c.digit,"w"+(+c.key[1]-1)):termFor(c.digit,c.key)).join(" + "));
+  const options=shuffle(Array.from(set).slice(0,4));
+  const steps=[{t:`Find every digit that is <b>not</b> zero: ${nz.map(c=>"<b>"+c.digit+"</b>").join(", ")}. That is <b>${nz.length}</b>, so the answer needs exactly <b>${nz.length} piece${nz.length>1?"s":""}</b>.`, chart:num}];
+  nz.forEach(c=>{ const val = c.key[0]==="w" ? WHOLE_VALUE[+c.key[1]] : DEC_FRACTION[+c.key[1]-1];
+    steps.push({t:`The <b>${c.digit}</b> is in the <b>${c.place}</b> seat, so its piece is <b>${c.digit} × ${val}</b>.`, chart:num, hl:{[c.key]:"ul"}}); });
+  if(z) steps.push({t:`Zeros get <b>no piece</b>. A 0 is worth nothing no matter which seat it sits in, so we skip it.`});
+  steps.push({t:`Line up the pieces with plus signs: <b>${correct}</b>. Count them: ${nz.length}. Matches.`});
+  return {skill:"expanded", level, prompt:`Which is the expanded form of<br><span class="big-num">${fmt(num)}</span>`, type:"mc", options, answer:options.indexOf(correct), display:correct, steps,
+    hint:`One piece for every digit that is not a zero.`};
+}
+
+function genShift(level){
+  let num, op, factor;
+  if(level===1){ num={w:ri(11,99),d:""}; op=pick(["×","÷"]); factor=10; }
+  else if(level===2){ num={w:ri(11,99),d:""}; op=pick(["×","÷"]); factor=pick([10,100]); }
+  else if(level===3){ num={w:ri(1,9),d:String(ri(1,9))}; op=pick(["×","÷"]); factor=pick([10,100]); }
+  else { if(Math.random()<0.5){ num={w:0,d:nonZeroDigits(2)}; factor=10; } else { num={w:ri(10,99),d:""}; factor=100; } op="÷"; }
+  const V=toThousandths(num); const n=factor===10?1:2;
+  const RV = op==="×" ? V*factor : V/factor;
+  const result=fromThousandths(RV);
+  const dir = op==="×" ? "left" : "right";
+  const steps=[
+    {t:`${op==="×"?"Multiplying":"Dividing"} by 10 slides every digit <b>one column ${dir}</b>. By 100 is two slides. Here we ${op==="×"?"multiply":"divide"} by <b>${factor}</b>, so every digit slides <b>${n} column${n>1?"s":""} ${dir}</b>.`},
+    {t:`Here is <b>${fmt(num)}</b> before anything moves. The dot stays put. It never moves. Only digits move.`, chart:num, hl:"all"},
+    {t:`Slide each digit ${n} to the ${dir}. Any seat left empty between the digits and the dot gets a <b>0</b> to hold the spot.`},
+    {t:`After the slide: <b>${fmt(result)}</b>.`, chart:result, hl:"all"}
+  ];
+  return {skill:"shift", level, prompt:`<span class="big-num">${fmt(num)} ${op} ${factor} = ?</span>`, type:"input", answer:numValue(result), display:fmt(result), steps,
+    hint:`× slides left. ÷ slides right. The dot never moves.`};
+}
+
+function genPowers(level){
+  let base, e;
+  if(level===1){ base=ri(2,9); e=ri(1,3); }
+  else if(level===2){ base=ri(11,99); e=ri(2,4); }
+  else if(level===3){ base=ri(11,99); e=ri(4,5); }
+  else { base=pick([ri(2,9)*10, ri(1,9)*100, ri(11,99)*10]); e=ri(2,4); }
+  const ans=base*Math.pow(10,e);
+  const sup=String(e).split("").map(ch=>"⁰¹²³⁴⁵⁶⁷⁸⁹"[+ch]).join("");
+  const baseZeros=(String(base).match(/0+$/)||[""])[0].length;
+  const steps=[
+    {t:`The small raised <b>${e}</b> is the exponent. It is a headcount: it says multiply by ten <b>${e} time${e>1?"s":""}</b>. 10${sup} = <b>${Math.pow(10,e).toLocaleString("en-US")}</b>.`},
+    {t:`Each ten slides every digit one column left and leaves a 0 behind to fill the empty seat. ${e} tens means <b>${e} slides</b>.`},
+    {t:`Start with <b>${base.toLocaleString("en-US")}</b>.`, chart:{w:base,d:""}, hl:"all"}
+  ];
+  if(baseZeros) steps.push({t:`Careful: ${base} already ends in ${baseZeros} zero${baseZeros>1?"s":""}. Do not just count zeros. <b>Slide the digits</b> ${e} left and the total zeros come out to ${baseZeros+e}, not ${e}.`});
+  steps.push({t:`After ${e} slide${e>1?"s":""}: <b>${ans.toLocaleString("en-US")}</b>.`, chart:{w:ans,d:""}, hl:"all"});
+  return {skill:"powers", level, prompt:`<span class="big-num">${base.toLocaleString("en-US")} × 10<sup>${e}</sup> = ?</span>`, type:"input", answer:ans, display:ans.toLocaleString("en-US"), steps,
+    hint:`The exponent counts the tens. Each ten is one slide left.`};
+}
+
+// rounding helpers on thousandths integer V and place p (p>=0 whole 10^p, p<0 decimal)
+const WHOLE_SING=["one","ten","hundred","thousand","ten thousand","hundred thousand","million"];
+const DEC_SING=["tenth","hundredth","thousandth"];
+function placeName(p){ return p>=0 ? WHOLE_PLACES[p] : DEC_PLACES[-p-1]; }
+function placeSing(p){ return p>=0 ? WHOLE_SING[p] : DEC_SING[-p-1]; }
+function placeKey(p){ return p>=0 ? "w"+p : "d"+(-p); }
+function roundV(V,p){ const unit=Math.pow(10,p+3); return Math.floor((V+unit/2)/unit)*unit; }
+function chopV(V,p){ const unit=Math.pow(10,p+3); return Math.floor(V/unit)*unit; }
+function digitAt(V,p){ const unit=Math.pow(10,p+3); return Math.floor(V/unit)%10; }
+
+function roundingSteps(num, p){
+  const V=toThousandths(num); const R=roundV(V,p); const C=chopV(V,p);
+  const ul=digitAt(V,p), dec=digitAt(V,p-1); const up=dec>=5;
+  const pn=placeName(p), key=placeKey(p), dkey=placeKey(p-1);
+  const steps=[
+    {t:`Underline the digit in the <b>${pn}</b> seat. That digit is <b>${ul}</b>.`, chart:num, hl:{[key]:"ul"}, minCols:p>=0?p+1:1},
+    {t:`Circle the very next digit to its right: <b>${dec}</b>. This is the <b>deciding digit</b>. Anything past it does not matter at all.`, chart:num, hl:{[key]:"ul",[dkey]:"circle"}, minCols:p>=0?p+1:1},
+  ];
+  if(up){
+    if(ul===9) steps.push({t:`${dec} is 5 or more, so the underlined ${ul} goes <b>up</b>. But 9 plus 1 is 10, so it rolls over to <b>0</b> and carries 1 into the seat on its left, just like carrying in addition.`});
+    else steps.push({t:`${dec} is 5 or more, so the underlined ${ul} goes <b>up</b> to <b>${ul+1}</b>.`});
+  } else steps.push({t:`${dec} is 4 or less, so the underlined ${ul} <b>stays ${ul}</b>.`});
+  steps.push({t:`Now clear everything to the right of the underlined seat. Whole-number seats become <b>0</b>. Decimal seats just <b>disappear</b>. Everything to the left is untouched.`});
+  const ans=fromThousandths(R);
+  let last=`Answer: <b>${fmt(ans)}</b>.`;
+  if(R!==C) last+=` Chopping the number off would have given ${fmt(fromThousandths(C))}. That is the trap. Chopping never rounds up.`;
+  steps.push({t:last, chart:ans, hl:{[key]:"ul"}, minCols:p>=0?p+1:1});
+  return {steps, R, ans};
+}
+
+function genRoundNumber(level){
+  let num,p;
+  if(level===1){ p=pick([0,-1]); num={w:ri(10,99), d:nonZeroDigits(2)}; }
+  else if(level===2){ if(Math.random()<0.5){ p=-2; num={w:ri(1,999), d:nonZeroDigits(3)}; } else { p=2; num={w:ri(1000,9999), d: Math.random()<0.5?nonZeroDigits(ri(1,3)):""}; } }
+  else if(level===3){ p=pick([3,4,5]); num={w:ri(100000,9999999), d:""}; }
+  else { p=pick([-1,-2,2,5]); num = p<0 ? {w:ri(10,999), d:nonZeroDigits(3)} : {w:ri(100000,9999999), d:""};
+    // force rollover: underlined 9, deciding >=5
+    let V=toThousandths(num); const unit=Math.pow(10,p+3);
+    V += (9-digitAt(V,p))*unit; V += (ri(5,9)-digitAt(V,p-1))*(unit/10);
+    num=fromThousandths(V); }
+  const {steps,ans}=roundingSteps(num,p);
+  return {skill:"rounding", level, prompt:`Round to the nearest <b>${placeSing(p)}</b>.<br><span class="big-num">${fmt(num)}</span>`, type:"input", answer:numValue(ans), display:fmt(ans), steps,
+    hint:`Underline the seat. Circle the next digit. 5 or more goes up.`};
+}
+function genRoundWhich(level){
+  const p = level<=2 ? pick([0,-1,-2]) : pick([3,4,5]);
+  const unit=Math.pow(10,p+3);
+  // target T (in thousandths), a clean rounded value
+  const T = p>=0 ? ri(2,89)*unit : (ri(1,9)*1000 + ri(1, Math.pow(10,-p)-1)*unit);
+  const half=unit/2;
+  const cands=[];
+  const smallest = Math.max(1, unit/1000); // keep at most 3 decimals: granularity in thousandths ... unit>=10 for p=-2
+  // correct: something that rounds to T; half the time force a round-up
+  const g = Math.max(1, unit/10); // granularity = deciding digit steps
+  let correct = Math.random()<0.5 ? T - half - (Math.random()<0.5? 0 : 0) : T + ri(1, Math.max(1, half/g - 1))*g;
+  if(Math.random()<0.5) correct = T - half + ri(0, Math.max(0, half/g - 1))*g; // rounds up to T
+  cands.push(correct);
+  const d1 = T + half;                     // rounds to T+unit (the "looks close" trap)
+  const d2 = T - half - ri(1, Math.max(1, half/g - 1))*g; // rounds to T-unit
+  const d3 = T + unit - ri(1, Math.max(1, half/g - 1))*g; // rounds to T+unit
+  [d1,d2,d3].forEach(x=>{ if(x>0 && !cands.includes(x) && roundV(x,p)!==T) cands.push(x); });
+  while(cands.length<4){ const x=T+unit+ri(1,9)*g*cands.length; if(!cands.includes(x)) cands.push(x); }
+  const opts=shuffle(cands.slice(0,4));
+  const nums=opts.map(fromThousandths);
+  const correctIdx=opts.indexOf(correct);
+  const Tn=fromThousandths(T);
+  const letters="abcd";
+  const steps=[{t:`Do not eyeball this. Round <b>every</b> choice to the nearest ${placeSing(p)} and write what it becomes.`}];
+  nums.forEach((n,i)=>{ const r=fromThousandths(roundV(opts[i],p)); const dec=digitAt(opts[i],p-1);
+    steps.push({t:`<b>${letters[i]}.</b> ${fmt(n)}: deciding digit is ${dec}, so it ${dec>=5?"rounds up":"stays"} to <b>${fmt(r)}</b>${opts[i]===correct?" ✓":""}.`}); });
+  steps.push({t:`Only <b>${letters[correctIdx]}. ${fmt(nums[correctIdx])}</b> lands on ${fmt(Tn)}.`});
+  return {skill:"rounding", level, prompt:`Which number, rounded to the nearest <b>${placeSing(p)}</b>, becomes<br><span class="big-num">${fmt(Tn)}</span>`, type:"mc", options:nums.map(fmt), answer:correctIdx, display:fmt(nums[correctIdx]), steps,
+    hint:`Round all four. Pick the one that matches.`};
+}
+function genRounding(level){ return (level>=2 && Math.random()<0.35) ? genRoundWhich(level) : genRoundNumber(level); }
+
+const SKILLS = {
+  standard:{name:"Words to number", gen:genStandard, blurb:"seventy-two and five hundred eighty-five thousandths → 72.585"},
+  words:{name:"Number to words", gen:genWords, blurb:"25.051 → twenty-five and fifty-one thousandths"},
+  expanded:{name:"Expanded form", gen:genExpanded, blurb:"2.053 → (2 × 1) + [5 × 1/100] + [3 × 1/1000]"},
+  shift:{name:"Multiply and divide by 10", gen:genShift, blurb:"9.1 ÷ 100 → 0.091"},
+  powers:{name:"Powers of ten", gen:genPowers, blurb:"35 × 10³ → 35,000"},
+  rounding:{name:"Rounding", gen:genRounding, blurb:"576.536 to the nearest hundredth → 576.54"},
+};
+const SKILL_ORDER=["standard","words","expanded","shift","powers","rounding"];
+
+function parseAnswer(str){
+  const s=String(str).replace(/[,\s]/g,"");
+  if(!/^-?\d*\.?\d+$|^-?\d+\.?\d*$/.test(s)) return NaN;
+  return parseFloat(s);
+}
+function checkInput(prob, str){ const v=parseAnswer(str); return !isNaN(v) && Math.abs(v-prob.answer)<1e-9; }
+
+
+
+</script>
+<script>
+// ===== State & storage =====
+const KEY="lily-math-v1";
+const defaultState=()=>({levels:Object.fromEntries(SKILL_ORDER.map(s=>[s,1])), streaks:Object.fromEntries(SKILL_ORDER.map(s=>[s,0])), correct:0, attempted:0, best:0, run:0});
+let S=defaultState();
+function load(){ try{ const raw=localStorage.getItem(KEY); if(raw){ const o=JSON.parse(raw); S={...defaultState(),...o, levels:{...defaultState().levels,...(o.levels||{})}, streaks:{...defaultState().streaks,...(o.streaks||{})}}; } }catch(e){} }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+load();
+
+// ===== View helpers =====
+const app=document.getElementById("app");
+const el=(h)=>{ const t=document.createElement("template"); t.innerHTML=h.trim(); return t.content.firstElementChild; };
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+
+function chartHTML(num, hl, minCols){
+  if(!num) return `<div class="chart"><table>${chartHeader(3)}<tr>${"<td></td>".repeat(3)}<td class="point">•</td>${"<td></td>".repeat(3)}</tr></table></div>`;
+  const m=chartModel(num, minCols||1);
+  const cls=k=>{ if(!hl) return ""; if(hl==="all") return " slide"; return hl[k]?(" "+hl[k]):""; };
+  const cells=m.whole.map(c=>`<td class="${cls(c.key)}">${c.digit}</td>`).join("")+`<td class="point">•</td>`+m.dec.map(c=>`<td class="${cls(c.key)}">${c.digit}</td>`).join("");
+  return `<div class="chart"><table>${chartHeader(m.whole.length, m.whole.map(c=>c.place))}<tr>${cells}</tr></table></div>`;
+}
+function chartHeader(nWhole, places){
+  places = places || WHOLE_PLACES.slice(0,nWhole).reverse();
+  const cap=s=>s.replace(/(^|\s)\S/g,c=>c.toUpperCase());
+  const th=places.map(p=>`<th><span>${cap(p)}</span></th>`).join("")+`<th class="point"></th>`+DEC_PLACES.map(p=>`<th><span>${cap(p)}</span></th>`).join("");
+  return `<tr>${th}</tr>`;
+}
+function dots(level){ return `<div class="dots" aria-label="level ${level} of 4">${[1,2,3,4].map(i=>`<span class="dot ${i<=level?"on":""}"></span>`).join("")}</div>`; }
+
+// ===== Screens =====
+let mode=null; // skill key or "mix"
+let cur=null;  // current problem
+let phase="q"; // q | ok | wt | retry | reveal
+let stepIdx=0; let isRetry=false; let selected=-1; let lastAnswer="";
+
+function home(){
+  mode=null; cur=null;
+  const pct = S.attempted ? Math.round(100*S.correct/S.attempted) : null;
+  app.innerHTML=`
+    <h1>Hi, Lily.</h1>
+    <p class="muted" style="margin:0 0 16px">Pick something to practice. It gets harder as you get better, and if you miss one, we slow down and walk through it.</p>
+    <div class="skills">${SKILL_ORDER.map(k=>`<button class="skill" data-skill="${k}"><div style="flex:1"><div class="name">${SKILLS[k].name}</div><div class="blurb">${esc(SKILLS[k].blurb)}</div></div>${dots(S.levels[k])}</button>`).join("")}</div>
+    <button class="btn primary mix" data-skill="mix">Mix it up</button>
+    <div class="stats muted">${S.attempted? `${S.correct} right out of ${S.attempted} tried (${pct}%). Best streak: ${S.best}.` : "Nothing tried yet. The dots fill in as you level up."}
+    ${S.attempted? ` <button class="btn quiet" id="reset" style="padding:4px 10px;min-height:0;font-size:13px;margin-left:6px">Start over</button>`:""}</div>`;
+  app.querySelectorAll("[data-skill]").forEach(b=>b.onclick=()=>start(b.dataset.skill));
+  const r=app.querySelector("#reset"); if(r) r.onclick=()=>{ if(confirm("Erase all progress and start from level 1?")){ S=defaultState(); save(); home(); } };
+}
+
+function pickSkill(){
+  if(mode!=="mix") return mode;
+  const weights=SKILL_ORDER.map(k=>(5-S.levels[k])*2+1);
+  let r=Math.random()*weights.reduce((a,b)=>a+b,0);
+  for(let i=0;i<weights.length;i++){ r-=weights[i]; if(r<=0) return SKILL_ORDER[i]; }
+  return SKILL_ORDER[0];
+}
+function start(m){ mode=m; isRetry=false; next(); }
+function next(sameAs){
+  const sk = sameAs ? sameAs.skill : pickSkill();
+  cur=SKILLS[sk].gen(S.levels[sk]); phase="q"; stepIdx=0; selected=-1; render();
+}
+
+function givenNum(){ // number to show in the chart during the question, if the problem shows a number
+  if(!cur) return null;
+  if(cur.skill==="words"||cur.skill==="expanded"||cur.skill==="rounding"||cur.skill==="shift"||cur.skill==="powers"){
+    const m=cur.prompt.match(/big-num">([\d,\.]+)/); if(m){ const [w,d=""]=m[1].replace(/,/g,"").split("."); return {w:parseInt(w,10),d}; } }
+  return null;
+}
+
+function render(){
+  const sk=cur.skill; const lvl=S.levels[sk];
+  let top=`
+    <div class="topbar"><button class="btn quiet" id="back">Home</button>
+      <div class="row"><span class="pill">${SKILLS[sk].name}</span>${dots(lvl)}</div></div>`;
+  let body=`<p class="prompt">${cur.prompt}</p>`; let right="";
+  if(phase==="q"||phase==="ok"||phase==="reveal"){
+    body+=chartHTML(givenNum(), null, chartMin());
+    if(cur.type==="input"){
+      body+=`<input class="ans" id="ans" inputmode="decimal" autocomplete="off" placeholder="Type your answer" ${phase!=="q"?"disabled":""} value="${phase!=="q"?esc(cur.display):""}">`;
+    } else {
+      const longOpts=cur.options.some(o=>o.length>34);
+      body+=`<div class="opts ${longOpts?"long":""}">${cur.options.map((o,i)=>{ let c="opt"; if(phase!=="q"){ if(i===cur.answer) c+=" right"; else if(i===selected) c+=" wrong"; } else if(i===selected) c+=" sel"; return `<button class="${c}" data-i="${i}" ${phase!=="q"?"disabled":""}><b>${"abcd"[i]}.</b>&nbsp; ${esc(o)}</button>`; }).join("")}</div>`;
+    }
+    if(phase==="q"){
+      body+=`<div class="hint hidden" id="hint">${esc(cur.hint)}</div>
+        <div class="actions"><button class="btn primary" id="check">Check</button><button class="btn quiet" id="showhint">Hint</button></div>`;
+    }
+    if(phase==="ok"){
+      const msgs=isRetry?["You got it on the second try. That counts.","Nice recovery.","There it is."]:["Correct.","Yes.","Nailed it.","That's right."];
+      body+=`<div class="banner ok"><span class="mark">✓</span><div>${pick(msgs)}${S.run>=3?`<small>${S.run} in a row.</small>`:""}</div></div>
+        <div class="actions"><button class="btn primary" id="next">Next</button></div>`;
+    }
+    if(phase==="reveal"){
+      right=`<div class="banner no" style="margin-top:0"><span class="mark">✕</span><div>Not this time. The answer is ${esc(cur.display)}.<small>We'll drop the level down a notch and build back up. That is what the levels are for.</small></div></div>
+        <div class="wt">${cur.steps.map((s,i)=>stepHTML(s,i,false)).join("")}</div>
+        <div class="actions"><button class="btn primary" id="next">Next</button></div>`;
+    }
+  }
+  if(phase==="wt"){
+    const total=cur.steps.length;
+    body+=chartHTML(givenNum(), null, chartMin());
+    if(cur.type==="input") body+=`<div class="yours">Your answer</div><input class="ans" disabled value="${esc(lastAnswer)}">`;
+    else body+=`<div class="opts ${cur.options.some(o=>o.length>34)?"long":""}">${cur.options.map((o,i)=>`<button class="opt ${i===selected?"wrong":""}" disabled><b>${"abcd"[i]}.</b>&nbsp; ${esc(o)}</button>`).join("")}</div>`;
+    right=`<div class="banner no" style="margin-top:0"><span class="mark">✕</span><div>Not yet. Let's walk through it.<small>Step ${stepIdx+1} of ${total}</small></div></div>
+      <div class="progress"><i style="width:${Math.round(100*(stepIdx+1)/total)}%"></i></div>
+      <div class="wt" id="wt">${cur.steps.slice(0,stepIdx+1).map((s,i)=>stepHTML(s,i,i<stepIdx)).join("")}</div>
+      <div class="actions">${stepIdx<total-1?`<button class="btn primary" id="step">Next step</button>`:`<button class="btn primary" id="retry">Try one like it</button>`}</div>`;
+  }
+  const card = right ? `<div class="card two"><div class="left">${body}</div><div class="right">${right}</div></div>` : `<div class="card">${body}</div>`;
+  app.innerHTML=top+card+`<p class="streak" style="margin-top:12px">${S.correct} right today${S.run>=2?` · ${S.run} in a row`:""}</p>`;
+  bind();
+}
+function chartMin(){ if(cur.skill==="rounding"){ const m=cur.prompt.match(/nearest <b>([^<]+)</); const map={"ten thousand":5,"hundred thousand":6,"thousand":4,"hundred":3}; return (m&&map[m[1]])||1; } return 1; }
+function stepHTML(s,i,dim){
+  return `<div class="step ${dim?"dim":""}"><span class="n">${i+1}.</span>${s.t}${s.chart?chartHTML(s.chart,s.hl,s.minCols):""}</div>`;
+}
+function bind(){
+  const q=id=>app.querySelector("#"+id);
+  q("back").onclick=home;
+  if(q("check")){
+    q("check").onclick=submit;
+    const inp=q("ans"); if(inp){ inp.focus(); inp.addEventListener("keydown",e=>{ if(e.key==="Enter") submit(); }); }
+    app.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{ selected=+b.dataset.i; app.querySelectorAll(".opt").forEach(x=>x.classList.toggle("sel",+x.dataset.i===selected)); });
+    q("showhint").onclick=()=>{ q("hint").classList.remove("hidden"); q("showhint").disabled=true; };
+  }
+  if(q("next")) q("next").onclick=()=>{ isRetry=false; next(); };
+  if(q("step")) q("step").onclick=()=>{ stepIdx++; render(); const st=app.querySelectorAll(".step"); if(st.length) st[st.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); };
+  if(q("retry")) q("retry").onclick=()=>{ isRetry=true; next(cur); };
+}
+function submit(){
+  let ok;
+  if(cur.type==="input"){ const v=app.querySelector("#ans").value; lastAnswer=v; if(!v.trim()){ app.querySelector("#ans").focus(); return; } if(isNaN(parseAnswer(v))){ alert("Type a number, like 72.585"); return; } ok=checkInput(cur,v); }
+  else { if(selected<0) return; ok=(selected===cur.answer); }
+  const sk=cur.skill; S.attempted++;
+  if(ok){
+    S.correct++; S.run++; S.best=Math.max(S.best,S.run);
+    if(!isRetry){ S.streaks[sk]++; if(S.streaks[sk]>=2 && S.levels[sk]<4){ S.levels[sk]++; S.streaks[sk]=0; } }
+    else S.streaks[sk]=0;
+    phase="ok";
+  } else {
+    S.run=0; S.streaks[sk]=0;
+    if(!isRetry){ phase="wt"; stepIdx=0; }
+    else { S.levels[sk]=Math.max(1,S.levels[sk]-1); phase="reveal"; }
+  }
+  save(); render();
+  if(phase==="wt") window.scrollTo({top:0,behavior:"smooth"});
+}
+home();
+</script>
+</body>
+</html>
