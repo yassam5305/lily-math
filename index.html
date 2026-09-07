@@ -177,6 +177,10 @@ input.ans.small{font-size:22px;padding:9px 12px;min-height:44px}
 .opt.sel:focus-visible{outline-color:var(--ink)}
 textarea:focus-visible{outline:3px solid var(--hi);outline-offset:2px}
 @media (min-width:700px){ .substep{font-size:17px} .substep .opt.copt{font-size:16px} }
+/* v3: confirm state, the answer is shown but she still has to enter it */
+.substep.confirm{border-style:dashed;border-color:var(--no);background:#FFF8F7}
+.substep.confirm .inline-msg{color:#8A2E27}
+.substep.confirm .opt.right.sel{outline:3px solid var(--ok);outline-offset:-3px}
 </style>
 </head>
 <body>
@@ -390,17 +394,30 @@ function genExpanded(level, focus){
 
 function genShift(level, focus){
   const f=focus&&focus.tag;
-  let num, op, factor;
-  if(level===1){ num={w:ri(11,99),d:""}; op=pick(["×","÷"]); factor=10; }
-  else if(level===2){ num={w:ri(11,99),d:""}; op=pick(["×","÷"]); factor=pick([10,100]); }
-  else if(level===3){ num={w:ri(1,9),d:String(ri(1,9))}; op=pick(["×","÷"]); factor=pick([10,100]); }
-  else if(level===4){ if(Math.random()<0.5){ num={w:0,d:nonZeroDigits(2)}; factor=10; } else { num={w:ri(10,99),d:""}; factor=100; } op="÷"; }
-  else { factor=pick([10,100,1000]); op=pick(["×","÷"]);
-    if(op==="×"){ num={w:ri(0,99), d:nonZeroDigits(ri(1,3))}; if(num.w===0 && Math.random()<0.5) num.d=digitsWithLeadingZeros(3,ri(1,2)); }
-    else { const dl=3-Math.round(Math.log10(factor)); num={w:ri(1,999), d: dl? nonZeroDigits(dl):""}; } }
-  if(focus && focus.op && level<=3){ op=focus.op; if(op==="÷"){ /* keep result within thousandths */ const dl=3-Math.round(Math.log10(factor)); if(num.d.length>dl) num.d=num.d.slice(0,dl); if(!num.d && num.w===0) num.w=ri(11,99); } }
-  if(f==="count" && focus.factor && level>=2 && !(level===4)) factor=focus.factor;
-  const V=toThousandths(num); const n=Math.round(Math.log10(factor));
+  // 1) decide the operation and the factor (focus wins so the follow-up matches the miss)
+  let op, factor;
+  if(level===1){ op=pick(["×","÷"]); factor=10; }
+  else if(level===2){ op=pick(["×","÷"]); factor=pick([10,100]); }
+  else if(level===3){ op=pick(["×","÷"]); factor=pick([10,100]); }
+  else if(level===4){ op="÷"; factor=pick([10,100]); }
+  else { op=pick(["×","÷"]); factor=pick([10,100,1000]); }
+  if(focus && focus.op) op=focus.op;
+  if(focus && focus.factor && (f==="count"||f==="direction")) factor=focus.factor;
+  const n=Math.round(Math.log10(factor));
+  // 2) build a number whose result still fits in the chart (at most 3 decimal places). For ÷ that means
+  //    the number may have at most 3-n decimal digits; we regenerate until V is exactly divisible.
+  let num, V, tries=0;
+  do{
+    if(level<=2) num={w:ri(11,99), d:""};
+    else if(level===3) num={w:ri(1,9), d:String(ri(1,9))};
+    else if(level===4) num = (factor===10 && Math.random()<0.5) ? {w:0, d:nonZeroDigits(2)} : {w:ri(10,99), d:""};
+    else if(op==="×"){ num={w:ri(0,99), d:nonZeroDigits(ri(1,3))}; if(num.w===0 && Math.random()<0.5) num.d=digitsWithLeadingZeros(3,ri(1,2)); }
+    else { const dl=3-n; num={w:ri(1,999), d: dl? nonZeroDigits(dl):""}; }
+    if(op==="÷"){ const dl=3-n; if(num.d.length>dl) num.d=num.d.slice(0,dl); if(num.w===0 && !num.d) num.w=ri(11,99); }
+    V=toThousandths(num);
+  } while(tries++<50 && op==="÷" && V%factor!==0);
+  if(op==="÷" && V%factor!==0){ num={w:ri(11,99), d:""}; V=toThousandths(num); } // whole numbers always divide by 10/100/1000 exactly
+
   const RV = op==="×" ? V*factor : V/factor;
   const result=fromThousandths(RV);
   const dir = op==="×" ? "left" : "right";
@@ -609,7 +626,7 @@ function genOrder(level, focus){
   const p={skill:"compare", level, prompt:`Put these in order from <b>${desc?"greatest to least":"least to greatest"}</b>.<br><span class="big-num">${shuffle(nums).map(fmt).join("&nbsp;&nbsp; ")}</span>`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:correct, show:null, meta:{nums,k,desc}};
   p.steps=[
     {t:`All the whole parts are <b>${w}</b>, so the decimals decide. Give every number the same number of decimal digits by adding zeros on the end.`, charts:padded, check:ci(`How many decimal digits should each number have?`, k)},
-    {t:`Now the decimal parts can be read like whole numbers of ${DEC_PLACES[k-1]}: ${padded.map(x=>"<b>"+fmt(x)+"</b>").join(", ")}.`, check:ci(`Read ${fmt(padded[0])} as a whole number of ${DEC_PLACES[k-1]}. How many ${DEC_PLACES[k-1]}?`, parseInt(padded[0].d,10))},
+    {t:`Now the decimal parts can be read like whole numbers of ${DEC_PLACES[k-1]}: ${padded.map(x=>"<b>"+fmt(x)+"</b>").join(", ")}.`, check:Object.assign(ci(`Look only at the digits <b>after the dot</b> in ${fmt(padded[0])}. Read them as a whole number. What do you get?`, parseInt(padded[0].d,10)), {accept:[parseInt(String(padded[0].w)+padded[0].d,10)]})},
     {t:`Order those whole numbers ${desc?"greatest to least":"least to greatest"}: ${sorted.map(x=>parseInt(padTo(x,k).d,10)).join(", ")}. Now swap the original numbers back in.`, check:finalCheck(p)}
   ];
   p.hints=[
@@ -645,26 +662,32 @@ function hasRegroup(nums, op, k){
 }
 function genAddSub(level, focus){
   const f=focus&&focus.tag;
-  let nums=null, op, tries=0;
   const dec=(w,k)=>({w, d:digitsNoTrail(k)});
+  // 1) operation: the follow-up must keep the operation of the missed problem, at any level
+  let op = focus && focus.op ? focus.op : (level<=2 ? "+" : level<=4 ? "−" : pick(["+","−"]));
   const okFocus=(ns,o)=>{ const kk=Math.max(1,...ns.map(x=>x.d.length));
-    if(focus && focus.op && level>=2 && o!==focus.op) return false;
-    if(f==="regroup" && level>=2 && !hasRegroup(ns,o,kk)) return false;
+    if(f==="regroup" && !hasRegroup(ns,o,kk)) return false;
     if(f==="alignment" && new Set(ns.map(x=>x.d.length)).size===1) return false;
     return true; };
-  let last=null;
-  while(tries++<120){
-    let cand=null;
-    if(level===1){ op="+"; const k=ri(1,2); const a=dec(ri(1,9),k); const as=fmt(padTo(a,k)); let bs=""; for(const ch of as){ bs += ch==="."?".":String(ri(0,9-+ch)); } const b={w:parseInt(bs.split(".")[0],10), d:trimDec(bs.split(".")[1]||"")}; if(b.w===0 && !b.d) continue; cand=[a,b]; }
-    else if(level===2){ op="+"; const ks=shuffle([1,2,3]); cand=[dec(ri(0,99),ks[0]), dec(ri(0,99),ks[1])]; }
-    else if(level===3){ op="−"; const a=dec(ri(2,99),ri(1,2)), b=dec(ri(1,a.w),ri(1,2)); if(cmpV(a,b)<=0) continue; cand=[a,b]; }
-    else if(level===4){ op="−"; const a = Math.random()<0.5 ? {w:ri(1,20),d:""} : {w:ri(1,99), d:String(ri(1,9))}; const b=dec(ri(0,a.w-1),ri(2,3)); if(cmpV(a,b)<=0) continue; cand=[a,b]; }
-    else { if(Math.random()<0.5){ op="+"; cand=[dec(ri(0,99),ri(1,3)), dec(ri(0,99),ri(1,3)), dec(ri(0,9),ri(1,3))]; }
-      else { op="−"; const ks=shuffle([1,2,3]); const a=dec(ri(10,99),ks[0]), b=dec(ri(0,a.w),ks[1]); if(cmpV(a,b)<=0) continue; cand=[a,b]; } }
-    last={cand,op};
-    if(okFocus(cand,op)){ nums=cand; break; }
-  }
-  if(!nums){ nums=last.cand; op=last.op; }
+  // 2) numbers sized by level, shaped by operation
+  const make=()=>{
+    if(op==="+"){
+      if(level===1){ const k=ri(1,2); const a=dec(ri(1,9),k); if(f==="regroup"||f==="alignment"){ const kb = f==="alignment" ? (k===1?2:1) : k; return [a, dec(ri(1,9),kb)]; }
+        const as=fmt(padTo(a,k)); let bs=""; for(const ch of as){ bs += ch==="."?".":String(ri(0,9-+ch)); } const b={w:parseInt(bs.split(".")[0],10), d:trimDec(bs.split(".")[1]||"")}; if(b.w===0 && !b.d) return null; return [a,b]; }
+      if(level<=4){ const ks=shuffle([1,2,3]); return [dec(ri(0,99),ks[0]), dec(ri(0,99),ks[1])]; }
+      return [dec(ri(0,99),ri(1,3)), dec(ri(0,99),ri(1,3)), dec(ri(0,9),ri(1,3))];
+    } else {
+      let a,b;
+      if(level===1){ a=dec(ri(2,9),ri(1,2)); b=dec(ri(1,a.w),ri(1,2)); }
+      else if(level<=3){ a=dec(ri(2,99),ri(1,2)); b=dec(ri(1,a.w),ri(1,2)); }
+      else if(level===4){ a = Math.random()<0.5 ? {w:ri(1,20),d:""} : {w:ri(1,99), d:String(ri(1,9))}; b=dec(ri(0,a.w-1),ri(2,3)); }
+      else { const ks=shuffle([1,2,3]); a=dec(ri(10,99),ks[0]); b=dec(ri(0,a.w),ks[1]); }
+      if(cmpV(a,b)<=0) return null; return [a,b];
+    }
+  };
+  let nums=null, last=null, tries=0;
+  while(tries++<150){ const c=make(); if(!c) continue; last=c; if(okFocus(c,op)){ nums=c; break; } }
+  if(!nums) nums=last;
   const k=Math.max(1,...nums.map(x=>x.d.length));
   const Vs=nums.map(toThousandths);
   const RV = op==="+" ? Vs.reduce((s,v)=>s+v,0) : Vs[0]-Vs[1];
@@ -710,15 +733,29 @@ function genAddSub(level, focus){
   return p;
 }
 
+function validProblem(p){
+  if(!p || !p.steps || !p.steps.length) return false;
+  if(p.type==="input"){ if(!Number.isFinite(p.answer) || Math.abs(p.answer*1000-Math.round(p.answer*1000))>1e-6) return false; if(!/^[\d,]+(\.\d{1,3})?$/.test(p.display)) return false; }
+  else { if(!Array.isArray(p.options) || p.answer<0 || p.answer>=p.options.length) return false; }
+  const lastC=p.steps[p.steps.length-1].check; if(!lastC) return false;
+  for(const st of p.steps){ const c=st.check; if(!c) continue; if(c.type==="input" && !Number.isFinite(c.answer)) return false; if(c.type==="mc" && (c.answer<0||c.answer>=c.options.length)) return false; }
+  return true;
+}
+function safeGen(gen){ return function(level, focus){
+  for(let i=0;i<5;i++){ let p=null; try{ p=gen(level, focus); }catch(e){} if(validProblem(p)) return p; }
+  for(let i=0;i<5;i++){ let p=null; try{ p=gen(level); }catch(e){} if(validProblem(p)) return p; }   // drop the focus if it keeps failing
+  for(let i=0;i<20;i++){ let p=null; try{ p=gen(1); }catch(e){} if(validProblem(p)) return p; }      // last resort: level 1
+  throw new Error("generator failed");
+}; }
 const SKILLS = {
-  standard:{name:"Words to number", gen:genStandard, blurb:"seventy-two and five hundred eighty-five thousandths → 72.585", std:"5.NBT.3a"},
-  words:{name:"Number to words", gen:genWords, blurb:"25.051 → twenty-five and fifty-one thousandths", std:"5.NBT.3a"},
-  expanded:{name:"Expanded form", gen:genExpanded, blurb:"2.053 → (2 × 1) + [5 × 1/100] + [3 × 1/1000]", std:"5.NBT.3a"},
-  shift:{name:"Multiply and divide by 10", gen:genShift, blurb:"9.1 ÷ 100 → 0.091", std:"5.NBT.2"},
-  powers:{name:"Powers of ten", gen:genPowers, blurb:"35 × 10³ → 35,000", std:"5.NBT.2"},
-  rounding:{name:"Rounding", gen:genRounding, blurb:"576.536 to the nearest hundredth → 576.54", std:"5.NBT.4"},
-  compare:{name:"Compare and order", gen:genCompare, blurb:"0.5 vs 0.45 → 0.5 is bigger", std:"5.NBT.3b"},
-  addsub:{name:"Add and subtract", gen:genAddSub, blurb:"3.45 + 2.7 → 6.15", std:"5.NBT.7"},
+  standard:{name:"Words to number", gen:safeGen(genStandard), blurb:"seventy-two and five hundred eighty-five thousandths → 72.585", std:"5.NBT.3a"},
+  words:{name:"Number to words", gen:safeGen(genWords), blurb:"25.051 → twenty-five and fifty-one thousandths", std:"5.NBT.3a"},
+  expanded:{name:"Expanded form", gen:safeGen(genExpanded), blurb:"2.053 → (2 × 1) + [5 × 1/100] + [3 × 1/1000]", std:"5.NBT.3a"},
+  shift:{name:"Multiply and divide by 10", gen:safeGen(genShift), blurb:"9.1 ÷ 100 → 0.091", std:"5.NBT.2"},
+  powers:{name:"Powers of ten", gen:safeGen(genPowers), blurb:"35 × 10³ → 35,000", std:"5.NBT.2"},
+  rounding:{name:"Rounding", gen:safeGen(genRounding), blurb:"576.536 to the nearest hundredth → 576.54", std:"5.NBT.4"},
+  compare:{name:"Compare and order", gen:safeGen(genCompare), blurb:"0.5 vs 0.45 → 0.5 is bigger", std:"5.NBT.3b"},
+  addsub:{name:"Add and subtract", gen:safeGen(genAddSub), blurb:"3.45 + 2.7 → 6.15", std:"5.NBT.7"},
 };
 const SKILL_ORDER=["standard","words","expanded","shift","powers","rounding","compare","addsub"];
 
@@ -838,7 +875,10 @@ const blankProfile=name=>({name, levels:Object.fromEntries(SKILL_ORDER.map(s=>[s
   correct:0, attempted:0, best:0, run:0, guided:0, persist:0, logTrimmed:0, today:{d:todayStr(), c:0, a:0}, log:[], created:Date.now()});
 function normalize(p){ // fill in anything missing (older saves, imports)
   const b=blankProfile(p.name||"Player");
-  const out={...b, ...p, levels:{...b.levels, ...(p.levels||{})}, hist:{...b.hist, ...(p.hist||{})}, today:{...b.today, ...(p.today||{})}, log:Array.isArray(p.log)?p.log:[]};
+  // history: keep only real entries (non-null objects with a finite numeric time); coerce the fields the report keys on
+  const log=(Array.isArray(p.log)?p.log:[]).filter(e=>e&&typeof e==="object"&&!Array.isArray(e)&&Number.isFinite(e.t))
+    .map(e=>{ const o={...e}; if("sk" in o) o.sk=String(o.sk); if("ok" in o) o.ok=o.ok?1:0; return o; });
+  const out={...b, ...p, levels:{...b.levels, ...(p.levels||{})}, hist:{...b.hist, ...(p.hist||{})}, today:{...b.today, ...(p.today||{})}, log};
   for(const k of SKILL_ORDER){ out.levels[k]=Math.min(MAX_LEVEL, Math.max(1, +out.levels[k]||1)); if(!Array.isArray(out.hist[k])) out.hist[k]=[]; }
   for(const k of ["correct","attempted","best","run","guided","persist","logTrimmed"]) out[k]=Math.max(0, +out[k]||0);
   if(out.today.d!==todayStr()) out.today={d:todayStr(), c:0, a:0};
@@ -890,9 +930,9 @@ function chartsHTML(s){ // a step or hint may carry one chart or several
   return s.chart ? chartHTML(s.chart, s.hl, s.minCols) : "";
 }
 function dots(level){ return `<div class="dots" role="img" aria-label="level ${level} of ${MAX_LEVEL}">${Array.from({length:MAX_LEVEL},(_,i)=>i+1).map(i=>`<span class="dot ${i<=level?(level===MAX_LEVEL?"max":"on"):""}"></span>`).join("")}</div>`; }
-const optsHTML=(id, options, sel, answer, done, cls)=>{ // MC radiogroup. done => show right/wrong and disable
+const optsHTML=(id, options, sel, answer, done, cls, mark)=>{ // MC radiogroup. done => show right/wrong and disable. mark => this option shows as right while still enabled
   const longOpts=options.some(o=>String(o).length>34);
-  return `<div class="opts ${longOpts?"long":""}" id="${id}" role="radiogroup" aria-label="Answer choices">${options.map((o,i)=>{ let c=cls; if(done){ if(i===answer) c+=" right"; else if(i===sel) c+=" wrong"; } else if(i===sel) c+=" sel";
+  return `<div class="opts ${longOpts?"long":""}" id="${id}" role="radiogroup" aria-label="Answer choices">${options.map((o,i)=>{ let c=cls; if(done){ if(i===answer) c+=" right"; else if(i===sel) c+=" wrong"; } else { if(i===sel) c+=" sel"; if(mark!==undefined&&mark>=0&&i===mark) c+=" right"; }
     return `<button type="button" class="${c}" role="radio" aria-checked="${i===sel}" data-i="${i}" ${done?"disabled":""}><b aria-hidden="true">${"abcd"[i]}.</b>&nbsp; ${esc(o)}</button>`; }).join("")}</div>`; };
 
 // ===== Screens =====
@@ -901,9 +941,9 @@ let cur=null;    // current problem
 let phase="q";   // q | ok | wt | reveal
 let stage="fresh"; // fresh | followup
 let chain=0;     // misses in the current help chain
-let chainLeveled=false; // has this chain already cost a level on a follow-up miss
 let stepIdx=0, selected=-1, lastAnswer="", hintIdx=0, lastChange=0, inlineErr="";
-let sc=null;     // state of the current step's check: {tries, state:"open"|"ok"|"revealed", val, sel, msg}
+let sc=null;     // state of the current step's check: {tries, state:"open"|"confirm"|"ok"|"revealed", val, sel, msg}
+                 // open = still trying; confirm = answer shown, she must enter it to close the step; ok / revealed = closed
 let stepRes=[];  // per-step outcome for the walkthrough ("ok" | "revealed")
 let revealed=0, passed=0, missEntry=null;
 
@@ -969,20 +1009,23 @@ function resetProblemState(){ // everything that must not leak from one problem 
 function start(m){ mode=m; next(); }
 function next(){ // a fresh problem: new help chain
   const sk=pickSkill();
-  stage="fresh"; chain=0; chainLeveled=false;
+  stage="fresh"; chain=0;
   cur=SKILLS[sk].gen(S.levels[sk]); resetProblemState(); render();
 }
-function followup(){ // "Try one like it": same skill, aimed at the same mistake
+function followup(){ // "Try one like it": same skill, same level as the one she missed, aimed at the same mistake
   const prev=cur, sk=prev.skill, tag=prev.mistake?prev.mistake.tag:"other";
   let focus; try{ focus = typeof focusFor==="function" ? focusFor(prev, tag) : undefined; }catch(e){ focus=undefined; }
   stage="followup";
-  cur=SKILLS[sk].gen(S.levels[sk], focus); cur.focusTag=tag; resetProblemState(); render();
+  const lvl=Math.min(MAX_LEVEL, Math.max(1, +prev.level||S.levels[sk]));
+  cur=SKILLS[sk].gen(lvl, focus); cur.focusTag=tag; resetProblemState(); render();
   window.scrollTo({top:0,behavior:"smooth"});
 }
 function initStepCheck(){ const s=cur.steps[stepIdx]; sc = s&&s.check ? {tries:0, state:"open", val:"", sel:-1, msg:""} : null; }
+const scActive=()=>!!sc && (sc.state==="open"||sc.state==="confirm"); // the check still wants an entry
+function stepAccepts(c,n){ return Math.abs(n-c.answer)<1e-9 || (Array.isArray(c.accept) && c.accept.some(a=>Math.abs(n-a)<1e-9)); }
 
 function render(){
-  const sk=cur.skill; const lvl=S.levels[sk];
+  const sk=cur.skill; const lvl = stage==="followup" ? cur.level : S.levels[sk]; // a follow-up stays at the level of the problem she missed
   const top=`
     <div class="topbar"><button class="btn quiet" id="back">Home</button>
       <div class="row"><span class="pill">${SKILLS[sk].name}</span>${stage==="followup"?`<span class="pill">One like it</span>`:""}${dots(lvl)}</div></div>${warnHTML()}`;
@@ -1010,15 +1053,19 @@ function render(){
       body+=`<div class="banner ok" role="status" aria-live="polite"><span class="mark" aria-hidden="true">✓</span><div>${msg}</div></div>
         <div class="actions"><button class="btn primary" id="next">Next</button></div>`;
     }
-    if(phase==="reveal"){
-      right=`<div class="banner no" style="margin-top:0" role="status" aria-live="polite"><span class="mark" aria-hidden="true">✕</span><div>Let's look at the whole thing once more, then start fresh with an easier one.<small>The answer is <b>${esc(cur.display)}</b>.</small>${noteHTML}${downHTML}</div></div>
+    if(phase==="reveal"){ // full solution shown; she copies the answer in before Next appears
+      const c = sc ? cur.steps[stepIdx].check : null; const done = !sc || sc.state==="ok";
+      right=`<div class="banner no" style="margin-top:0" role="status" aria-live="polite"><span class="mark" aria-hidden="true">✕</span><div>Let's look at the whole thing once more. Then the next one is fresh.<small>The answer is <b>${esc(cur.display)}</b>.</small>${noteHTML}${downHTML}</div></div>
         <div class="wt">${cur.steps.map((s,i)=>stepHTML(s,i,false,false)).join("")}</div>
-        <div class="actions"><button class="btn primary" id="next">Next</button></div>`;
+        ${c?`<div class="substep ${done?"ok":"confirm"}"><div class="cq">${c.type==="mc"?"Pick the answer to continue.":"Type the answer to continue."}</div>${checkCtlHTML(c)}
+          <div class="inline-msg" id="cmsg" role="status" aria-live="polite">${sc.msg}</div>
+          ${done?"":`<div class="actions" style="margin-top:10px"><button class="btn primary" id="cstep">Check</button></div>`}</div>`:""}
+        <div class="actions">${done?`<button class="btn primary" id="next">Next</button>`:""}</div>`;
     }
   }
   if(phase==="wt"){
     const total=cur.steps.length, last=stepIdx===total-1, step=cur.steps[stepIdx];
-    const open = sc && sc.state==="open";
+    const open = scActive();
     body+=showChart;
     if(cur.type==="input") body+=`<div class="yours" id="yourslbl">Your answer</div><input class="ans" disabled aria-labelledby="yourslbl" value="${esc(lastAnswer)}">`;
     else body+=optsHTML("opts", cur.options, selected, -1, true, "opt");
@@ -1040,16 +1087,18 @@ function stepHTML(s,i,dim,withCheck){
       const r=stepRes[i];
       sub=`<div class="substep ${r==="ok"?"ok":"bad"}">${c.q}<div class="res"><span aria-hidden="true">${r==="ok"?"✓":"•"}</span> ${r==="ok"?`You got <b>${esc(c.display)}</b>.`:`It's <b>${esc(c.display)}</b>.`}</div></div>`;
     } else if(sc){
-      const open=sc.state==="open";
-      let ctl;
-      if(c.type==="mc") ctl=optsHTML("copts", c.options||[], sc.sel, c.answer, !open, "opt copt");
-      else ctl=`<label class="vh" for="cans">Your answer for this step</label><input class="ans small" id="cans" inputmode="decimal" autocomplete="off" placeholder="Your answer" ${open?"":"disabled"} value="${esc(open?sc.val:c.display)}">`;
-      sub=`<div class="substep ${sc.state==="ok"?"ok":sc.state==="revealed"?"bad":""}"><div class="cq">${c.q}</div>${ctl}
+      const open=scActive();
+      sub=`<div class="substep ${sc.state==="ok"?"ok":sc.state==="revealed"?"bad":sc.state==="confirm"?"confirm":""}"><div class="cq">${c.q}</div>${checkCtlHTML(c)}
         <div class="inline-msg" id="cmsg" role="status" aria-live="polite">${sc.msg}</div>
         ${open?`<div class="actions" style="margin-top:10px"><button class="btn primary" id="cstep">Check step</button></div>`:""}</div>`;
     }
   }
   return `<div class="step ${dim?"dim":""}"><span class="n">${i+1}.</span>${s.t}${chartsHTML(s)}${sub}</div>`;
+}
+function checkCtlHTML(c){ // the entry control for a check, driven by sc. In confirm state it stays enabled with the right answer marked
+  const open=scActive();
+  if(c.type==="mc") return optsHTML("copts", c.options||[], sc.sel, c.answer, !open, "opt copt", sc.state==="confirm"?c.answer:-1);
+  return `<label class="vh" for="cans">Your answer for this step</label><input class="ans small" id="cans" inputmode="decimal" autocomplete="off" placeholder="Your answer" ${open?"":"disabled"} value="${esc(open?sc.val:c.display)}">`;
 }
 function focusFirst(){
   const el = ["#ans:not([disabled])","#cans:not([disabled])","#check","#cstep","#step","#retry","#next"].map(s=>app.querySelector(s)).find(Boolean);
@@ -1080,7 +1129,7 @@ function setSel(groupId, i, focusIt){ // select an MC option without re-renderin
 }
 function activeGroup(){ // the MC radiogroup the keyboard should drive right now, if any
   if(phase==="q"&&cur.type==="mc") return {id:"opts", n:cur.options.length, get:()=>selected};
-  if(phase==="wt"&&sc&&sc.state==="open"&&cur.steps[stepIdx].check.type==="mc") return {id:"copts", n:(cur.steps[stepIdx].check.options||[]).length, get:()=>sc.sel};
+  if((phase==="wt"||phase==="reveal")&&scActive()&&cur.steps[stepIdx].check.type==="mc") return {id:"copts", n:(cur.steps[stepIdx].check.options||[]).length, get:()=>sc.sel};
   return null;
 }
 app.addEventListener("keydown", e=>{ // keyboard for the practice screen: Enter checks, 1-4 / a-d pick, arrows move
@@ -1092,7 +1141,7 @@ app.addEventListener("keydown", e=>{ // keyboard for the practice screen: Enter 
     if(tag==="BUTTON"&&!isOpt) return; // let ordinary buttons click natively
     e.preventDefault();
     if(isOpt&&g&&g.get()<0){ setSel(g.id,+tg.dataset.i); return; }
-    if(phase==="q") submit(); else if(phase==="wt"&&sc&&sc.state==="open") checkStep();
+    if(phase==="q") submit(); else if((phase==="wt"||phase==="reveal")&&scActive()) checkStep();
     return;
   }
   if(tag==="INPUT"||!g) return;
@@ -1119,37 +1168,47 @@ function submit(){
   else { if(selected<0){ inlineErr=""; const f=app.querySelector("#opts .opt"); if(f) f.focus(); return; } ok=(selected===cur.answer); yours=cur.options[selected]; raw=selected; }
   inlineErr="";
   const sk=cur.skill; S=normalize(S); S.attempted++; S.today.a++;
-  const independent = ok && stage==="fresh" && hintIdx===0;
-  const entry={t:Date.now(), sk, lvl:cur.level, q:plain(cur.prompt), yours:String(yours), ans:cur.display, ok:ok?1:0, stage, hints:hintIdx, independent:independent?1:0, tag: cur.mistake ? cur.mistake.tag : (cur.focusTag||"")};
+  // Only independent attempts (fresh, no hints) move levels, up or down. Hints, follow-ups, walkthroughs never do.
+  const independent = stage==="fresh" && hintIdx===0;
+  const entry={t:Date.now(), sk, lvl:cur.level, q:plain(cur.prompt), yours:String(yours), ans:cur.display, ok:ok?1:0, stage, hints:hintIdx, independent:(ok&&independent)?1:0, tag: cur.mistake ? cur.mistake.tag : (cur.focusTag||"")};
   lastChange=0;
+  if(independent){ const res=applyResult(S.hist[sk], S.levels[sk], ok); S.levels[sk]=res.level; S.hist[sk]=res.hist; lastChange=res.change; }
   if(ok){
     S.correct++; S.today.c++; S.run++; S.best=Math.max(S.best,S.run);
-    if(independent){ const res=applyResult(S.hist[sk], S.levels[sk], true); S.levels[sk]=res.level; S.hist[sk]=res.hist; lastChange=res.change; }
-    else { S.guided++; S.persist++; }
+    if(!independent){ S.guided++; S.persist++; }
     pushLog(entry); phase="ok";
   } else {
     S.run=0;
     const d=diag(raw); cur.mistake=d; entry.tag=d.tag;
-    if(stage==="fresh"){ chain=1; const res=applyResult(S.hist[sk], S.levels[sk], false); S.levels[sk]=res.level; S.hist[sk]=res.hist; lastChange=res.change; }
-    else { chain++; if(!chainLeveled){ chainLeveled=true; const res=applyResult(S.hist[sk], S.levels[sk], false); S.levels[sk]=res.level; S.hist[sk]=res.hist; lastChange=res.change; } }
+    if(stage==="fresh") chain=1; else chain++;
     missEntry=pushLog(entry);
     if(chain<3){ phase="wt"; stepIdx=0; stepRes=[]; revealed=0; passed=0; initStepCheck(); }
-    else { phase="reveal"; S.persist=0; }
+    else { phase="reveal"; S.persist=0; stepIdx=cur.steps.length-1; initStepCheck(); } // the final check is re-used so she copies the answer in
   }
   save(); render();
   if(phase!=="ok") window.scrollTo({top:0,behavior:"smooth"});
 }
 function checkStep(){
-  const c=cur.steps[stepIdx].check; if(!sc||sc.state!=="open") return;
+  const c=cur.steps[stepIdx].check; if(!scActive()) return;
   let ok;
   if(c.type==="mc"){ if(sc.sel<0){ const f=app.querySelector("#copts .opt"); if(f) f.focus(); return; } ok = sc.sel===c.answer; }
   else { const inp=app.querySelector("#cans"); const v=inp.value; sc.val=v; if(!v.trim()){ inp.focus(); return; }
-    const n=parseAnswer(v); if(isNaN(n)){ sc.msg="Type a number, like 72.585"; render(); return; } ok = Math.abs(n-c.answer)<1e-9; }
+    const n=parseAnswer(v); if(isNaN(n)){ sc.msg="Type a number, like 72.585"; render(); return; } ok = stepAccepts(c,n); }
+  if(phase==="reveal"){ // copying the shown answer in: no stats, no log, it just unlocks Next
+    if(ok){ sc.state="ok"; sc.msg=`<span aria-hidden="true">✓</span> That's it.`; }
+    else { sc.msg = c.type==="mc" ? "Not that one. Pick the answer to continue." : "Not quite. Type the answer to continue."; sc.val=""; sc.sel=-1; }
+    render(); return;
+  }
   const last = stepIdx===cur.steps.length-1;
-  if(ok){ sc.state="ok"; sc.msg=`<span aria-hidden="true">✓</span> That's it.`; passed++; stepRes[stepIdx]="ok"; }
+  const shown=`It's <b>${esc(c.display)}</b>.`, lockIn = c.type==="mc" ? "Tap it to lock it in." : "Type it in to lock it in.";
+  if(sc.state==="confirm"){ // the answer is on screen; the step closes only once she enters it
+    if(ok){ sc.state="revealed"; sc.msg=`${shown} Locked in.`; revealed++; stepRes[stepIdx]="revealed"; }
+    else { sc.msg=`${shown} ${lockIn}`; sc.val=""; sc.sel=-1; }
+  }
+  else if(ok){ sc.state="ok"; sc.msg=`<span aria-hidden="true">✓</span> That's it.`; passed++; stepRes[stepIdx]="ok"; }
   else { sc.tries++;
     if(sc.tries<2){ sc.msg="Not quite. Try once more."; sc.val=""; sc.sel=-1; }
-    else { sc.state="revealed"; sc.msg=`It's <b>${esc(c.display)}</b>.`; revealed++; stepRes[stepIdx]="revealed"; } }
+    else { sc.state="confirm"; sc.msg=`${shown} ${lockIn}`; sc.val=""; sc.sel=-1; } }
   if(missEntry){ missEntry.revealed=revealed; missEntry.passed=passed; }
   if(last && sc.state==="ok"){ // finished the whole problem inside the walkthrough: a guided completion
     S.guided++;
@@ -1174,6 +1233,7 @@ function validateBackup(text){ // returns {ok:true, db, summary} or {ok:false, e
     if(!p.levels||typeof p.levels!=="object"||Array.isArray(p.levels)) return {ok:false, err:`Player "${n}" has no levels.`};
     for(const k of SKILL_ORDER){ if(k in p.levels){ const v=p.levels[k]; if(typeof v!=="number"||!Number.isFinite(v)||v<1||v>MAX_LEVEL) return {ok:false, err:`Player "${n}" has an impossible level for ${SKILLS[k].name} (${String(v)}). Levels run 1 to ${MAX_LEVEL}.`}; } }
     if(p.log!==undefined && !Array.isArray(p.log)) return {ok:false, err:`Player "${n}" has a history that is not a list.`};
+    if(Array.isArray(p.log)){ const bad=p.log.findIndex(e=>!e||typeof e!=="object"||Array.isArray(e)); if(bad>=0) return {ok:false, err:`Player "${n}" has a broken history entry at position ${bad}.`}; }
     const att = Array.isArray(p.log) ? p.log.length : (+p.attempted||0);
     summary.push(`${n} (${att} attempt${att===1?"":"s"})`);
   }
@@ -1181,16 +1241,19 @@ function validateBackup(text){ // returns {ok:true, db, summary} or {ok:false, e
 }
 function grownups(){
   cur=null; S=normalize(S);
-  const log=S.log;
+  const log=S.log.filter(e=>e&&typeof e==="object"); // normalize() already did this; belt and braces so nothing below can throw
+  const str=v=>v==null?"":String(v); // a missing field shows as blank, never "undefined"
   const rows=SKILL_ORDER.map(k=>{ const a=log.filter(e=>e.sk===k);
     const ind=a.filter(e=>isFresh(e)&&!e.hints&&!e.guided).slice(-20); const indRight=ind.filter(e=>e.ok).length;
     const guided=a.filter(e=>e.ok&&indep(e)===0).length;
-    const missTags=a.filter(e=>!e.ok).slice(-20).map(e=>e.tag).filter(Boolean);
+    const missTags=a.filter(e=>!e.ok).slice(-20).map(e=>typeof e.tag==="string"?e.tag:"").filter(Boolean);
     const cnt={}; for(const t of missTags) cnt[t]=(cnt[t]||0)+1; const topTag=Object.keys(cnt).sort((x,y)=>cnt[y]-cnt[x])[0];
     return `<tr><td><b>${SKILLS[k].name}</b></td><td>${S.levels[k]} of ${MAX_LEVEL}</td><td>${ind.length?`${indRight} of ${ind.length}`:"—"}</td><td>${guided||"—"}</td><td>${topTag?`${esc(topTag)} <span class="muted">(${cnt[topTag]})</span>`:"—"}</td></tr>`; }).join("");
   const misses=log.filter(e=>!e.ok).slice(-40).reverse();
-  const weekAgo=Date.now()-7*864e5; const week=log.filter(e=>e.t>=weekAgo&&!e.guided);
+  const weekAgo=Date.now()-7*864e5; const week=log.filter(e=>Number.isFinite(e.t)&&e.t>=weekAgo&&!e.guided);
   const days=new Set(week.map(e=>new Date(e.t).toDateString())).size;
+  const skillName=k=>SKILLS[k]?SKILLS[k].name:esc(str(k)||"?");
+  const missMeta=e=>`${Number.isFinite(e.t)?fmtDate(e.t):"unknown time"} · ${skillName(e.sk)}${e.lvl!=null?` · level ${esc(str(e.lvl))}`:""} · ${e.stage?esc(str(e.stage)):(e.retry?"retry":"fresh")}${+e.hints>0?" · "+(+e.hints)+" hint"+(+e.hints>1?"s":""):""}${typeof e.tag==="string"&&e.tag?` · <span class="tag">${esc(e.tag)}</span>`:""}${e.revealed!==undefined?` · walkthrough: ${+e.passed||0} step${+e.passed===1?"":"s"} right, ${+e.revealed||0} shown`:""}`;
   const exportText=JSON.stringify(DB); const nPlayers=Object.keys(DB.profiles).length;
   app.innerHTML=`
     <div class="topbar"><button class="btn quiet" id="back">Home</button><h1 style="margin:0">${esc(S.name)}'s progress</h1><span></span></div>${warnHTML()}
@@ -1198,12 +1261,12 @@ function grownups(){
     <div class="card">
       <h2 style="margin-top:0">By skill</h2>
       <div style="overflow-x:auto"><table class="report"><tr><th>Skill</th><th>Level</th><th>On their own<br><span style="text-transform:none;letter-spacing:0">right / tried, last 20</span></th><th>Guided completions</th><th>Common mistake</th></tr>${rows}</table></div>
-      <p class="muted" style="font-size:13px;margin:10px 0 0">"On their own" counts fresh problems answered with no hints; only those move levels. Levels go up after 3 right out of the last 4 and drop after 2 misses out of the last 3. Level ${MAX_LEVEL} mixes every trap at once. A guided completion is a problem finished with hints, inside a walkthrough, or on the follow-up.</p>
+      <p class="muted" style="font-size:13px;margin:10px 0 0">Only problems done fresh with no hints move levels: up after 3 right out of the last 4, down after 2 wrong out of the last 3. Hints, follow-ups, and walkthroughs never move levels, up or down. Level ${MAX_LEVEL} mixes every trap at once. A guided completion is a problem finished with hints, inside a walkthrough, or on the follow-up.</p>
       ${S.logTrimmed>0?`<p class="muted" style="font-size:13px;margin:6px 0 0">History shows the most recent ${LOG_CAP} attempts; older entries were trimmed.</p>`:""}
     </div>
     <div class="card">
       <h2 style="margin-top:0">Recent misses</h2>
-      ${misses.length?misses.map(e=>`<div class="miss"><div class="meta">${fmtDate(e.t)} · ${SKILLS[e.sk]?SKILLS[e.sk].name:esc(e.sk)} · level ${e.lvl} · ${e.stage?esc(e.stage):(e.retry?"retry":"fresh")}${e.hints?" · "+e.hints+" hint"+(e.hints>1?"s":""):""}${e.tag?` · <span class="tag">${esc(e.tag)}</span>`:""}${e.revealed!==undefined?` · walkthrough: ${e.passed||0} step${e.passed===1?"":"s"} right, ${e.revealed} shown`:""}</div><div class="q">${esc(e.q)}</div><div class="a">Answered <span class="bad">${esc(e.yours)}</span> · correct: <span class="good">${esc(e.ans)}</span></div></div>`).join(""):`<p class="muted">No misses logged yet.</p>`}
+      ${misses.length?misses.map(e=>`<div class="miss"><div class="meta">${missMeta(e)}</div><div class="q">${esc(str(e.q))||"<span class=\"muted\">(question not recorded)</span>"}</div><div class="a">Answered <span class="bad">${esc(str(e.yours))||"—"}</span> · correct: <span class="good">${esc(str(e.ans))||"—"}</span></div></div>`).join(""):`<p class="muted">No misses logged yet.</p>`}
     </div>
     <div class="card">
       <h2 style="margin-top:0">Back up or move progress</h2>
