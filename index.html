@@ -154,6 +154,29 @@ textarea.io{width:100%;min-height:90px;font-family:Menlo,Consolas,monospace;font
 .profile .pname{font-weight:700;font-size:18px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (max-width:380px){.chart td{width:32px;height:40px;font-size:20px}}
+
+/* v2 additions: learning loop, a11y, save warning */
+.vh{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.warn{background:#FFF4D6;border:2px solid #E0B84A;color:#6B5A00;border-radius:12px;padding:10px 14px;margin:0 0 12px;font-size:14px;font-weight:600}
+.substep{margin-top:12px;padding:12px 14px;border:2px dashed var(--line);border-radius:12px;background:#F7F9FC;font-size:16px;color:var(--ink)}
+.substep .cq{font-weight:600;margin-bottom:8px}
+.substep.ok{border-style:solid;border-color:var(--ok);background:var(--ok-bg)}
+.substep.bad{border-style:solid;border-color:var(--no);background:var(--no-bg)}
+.substep .res{margin-top:6px;font-weight:600}
+.substep.ok .res{color:#1D6B47}
+.substep.bad .res{color:#8A2E27}
+.substep .opts{margin-top:4px}
+.substep .opt.copt{min-height:44px;padding:10px 12px;font-size:15px}
+.substep .inline-msg{margin-top:8px;font-weight:600;font-size:15px;min-height:1.2em}
+.substep .inline-msg:empty{display:none}
+input.ans.small{font-size:22px;padding:9px 12px;min-height:44px}
+.miss .tag{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:0 7px;font-size:11px;font-weight:600;color:var(--graphite);background:#fff}
+.opt[role="radio"]{min-height:44px}
+.btn.small{min-height:44px;padding:8px 12px}
+.opt:focus-visible,.copt:focus-visible{outline:3px solid var(--hi);outline-offset:2px;border-color:var(--ink)}
+.opt.sel:focus-visible{outline-color:var(--ink)}
+textarea:focus-visible{outline:3px solid var(--hi);outline-offset:2px}
+@media (min-width:700px){ .substep{font-size:17px} .substep .opt.copt{font-size:16px} }
 </style>
 </head>
 <body>
@@ -196,11 +219,11 @@ function toWordForm(num){
 }
 function trimDec(d){ return d.replace(/0+$/,""); }
 function fromThousandths(V){ const w=Math.floor(V/1000); const d=String(V%1000).padStart(3,"0"); return {w, d: trimDec(d)}; }
-function fixedFrom(V, places){ // keep exactly `places` decimal digits (for rounding answers like 518.0)
-  const w=Math.floor(V/1000); const d=String(V%1000).padStart(3,"0").slice(0,places); return {w,d}; }
+function fixedFrom(V, places){ const w=Math.floor(V/1000); const d=String(V%1000).padStart(3,"0").slice(0,places); return {w,d}; }
 function padTo(num,k){ return {w:num.w, d:(num.d||"").padEnd(k,"0")}; }
 function toThousandths(num){ return num.w*1000 + parseInt((num.d||"").padEnd(3,"0"),10); }
 function plural(n,s){ return n+" "+s+(n===1?"":"s"); }
+function near(a,b){ return Math.abs(a-b)<1e-9; }
 
 // ===== random helpers =====
 const ri = (a,b)=>a+Math.floor(Math.random()*(b-a+1));
@@ -210,6 +233,20 @@ function nonZeroDigits(k){ let s=""; for(let i=0;i<k;i++) s+=ri(1,9); return s; 
 function digitsNoTrail(k){ if(k<=0) return ""; let s=""; for(let i=0;i<k-1;i++) s+=ri(0,9); return s+ri(1,9); }
 function digitsWithLeadingZeros(k, z){ let s=""; for(let i=0;i<z;i++) s+="0"; s+=ri(1,9); for(let i=z+1;i<k;i++) s+=ri(0,9);
   if(s.endsWith("0")) s=s.slice(0,-1)+ri(1,9); return s; }
+
+// ===== Checks (interactive substeps) =====
+const ci=(q,answer,display)=>({q, type:"input", answer, display: display!==undefined ? String(display) : String(answer)});
+const cm=(q,options,answer)=>({q, type:"mc", options, answer, display:options[answer]});
+// options with tags, de-duplicated by text, correct always kept
+function buildOptions(correct, distractors){ // distractors: [{text, tag}]
+  const seen=new Set([correct]); const list=[{text:correct, tag:"correct"}];
+  for(const d of distractors){ if(d.text && !seen.has(d.text)){ seen.add(d.text); list.push(d); } if(list.length>=4) break; }
+  const sh=shuffle(list);
+  return {options:sh.map(o=>o.text), optionTags:sh.map(o=>o.tag), answer:sh.findIndex(o=>o.tag==="correct")};
+}
+function finalCheck(p){ // the last walkthrough step asks for the whole answer
+  return p.type==="input" ? ci(`Now you finish it. Type the answer.`, p.answer, p.display) : cm(`Now you finish it. Pick the answer.`, p.options, p.answer);
+}
 
 // ===== Chart model =====
 function chartModel(num, minWholeCols=1){
@@ -223,68 +260,78 @@ function chartModel(num, minWholeCols=1){
 }
 
 // ===== Generators =====
-// Each returns {skill, level, prompt, type:'input'|'mc', answer, options?, display, steps:[{t, chart?, hl?, minCols?}], hints:[{t,chart?,hl?}], show:num|"blank"|null, minCols?}
+// Each returns {skill, level, prompt, type, answer, options?, optionTags?, display, steps:[{t, chart?, charts?, hl?, minCols?, check?}], hints:[...], show, minCols?, meta}
+// `focus` (optional) = {tag, ...} from focusFor(): steer the variant toward the mistake just made.
 
-function genStandard(level){
+function genStandard(level, focus){
+  const f=focus&&focus.tag;
   let w, d;
   if(level===1){ w=ri(1,9); d=nonZeroDigits(ri(1,2)); }
   else if(level===2){ w=ri(1,99); d=nonZeroDigits(3); }
   else if(level===3){ w=ri(1,99); d=digitsWithLeadingZeros(ri(2,3), 1); }
   else if(level===4){ const zeros=ri(1,2); const k=Math.max(zeros+1, ri(2,3)); w = Math.random()<0.5 ? 0 : ri(1,999); d=digitsWithLeadingZeros(k, zeros); }
   else { w=pick([0, ri(1,99), ri(100,999), ri(1000,9999)]); const z=ri(0,2); d = z ? digitsWithLeadingZeros(3,z) : nonZeroDigits(ri(1,3)); }
+  if(f==="zeros"){ const k=Math.max(2,d.length); d=digitsWithLeadingZeros(k, ri(1,k-1)); }           // zeros after the dot were the problem
+  if(f==="whole" && w===0) w=ri(1,99);                                                                   // whole part was the problem
+  if(f==="no-whole") w=0;
   const num={w,d};
   const wf=toWordForm(num);
   const k=d.length, di=parseInt(d,10), dgs=String(di).length, place=DEC_PLACES[k-1];
   const steps=[];
-  if(w>0) steps.push({t:`Find the word <b>and</b>. That is the decimal point. Everything before it is the whole number: <b>${w.toLocaleString("en-US")}</b>.`});
-  else steps.push({t:`There is no word <b>and</b> in this problem. That means there is <b>no whole number</b>. A 0 will hold the ones seat.`});
-  steps.push({t:`The last word is <b>${place}</b>. So the last digit has to land in the ${place} seat, which is <b>${k}</b> place${k>1?"s":""} after the dot.`});
+  if(w>0) steps.push({t:`Find the word <b>and</b>. That is the decimal point. Everything before it is the whole number.`, check:ci(`What is the whole number?`, w, w.toLocaleString("en-US"))});
+  else steps.push({t:`There is no word <b>and</b> in this problem. That means there is <b>no whole number</b>. A 0 will hold the ones seat.`, check:cm(`What goes in front of the dot?`, ["0","Nothing, start with the dot","The first word"], 0)});
+  steps.push({t:`The last word is <b>${place}</b>. So the last digit has to land in the ${place} seat.`, check:ci(`How many seats after the dot is the ${place} seat?`, k)});
   steps.push({t:`The decimal part says <b>${words(di)}</b>. As a plain number that is <b>${di}</b>, which has <b>${dgs}</b> digit${dgs>1?"s":""}.`});
-  if(dgs<k) steps.push({t:`${dgs} is fewer than ${k}. So <b>${plural(k-dgs,"zero")}</b> ${k-dgs>1?"go":"goes"} in front, between the dot and the ${di}, to push the last digit into the ${place} seat.`});
-  else steps.push({t:`That is exactly ${k} digit${k>1?"s":""}, so <b>no zeros are needed</b>. The number drops right in.`});
-  steps.push({t:`Put it together: <b>${fmt(num)}</b>.`, chart:num});
-  const hints=[
+  if(dgs<k) steps.push({t:`${dgs} is fewer than ${k}. Zeros go in front, between the dot and the ${di}, to push the last digit into the ${place} seat.`, check:ci(`How many zeros go right after the dot?`, k-dgs)});
+  else steps.push({t:`That is exactly ${k} digit${k>1?"s":""}, so <b>no zeros are needed</b>. The number drops right in.`, check:ci(`How many zeros go right after the dot?`, 0)});
+  const p={skill:"standard", level, prompt:`Write the standard form for<br><span class="big-words">${wf}</span>`, type:"input", answer:numValue(num), display:fmt(num), show:"blank", meta:{num,k,dgs}};
+  steps.push({t:`Put it together: whole number, dot, ${k-dgs?plural(k-dgs,"zero")+", ":""}then ${di}.`, chart:num, check:finalCheck(p)});
+  p.steps=steps;
+  p.hints=[
     {t:`"And" is the dot. The last word tells you which seat the last digit lands in.`},
     w>0 ? {t:`Everything before "and" is the whole number: <b>${w.toLocaleString("en-US")}</b>. Write it, then the dot.`, chart:{w,d:""}}
         : {t:`No "and" means no whole number. Start with <b>0</b> and the dot.`, chart:{w:0,d:""}},
     {t:`The last word is <b>${place}</b>, so the last digit must sit ${k} seat${k>1?"s":""} after the dot. If <b>${words(di)}</b> has fewer than ${k} digits, zeros fill the gap right after the dot.`}
   ];
-  return {skill:"standard", level, prompt:`Write the standard form for<br><span class="big-words">${wf}</span>`, type:"input", answer:numValue(num), display:fmt(num), steps, hints, show:"blank"};
+  return p;
 }
 
-function genWords(level){
+function genWords(level, focus){
+  const f=focus&&focus.tag;
   let w, d;
   if(level===1){ w=ri(1,20); d=nonZeroDigits(ri(1,2)); }
   else if(level===2){ w=ri(10,99); d=nonZeroDigits(3); }
   else if(level===3){ w=ri(1,99); d=digitsWithLeadingZeros(3,1); }
   else if(level===4){ w=ri(100,999); d=digitsWithLeadingZeros(3, ri(1,2)); }
   else { w=ri(100,9999); d=pick([nonZeroDigits(ri(1,3)), digitsWithLeadingZeros(3,1), digitsWithLeadingZeros(3,2)]); }
+  if(f==="leading-zero") d=digitsWithLeadingZeros(3, ri(1,2));
+  if(f==="place-name" && d.length<2) d=nonZeroDigits(ri(2,3));
   const num={w,d}; const correct=toWordForm(num);
   const k=d.length, di=parseInt(d,10);
-  const set=new Set([correct]);
-  const add=s=>{ if(s && !set.has(s)) set.add(s); };
-  if(k>1) add(words(w)+" and "+words(di)+" "+DEC_PLACES[k-2]);
-  if(k<3) add(words(w)+" and "+words(di)+" "+DEC_PLACES[k]);
-  if(d.length>=2){ const twoDigit=parseInt(d.slice(0,2),10); if(twoDigit!==di && twoDigit>0) add(words(w)+" and "+words(twoDigit)+" "+DEC_PLACES[k-1]); }
-  if(d[0]==="0") add(words(w)+" and "+words(di)+" "+DEC_PLACES[String(di).length-1]); // ignored the leading zero
-  add(words(w)+" and "+words(di)+" "+DEC_PLACES[(k+1)%3]);
-  add(words(w)+" and "+words(di));
-  add(words(w+1)+" and "+words(di)+" "+DEC_PLACES[k-1]);
-  const options=shuffle(Array.from(set).slice(0,4));
+  const D=[];
+  if(k>1) D.push({text:words(w)+" and "+words(di)+" "+DEC_PLACES[k-2], tag:"place-name"});
+  if(d[0]==="0") D.push({text:words(w)+" and "+words(di)+" "+DEC_PLACES[String(di).length-1], tag:"leading-zero"});
+  if(k<3) D.push({text:words(w)+" and "+words(di)+" "+DEC_PLACES[k], tag:"place-name"});
+  if(d.length>=2){ const twoDigit=parseInt(d.slice(0,2),10); if(twoDigit!==di && twoDigit>0) D.push({text:words(w)+" and "+words(twoDigit)+" "+DEC_PLACES[k-1], tag:"dropped-digit"}); }
+  D.push({text:words(w)+" and "+words(di)+" "+DEC_PLACES[(k+1)%3], tag:"place-name"});
+  D.push({text:words(w)+" and "+words(di), tag:"missing-place"});
+  D.push({text:words(w+1)+" and "+words(di)+" "+DEC_PLACES[k-1], tag:"whole"});
+  const o=buildOptions(correct, D);
   const hl={}; for(let i=1;i<=k;i++) hl["d"+i]="ul";
-  const steps=[
+  const p={skill:"words", level, prompt:`Which is the word form for<br><span class="big-num">${fmt(num)}</span>`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:correct, show:num, meta:{num,k}};
+  p.steps=[
     {t:`Split at the decimal point. Whole part: <b>${w.toLocaleString("en-US")}</b>. Decimal part: <b>${d}</b>.`, chart:num},
     {t:`Whole part in words: <b>${words(w)}</b>. The dot becomes the word <b>and</b>.`},
-    {t:`Count the digits after the dot: <b>${k}</b>. ${k} digit${k>1?"s":""} means the name is <b>${DEC_PLACES[k-1]}</b>. The last digit is sitting in the ${DEC_PLACES[k-1]} seat.`, chart:num, hl},
-    {t:`Read the decimal digits like a normal number: ${d} is <b>${words(di)}</b>.${d[0]==="0"?" The zero in front is silent, but it still counts as a digit, so it still pushes the name out to "+DEC_PLACES[k-1]+".":""}`},
-    {t:`Answer: <b>${correct}</b>.`}
+    {t:`Count the digits after the dot. Every digit counts, including a zero in front.`, chart:num, hl, check:ci(`How many digits are after the dot?`, k)},
+    {t:`${k} digit${k>1?"s":""} after the dot means the last digit is sitting in the <b>${DEC_PLACES[k-1]}</b> seat.`, check:cm(`So the name at the end is…`, DEC_PLACES.slice(), k-1)},
+    {t:`Read the decimal digits like a normal number: ${d} is <b>${words(di)}</b>.${d[0]==="0"?" The zero in front is silent, but it still counts as a digit, so it still pushes the name out to "+DEC_PLACES[k-1]+".":""}`, check:finalCheck(p)}
   ];
-  const hints=[
+  p.hints=[
     {t:`Count the digits after the dot. That count is the name.`},
     {t:`Whole part: <b>${words(w)}</b>. The dot is the word "and".`},
     {t:`There ${k>1?"are":"is"} <b>${k}</b> digit${k>1?"s":""} after the dot, so the name is <b>${DEC_PLACES[k-1]}</b>. A leading zero still counts as a digit.`, chart:num, hl}
   ];
-  return {skill:"words", level, prompt:`Which is the word form for<br><span class="big-num">${fmt(num)}</span>`, type:"mc", options, answer:options.indexOf(correct), display:correct, steps, hints, show:num};
+  return p;
 }
 
 function termFor(digit, key){
@@ -297,48 +344,52 @@ function expandedFor(num){
   m.dec.forEach(c=>{ if(c.digit && c.digit!=="0") terms.push(termFor(c.digit,c.key)); });
   return terms.join(" + ");
 }
-function genExpanded(level){
+function genExpanded(level, focus){
+  const f=focus&&focus.tag;
   let w,d;
   if(level===1){ w=ri(1,9); d=nonZeroDigits(2); }
   else if(level===2){ w=ri(10,99); d=nonZeroDigits(3); }
   else if(level===3){ w=ri(1,99); d=digitsWithLeadingZeros(3,1); }
   else if(level===4){ w=pick([ri(100,999), 100*ri(1,9)+ri(1,9), 100*ri(1,9)+10*ri(1,9)]); d=digitsWithLeadingZeros(3, ri(1,2)); }
   else { w=pick([ri(1000,9999), 1000*ri(1,9)+ri(1,9), 1000*ri(1,9)+10*ri(1,9), 1000*ri(1,9)+100*ri(1,9)]); d=pick([nonZeroDigits(3), digitsWithLeadingZeros(3,1), digitsWithLeadingZeros(3,2)]); }
+  if(f==="skip-zero") d=digitsWithLeadingZeros(3, ri(1,2));
   const num={w,d}; const correct=expandedFor(num);
   const m=chartModel(num);
   const all=[...m.whole,...m.dec].filter(c=>c.digit!=="");
   const nz=all.filter(c=>c.digit!=="0");
-  const set=new Set([correct]); const add=s=>{ if(s&&!set.has(s)) set.add(s); };
-  // distractor: skipped the decimal zeros, so every later digit slid left (the real misconception)
-  const dz=d.replace(/0/g,""); if(dz!==d) add(expandedFor({w, d:dz}));
-  // distractor: shift one decimal term's place
+  const D=[];
+  const dz=d.replace(/0/g,""); if(dz!==d) D.push({text:expandedFor({w, d:dz}), tag:"skip-zero"});
   const dec=nz.filter(c=>c.key[0]==="d");
   if(dec.length){ const c=dec[dec.length-1]; const i=+c.key[1]; const nk="d"+(i===3?2:i+1);
-    add(nz.map(x=>x===c?termFor(x.digit,nk):termFor(x.digit,x.key)).join(" + ")); }
-  // distractor: drop last term
-  if(nz.length>1) add(nz.slice(0,-1).map(c=>termFor(c.digit,c.key)).join(" + "));
-  // distractor: wrong whole value
+    D.push({text:nz.map(x=>x===c?termFor(x.digit,nk):termFor(x.digit,x.key)).join(" + "), tag:"shift"}); }
+  if(nz.length>1) D.push({text:nz.slice(0,-1).map(c=>termFor(c.digit,c.key)).join(" + "), tag:"missing-piece"});
   const wh=nz.filter(c=>c.key[0]==="w"); if(wh.length){ const c=wh[0]; const i=+c.key[1]; const nk="w"+(i===0?1:i-1);
-    add(nz.map(x=>x===c?termFor(x.digit,nk):termFor(x.digit,x.key)).join(" + ")); }
-  // distractor: decimals treated as whole values
-  add(nz.map(c=>c.key[0]==="d"?termFor(c.digit,"w"+(+c.key[1]-1)):termFor(c.digit,c.key)).join(" + "));
-  const options=shuffle(Array.from(set).slice(0,4));
+    D.push({text:nz.map(x=>x===c?termFor(x.digit,nk):termFor(x.digit,x.key)).join(" + "), tag:"whole-value"}); }
+  D.push({text:nz.map(c=>c.key[0]==="d"?termFor(c.digit,"w"+(+c.key[1]-1)):termFor(c.digit,c.key)).join(" + "), tag:"dec-as-whole"});
+  const o=buildOptions(correct, D);
   const z=all.find(c=>c.digit==="0");
-  const steps=[{t:`Find every digit that is <b>not</b> zero: ${nz.map(c=>"<b>"+c.digit+"</b>").join(", ")}. That is <b>${nz.length}</b>, so the answer needs exactly <b>${plural(nz.length,"piece")}</b>.`, chart:num}];
-  nz.forEach(c=>{ const val = c.key[0]==="w" ? WHOLE_VALUE[+c.key[1]] : DEC_FRACTION[+c.key[1]-1];
-    steps.push({t:`The <b>${c.digit}</b> is in the <b>${c.place}</b> seat, so its piece is <b>${c.digit} × ${val}</b>.`, chart:num, hl:{[c.key]:"ul"}}); });
-  if(z) steps.push({t:`Zeros get <b>no piece</b>, but they still <b>hold their seat</b>. Skip the zero, do not slide the next digit over into its seat.`});
-  steps.push({t:`Line up the pieces with plus signs: <b>${correct}</b>. Count them: ${nz.length}. Matches.`});
-  const f=nz[0]; const fval = f.key[0]==="w" ? WHOLE_VALUE[+f.key[1]] : DEC_FRACTION[+f.key[1]-1];
-  const hints=[
+  const p={skill:"expanded", level, prompt:`Which is the expanded form of<br><span class="big-num">${fmt(num)}</span>`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:correct, show:num, meta:{num}};
+  const valOf=c=> c.key[0]==="w" ? WHOLE_VALUE[+c.key[1]] : DEC_FRACTION[+c.key[1]-1];
+  const steps=[{t:`Find every digit that is <b>not</b> zero: ${nz.map(c=>"<b>"+c.digit+"</b>").join(", ")}. One piece for each.`, chart:num, check:ci(`How many pieces will the answer have?`, nz.length)}];
+  const allVals=[...WHOLE_VALUE.slice(0,4), ...DEC_FRACTION];
+  nz.forEach((c,i)=>{ const val=valOf(c);
+    const idx=allVals.indexOf(val); const cand=[val]; for(let dlt=1; cand.length<4 && dlt<7; dlt++){ if(allVals[idx-dlt]) cand.push(allVals[idx-dlt]); if(cand.length<4 && allVals[idx+dlt]) cand.push(allVals[idx+dlt]); }
+    const opts=shuffle(cand);
+    steps.push({t:`The <b>${c.digit}</b> is in the <b>${c.place}</b> seat.`, chart:num, hl:{[c.key]:"ul"}, check: i<2 ? cm(`So the ${c.digit} is worth ${c.digit} × …?`, opts, opts.indexOf(val)) : undefined}); });
+  if(z) steps.push({t:`Zeros get <b>no piece</b>, but they still <b>hold their seat</b>. Skip the zero, do not slide the next digit over into its seat.`, check:cm(`What does a 0 in the ${z.place} seat get?`, ["No piece, but it holds the seat","A piece: 0 × "+valOf(z),"It gets skipped and the next digit slides over"], 0)});
+  steps.push({t:`Line up the pieces with plus signs. Count them: there should be ${nz.length}.`, check:finalCheck(p)});
+  p.steps=steps;
+  const fc=nz[0];
+  p.hints=[
     {t:`One piece for every digit that is not a zero.`},
     {t:`Count the digits that are not zero: there are <b>${nz.length}</b>. So the answer has exactly ${plural(nz.length,"piece")}.`},
-    {t:`The seat names the piece. The <b>${f.digit}</b> sits in the <b>${f.place}</b> seat, so its piece is <b>${f.digit} × ${fval}</b>. Do the same for each digit.`, chart:num, hl:{[f.key]:"ul"}}
+    {t:`The seat names the piece. The <b>${fc.digit}</b> sits in the <b>${fc.place}</b> seat, so its piece is <b>${fc.digit} × ${valOf(fc)}</b>. Do the same for each digit.`, chart:num, hl:{[fc.key]:"ul"}}
   ];
-  return {skill:"expanded", level, prompt:`Which is the expanded form of<br><span class="big-num">${fmt(num)}</span>`, type:"mc", options, answer:options.indexOf(correct), display:correct, steps, hints, show:num};
+  return p;
 }
 
-function genShift(level){
+function genShift(level, focus){
+  const f=focus&&focus.tag;
   let num, op, factor;
   if(level===1){ num={w:ri(11,99),d:""}; op=pick(["×","÷"]); factor=10; }
   else if(level===2){ num={w:ri(11,99),d:""}; op=pick(["×","÷"]); factor=pick([10,100]); }
@@ -347,49 +398,56 @@ function genShift(level){
   else { factor=pick([10,100,1000]); op=pick(["×","÷"]);
     if(op==="×"){ num={w:ri(0,99), d:nonZeroDigits(ri(1,3))}; if(num.w===0 && Math.random()<0.5) num.d=digitsWithLeadingZeros(3,ri(1,2)); }
     else { const dl=3-Math.round(Math.log10(factor)); num={w:ri(1,999), d: dl? nonZeroDigits(dl):""}; } }
+  if(focus && focus.op && level<=3){ op=focus.op; if(op==="÷"){ /* keep result within thousandths */ const dl=3-Math.round(Math.log10(factor)); if(num.d.length>dl) num.d=num.d.slice(0,dl); if(!num.d && num.w===0) num.w=ri(11,99); } }
+  if(f==="count" && focus.factor && level>=2 && !(level===4)) factor=focus.factor;
   const V=toThousandths(num); const n=Math.round(Math.log10(factor));
   const RV = op==="×" ? V*factor : V/factor;
   const result=fromThousandths(RV);
   const dir = op==="×" ? "left" : "right";
-  const steps=[
-    {t:`${op==="×"?"Multiplying":"Dividing"} by 10 slides every digit <b>one column ${dir}</b>. By 100 is two slides. By 1,000 is three. Here we ${op==="×"?"multiply":"divide"} by <b>${factor.toLocaleString("en-US")}</b>, so every digit slides <b>${plural(n,"column")} ${dir}</b>.`},
+  const p={skill:"shift", level, prompt:`<span class="big-num">${fmt(num)} ${op} ${factor.toLocaleString("en-US")} = ?</span>`, type:"input", answer:numValue(result), display:fmt(result), show:num, meta:{V,op,factor,n}};
+  p.steps=[
+    {t:`${op==="×"?"Multiplying":"Dividing"} by 10 slides every digit one column. By 100 is two slides. By 1,000 is three.`, check:ci(`We ${op==="×"?"multiply":"divide"} by ${factor.toLocaleString("en-US")}. How many columns does each digit slide?`, n)},
+    {t:`Multiplying makes the number bigger, so digits slide <b>left</b> into bigger seats. Dividing makes it smaller, so digits slide <b>right</b>.`, check:cm(`Which way do the digits slide here?`, ["Left","Right"], op==="×"?0:1)},
     {t:`Here is <b>${fmt(num)}</b> before anything moves. The dot stays put. It never moves. Only digits move.`, chart:num, hl:"all"},
-    {t:`Slide each digit ${n} to the ${dir}. Any seat left empty between the digits and the dot gets a <b>0</b> to hold the spot.`},
-    {t:`After the slide: <b>${fmt(result)}</b>.`, chart:result, hl:"all"}
+    {t:`Slide each digit ${n} to the ${dir}. Any seat left empty between the digits and the dot gets a <b>0</b> to hold the spot.`, chart:result, hl:"all", check:finalCheck(p)}
   ];
-  const hints=[
+  p.hints=[
     {t:`× slides left. ÷ slides right. The dot never moves.`},
     {t:`${factor.toLocaleString("en-US")} means <b>${plural(n,"slide")}</b> to the <b>${dir}</b>.`},
     {t:`Every digit moves ${n} seat${n>1?"s":""} ${dir}. The dot stays. Empty seats between the digits and the dot get a 0.`, chart:num, hl:"all"}
   ];
-  return {skill:"shift", level, prompt:`<span class="big-num">${fmt(num)} ${op} ${factor.toLocaleString("en-US")} = ?</span>`, type:"input", answer:numValue(result), display:fmt(result), steps, hints, show:num};
+  return p;
 }
 
-function genPowers(level){
+function genPowers(level, focus){
   let num, e;
   if(level===1){ num={w:ri(2,9),d:""}; e=ri(1,3); }
   else if(level===2){ num={w:ri(11,99),d:""}; e=ri(2,4); }
   else if(level===3){ num={w:ri(11,99),d:""}; e=ri(4,5); }
   else if(level===4){ num={w:pick([ri(2,9)*10, ri(1,9)*100, ri(11,99)*10]),d:""}; e=ri(2,4); }
   else { num={w:ri(1,99), d:nonZeroDigits(ri(1,2))}; e=ri(1,3); }
+  if(focus && focus.e && level!==3) e=focus.e;
+  if(focus && focus.tag==="trailing-zeros" && !num.d) num.w = pick([ri(2,9)*10, ri(1,9)*100]);
   const V=toThousandths(num); const ans=fromThousandths(V*Math.pow(10,e));
   const sup=String(e).split("").map(ch=>"⁰¹²³⁴⁵⁶⁷⁸⁹"[+ch]).join("");
   const baseZeros = num.d ? 0 : (String(num.w).match(/0+$/)||[""])[0].length;
   const dl=num.d.length;
+  const p={skill:"powers", level, prompt:`<span class="big-num">${fmt(num)} × 10<sup>${e}</sup> = ?</span>`, type:"input", answer:numValue(ans), display:fmt(ans), show:num, meta:{V,e,baseZeros}};
   const steps=[
-    {t:`The small raised <b>${e}</b> is the exponent. It is a headcount: it says multiply by ten <b>${plural(e,"time")}</b>. 10${sup} = <b>${Math.pow(10,e).toLocaleString("en-US")}</b>.`},
-    {t:`Each ten slides every digit one column left. ${e} tens means <b>${plural(e,"slide")}</b>. The dot never moves.`},
+    {t:`The small raised <b>${e}</b> is the exponent. It is a headcount: it says multiply by ten <b>${plural(e,"time")}</b>.`, check:ci(`10${sup} = ?`, Math.pow(10,e), Math.pow(10,e).toLocaleString("en-US"))},
+    {t:`Each ten slides every digit one column left. The dot never moves.`, check:ci(`How many slides left for 10${sup}?`, e)},
     {t:`Start with <b>${fmt(num)}</b>.`, chart:num, hl:"all"}
   ];
-  if(baseZeros) steps.push({t:`Careful: ${num.w} already ends in ${plural(baseZeros,"zero")}. Do not just count zeros. <b>Slide the digits</b> ${e} left and the total zeros come out to ${baseZeros+e}, not ${e}.`});
+  if(baseZeros) steps.push({t:`Careful: ${num.w} already ends in ${plural(baseZeros,"zero")}. Do not just count zeros. <b>Slide the digits</b> ${e} left.`, check:ci(`How many zeros will the answer end with?`, baseZeros+e)});
   if(dl) steps.push({t:`${fmt(num)} has ${plural(dl,"decimal digit")}. After ${plural(e,"slide")} left, ${e>=dl ? "none of them are left past the dot"+(e>dl?", and "+plural(e-dl,"empty seat")+" before the dot "+(e-dl>1?"get":"gets")+" a 0":"") : plural(dl-e,"digit")+" still sit past the dot"}.`});
-  steps.push({t:`After ${plural(e,"slide")}: <b>${fmt(ans)}</b>.`, chart:ans, hl:"all"});
-  const hints=[
+  steps.push({t:`After ${plural(e,"slide")}, read the chart.`, chart:ans, hl:"all", check:finalCheck(p)});
+  p.steps=steps;
+  p.hints=[
     {t:`The exponent counts the tens. Each ten is one slide left.`},
     {t:`10${sup} = <b>${Math.pow(10,e).toLocaleString("en-US")}</b>. The exponent ${e} is the number of slides.`},
     {t:`Start here and slide each digit <b>${e}</b> to the left. The dot stays.${baseZeros?" The zeros already in the number slide too.":""}`, chart:num, hl:"all"}
   ];
-  return {skill:"powers", level, prompt:`<span class="big-num">${fmt(num)} × 10<sup>${e}</sup> = ?</span>`, type:"input", answer:numValue(ans), display:fmt(ans), steps, hints, show:num};
+  return p;
 }
 
 // rounding helpers on thousandths integer V and place p (p>=0 whole 10^p, p<0 decimal)
@@ -401,26 +459,24 @@ function chopV(V,p){ const unit=Math.pow(10,p+3); return Math.floor(V/unit)*unit
 function digitAt(V,p){ const unit=Math.pow(10,p+3); return Math.floor(V/unit)%10; }
 function roundedNum(V,p){ const R=roundV(V,p); return p<0 ? fixedFrom(R,-p) : fromThousandths(R); }
 
-function roundingSteps(num, p){
+function roundingSteps(num, p, prob){
   const V=toThousandths(num); const R=roundV(V,p); const C=chopV(V,p);
   const ul=digitAt(V,p), dec=digitAt(V,p-1); const up=dec>=5;
   const pn=placeName(p), key=placeKey(p), dkey=placeKey(p-1);
   const minCols=p>=0?p+1:1;
   const steps=[
-    {t:`Underline the digit in the <b>${pn}</b> seat. That digit is <b>${ul}</b>.`, chart:num, hl:{[key]:"ul"}, minCols},
-    {t:`Circle the very next digit to its right: <b>${dec}</b>. This is the <b>deciding digit</b>. Anything past it does not matter at all.`, chart:num, hl:{[key]:"ul",[dkey]:"circle"}, minCols},
+    {t:`Underline the digit in the <b>${pn}</b> seat.`, chart:num, hl:{[key]:"ul"}, minCols, check:ci(`Which digit is in the ${pn} seat?`, ul)},
+    {t:`Circle the very next digit to its right. This is the <b>deciding digit</b>. Anything past it does not matter at all.`, chart:num, hl:{[key]:"ul",[dkey]:"circle"}, minCols, check:ci(`What is the deciding digit?`, dec)},
+    {t:`5 or more: the underlined digit goes up by one. 4 or less: it stays.`, check:cm(`The deciding digit is ${dec}. What happens to the underlined ${ul}?`, [`Goes up to ${ul===9?"0 and carries 1 to the left":ul+1}`, `Stays ${ul}`], up?0:1)}
   ];
-  if(up){
-    if(ul===9) steps.push({t:`${dec} is 5 or more, so the underlined ${ul} goes <b>up</b>. But 9 plus 1 is 10, so it rolls over to <b>0</b> and carries 1 into the seat on its left, just like carrying in addition. If that seat is a 9 too, it rolls over as well and keeps carrying.`});
-    else steps.push({t:`${dec} is 5 or more, so the underlined ${ul} goes <b>up</b> to <b>${ul+1}</b>.`});
-  } else steps.push({t:`${dec} is 4 or less, so the underlined ${ul} <b>stays ${ul}</b>.`});
+  if(up && ul===9) steps.push({t:`9 plus 1 is 10, so the 9 rolls over to <b>0</b> and carries 1 into the seat on its left, just like carrying in addition. If that seat is a 9 too, it rolls over as well and keeps carrying.`});
   steps.push({t:`Now clear everything to the <b>right</b> of the underlined seat. Whole-number seats become <b>0</b>. Decimal seats past the underlined seat <b>disappear</b>. The underlined seat itself stays, even if it is now a 0, so anyone can see which place you rounded to.`});
   const ans=roundedNum(V,p);
-  let last=`Answer: <b>${fmt(ans)}</b>.`;
+  let last=`Read the answer off the chart.`;
   if(p<0 && /0$/.test(ans.d)) last+=` Keep that last 0. <b>${fmt(ans)}</b> shows you rounded to the ${pn}; ${fmt(fromThousandths(R))} does not.`;
   if(R!==C) last+=` Chopping the number off would have given ${fmt(p<0?fixedFrom(C,-p):fromThousandths(C))}. That is the trap. Chopping never rounds up.`;
-  steps.push({t:last, chart:ans, hl:{[key]:"ul"}, minCols});
-  return {steps, R, ans, minCols};
+  steps.push({t:last, chart:ans, hl:{[key]:"ul"}, minCols, check: prob ? finalCheck(prob) : undefined});
+  return {steps, R, C, ans, minCols, ul, dec};
 }
 
 function numForPlace(p){
@@ -428,7 +484,8 @@ function numForPlace(p){
   if(p<=2) return {w:ri(100,99999), d: Math.random()<0.5?nonZeroDigits(ri(1,2)):""};
   return {w:ri(100000,9999999), d:""};
 }
-function genRoundNumber(level){
+function genRoundNumber(level, focus){
+  const f=focus&&focus.tag;
   let num,p;
   if(level===1){ p=pick([0,-1]); num={w:ri(10,99), d:nonZeroDigits(2)}; }
   else if(level===2){ if(Math.random()<0.5){ p=-2; num={w:ri(1,999), d:nonZeroDigits(3)}; } else { p=2; num={w:ri(1000,9999), d: Math.random()<0.5?nonZeroDigits(ri(1,3)):""}; } }
@@ -439,93 +496,99 @@ function genRoundNumber(level){
     num=fromThousandths(V); }
   else { p=pick([-2,-1,0,2,3,4,5]); num=numForPlace(p);
     let V=toThousandths(num); const unit=Math.pow(10,p+3); const r=Math.random();
-    if(r<0.4){ V += (9-digitAt(V,p))*unit; V += (ri(5,9)-digitAt(V,p-1))*(unit/10); }          // rollover
-    else if(r<0.65){ V += (5-digitAt(V,p-1))*(unit/10); }                                        // deciding digit exactly 5
-    else if(r<0.8){ V += (0-digitAt(V,p))*unit; V += (ri(0,4)-digitAt(V,p-1))*(unit/10); }       // underlined 0 that must stay
+    if(r<0.4){ V += (9-digitAt(V,p))*unit; V += (ri(5,9)-digitAt(V,p-1))*(unit/10); }
+    else if(r<0.65){ V += (5-digitAt(V,p-1))*(unit/10); }
+    else if(r<0.8){ V += (0-digitAt(V,p))*unit; V += (ri(0,4)-digitAt(V,p-1))*(unit/10); }
     if(p<0){ num=fixedFrom(V,3); num.d=trimDec(num.d); } else num=fromThousandths(V); }
-  const {steps,ans,minCols}=roundingSteps(num,p);
-  const hints=[
-    {t:`Underline the seat. Circle the next digit. 5 or more goes up.`},
-    steps[0],
-    steps[1]
-  ];
-  return {skill:"rounding", level, prompt:`Round to the nearest <b>${placeSing(p)}</b>.<br><span class="big-num">${fmt(num)}</span>`, type:"input", answer:numValue(ans), display:fmt(ans), steps, hints, show:num, minCols};
+  // focus: same place as the missed problem; force the trap that bit her
+  if(focus && typeof focus.p==="number" && level!==4){ p=focus.p; num=numForPlace(p); if(level<=2 && p>=0){ num={w:ri(1000,9999), d:""}; } }
+  if(f==="chop"||f==="direction"){ let V=toThousandths(num); const unit=Math.pow(10,p+3); V += (ri(5,9)-digitAt(V,p-1))*(unit/10); num = p<0 ? (()=>{const n=fixedFrom(V,3); n.d=trimDec(n.d); return n;})() : fromThousandths(V); }
+  const p0={skill:"rounding", level, prompt:`Round to the nearest <b>${placeSing(p)}</b>.<br><span class="big-num">${fmt(num)}</span>`, type:"input", show:num};
+  const rs=roundingSteps(num,p,null);
+  p0.answer=numValue(rs.ans); p0.display=fmt(rs.ans); p0.minCols=rs.minCols; p0.meta={V:toThousandths(num), p, R:rs.R, C:rs.C};
+  p0.steps=roundingSteps(num,p,p0).steps;
+  p0.hints=[{t:`Underline the seat. Circle the next digit. 5 or more goes up.`}, {...p0.steps[0], check:undefined}, {...p0.steps[1], check:undefined}];
+  return p0;
 }
-function genRoundWhich(level){
-  const p = level<=2 ? pick([0,-1,-2]) : level<=4 ? pick([3,4,5]) : pick([0,-1,-2,3,4,5]);
+function genRoundWhich(level, focus){
+  let p = level<=2 ? pick([0,-1,-2]) : level<=4 ? pick([3,4,5]) : pick([0,-1,-2,3,4,5]);
+  if(focus && typeof focus.p==="number") p=focus.p;
   const unit=Math.pow(10,p+3);
   const T = p>=0 ? ri(2,89)*unit : (ri(1,9)*1000 + ri(1, Math.pow(10,-p)-1)*unit);
   const half=unit/2;
-  const cands=[];
   const g = Math.max(1, unit/10);
   const span=Math.max(1, half/g - 1);
   let correct = Math.random()<0.5 ? T - half + ri(0, span)*g : T + ri(1, span)*g;
-  cands.push(correct);
-  const d1 = T + half;
-  const d2 = T - half - ri(1, span)*g;
-  const d3 = T + unit - ri(1, span)*g;
-  [d1,d2,d3].forEach(x=>{ if(x>0 && !cands.includes(x) && roundV(x,p)!==T) cands.push(x); });
-  while(cands.length<4){ const x=T+unit+ri(1,9)*g*cands.length; if(!cands.includes(x)) cands.push(x); }
-  const opts=shuffle(cands.slice(0,4));
-  const nums=opts.map(fromThousandths);
-  const correctIdx=opts.indexOf(correct);
+  const cands=[{v:correct, tag:"correct"}];
+  const push=(v,tag)=>{ if(v>0 && !cands.some(c=>c.v===v) && roundV(v,p)!==T) cands.push({v,tag}); };
+  push(T + half, "half-up");                 // looks close but rounds up to the next one
+  push(T - half - ri(1, span)*g, "below");
+  push(T + unit - ri(1, span)*g, "above");
+  let guard=0; while(cands.length<4 && guard++<20){ push(T+unit+ri(1,9)*g*cands.length, "above"); }
+  const sh=shuffle(cands.slice(0,4));
+  const nums=sh.map(c=>fromThousandths(c.v));
+  const correctIdx=sh.findIndex(c=>c.tag==="correct");
   const Tn=roundedNum(T,p);
   const letters="abcd";
+  const p0={skill:"rounding", level, prompt:`Which number, rounded to the nearest <b>${placeSing(p)}</b>, becomes<br><span class="big-num">${fmt(Tn)}</span>`, type:"mc", options:nums.map(fmt), optionTags:sh.map(c=>c.tag), answer:correctIdx, display:fmt(nums[correctIdx]), show:Tn, minCols:p>=0?p+1:1, meta:{p,T,which:true}};
   const steps=[{t:`Do not eyeball this. Round <b>every</b> choice to the nearest ${placeSing(p)} and write what it becomes.`}];
-  nums.forEach((n,i)=>{ const r=roundedNum(opts[i],p); const dec=digitAt(opts[i],p-1);
-    steps.push({t:`<b>${letters[i]}.</b> ${fmt(n)}: deciding digit is ${dec}, so it ${dec>=5?"rounds up":"stays"} to <b>${fmt(r)}</b>${opts[i]===correct?" ✓":""}.`}); });
-  steps.push({t:`Only <b>${letters[correctIdx]}. ${fmt(nums[correctIdx])}</b> lands on ${fmt(Tn)}.`});
+  nums.forEach((n,i)=>{ const r=roundedNum(sh[i].v,p); const dec=digitAt(sh[i].v,p-1);
+    steps.push({t:`<b>${letters[i]}.</b> ${fmt(n)}: the deciding digit is ${dec}, so it ${dec>=5?"rounds up":"stays"}.`, check: i===0 ? ci(`What does ${fmt(n)} become?`, numValue(r), fmt(r)) : undefined, reveal:`${fmt(n)} → ${fmt(r)}`}); });
+  steps.push({t:`Only one lands on ${fmt(Tn)}.`, check:finalCheck(p0)});
+  p0.steps=steps;
   const lo=fmt(fromThousandths(T-half)), hi=fmt(fromThousandths(T+half));
-  const hints=[
+  p0.hints=[
     {t:`Round all four. Pick the one that matches.`},
     {t:`Only one digit decides: the one right after the <b>${placeSing(p)}</b> seat. 5 or more rounds up, 4 or less stays.`},
     {t:`Every number from <b>${lo}</b> up to (but not including) <b>${hi}</b> rounds to ${fmt(Tn)}. Which choice is inside that range?`}
   ];
-  return {skill:"rounding", level, prompt:`Which number, rounded to the nearest <b>${placeSing(p)}</b>, becomes<br><span class="big-num">${fmt(Tn)}</span>`, type:"mc", options:nums.map(fmt), answer:correctIdx, display:fmt(nums[correctIdx]), steps, hints, show:Tn, minCols:p>=0?p+1:1};
+  return p0;
 }
-function genRounding(level){ const pWhich = level<2 ? 0 : level>=5 ? 0.5 : 0.35; return Math.random()<pWhich ? genRoundWhich(level) : genRoundNumber(level); }
+function genRounding(level, focus){
+  if(focus && focus.which!==undefined) return focus.which ? genRoundWhich(level, focus) : genRoundNumber(level, focus);
+  const pWhich = level<2 ? 0 : level>=5 ? 0.5 : 0.35; return Math.random()<pWhich ? genRoundWhich(level, focus) : genRoundNumber(level, focus);
+}
 
 // ===== Compare & order =====
 function cmpV(a,b){ return toThousandths(a)-toThousandths(b); }
-function compareSteps(a,b){
+function genComparePair(level, focus){
+  const f=focus&&focus.tag;
+  let a,b, tries=0;
+  do{
+    if(level===1 && f!=="length"){ const k=ri(1,2); const w=ri(0,9); a={w, d:digitsNoTrail(k)}; b={w: Math.random()<0.6? w : ri(0,9), d:digitsNoTrail(k)}; }
+    else if(level===2 || f==="length"){ const w=ri(0,20); const long=ri(2,3); a={w, d:String(ri(1,9))}; b={w, d:digitsNoTrail(long)}; if(b.d[0]===a.d[0]) b.d=String(a.d[0]==="9"?1:+a.d[0]+1)+b.d.slice(1); if(f==="length" && +b.d[0] > +a.d[0]) { a.d=String(Math.min(9,+b.d[0]+1)); } if(Math.random()<0.5) [a,b]=[b,a]; }
+    else { if(Math.random()<0.35 || f==="equal"){ const k=ri(1,2); a={w:ri(0,99), d:digitsNoTrail(k)}; b={w:a.w, d:a.d+"0".repeat(ri(1,3-k))}; if(Math.random()<0.5) [a,b]=[b,a]; }
+      else { const w=ri(0,99); const ks=shuffle([1,2,3]); a={w, d:digitsNoTrail(ks[0])}; b={w, d:digitsNoTrail(ks[1])}; } }
+    tries++;
+  } while(tries<20 && level<3 && f!=="equal" && cmpV(a,b)===0);
   const k=Math.max(a.d.length,b.d.length,1);
   const ap=padTo(a,k), bp=padTo(b,k);
-  const steps=[{t:`Line up the decimal points. Give both numbers the same number of decimal digits by adding zeros on the <b>end</b>: <b>${fmt(ap)}</b> and <b>${fmt(bp)}</b>. Zeros on the end do not change a decimal.`, charts:[ap,bp]}];
   const sym = cmpV(a,b)<0?"<":cmpV(a,b)>0?">":"=";
-  if(a.w!==b.w){ steps.push({t:`Compare the whole parts first: <b>${a.w}</b> and <b>${b.w}</b>. ${Math.max(a.w,b.w)} is bigger. Done, the decimals never get a vote.`}); }
+  const symH = sym==="<" ? "&lt;" : sym;
+  const options=["<  (less than)",">  (greater than)","=  (equal to)"];
+  const answer={"<":0,">":1,"=":2}[sym];
+  const optionTags=options.map((o,i)=> i===answer ? "correct" : (i===2 ? "equal" : ((a.d.length!==b.d.length) && ((i===1) === (a.d.length>b.d.length)) ? "length" : "other")));
+  const p={skill:"compare", level, prompt:`Which symbol makes this true?<br><span class="big-num">${fmt(a)} &nbsp;?&nbsp; ${fmt(b)}</span>`, type:"mc", options, optionTags, answer, display:`${fmt(a)} ${sym} ${fmt(b)}`, show:null, meta:{a,b,k}};
+  const steps=[{t:`Line up the decimal points. Give both numbers the same number of decimal digits by adding zeros on the <b>end</b>. Zeros on the end do not change a decimal.`, charts:[ap,bp], check:ci(`How many decimal digits should both numbers have?`, k)}];
+  if(a.w!==b.w){ steps.push({t:`Compare the whole parts first: <b>${a.w}</b> and <b>${b.w}</b>. The bigger whole part wins. The decimals never get a vote.`, check:cm(`Which whole part is bigger?`, [String(a.w), String(b.w)], a.w>b.w?0:1)}); }
   else {
     steps.push({t:`Whole parts are both <b>${a.w}</b>. That is a tie, so move one seat to the right.`});
     for(let i=0;i<k;i++){ const x=ap.d[i], y=bp.d[i];
       if(x===y) steps.push({t:`<b>${DEC_PLACES[i]}</b>: ${x} and ${y}. Tie again${i<k-1?", keep moving right":""}.`, charts:[ap,bp], hl:{["d"+(i+1)]:"ul"}});
-      else { steps.push({t:`<b>${DEC_PLACES[i]}</b>: <b>${x}</b> and <b>${y}</b>. ${Math.max(+x,+y)} is bigger, so <b>${+x>+y?fmt(a):fmt(b)}</b> is the bigger number. Stop here; nothing further right can change it.`, charts:[ap,bp], hl:{["d"+(i+1)]:"ul"}}); break; }
+      else { steps.push({t:`<b>${DEC_PLACES[i]}</b>: <b>${x}</b> and <b>${y}</b>. This seat decides. Stop here; nothing further right can change it.`, charts:[ap,bp], hl:{["d"+(i+1)]:"ul"}, check:cm(`Which number is bigger?`, [fmt(a), fmt(b)], +x>+y?0:1)}); break; }
     }
     if(sym==="=") steps.push({t:`Every seat tied. <b>${fmt(a)}</b> and <b>${fmt(b)}</b> are the <b>same number</b>, just written with a different number of zeros on the end.`});
   }
-  const symH = sym==="<" ? "&lt;" : sym;
-  steps.push({t:`Answer: <b>${fmt(a)} ${symH} ${fmt(b)}</b>.${a.d.length!==b.d.length && sym!=="=" ? " Notice the longer number was "+(cmpV(a,b)<0 && a.d.length>b.d.length || cmpV(a,b)>0 && b.d.length>a.d.length ? "the smaller one. More digits does not mean bigger." : "bigger this time, but only because of its digits, not its length.") : ""}`});
-  return {steps, sym, ap, bp, k};
-}
-function genComparePair(level){
-  let a,b, tries=0;
-  do{
-    if(level===1){ const k=ri(1,2); const w=ri(0,9); a={w, d:digitsNoTrail(k)}; b={w: Math.random()<0.6? w : ri(0,9), d:digitsNoTrail(k)}; }
-    else if(level===2){ const w=ri(0,20); const long=ri(2,3); a={w, d:String(ri(1,9))}; b={w, d:digitsNoTrail(long)}; if(b.d[0]===a.d[0]) b.d=String(a.d[0]===("9")?1:+a.d[0]+1)+b.d.slice(1); if(Math.random()<0.5) [a,b]=[b,a]; }
-    else { if(Math.random()<0.35){ const k=ri(1,2); a={w:ri(0,99), d:digitsNoTrail(k)}; b={w:a.w, d:a.d+"0".repeat(ri(1,3-k))}; if(Math.random()<0.5) [a,b]=[b,a]; }
-      else { const w=ri(0,99); const ks=shuffle([1,2,3]); a={w, d:digitsNoTrail(ks[0])}; b={w, d:digitsNoTrail(ks[1])}; } }
-    tries++;
-  } while(tries<20 && level<3 && cmpV(a,b)===0);
-  const {steps,sym}=compareSteps(a,b);
-  const options=["<  (less than)",">  (greater than)","=  (equal to)"];
-  const answer={"<":0,">":1,"=":2}[sym];
-  const k=Math.max(a.d.length,b.d.length);
-  const hints=[
+  steps.push({t:`Write the symbol. The open side faces the bigger number.${a.d.length!==b.d.length && sym!=="=" ? " Notice: the longer number was "+((cmpV(a,b)<0 && a.d.length>b.d.length) || (cmpV(a,b)>0 && b.d.length>a.d.length) ? "the smaller one. More digits does not mean bigger." : "bigger this time, but only because of its digits, not its length.") : ""}`, check:finalCheck(p)});
+  p.steps=steps;
+  p.hints=[
     {t:`Line up the dots. A longer decimal is not automatically bigger.`},
     {t:`Add zeros on the end so both numbers have <b>${k}</b> decimal digits. Then compare seat by seat, starting from the left.`},
-    steps[0]
+    {...steps[0], check:undefined}
   ];
-  return {skill:"compare", level, prompt:`Which symbol makes this true?<br><span class="big-num">${fmt(a)} &nbsp;?&nbsp; ${fmt(b)}</span>`, type:"mc", options, answer, display:`${fmt(a)} ${sym} ${fmt(b)}`, steps, hints, show:null};
+  return p;
 }
-function genOrder(level){
+function genOrder(level, focus){
   const n = level>=5 ? 4 : 3;
   const w=ri(0,99); let nums, tries=0;
   do{ const ks=shuffle([1,2,3,ri(1,3)]).slice(0,n); nums=ks.map(k=>({w, d:digitsNoTrail(k)}));
@@ -535,33 +598,35 @@ function genOrder(level){
   const sorted=nums.slice().sort((x,y)=>cmpV(x,y)); if(desc) sorted.reverse();
   const key=arr=>arr.map(fmt).join(", ");
   const correct=key(sorted);
-  const set=new Set([correct]);
-  const byLen=nums.slice().sort((x,y)=>x.d.length-y.d.length || cmpV(x,y)); set.add(key(desc?byLen.reverse():byLen)); // "longer is bigger" trap
-  const byDigits=nums.slice().sort((x,y)=>parseInt(x.d,10)-parseInt(y.d,10)); set.add(key(desc?byDigits.reverse():byDigits)); // ignore place value
-  set.add(key(sorted.slice().reverse()));
-  let guard=0; while(set.size<4 && guard++<20) set.add(key(shuffle(nums)));
-  const options=shuffle(Array.from(set).slice(0,4));
+  const D=[];
+  const byLen=nums.slice().sort((x,y)=>x.d.length-y.d.length || cmpV(x,y)); D.push({text:key(desc?byLen.reverse():byLen), tag:"length"});
+  const byDigits=nums.slice().sort((x,y)=>parseInt(x.d,10)-parseInt(y.d,10)); D.push({text:key(desc?byDigits.reverse():byDigits), tag:"ignore-place"});
+  D.push({text:key(sorted.slice().reverse()), tag:"reversed"});
+  let guard=0; while(D.length<6 && guard++<20) D.push({text:key(shuffle(nums)), tag:"other"});
+  const o=buildOptions(correct, D);
   const k=Math.max(...nums.map(x=>x.d.length));
   const padded=nums.map(x=>padTo(x,k));
-  const steps=[
-    {t:`All the whole parts are <b>${w}</b>, so the decimals decide. Give every number <b>${k}</b> decimal digits by adding zeros on the end: ${padded.map(x=>"<b>"+fmt(x)+"</b>").join(", ")}.`, charts:padded},
-    {t:`Now the decimal parts can be read like whole numbers of ${DEC_PLACES[k-1]}: ${padded.map(x=>"<b>"+parseInt(x.d,10)+"</b>").join(", ")}. Order those.`},
-    {t:`${desc?"Greatest to least":"Least to greatest"}: ${sorted.map(x=>parseInt(padTo(x,k).d,10)).join(", ")}. Now swap the original numbers back in.`},
-    {t:`Answer: <b>${correct}</b>.`}
+  const p={skill:"compare", level, prompt:`Put these in order from <b>${desc?"greatest to least":"least to greatest"}</b>.<br><span class="big-num">${shuffle(nums).map(fmt).join("&nbsp;&nbsp; ")}</span>`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:correct, show:null, meta:{nums,k,desc}};
+  p.steps=[
+    {t:`All the whole parts are <b>${w}</b>, so the decimals decide. Give every number the same number of decimal digits by adding zeros on the end.`, charts:padded, check:ci(`How many decimal digits should each number have?`, k)},
+    {t:`Now the decimal parts can be read like whole numbers of ${DEC_PLACES[k-1]}: ${padded.map(x=>"<b>"+fmt(x)+"</b>").join(", ")}.`, check:ci(`Read ${fmt(padded[0])} as a whole number of ${DEC_PLACES[k-1]}. How many ${DEC_PLACES[k-1]}?`, parseInt(padded[0].d,10))},
+    {t:`Order those whole numbers ${desc?"greatest to least":"least to greatest"}: ${sorted.map(x=>parseInt(padTo(x,k).d,10)).join(", ")}. Now swap the original numbers back in.`, check:finalCheck(p)}
   ];
-  const hints=[
+  p.hints=[
     {t:`Give every number the same number of decimal digits first.`},
     {t:`Add zeros on the end until each has <b>${k}</b> decimal digits. Zeros on the end change nothing.`},
-    steps[0]
+    {...p.steps[0], check:undefined}
   ];
-  return {skill:"compare", level, prompt:`Put these in order from <b>${desc?"greatest to least":"least to greatest"}</b>.<br><span class="big-num">${shuffle(nums).map(fmt).join("&nbsp;&nbsp; ")}</span>`, type:"mc", options, answer:options.indexOf(correct), display:correct, steps, hints, show:null};
+  return p;
 }
-function genCompare(level){ return level>=4 ? genOrder(level) : genComparePair(level); }
+function genCompare(level, focus){
+  if(focus && focus.order!==undefined) return focus.order ? genOrder(level, focus) : genComparePair(level, focus);
+  return level>=4 ? genOrder(level, focus) : genComparePair(level, focus);
+}
 
 // ===== Add & subtract =====
 function colName(j,k){ return j<k ? DEC_PLACES[k-1-j] : WHOLE_PLACES[j-k]; }
-function stackHTML(nums, ops, k, result){ // nums: {w,d}; ops[i]: operator before line i; result optional
-  // each line: real part + padded zeros (grey). If a number had no decimals, the dot is padding too.
+function stackHTML(nums, ops, k, result){
   const parts=nums.map(x=>{ const real=String(x.w)+(x.d?"."+x.d:""); const pad=(x.d?"":".")+"0".repeat(k-x.d.length); return {real,pad}; });
   const rs = result ? String(result.w)+"."+(result.d||"").padEnd(k,"0") : "";
   const width=Math.max(...parts.map(p=>p.real.length+p.pad.length), rs.length);
@@ -571,36 +636,55 @@ function stackHTML(nums, ops, k, result){ // nums: {w,d}; ops[i]: operator befor
   if(result) html+=`<span class="rule">  ${" ".repeat(width-rs.length)}${rs}</span>`;
   return `<pre class="stack">${html}</pre>`;
 }
-function genAddSub(level){
-  let nums, op, tries=0;
+function hasRegroup(nums, op, k){
+  const scale=Math.pow(10,3-k); const ints=nums.map(x=>toThousandths(x)/scale);
+  const width=Math.max(...ints.map(v=>String(v).length));
+  const digs=ints.map(v=>String(v).padStart(width,"0").split("").map(Number).reverse());
+  if(op==="+"){ let carry=0; for(let j=0;j<width;j++){ const s=digs.reduce((a,d)=>a+d[j],0)+carry; if(s>=10) return true; carry=0; } return false; }
+  let borrow=0; for(let j=0;j<width;j++){ const t=digs[0][j]-borrow; if(t<digs[1][j]) return true; borrow=0; } return false;
+}
+function genAddSub(level, focus){
+  const f=focus&&focus.tag;
+  let nums=null, op, tries=0;
   const dec=(w,k)=>({w, d:digitsNoTrail(k)});
-  do{
-    tries++;
-    if(level===1){ op="+"; const k=ri(1,2); const a=dec(ri(1,9),k); const as=fmt(padTo(a,k)); let bs=""; for(const ch of as){ bs += ch==="."?".":String(ri(0,9-+ch)); } const b={w:parseInt(bs.split(".")[0],10), d:trimDec(bs.split(".")[1]||"")}; if(b.w===0 && !b.d) continue; nums=[a,b]; }
-    else if(level===2){ op="+"; const ks=shuffle([1,2,3]); nums=[dec(ri(0,99),ks[0]), dec(ri(0,99),ks[1])]; }
-    else if(level===3){ op="−"; const a=dec(ri(2,99),ri(1,2)), b=dec(ri(1,a.w),ri(1,2)); if(cmpV(a,b)<=0) continue; nums=[a,b]; }
-    else if(level===4){ op="−"; const a = Math.random()<0.5 ? {w:ri(1,20),d:""} : {w:ri(1,99), d:String(ri(1,9))}; const b=dec(ri(0,a.w-1),ri(2,3)); if(cmpV(a,b)<=0) continue; nums=[a,b]; }
-    else { if(Math.random()<0.5){ op="+"; nums=[dec(ri(0,99),ri(1,3)), dec(ri(0,99),ri(1,3)), dec(ri(0,9),ri(1,3))]; }
-      else { op="−"; const ks=shuffle([1,2,3]); const a=dec(ri(10,99),ks[0]), b=dec(ri(0,a.w),ks[1]); if(cmpV(a,b)<=0) continue; nums=[a,b]; } }
-  } while(!nums && tries<50);
+  const okFocus=(ns,o)=>{ const kk=Math.max(1,...ns.map(x=>x.d.length));
+    if(focus && focus.op && level>=2 && o!==focus.op) return false;
+    if(f==="regroup" && level>=2 && !hasRegroup(ns,o,kk)) return false;
+    if(f==="alignment" && new Set(ns.map(x=>x.d.length)).size===1) return false;
+    return true; };
+  let last=null;
+  while(tries++<120){
+    let cand=null;
+    if(level===1){ op="+"; const k=ri(1,2); const a=dec(ri(1,9),k); const as=fmt(padTo(a,k)); let bs=""; for(const ch of as){ bs += ch==="."?".":String(ri(0,9-+ch)); } const b={w:parseInt(bs.split(".")[0],10), d:trimDec(bs.split(".")[1]||"")}; if(b.w===0 && !b.d) continue; cand=[a,b]; }
+    else if(level===2){ op="+"; const ks=shuffle([1,2,3]); cand=[dec(ri(0,99),ks[0]), dec(ri(0,99),ks[1])]; }
+    else if(level===3){ op="−"; const a=dec(ri(2,99),ri(1,2)), b=dec(ri(1,a.w),ri(1,2)); if(cmpV(a,b)<=0) continue; cand=[a,b]; }
+    else if(level===4){ op="−"; const a = Math.random()<0.5 ? {w:ri(1,20),d:""} : {w:ri(1,99), d:String(ri(1,9))}; const b=dec(ri(0,a.w-1),ri(2,3)); if(cmpV(a,b)<=0) continue; cand=[a,b]; }
+    else { if(Math.random()<0.5){ op="+"; cand=[dec(ri(0,99),ri(1,3)), dec(ri(0,99),ri(1,3)), dec(ri(0,9),ri(1,3))]; }
+      else { op="−"; const ks=shuffle([1,2,3]); const a=dec(ri(10,99),ks[0]), b=dec(ri(0,a.w),ks[1]); if(cmpV(a,b)<=0) continue; cand=[a,b]; } }
+    last={cand,op};
+    if(okFocus(cand,op)){ nums=cand; break; }
+  }
+  if(!nums){ nums=last.cand; op=last.op; }
   const k=Math.max(1,...nums.map(x=>x.d.length));
   const Vs=nums.map(toThousandths);
   const RV = op==="+" ? Vs.reduce((s,v)=>s+v,0) : Vs[0]-Vs[1];
   const result=fromThousandths(RV);
   const scale=Math.pow(10,3-k);
-  const ints=Vs.map(v=>v/scale); // integers in units of 10^-k
-  const width=Math.max(...ints.map(v=>String(v).length)); // columns that hold at least one digit
-  const digs=ints.map(v=>String(v).padStart(width,"0").split("").map(Number).reverse()); // index j = column from right
+  const ints=Vs.map(v=>v/scale);
+  const width=Math.max(...ints.map(v=>String(v).length));
+  const digs=ints.map(v=>String(v).padStart(width,"0").split("").map(Number).reverse());
   const ops=nums.map((_,i)=>i?op:"");
-  const steps=[{t:`Line up the <b>decimal points</b>, not the ends of the numbers. Every number gets <b>${plural(k,"decimal digit")}</b>, so add zeros on the end where needed.${stackHTML(nums,ops,k)}`}];
+  const p={skill:"addsub", level, prompt:`<span class="big-num">${nums.map(fmt).join(` ${op} `)} = ?</span>`, type:"input", answer:numValue(result), display:fmt(result), show:null, meta:{nums,op,k,RV}};
+  const steps=[{t:`Line up the <b>decimal points</b>, not the ends of the numbers. Add zeros on the end where needed so every number has the same number of decimal digits.${stackHTML(nums,ops,k)}`, check:ci(`How many decimal digits should every number have?`, k)}];
   if(op==="+"){
     let carry=0;
     for(let j=0;j<width;j++){
       const col=digs.map(d=>d[j]); const sum=col.reduce((s,x)=>s+x,0)+carry;
       let t=`<b>${colName(j,k)}</b>: ${col.join(" + ")}${carry?` + ${carry} (carried)`:""} = <b>${sum}</b>.`;
-      if(sum>=10){ t+=` Write <b>${sum%10}</b>, carry <b>${Math.floor(sum/10)}</b> to the ${colName(j+1,k)}.`; carry=Math.floor(sum/10); }
-      else { t+=` Write <b>${sum}</b>.`; carry=0; }
-      steps.push({t});
+      if(sum>=10) t+=` Only one digit fits in a column, so write the ${sum%10} and carry <b>${Math.floor(sum/10)}</b> to the ${colName(j+1,k)}.`;
+      const written=sum%10; const c=Math.floor(sum/10);
+      steps.push({t, check:ci(`What digit goes in the ${colName(j,k)} column?`, written)});
+      carry=c;
     }
     if(carry) steps.push({t:`The last carry has nowhere to go, so it becomes the front digit: <b>${carry}</b>.`});
   } else {
@@ -608,31 +692,33 @@ function genAddSub(level){
     for(let j=0;j<width;j++){
       const t0=top[j]-borrow; let t=`<b>${colName(j,k)}</b>: `;
       if(borrow) t+= t0>=0 ? `the ${top[j]} lent 1 to the right, so it is really <b>${t0}</b>. ` : `the 0 already lent its 1 to the right, so it must borrow too and becomes <b>9</b>. `;
-      if(t0<bot[j]){ if(t0>=0) t+=`${t0} is smaller than ${bot[j]}, so <b>borrow 1</b> from the ${colName(j+1,k)}: ${t0+10} − ${bot[j]} = <b>${t0+10-bot[j]}</b>.`; else t+=`9 − ${bot[j]} = <b>${9-bot[j]}</b>.`; borrow=1; }
-      else { t+=`${t0} − ${bot[j]} = <b>${t0-bot[j]}</b>.${(j===width-1 && j>=k && t0-bot[j]===0)?" A 0 at the very front is not written.":""}`; borrow=0; }
-      steps.push({t});
+      let res;
+      if(t0<bot[j]){ if(t0>=0) t+=`${t0} is smaller than ${bot[j]}, so <b>borrow 1</b> from the ${colName(j+1,k)}: ${t0+10} − ${bot[j]}.`; else t+=`9 − ${bot[j]}.`; res=(t0<0?9:t0+10)-bot[j]; borrow=1; }
+      else { t+=`${t0} − ${bot[j]}.`; res=t0-bot[j]; borrow=0; }
+      if(j===width-1 && j>=k && res===0) t+=` A 0 at the very front is not written.`;
+      steps.push({t, check:ci(`What digit goes in the ${colName(j,k)} column?`, res)});
     }
   }
   const rp=padTo(result,k);
-  steps.push({t:`Bring the decimal point <b>straight down</b>. Answer: <b>${fmt(result)}</b>.${rp.d!==result.d?` (${fmt(rp)} and ${fmt(result)} are the same number.)`:""}${stackHTML(nums,ops,k,result)}`});
-  const hints=[
+  steps.push({t:`Bring the decimal point <b>straight down</b>.${rp.d!==result.d?` (${fmt(rp)} and ${fmt(result)} are the same number.)`:""}${stackHTML(nums,ops,k,result)}`, check:finalCheck(p)});
+  p.steps=steps;
+  p.hints=[
     {t:`Line up the dots, not the ends of the numbers.`},
     {t:`Add zeros on the end so every number has <b>${plural(k,"decimal digit")}</b>. Then it works exactly like whole numbers.`},
-    steps[0]
+    {...steps[0], check:undefined}
   ];
-  const promptExpr = nums.map(fmt).join(` ${op} `);
-  return {skill:"addsub", level, prompt:`<span class="big-num">${promptExpr} = ?</span>`, type:"input", answer:numValue(result), display:fmt(result), steps, hints, show:null};
+  return p;
 }
 
 const SKILLS = {
-  standard:{name:"Words to number", gen:genStandard, blurb:"seventy-two and five hundred eighty-five thousandths → 72.585"},
-  words:{name:"Number to words", gen:genWords, blurb:"25.051 → twenty-five and fifty-one thousandths"},
-  expanded:{name:"Expanded form", gen:genExpanded, blurb:"2.053 → (2 × 1) + [5 × 1/100] + [3 × 1/1000]"},
-  shift:{name:"Multiply and divide by 10", gen:genShift, blurb:"9.1 ÷ 100 → 0.091"},
-  powers:{name:"Powers of ten", gen:genPowers, blurb:"35 × 10³ → 35,000"},
-  rounding:{name:"Rounding", gen:genRounding, blurb:"576.536 to the nearest hundredth → 576.54"},
-  compare:{name:"Compare and order", gen:genCompare, blurb:"0.5 vs 0.45 → 0.5 is bigger"},
-  addsub:{name:"Add and subtract", gen:genAddSub, blurb:"3.45 + 2.7 → 6.15"},
+  standard:{name:"Words to number", gen:genStandard, blurb:"seventy-two and five hundred eighty-five thousandths → 72.585", std:"5.NBT.3a"},
+  words:{name:"Number to words", gen:genWords, blurb:"25.051 → twenty-five and fifty-one thousandths", std:"5.NBT.3a"},
+  expanded:{name:"Expanded form", gen:genExpanded, blurb:"2.053 → (2 × 1) + [5 × 1/100] + [3 × 1/1000]", std:"5.NBT.3a"},
+  shift:{name:"Multiply and divide by 10", gen:genShift, blurb:"9.1 ÷ 100 → 0.091", std:"5.NBT.2"},
+  powers:{name:"Powers of ten", gen:genPowers, blurb:"35 × 10³ → 35,000", std:"5.NBT.2"},
+  rounding:{name:"Rounding", gen:genRounding, blurb:"576.536 to the nearest hundredth → 576.54", std:"5.NBT.4"},
+  compare:{name:"Compare and order", gen:genCompare, blurb:"0.5 vs 0.45 → 0.5 is bigger", std:"5.NBT.3b"},
+  addsub:{name:"Add and subtract", gen:genAddSub, blurb:"3.45 + 2.7 → 6.15", std:"5.NBT.7"},
 };
 const SKILL_ORDER=["standard","words","expanded","shift","powers","rounding","compare","addsub"];
 
@@ -643,8 +729,97 @@ function parseAnswer(str){
 }
 function checkInput(prob, str){ const v=parseAnswer(str); return !isNaN(v) && Math.abs(v-prob.answer)<1e-9; }
 
+// ===== Mistake diagnosis =====
+// yours: typed string (input problems) or selected option index (mc problems)
+const NOTES={
+  "regroup":"That is what you get when a column adds up past 9 (or comes up short) and the carry or borrow gets lost. Watch the column that needs regrouping.",
+  "alignment":"That is what you get when you line up the <b>ends</b> of the numbers instead of the <b>decimal points</b>.",
+  "chop":"That is the number chopped off, not rounded. When the deciding digit is 5 or more, the underlined digit has to go up.",
+  "direction":"You rounded the wrong way. Look at the deciding digit: 5 or more goes up, 4 or less stays.",
+  "place":"You rounded to a different seat than the one asked for. Underline the right seat first.",
+  "half-up":"That one looks close, but its deciding digit is 5, so it rounds up to the next one, not down.",
+  "below":"That one rounds down to the number below the target.",
+  "above":"That one rounds to the number above the target.",
+  "count":"The number of slides did not match. Each zero in 10, 100, 1,000 (or each 1 in the exponent) is one slide.",
+  "trailing-zeros":"The number already ended in zeros. Counting zeros instead of sliding digits misses those.",
+  "shift-dir":"The digits slid the wrong way. Multiplying makes a number bigger, so digits slide left; dividing slides right.",
+  "length":"Longer is not bigger with decimals. Line up the dots and compare seat by seat from the left.",
+  "equal":"Those are not the same number. Line up the dots and compare seat by seat.",
+  "ignore-place":"You compared the decimal digits as if they were whole numbers without giving them the same number of places first.",
+  "reversed":"That is the right order, backwards. Check which way the question asked for.",
+  "leading-zero":"The zero right after the dot is silent, but it still counts as a digit. It pushes the name out one more place.",
+  "place-name":"The name comes from how many digits are after the dot: 1 is tenths, 2 is hundredths, 3 is thousandths.",
+  "missing-place":"Word form needs the place name at the end. Without it, nobody knows how big the decimal part is.",
+  "dropped-digit":"A digit went missing. Read all the digits after the dot as one number.",
+  "whole":"The whole-number part slipped. Everything before the dot (or before the word 'and') is the whole number.",
+  "skip-zero":"You skipped the zero and slid the next digit into its seat. A zero gets no piece, but it still holds its seat.",
+  "shift":"One piece landed in the wrong seat. Match each digit to the seat it sits in.",
+  "missing-piece":"A piece is missing. Every digit that is not zero gets a piece.",
+  "whole-value":"A whole-number piece has the wrong value. Check which seat that digit sits in.",
+  "dec-as-whole":"Decimal digits were treated like whole numbers. Digits after the dot are worth 1/10, 1/100, 1/1000.",
+  "zeros":"The digits are right but they landed in the wrong seats. Count the zeros you need right after the dot.",
+  "no-whole":"There is no word 'and', so there is no whole number. Start with 0 and the dot.",
+  "other":""
+};
+function diagnose(prob, yours){
+  let tag="other";
+  const m=prob.meta||{};
+  if(prob.type==="mc"){ const i=+yours; tag=(prob.optionTags && prob.optionTags[i]) || "other"; if(tag==="correct") tag="other"; }
+  else {
+    const v=parseAnswer(yours);
+    if(!isNaN(v)){
+      if(prob.skill==="addsub" && m.nums){
+        const {nums,op,k}=m;
+        // misaligned: treat numbers as digit strings right-aligned
+        const raw=nums.map(x=>parseInt(String(x.w)+x.d,10)); const mis = op==="+" ? raw.reduce((a,b)=>a+b,0) : raw[0]-raw[1];
+        const misVals=[mis/Math.pow(10,k), mis/Math.pow(10,Math.max(...nums.map(x=>x.d.length)))];
+        // no regrouping: column-wise mod 10 / absolute difference
+        const scale=Math.pow(10,3-k); const ints=nums.map(x=>toThousandths(x)/scale); const width=Math.max(...ints.map(x=>String(x).length));
+        const digs=ints.map(x=>String(x).padStart(width,"0").split("").map(Number).reverse());
+        let nr=0; for(let j=0;j<width;j++){ const col=digs.map(d=>d[j]); const dgt = op==="+" ? col.reduce((a,b)=>a+b,0)%10 : Math.abs(col[0]-col[1]); nr+=dgt*Math.pow(10,j); }
+        const nrVal=nr/Math.pow(10,k);
+        if(misVals.some(x=>near(x,v))) tag="alignment";
+        else if(near(nrVal,v) && !near(v,prob.answer)) tag="regroup";
+        else if(hasRegroup(nums,op,k)) tag="regroup";
+        else tag="alignment";
+      } else if(prob.skill==="rounding" && m.p!==undefined && !m.which){
+        const {V,p,R,C}=m; const unit=Math.pow(10,p+3);
+        const toV=Math.round(v*1000);
+        if(toV===C && C!==R) tag="chop";
+        else if(Math.abs(toV-R)===unit) tag="direction";
+        else { let other=false; for(let q=-3;q<=6;q++){ if(q!==p && roundV(V,q)===toV){ other=true; break; } } tag = other ? "place" : (toV===V ? "place" : "other"); }
+      } else if(prob.skill==="shift" && m.V!==undefined){
+        const {V,op,factor}=m; const toV=Math.round(v*1000);
+        const wrongDir = op==="×" ? V/factor : V*factor;
+        if(Math.abs(toV-wrongDir)<0.5) tag="shift-dir";
+        else { const ratio=toV/(op==="×"?V*factor:V/factor); tag = (Math.abs(ratio-10)<1e-6||Math.abs(ratio-0.1)<1e-6||Math.abs(ratio-100)<1e-6||Math.abs(ratio-0.01)<1e-6) ? "count" : "other"; }
+      } else if(prob.skill==="powers" && m.V!==undefined){
+        const ratio=v/prob.answer; const lg=Math.log10(ratio);
+        if(Math.abs(lg-Math.round(lg))<1e-6 && Math.round(lg)!==0) tag = m.baseZeros ? "trailing-zeros" : "count"; else tag="other";
+      } else if(prob.skill==="standard" && m.num){
+        const {num}=m; const s=String(v);
+        const digitsOnly=x=>String(x).replace(/[^0-9]/g,"").replace(/^0+/,"");
+        if(Math.floor(v)!==num.w) tag = num.w===0 ? "no-whole" : "whole";
+        else if(digitsOnly(s)===digitsOnly(fmt(num).replace(/,/g,"")) || digitsOnly(s.split(".")[1]||"")===digitsOnly(num.d)) tag="zeros";
+        else tag="zeros";
+      }
+    }
+  }
+  return {tag, note: NOTES[tag]||""};
+}
+// Build a focus object so the follow-up targets the same mistake
+function focusFor(prob, tag){
+  const m=prob.meta||{}; const f={tag};
+  if(prob.skill==="addsub"){ f.op=m.op; }
+  if(prob.skill==="rounding"){ f.p=m.p; f.which=!!m.which; }
+  if(prob.skill==="shift"){ f.op=m.op; f.factor=m.factor; if(tag==="shift-dir") f.tag="direction"; }
+  if(prob.skill==="powers"){ f.e=m.e; }
+  if(prob.skill==="compare"){ f.order = !!(m.nums); }
+  return f;
+}
+
 // ===== Progression =====
-// hist: last few results for a skill (1 = right, 0 = wrong). Returns +1 (level up), -1 (level down), or 0.
+// hist: last few INDEPENDENT results for a skill (1 = right, 0 = wrong). Returns +1 (level up), -1 (level down), or 0.
 function applyResult(hist, level, ok){
   hist.push(ok?1:0); while(hist.length>6) hist.shift();
   const last4=hist.slice(-4), last3=hist.slice(-3);
@@ -657,19 +832,21 @@ function applyResult(hist, level, ok){
 <script>
 // ===== State & storage =====
 // DB = {profiles:{name:S}, current:name}. S = one player's progress.
-const KEY="math-practice-v2", OLD_KEY="math-practice-v1";
+const KEY="math-practice-v2", OLD_KEY="math-practice-v1", LOG_CAP=500;
 const todayStr=()=>{ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
 const blankProfile=name=>({name, levels:Object.fromEntries(SKILL_ORDER.map(s=>[s,1])), hist:Object.fromEntries(SKILL_ORDER.map(s=>[s,[]])),
-  correct:0, attempted:0, best:0, run:0, today:{d:todayStr(), c:0, a:0}, log:[], created:Date.now()});
+  correct:0, attempted:0, best:0, run:0, guided:0, persist:0, logTrimmed:0, today:{d:todayStr(), c:0, a:0}, log:[], created:Date.now()});
 function normalize(p){ // fill in anything missing (older saves, imports)
   const b=blankProfile(p.name||"Player");
   const out={...b, ...p, levels:{...b.levels, ...(p.levels||{})}, hist:{...b.hist, ...(p.hist||{})}, today:{...b.today, ...(p.today||{})}, log:Array.isArray(p.log)?p.log:[]};
   for(const k of SKILL_ORDER){ out.levels[k]=Math.min(MAX_LEVEL, Math.max(1, +out.levels[k]||1)); if(!Array.isArray(out.hist[k])) out.hist[k]=[]; }
+  for(const k of ["correct","attempted","best","run","guided","persist","logTrimmed"]) out[k]=Math.max(0, +out[k]||0);
   if(out.today.d!==todayStr()) out.today={d:todayStr(), c:0, a:0};
   return out;
 }
 let DB={profiles:{}, current:null};
 let S=null;
+let saveFailed=false; // set when localStorage refuses to write (quota, private mode)
 function load(){
   try{
     const raw=localStorage.getItem(KEY);
@@ -683,7 +860,10 @@ function load(){
   if(DB.current && !DB.profiles[DB.current]) DB.current=null;
   S = DB.current ? DB.profiles[DB.current] : null;
 }
-function save(){ try{ if(S) DB.profiles[S.name]=S; localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){} }
+function save(){
+  try{ if(S) DB.profiles[S.name]=S; localStorage.setItem(KEY, JSON.stringify(DB)); saveFailed=false; return true; }
+  catch(e){ saveFailed=true; return false; }
+}
 load();
 
 // ===== View helpers =====
@@ -691,6 +871,7 @@ const app=document.getElementById("app");
 const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 const plain=h=>String(h).replace(/<br\s*\/?>/g," ").replace(/<[^>]+>/g,"").replace(/&nbsp;/g," ").replace(/&lt;/g,"<").replace(/&amp;/g,"&").replace(/\s+/g," ").trim();
 const cap=s=>s.replace(/(^|\s)\S/g,c=>c.toUpperCase());
+const warnHTML=()=>saveFailed?`<div class="warn" role="status">Progress could not be saved on this device. Use the backup on the grown-ups page.</div>`:"";
 
 function chartHTML(num, hl, minCols, compact){
   if(num==="blank"||!num) return `<div class="chart"><table>${chartHeader(3)}<tr>${"<td></td>".repeat(3)}<td class="point">•</td>${"<td></td>".repeat(3)}</tr></table></div>`;
@@ -708,21 +889,32 @@ function chartsHTML(s){ // a step or hint may carry one chart or several
   if(s.charts){ return s.charts.map((n,i)=>chartHTML(n, s.hl, s.minCols, i>0)).join(""); }
   return s.chart ? chartHTML(s.chart, s.hl, s.minCols) : "";
 }
-function dots(level){ return `<div class="dots" aria-label="level ${level} of ${MAX_LEVEL}">${Array.from({length:MAX_LEVEL},(_,i)=>i+1).map(i=>`<span class="dot ${i<=level?(level===MAX_LEVEL?"max":"on"):""}"></span>`).join("")}</div>`; }
+function dots(level){ return `<div class="dots" role="img" aria-label="level ${level} of ${MAX_LEVEL}">${Array.from({length:MAX_LEVEL},(_,i)=>i+1).map(i=>`<span class="dot ${i<=level?(level===MAX_LEVEL?"max":"on"):""}"></span>`).join("")}</div>`; }
+const optsHTML=(id, options, sel, answer, done, cls)=>{ // MC radiogroup. done => show right/wrong and disable
+  const longOpts=options.some(o=>String(o).length>34);
+  return `<div class="opts ${longOpts?"long":""}" id="${id}" role="radiogroup" aria-label="Answer choices">${options.map((o,i)=>{ let c=cls; if(done){ if(i===answer) c+=" right"; else if(i===sel) c+=" wrong"; } else if(i===sel) c+=" sel";
+    return `<button type="button" class="${c}" role="radio" aria-checked="${i===sel}" data-i="${i}" ${done?"disabled":""}><b aria-hidden="true">${"abcd"[i]}.</b>&nbsp; ${esc(o)}</button>`; }).join("")}</div>`; };
 
 // ===== Screens =====
 let mode=null;   // skill key or "mix"
 let cur=null;    // current problem
-let phase="q";   // q | ok | wt | retry | reveal
-let stepIdx=0, isRetry=false, selected=-1, lastAnswer="", hintIdx=0, lastChange=0, inlineErr="";
+let phase="q";   // q | ok | wt | reveal
+let stage="fresh"; // fresh | followup
+let chain=0;     // misses in the current help chain
+let chainLeveled=false; // has this chain already cost a level on a follow-up miss
+let stepIdx=0, selected=-1, lastAnswer="", hintIdx=0, lastChange=0, inlineErr="";
+let sc=null;     // state of the current step's check: {tries, state:"open"|"ok"|"revealed", val, sel, msg}
+let stepRes=[];  // per-step outcome for the walkthrough ("ok" | "revealed")
+let revealed=0, passed=0, missEntry=null;
 
 function askName(){
   app.innerHTML=`
-    <h1>${Object.keys(DB.profiles).length?"New player":"Hi there."}</h1>
+    <h1>${Object.keys(DB.profiles).length?"New player":"Hi there."}</h1>${warnHTML()}
     <p class="muted" style="margin:0 0 18px">What's your name? The app keeps a separate set of progress for each player.</p>
     <div class="card" style="margin-top:0">
+      <label class="vh" for="name">Your first name</label>
       <input class="ans" id="name" type="text" autocomplete="given-name" autocapitalize="words" placeholder="Your first name" maxlength="24">
-      <div class="inline-err" id="err"></div>
+      <div class="inline-err" id="err" role="status" aria-live="polite"></div>
       <div class="actions"><button class="btn primary" id="go">Let's go</button>${Object.keys(DB.profiles).length?`<button class="btn quiet" id="cancel">Cancel</button>`:""}</div>
     </div>`;
   const inp=app.querySelector("#name"); inp.focus();
@@ -733,14 +925,16 @@ function askName(){
   const c=app.querySelector("#cancel"); if(c) c.onclick=players;
 }
 function players(){
+  cur=null;
   const names=Object.keys(DB.profiles).sort((a,b)=>(DB.profiles[b].today.a||0)-(DB.profiles[a].today.a||0) || a.localeCompare(b));
   app.innerHTML=`
-    <div class="topbar">${S?`<button class="btn quiet" id="back">Back</button>`:"<span></span>"}<h1 style="margin:0">Who's playing?</h1><span></span></div>
-    ${names.map(n=>{ const p=DB.profiles[n]; const lv=SKILL_ORDER.reduce((s,k)=>s+p.levels[k],0); return `<div class="profile"><div><div class="pname">${esc(n)}</div><div class="muted" style="font-size:13px">${p.attempted} tried · ${p.correct} right · ${lv-SKILL_ORDER.length} levels earned</div></div><button class="btn primary" data-name="${esc(n)}">${S&&S.name===n?"Continue":"Play"}</button></div>`; }).join("")}
+    <div class="topbar">${S?`<button class="btn quiet" id="back">Back</button>`:"<span></span>"}<h1 style="margin:0">Who's playing?</h1><span></span></div>${warnHTML()}
+    ${names.map(n=>{ const p=DB.profiles[n]; const lv=SKILL_ORDER.reduce((s,k)=>s+p.levels[k],0); return `<div class="profile"><div><div class="pname">${esc(n)}</div><div class="muted" style="font-size:13px">${p.attempted} tried · ${p.correct} right · ${lv-SKILL_ORDER.length} levels earned</div></div><button class="btn primary" data-name="${esc(n)}" aria-label="${S&&S.name===n?"Continue":"Play"} as ${esc(n)}">${S&&S.name===n?"Continue":"Play"}</button></div>`; }).join("")}
     <button class="btn" id="add" style="margin-top:10px;width:100%">+ Add a player</button>`;
   app.querySelectorAll("[data-name]").forEach(b=>b.onclick=()=>{ DB.current=b.dataset.name; S=DB.profiles[DB.current]; save(); home(); });
   app.querySelector("#add").onclick=askName;
   const bk=app.querySelector("#back"); if(bk) bk.onclick=home;
+  (app.querySelector("[data-name]")||app.querySelector("#add")).focus();
 }
 function home(){
   mode=null; cur=null;
@@ -749,7 +943,7 @@ function home(){
   const pct = S.attempted ? Math.round(100*S.correct/S.attempted) : null;
   const t=S.today;
   app.innerHTML=`
-    <div class="topbar"><h1 style="margin:0">Hi, ${esc(S.name)}.</h1><button class="btn quiet small" id="switch">Not ${esc(S.name)}?</button></div>
+    <div class="topbar"><h1 style="margin:0">Hi, ${esc(S.name)}.</h1><button class="btn quiet small" id="switch">Not ${esc(S.name)}?</button></div>${warnHTML()}
     <p class="muted" style="margin:6px 0 16px">Pick something to practice. It gets harder as you get better, and if you miss one, we slow down and walk through it.</p>
     <div class="skills">${SKILL_ORDER.map(k=>`<button class="skill" data-skill="${k}"><div style="flex:1"><div class="name">${SKILLS[k].name}</div><div class="blurb">${esc(SKILLS[k].blurb)}</div></div>${dots(S.levels[k])}</button>`).join("")}</div>
     <button class="btn primary mix" data-skill="mix">Mix it up</button>
@@ -758,6 +952,7 @@ function home(){
   app.querySelectorAll("[data-skill]").forEach(b=>b.onclick=()=>start(b.dataset.skill));
   app.querySelector("#switch").onclick=players;
   app.querySelector("#grown").onclick=grownups;
+  app.querySelector(".skill").focus({preventScroll:true});
 }
 
 function pickSkill(){
@@ -767,136 +962,280 @@ function pickSkill(){
   for(let i=0;i<weights.length;i++){ r-=weights[i]; if(r<=0) return SKILL_ORDER[i]; }
   return SKILL_ORDER[0];
 }
-function start(m){ mode=m; isRetry=false; next(); }
-function next(sameAs){
-  const sk = sameAs ? sameAs.skill : pickSkill();
-  cur=SKILLS[sk].gen(S.levels[sk]); phase="q"; stepIdx=0; selected=-1; hintIdx=0; lastChange=0; inlineErr=""; render();
+function resetProblemState(){ // everything that must not leak from one problem into the next
+  phase="q"; stepIdx=0; selected=-1; lastAnswer=""; hintIdx=0; lastChange=0; inlineErr="";
+  sc=null; stepRes=[]; revealed=0; passed=0; missEntry=null;
 }
+function start(m){ mode=m; next(); }
+function next(){ // a fresh problem: new help chain
+  const sk=pickSkill();
+  stage="fresh"; chain=0; chainLeveled=false;
+  cur=SKILLS[sk].gen(S.levels[sk]); resetProblemState(); render();
+}
+function followup(){ // "Try one like it": same skill, aimed at the same mistake
+  const prev=cur, sk=prev.skill, tag=prev.mistake?prev.mistake.tag:"other";
+  let focus; try{ focus = typeof focusFor==="function" ? focusFor(prev, tag) : undefined; }catch(e){ focus=undefined; }
+  stage="followup";
+  cur=SKILLS[sk].gen(S.levels[sk], focus); cur.focusTag=tag; resetProblemState(); render();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function initStepCheck(){ const s=cur.steps[stepIdx]; sc = s&&s.check ? {tries:0, state:"open", val:"", sel:-1, msg:""} : null; }
 
 function render(){
   const sk=cur.skill; const lvl=S.levels[sk];
   const top=`
     <div class="topbar"><button class="btn quiet" id="back">Home</button>
-      <div class="row"><span class="pill">${SKILLS[sk].name}</span>${dots(lvl)}</div></div>`;
+      <div class="row"><span class="pill">${SKILLS[sk].name}</span>${stage==="followup"?`<span class="pill">One like it</span>`:""}${dots(lvl)}</div></div>${warnHTML()}`;
   let body=`<p class="prompt">${cur.prompt}</p>`; let right="";
   const showChart = cur.show ? chartHTML(cur.show, null, cur.minCols) : "";
-  const optsHTML=(disabledAll)=>{ const longOpts=cur.options.some(o=>o.length>34);
-    return `<div class="opts ${longOpts?"long":""}">${cur.options.map((o,i)=>{ let c="opt"; if(phase!=="q"){ if(i===cur.answer) c+=" right"; else if(i===selected) c+=" wrong"; } else if(i===selected) c+=" sel"; return `<button class="${c}" data-i="${i}" ${disabledAll?"disabled":""}><b>${"abcd"[i]}.</b>&nbsp; ${esc(o)}</button>`; }).join("")}</div>`; };
+  const m=cur.mistake;
+  const noteHTML = m&&m.note ? `<small>${m.note}</small>` : "";
+  const downHTML = lastChange<0 ? `<small>That is two misses close together, so this skill drops a level for now. You will earn it back.</small>` : "";
   if(phase==="q"||phase==="ok"||phase==="reveal"){
     body+=showChart;
     if(cur.type==="input"){
-      body+=`<input class="ans" id="ans" inputmode="decimal" autocomplete="off" placeholder="Type your answer" ${phase!=="q"?"disabled":""} value="${phase!=="q"?esc(cur.display):esc(lastAnswer)}">`;
-      if(phase==="q"&&inlineErr) body+=`<div class="inline-err">${esc(inlineErr)}</div>`;
-    } else body+=optsHTML(phase!=="q");
+      body+=`<label class="vh" for="ans">Your answer</label><input class="ans" id="ans" inputmode="decimal" autocomplete="off" placeholder="Type your answer" ${phase!=="q"?"disabled":""} value="${phase!=="q"?esc(cur.display):esc(lastAnswer)}">`;
+      if(phase==="q") body+=`<div class="inline-err" id="ierr" role="status" aria-live="polite">${esc(inlineErr)}</div>`;
+    } else body+=optsHTML("opts", cur.options, selected, cur.answer, phase!=="q", "opt");
     if(phase==="q"){
-      body+=`<div class="hints" id="hints">${cur.hints.slice(0,hintIdx).map((h,i)=>`<div class="step"><span class="n">Hint ${i+1}.</span>${h.t}${chartsHTML(h)}</div>`).join("")}</div>
+      body+=`<div class="hints" id="hints" aria-live="polite">${cur.hints.slice(0,hintIdx).map((h,i)=>`<div class="step"><span class="n">Hint ${i+1}.</span>${h.t}${chartsHTML(h)}</div>`).join("")}</div>
         <div class="actions"><button class="btn primary" id="check">Check</button><button class="btn quiet" id="showhint" ${hintIdx>=cur.hints.length?"disabled":""}>${hintIdx===0?"Hint":hintIdx<cur.hints.length?"Another hint":"No more hints"}</button></div>`;
     }
     if(phase==="ok"){
-      const msgs=isRetry?["You got it on the second try. That counts.","Nice recovery. That one counts.","There it is."]:["Correct.","Yes.","Nailed it.","That's right."];
-      body+=`<div class="banner ok"><span class="mark">✓</span><div>${pick(msgs)}${S.run>=3?`<small>${S.run} in a row.</small>`:""}${lastChange>0?`<span class="lvl">Level up! ${SKILLS[sk].name} is now level ${lvl}${lvl===MAX_LEVEL?", the top":""}.</span>`:""}</div></div>
+      const independent = stage==="fresh" && hintIdx===0;
+      let msg;
+      if(independent) msg=pick(["Correct.","Yes.","Nailed it.","That's right."])+(S.run>=3?`<small>${S.run} in a row.</small>`:"")+(lastChange>0?`<span class="lvl">Level up! ${SKILLS[sk].name} is now level ${lvl}${lvl===MAX_LEVEL?", the top":""}.</span>`:"");
+      else if(stage==="fresh") msg=`You got it with a hint.<small>Level-ups come from problems you do on your own, so the next one is fresh, no hints needed yet.</small>`;
+      else msg=`You worked through it. Persistence counts.<small>Here comes a fresh one.${S.persist>=2?` That is ${S.persist} tough ones finished in a row.`:""}</small>`;
+      body+=`<div class="banner ok" role="status" aria-live="polite"><span class="mark" aria-hidden="true">✓</span><div>${msg}</div></div>
         <div class="actions"><button class="btn primary" id="next">Next</button></div>`;
     }
     if(phase==="reveal"){
-      right=`<div class="banner no" style="margin-top:0"><span class="mark">✕</span><div>Not this time. The answer is ${esc(cur.display)}.<small>${lastChange<0?"We'll drop the level down a notch and build back up. That is what the levels are for.":"Read the steps once more, then we keep going."}</small></div></div>
-        <div class="wt">${cur.steps.map((s,i)=>stepHTML(s,i,false)).join("")}</div>
+      right=`<div class="banner no" style="margin-top:0" role="status" aria-live="polite"><span class="mark" aria-hidden="true">✕</span><div>Let's look at the whole thing once more, then start fresh with an easier one.<small>The answer is <b>${esc(cur.display)}</b>.</small>${noteHTML}${downHTML}</div></div>
+        <div class="wt">${cur.steps.map((s,i)=>stepHTML(s,i,false,false)).join("")}</div>
         <div class="actions"><button class="btn primary" id="next">Next</button></div>`;
     }
   }
   if(phase==="wt"){
-    const total=cur.steps.length;
+    const total=cur.steps.length, last=stepIdx===total-1, step=cur.steps[stepIdx];
+    const open = sc && sc.state==="open";
     body+=showChart;
-    if(cur.type==="input") body+=`<div class="yours">Your answer</div><input class="ans" disabled value="${esc(lastAnswer)}">`;
-    else body+=`<div class="opts ${cur.options.some(o=>o.length>34)?"long":""}">${cur.options.map((o,i)=>`<button class="opt ${i===selected?"wrong":""}" disabled><b>${"abcd"[i]}.</b>&nbsp; ${esc(o)}</button>`).join("")}</div>`;
-    right=`<div class="banner no" style="margin-top:0"><span class="mark">✕</span><div>Not yet. Let's walk through it.<small>Step ${stepIdx+1} of ${total}</small>${lastChange<0?`<small>That is two misses close together, so this skill drops a level for now. You will earn it back.</small>`:""}</div></div>
-      <div class="progress"><i style="width:${Math.round(100*(stepIdx+1)/total)}%"></i></div>
-      <div class="wt" id="wt">${cur.steps.slice(0,stepIdx+1).map((s,i)=>stepHTML(s,i,i<stepIdx)).join("")}</div>
-      <div class="actions">${stepIdx<total-1?`<button class="btn primary" id="step">Next step</button>`:`<button class="btn primary" id="retry">Try one like it</button>`}</div>`;
+    if(cur.type==="input") body+=`<div class="yours" id="yourslbl">Your answer</div><input class="ans" disabled aria-labelledby="yourslbl" value="${esc(lastAnswer)}">`;
+    else body+=optsHTML("opts", cur.options, selected, -1, true, "opt");
+    const head = chain>=2 ? "Still not there. One more walk through, then another try." : "Not yet. Let's walk through it.";
+    right=`<div class="banner no" style="margin-top:0" role="status" aria-live="polite"><span class="mark" aria-hidden="true">✕</span><div>${head}${noteHTML}<small>Step ${stepIdx+1} of ${total}</small>${downHTML}</div></div>
+      <div class="progress" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${stepIdx+1}" aria-label="Walkthrough progress"><i style="width:${Math.round(100*(stepIdx+1)/total)}%"></i></div>
+      <div class="wt" id="wt">${cur.steps.slice(0,stepIdx+1).map((s,i)=>stepHTML(s,i,i<stepIdx,true)).join("")}</div>
+      <div class="actions">${open?"":(!last?`<button class="btn primary" id="step">Next step</button>`:`<button class="btn primary" id="retry">Try one like it</button>`)}</div>`;
   }
   const card = right ? `<div class="card two"><div class="left">${body}</div><div class="right">${right}</div></div>` : `<div class="card">${body}</div>`;
   app.innerHTML=top+card+`<p class="streak" style="margin-top:12px">${S.today.c} right today${S.run>=2?` · ${S.run} in a row`:""}</p>`;
   bind();
 }
-function stepHTML(s,i,dim){ return `<div class="step ${dim?"dim":""}"><span class="n">${i+1}.</span>${s.t}${chartsHTML(s)}</div>`; }
+function stepHTML(s,i,dim,withCheck){
+  let sub="";
+  if(withCheck && s.check){
+    const c=s.check;
+    if(i<stepIdx){ // an earlier step: show how its check went
+      const r=stepRes[i];
+      sub=`<div class="substep ${r==="ok"?"ok":"bad"}">${c.q}<div class="res"><span aria-hidden="true">${r==="ok"?"✓":"•"}</span> ${r==="ok"?`You got <b>${esc(c.display)}</b>.`:`It's <b>${esc(c.display)}</b>.`}</div></div>`;
+    } else if(sc){
+      const open=sc.state==="open";
+      let ctl;
+      if(c.type==="mc") ctl=optsHTML("copts", c.options||[], sc.sel, c.answer, !open, "opt copt");
+      else ctl=`<label class="vh" for="cans">Your answer for this step</label><input class="ans small" id="cans" inputmode="decimal" autocomplete="off" placeholder="Your answer" ${open?"":"disabled"} value="${esc(open?sc.val:c.display)}">`;
+      sub=`<div class="substep ${sc.state==="ok"?"ok":sc.state==="revealed"?"bad":""}"><div class="cq">${c.q}</div>${ctl}
+        <div class="inline-msg" id="cmsg" role="status" aria-live="polite">${sc.msg}</div>
+        ${open?`<div class="actions" style="margin-top:10px"><button class="btn primary" id="cstep">Check step</button></div>`:""}</div>`;
+    }
+  }
+  return `<div class="step ${dim?"dim":""}"><span class="n">${i+1}.</span>${s.t}${chartsHTML(s)}${sub}</div>`;
+}
+function focusFirst(){
+  const el = ["#ans:not([disabled])","#cans:not([disabled])","#check","#cstep","#step","#retry","#next"].map(s=>app.querySelector(s)).find(Boolean);
+  if(el) el.focus({preventScroll:true});
+}
 function bind(){
   const q=id=>app.querySelector("#"+id);
   q("back").onclick=home;
   if(q("check")){
     q("check").onclick=submit;
-    const inp=q("ans"); if(inp){ inp.focus(); inp.addEventListener("keydown",e=>{ if(e.key==="Enter") submit(); }); inp.addEventListener("input",()=>{ lastAnswer=inp.value; }); }
-    app.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{ selected=+b.dataset.i; app.querySelectorAll(".opt").forEach(x=>x.classList.toggle("sel",+x.dataset.i===selected)); });
+    const inp=q("ans"); if(inp) inp.addEventListener("input",()=>{ lastAnswer=inp.value; });
+    app.querySelectorAll("#opts .opt").forEach(b=>b.onclick=()=>setSel("opts",+b.dataset.i));
     q("showhint").onclick=()=>{ if(hintIdx<cur.hints.length){ hintIdx++; inlineErr=""; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const hs=app.querySelectorAll("#hints .step"); if(hs.length) hs[hs.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); } };
   }
-  if(q("next")) q("next").onclick=()=>{ isRetry=false; lastAnswer=""; next(); };
-  if(q("step")) q("step").onclick=()=>{ stepIdx++; render(); const st=app.querySelectorAll("#wt .step"); if(st.length) st[st.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); };
-  if(q("retry")) q("retry").onclick=()=>{ isRetry=true; lastAnswer=""; next(cur); };
+  if(q("cstep")){
+    q("cstep").onclick=checkStep;
+    const ci=q("cans"); if(ci) ci.addEventListener("input",()=>{ sc.val=ci.value; });
+    app.querySelectorAll("#copts .opt").forEach(b=>b.onclick=()=>setSel("copts",+b.dataset.i));
+  }
+  if(q("next")) q("next").onclick=next;
+  if(q("step")) q("step").onclick=()=>{ stepIdx++; initStepCheck(); render(); const st=app.querySelectorAll("#wt .step"); if(st.length) st[st.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); };
+  if(q("retry")) q("retry").onclick=followup;
+  focusFirst();
 }
-function logAttempt(ok, yours){
-  S.log.push({t:Date.now(), sk:cur.skill, lvl:cur.level, q:plain(cur.prompt), yours:String(yours), ans:cur.display, ok:ok?1:0, retry:isRetry?1:0, hints:hintIdx});
-  while(S.log.length>500) S.log.shift();
+function setSel(groupId, i, focusIt){ // select an MC option without re-rendering
+  if(groupId==="opts") selected=i; else if(sc) sc.sel=i;
+  app.querySelectorAll("#"+groupId+" .opt").forEach(x=>{ const on=+x.dataset.i===i; x.classList.toggle("sel",on); x.setAttribute("aria-checked",on); if(on&&focusIt) x.focus({preventScroll:true}); });
 }
+function activeGroup(){ // the MC radiogroup the keyboard should drive right now, if any
+  if(phase==="q"&&cur.type==="mc") return {id:"opts", n:cur.options.length, get:()=>selected};
+  if(phase==="wt"&&sc&&sc.state==="open"&&cur.steps[stepIdx].check.type==="mc") return {id:"copts", n:(cur.steps[stepIdx].check.options||[]).length, get:()=>sc.sel};
+  return null;
+}
+app.addEventListener("keydown", e=>{ // keyboard for the practice screen: Enter checks, 1-4 / a-d pick, arrows move
+  if(!cur) return;
+  const tg=e.target, tag=tg.tagName, isOpt=tg.classList&&tg.classList.contains("opt");
+  if(tag==="TEXTAREA"||e.altKey||e.ctrlKey||e.metaKey) return;
+  const g=activeGroup();
+  if(e.key==="Enter"){
+    if(tag==="BUTTON"&&!isOpt) return; // let ordinary buttons click natively
+    e.preventDefault();
+    if(isOpt&&g&&g.get()<0){ setSel(g.id,+tg.dataset.i); return; }
+    if(phase==="q") submit(); else if(phase==="wt"&&sc&&sc.state==="open") checkStep();
+    return;
+  }
+  if(tag==="INPUT"||!g) return;
+  const k=e.key.toLowerCase(); let idx=-1;
+  if(/^[1-4]$/.test(k)) idx=+k-1;
+  else if(/^[a-d]$/.test(k)) idx="abcd".indexOf(k);
+  else if(k==="arrowdown"||k==="arrowright") idx=(g.get()+1)%g.n;
+  else if(k==="arrowup"||k==="arrowleft") idx=(g.get()-1+g.n)%g.n;
+  else return;
+  if(idx>=g.n) return;
+  e.preventDefault(); setSel(g.id, idx, k.startsWith("arrow")||isOpt);
+});
+
+function pushLog(e){
+  S.log.push(e);
+  while(S.log.length>LOG_CAP){ S.log.shift(); S.logTrimmed=(S.logTrimmed||0)+1; }
+  return e;
+}
+function diag(yours){ try{ return (typeof diagnose==="function" && diagnose(cur, yours)) || {tag:"other", note:""}; }catch(e){ return {tag:"other", note:""}; } }
 function submit(){
-  let ok, yours;
+  let ok, yours, raw;
   if(cur.type==="input"){ const inp=app.querySelector("#ans"); const v=inp.value; lastAnswer=v; if(!v.trim()){ inp.focus(); return; }
-    if(isNaN(parseAnswer(v))){ inlineErr="Type a number, like 72.585"; render(); return; } ok=checkInput(cur,v); yours=v.trim(); }
-  else { if(selected<0) return; ok=(selected===cur.answer); yours=cur.options[selected]; }
+    if(isNaN(parseAnswer(v))){ inlineErr="Type a number, like 72.585"; render(); return; } ok=checkInput(cur,v); yours=v.trim(); raw=v; }
+  else { if(selected<0){ inlineErr=""; const f=app.querySelector("#opts .opt"); if(f) f.focus(); return; } ok=(selected===cur.answer); yours=cur.options[selected]; raw=selected; }
   inlineErr="";
   const sk=cur.skill; S=normalize(S); S.attempted++; S.today.a++;
-  logAttempt(ok, yours);
-  const res=applyResult(S.hist[sk], S.levels[sk], ok);
-  S.levels[sk]=res.level; S.hist[sk]=res.hist; lastChange=res.change;
-  if(ok){ S.correct++; S.today.c++; S.run++; S.best=Math.max(S.best,S.run); phase="ok"; }
-  else { S.run=0; if(!isRetry){ phase="wt"; stepIdx=0; } else phase="reveal"; }
+  const independent = ok && stage==="fresh" && hintIdx===0;
+  const entry={t:Date.now(), sk, lvl:cur.level, q:plain(cur.prompt), yours:String(yours), ans:cur.display, ok:ok?1:0, stage, hints:hintIdx, independent:independent?1:0, tag: cur.mistake ? cur.mistake.tag : (cur.focusTag||"")};
+  lastChange=0;
+  if(ok){
+    S.correct++; S.today.c++; S.run++; S.best=Math.max(S.best,S.run);
+    if(independent){ const res=applyResult(S.hist[sk], S.levels[sk], true); S.levels[sk]=res.level; S.hist[sk]=res.hist; lastChange=res.change; }
+    else { S.guided++; S.persist++; }
+    pushLog(entry); phase="ok";
+  } else {
+    S.run=0;
+    const d=diag(raw); cur.mistake=d; entry.tag=d.tag;
+    if(stage==="fresh"){ chain=1; const res=applyResult(S.hist[sk], S.levels[sk], false); S.levels[sk]=res.level; S.hist[sk]=res.hist; lastChange=res.change; }
+    else { chain++; if(!chainLeveled){ chainLeveled=true; const res=applyResult(S.hist[sk], S.levels[sk], false); S.levels[sk]=res.level; S.hist[sk]=res.hist; lastChange=res.change; } }
+    missEntry=pushLog(entry);
+    if(chain<3){ phase="wt"; stepIdx=0; stepRes=[]; revealed=0; passed=0; initStepCheck(); }
+    else { phase="reveal"; S.persist=0; }
+  }
   save(); render();
-  if(phase==="wt") window.scrollTo({top:0,behavior:"smooth"});
+  if(phase!=="ok") window.scrollTo({top:0,behavior:"smooth"});
+}
+function checkStep(){
+  const c=cur.steps[stepIdx].check; if(!sc||sc.state!=="open") return;
+  let ok;
+  if(c.type==="mc"){ if(sc.sel<0){ const f=app.querySelector("#copts .opt"); if(f) f.focus(); return; } ok = sc.sel===c.answer; }
+  else { const inp=app.querySelector("#cans"); const v=inp.value; sc.val=v; if(!v.trim()){ inp.focus(); return; }
+    const n=parseAnswer(v); if(isNaN(n)){ sc.msg="Type a number, like 72.585"; render(); return; } ok = Math.abs(n-c.answer)<1e-9; }
+  const last = stepIdx===cur.steps.length-1;
+  if(ok){ sc.state="ok"; sc.msg=`<span aria-hidden="true">✓</span> That's it.`; passed++; stepRes[stepIdx]="ok"; }
+  else { sc.tries++;
+    if(sc.tries<2){ sc.msg="Not quite. Try once more."; sc.val=""; sc.sel=-1; }
+    else { sc.state="revealed"; sc.msg=`It's <b>${esc(c.display)}</b>.`; revealed++; stepRes[stepIdx]="revealed"; } }
+  if(missEntry){ missEntry.revealed=revealed; missEntry.passed=passed; }
+  if(last && sc.state==="ok"){ // finished the whole problem inside the walkthrough: a guided completion
+    S.guided++;
+    pushLog({t:Date.now(), sk:cur.skill, lvl:cur.level, q:plain(cur.prompt), yours:c.type==="mc"?String((c.options||[])[sc.sel]):String(sc.val).trim(), ans:cur.display, ok:1, guided:1, stage:"wt", hints:hintIdx, independent:0, tag:cur.mistake?cur.mistake.tag:"", revealed, passed});
+  }
+  save(); render();
 }
 
 // ===== Grown-ups =====
 function fmtDate(ts){ const d=new Date(ts); return d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+" "+d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}); }
+const isFresh=e=>e.stage?e.stage==="fresh":!e.retry; // older entries have retry instead of stage
+const indep=e=>e.independent!==undefined?e.independent:((isFresh(e)&&!e.hints)?1:0);
+const fmtBytes=n=>n<1024?n+" bytes":n<1048576?(n/1024).toFixed(1)+" KB":(n/1048576).toFixed(2)+" MB";
+function validateBackup(text){ // returns {ok:true, db, summary} or {ok:false, err}
+  let o; try{ o=JSON.parse(text); }catch(e){ return {ok:false, err:"That is not valid backup text (it did not parse as JSON). Make sure you copied all of it."}; }
+  if(!o||typeof o!=="object"||Array.isArray(o)) return {ok:false, err:"The backup should be a single block of text starting with { and ending with }."};
+  if(!o.profiles||typeof o.profiles!=="object"||Array.isArray(o.profiles)) return {ok:false, err:"The backup has no 'profiles' section, so it is not from this app."};
+  const names=Object.keys(o.profiles); if(!names.length) return {ok:false, err:"The backup has no players in it."};
+  const summary=[];
+  for(const n of names){ const p=o.profiles[n];
+    if(!p||typeof p!=="object") return {ok:false, err:`Player "${n}" is not a valid record.`};
+    if(!p.levels||typeof p.levels!=="object"||Array.isArray(p.levels)) return {ok:false, err:`Player "${n}" has no levels.`};
+    for(const k of SKILL_ORDER){ if(k in p.levels){ const v=p.levels[k]; if(typeof v!=="number"||!Number.isFinite(v)||v<1||v>MAX_LEVEL) return {ok:false, err:`Player "${n}" has an impossible level for ${SKILLS[k].name} (${String(v)}). Levels run 1 to ${MAX_LEVEL}.`}; } }
+    if(p.log!==undefined && !Array.isArray(p.log)) return {ok:false, err:`Player "${n}" has a history that is not a list.`};
+    const att = Array.isArray(p.log) ? p.log.length : (+p.attempted||0);
+    summary.push(`${n} (${att} attempt${att===1?"":"s"})`);
+  }
+  return {ok:true, db:o, names, summary};
+}
 function grownups(){
-  S=normalize(S);
+  cur=null; S=normalize(S);
   const log=S.log;
-  const rows=SKILL_ORDER.map(k=>{ const a=log.filter(e=>e.sk===k); const last=a.slice(-20); const acc=last.length?Math.round(100*last.filter(e=>e.ok).length/last.length):null;
-    const hinted=last.filter(e=>e.hints>0).length;
-    return `<tr><td><b>${SKILLS[k].name}</b></td><td>${S.levels[k]} of ${MAX_LEVEL}</td><td>${a.length}</td><td>${acc===null?"—":acc+"%"}${last.length&&last.length<20?` <span class="muted">(${last.length})</span>`:""}</td><td>${last.length?hinted+" of "+last.length:"—"}</td></tr>`; }).join("");
+  const rows=SKILL_ORDER.map(k=>{ const a=log.filter(e=>e.sk===k);
+    const ind=a.filter(e=>isFresh(e)&&!e.hints&&!e.guided).slice(-20); const indRight=ind.filter(e=>e.ok).length;
+    const guided=a.filter(e=>e.ok&&indep(e)===0).length;
+    const missTags=a.filter(e=>!e.ok).slice(-20).map(e=>e.tag).filter(Boolean);
+    const cnt={}; for(const t of missTags) cnt[t]=(cnt[t]||0)+1; const topTag=Object.keys(cnt).sort((x,y)=>cnt[y]-cnt[x])[0];
+    return `<tr><td><b>${SKILLS[k].name}</b></td><td>${S.levels[k]} of ${MAX_LEVEL}</td><td>${ind.length?`${indRight} of ${ind.length}`:"—"}</td><td>${guided||"—"}</td><td>${topTag?`${esc(topTag)} <span class="muted">(${cnt[topTag]})</span>`:"—"}</td></tr>`; }).join("");
   const misses=log.filter(e=>!e.ok).slice(-40).reverse();
-  const weekAgo=Date.now()-7*864e5; const week=log.filter(e=>e.t>=weekAgo);
+  const weekAgo=Date.now()-7*864e5; const week=log.filter(e=>e.t>=weekAgo&&!e.guided);
   const days=new Set(week.map(e=>new Date(e.t).toDateString())).size;
+  const exportText=JSON.stringify(DB); const nPlayers=Object.keys(DB.profiles).length;
   app.innerHTML=`
-    <div class="topbar"><button class="btn quiet" id="back">Home</button><h1 style="margin:0">${esc(S.name)}'s progress</h1><span></span></div>
-    <p class="muted" style="margin:6px 0 0">Last 7 days: ${week.length} problems on ${days} day${days===1?"":"s"}, ${week.length?Math.round(100*week.filter(e=>e.ok).length/week.length)+"% right":"no data yet"}. All time: ${S.correct} of ${S.attempted}.</p>
+    <div class="topbar"><button class="btn quiet" id="back">Home</button><h1 style="margin:0">${esc(S.name)}'s progress</h1><span></span></div>${warnHTML()}
+    <p class="muted" style="margin:6px 0 0">Last 7 days: ${week.length} problems on ${days} day${days===1?"":"s"}, ${week.length?Math.round(100*week.filter(e=>e.ok).length/week.length)+"% right":"no data yet"}. All time: ${S.correct} of ${S.attempted}. Guided completions: ${S.guided}. Current persistence streak: ${S.persist}.</p>
     <div class="card">
       <h2 style="margin-top:0">By skill</h2>
-      <div style="overflow-x:auto"><table class="report"><tr><th>Skill</th><th>Level</th><th>Tried</th><th>Last 20</th><th>Used a hint</th></tr>${rows}</table></div>
-      <p class="muted" style="font-size:13px;margin:10px 0 0">Levels go up after 3 right out of the last 4 and drop after 2 misses out of the last 3. Level ${MAX_LEVEL} mixes every trap at once.</p>
+      <div style="overflow-x:auto"><table class="report"><tr><th>Skill</th><th>Level</th><th>On their own<br><span style="text-transform:none;letter-spacing:0">right / tried, last 20</span></th><th>Guided completions</th><th>Common mistake</th></tr>${rows}</table></div>
+      <p class="muted" style="font-size:13px;margin:10px 0 0">"On their own" counts fresh problems answered with no hints; only those move levels. Levels go up after 3 right out of the last 4 and drop after 2 misses out of the last 3. Level ${MAX_LEVEL} mixes every trap at once. A guided completion is a problem finished with hints, inside a walkthrough, or on the follow-up.</p>
+      ${S.logTrimmed>0?`<p class="muted" style="font-size:13px;margin:6px 0 0">History shows the most recent ${LOG_CAP} attempts; older entries were trimmed.</p>`:""}
     </div>
     <div class="card">
       <h2 style="margin-top:0">Recent misses</h2>
-      ${misses.length?misses.map(e=>`<div class="miss"><div class="meta">${fmtDate(e.t)} · ${SKILLS[e.sk]?SKILLS[e.sk].name:e.sk} · level ${e.lvl}${e.retry?" · retry":""}${e.hints?" · "+e.hints+" hint"+(e.hints>1?"s":""):""}</div><div class="q">${esc(e.q)}</div><div class="a">Answered <span class="bad">${esc(e.yours)}</span> · correct: <span class="good">${esc(e.ans)}</span></div></div>`).join(""):`<p class="muted">No misses logged yet.</p>`}
+      ${misses.length?misses.map(e=>`<div class="miss"><div class="meta">${fmtDate(e.t)} · ${SKILLS[e.sk]?SKILLS[e.sk].name:esc(e.sk)} · level ${e.lvl} · ${e.stage?esc(e.stage):(e.retry?"retry":"fresh")}${e.hints?" · "+e.hints+" hint"+(e.hints>1?"s":""):""}${e.tag?` · <span class="tag">${esc(e.tag)}</span>`:""}${e.revealed!==undefined?` · walkthrough: ${e.passed||0} step${e.passed===1?"":"s"} right, ${e.revealed} shown`:""}</div><div class="q">${esc(e.q)}</div><div class="a">Answered <span class="bad">${esc(e.yours)}</span> · correct: <span class="good">${esc(e.ans)}</span></div></div>`).join(""):`<p class="muted">No misses logged yet.</p>`}
     </div>
     <div class="card">
       <h2 style="margin-top:0">Back up or move progress</h2>
       <p class="muted" style="font-size:14px;margin:0 0 8px">Progress lives only in this browser on this device. Copy this text somewhere safe (Notes, email to yourself) and paste it into the box on another device to carry everything over.</p>
-      <textarea class="io" id="export" readonly>${esc(JSON.stringify(DB))}</textarea>
-      <div class="actions" style="margin-top:8px"><button class="btn" id="copy">Copy backup</button><span class="muted" id="copied" style="font-size:13px"></span></div>
+      <label class="vh" for="export">Backup text</label>
+      <textarea class="io" id="export" readonly>${esc(exportText)}</textarea>
+      <div class="muted" style="font-size:13px;margin-top:4px">${fmtBytes(new Blob([exportText]).size)} · ${nPlayers} player${nPlayers===1?"":"s"}</div>
+      <div class="actions" style="margin-top:8px"><button class="btn" id="copy">Copy backup</button><span class="muted" id="copied" style="font-size:13px" role="status" aria-live="polite"></span></div>
       <h2>Restore from a backup</h2>
+      <label class="vh" for="import">Paste a backup here</label>
       <textarea class="io" id="import" placeholder="Paste a backup here"></textarea>
-      <div class="inline-err" id="imperr"></div>
+      <div class="inline-err" id="imperr" role="status" aria-live="polite"></div>
       <div class="actions" style="margin-top:8px"><button class="btn" id="doimport">Restore</button></div>
+    </div>
+    <div class="card">
+      <h2 style="margin-top:0">What this app covers</h2>
+      <p class="muted" style="font-size:14px;margin:0 0 8px">Mapped to the California Mathematics Framework, Grade Five (CDE), which uses the Common Core standard codes. This app is decimal place-value practice; it is not a full fifth-grade program.</p>
+      <div style="overflow-x:auto"><table class="report"><tr><th>Skill here</th><th>Standard</th></tr>${SKILL_ORDER.map(k=>`<tr><td>${SKILLS[k].name}</td><td>${SKILLS[k].std}</td></tr>`).join("")}</table></div>
+      <p class="muted" style="font-size:13px;margin:10px 0 0">Covered: 5.NBT.2, 5.NBT.3a, 5.NBT.3b, 5.NBT.4, and the add/subtract part of 5.NBT.7. Not yet covered from the grade-five "major" clusters: 5.NBT.1 as a stated relationship (10× / 1/10 between places), 5.NBT.5–6 (multi-digit multiplication and division), multiplying and dividing decimals (rest of 5.NBT.7), all of fractions (5.NF.1–7), and volume (5.MD.3–5). Also not covered: 5.OA, 5.MD.1–2, 5.G. Matching this to the SWUN unit and lesson sequence needs the classroom unit materials; the framework itself does not mention SWUN.</p>
     </div>
     <div class="card">
       <h2 style="margin-top:0">Danger zone</h2>
       <div class="actions" style="margin-top:0"><button class="btn danger" id="reset">Reset ${esc(S.name)}'s levels</button><button class="btn danger" id="remove">Remove player ${esc(S.name)}</button></div>
     </div>`;
   const q=id=>app.querySelector("#"+id);
-  q("back").onclick=home;
+  q("back").onclick=home; q("back").focus({preventScroll:true});
   q("copy").onclick=async()=>{ const ta=q("export"); ta.select(); let done=false; try{ await navigator.clipboard.writeText(ta.value); done=true; }catch(e){ try{ done=document.execCommand("copy"); }catch(e2){} } q("copied").textContent=done?"Copied.":"Select the text and copy it by hand."; };
-  q("doimport").onclick=()=>{ let o; try{ o=JSON.parse(q("import").value); }catch(e){ q("imperr").textContent="That does not look like a backup."; return; }
-    if(!o||typeof o!=="object"||!o.profiles){ q("imperr").textContent="That does not look like a backup."; return; }
-    const names=Object.keys(o.profiles); if(!names.length){ q("imperr").textContent="The backup has no players in it."; return; }
-    if(!confirm(`Restore ${names.length} player${names.length>1?"s":""} (${names.join(", ")})? Players with the same name on this device will be replaced.`)) return;
-    for(const n of names){ DB.profiles[n]=normalize({...o.profiles[n], name:n}); }
-    DB.current = o.current && DB.profiles[o.current] ? o.current : DB.current; S=DB.profiles[DB.current]||S; save(); home(); };
+  q("doimport").onclick=()=>{ const r=validateBackup(q("import").value); if(!r.ok){ q("imperr").textContent=r.err; return; } q("imperr").textContent="";
+    if(!confirm(`Restore ${r.names.length} player${r.names.length>1?"s":""}?\n\n${r.summary.join("\n")}\n\nPlayers with the same name on this device will be replaced.`)) return;
+    for(const n of r.names){ DB.profiles[n]=normalize({...r.db.profiles[n], name:n}); }
+    DB.current = r.db.current && DB.profiles[r.db.current] ? r.db.current : DB.current; S=DB.profiles[DB.current]||S;
+    if(!save()){ q("imperr").textContent="Restored in memory, but this device refused to save it. Progress will be lost when the page closes."; return; } home(); };
   q("reset").onclick=()=>{ if(confirm(`Erase ${S.name}'s levels and history and start from level 1?`)){ const n=S.name; S=normalize(blankProfile(n)); DB.profiles[n]=S; save(); home(); } };
   q("remove").onclick=()=>{ if(confirm(`Remove ${S.name} completely? This cannot be undone (unless you saved a backup).`)){ delete DB.profiles[S.name]; DB.current=null; S=null; save(); home(); } };
 }
