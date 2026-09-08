@@ -206,6 +206,14 @@ select.sel{font:inherit;font-size:15px;max-width:100%;min-height:44px;padding:8p
 select.sel:focus-visible{outline:3px solid var(--hi);outline-offset:2px}
 input.ans.text{font-size:24px;font-variant-numeric:normal}
 @media (min-width:700px){ input.ans.text{font-size:28px} .week-lesson{font-size:19px} }
+/* v5: calendar-driven class position, unit line, grouped skill→lesson table */
+.week-unit{font-size:13px;font-weight:600;margin-top:6px;letter-spacing:.01em}
+.week-foot{font-size:12px;margin:10px 0 0;line-height:1.4}
+.classmode b{color:var(--ink)}
+table.report tr.unit-row th{text-transform:none;letter-spacing:0;font-size:13px;font-weight:700;color:var(--ink);background:#F7F9FC;padding-top:12px}
+ul.units{font-size:13px;margin:0;padding-left:20px}
+ul.units li{margin:2px 0}
+select.sel optgroup{font-style:normal;font-weight:700}
 </style>
 </head>
 <body>
@@ -1248,7 +1256,7 @@ function genMultiply(level, focus){
   let a,b, variant="algorithm";
   if(level===1){ a=ri(12,49); b=ri(2,9); }
   else if(level===2){ a=ri(102,499); b=ri(3,9); }
-  else if(level===3){ a=ri(12,49); b=ri(12,29); variant = Math.random()<0.35 ? "distributive" : "algorithm"; }
+  else if(level===3){ a=ri(12,49); b=ri(12,29); variant = pick(["algorithm","algorithm","distributive","area"]); }
   else if(level===4){ a=ri(102,499); b=ri(12,49); variant = Math.random()<0.25 ? "distributive" : "algorithm"; }
   else { a=ri(300,999); b=ri(31,99); }
   if(focus && focus.shape){ const [da,db]=focus.shape; a=ri(Math.pow(10,da-1)+1, Math.pow(10,da)-1); b=ri(Math.max(2,Math.pow(10,db-1)+1), Math.pow(10,db)-1); }
@@ -1264,6 +1272,12 @@ function genMultiply(level, focus){
       steps.push({t:`<b>${name}</b>: ${b} × ${d}${carry?` + ${carry} (carried)`:""} = <b>${prodD}</b>. ${last ? `Write <b>${prodD}</b>.` : (c ? `Write <b>${write}</b>, carry <b>${c}</b>.` : `Write <b>${write}</b>.`)}`, check:ci(last ? `What goes in front (the ${name} and up)?` : `What digit goes in the ${name} place?`, last?prodD:write)});
       carry=c; });
     steps.push({t:`Read the product.${stackMul(a,b,[],prod)}`, check:finalCheck(p)});
+  } else if(variant==="area"){
+    const at=a-(a%10), ao=a%10, bt=b-(b%10), bo=b%10;
+    const cells=[[at,bt],[at,bo],[ao,bt],[ao,bo]].filter(([x,y])=>x>0&&y>0);
+    steps.push({t:`Area model: break each factor by place value. ${a} = ${at}${ao?" + "+ao:""} and ${b} = ${bt}${bo?" + "+bo:""}. Draw a rectangle split into ${cells.length} parts, one for each pair.`, check:ci(`How many parts does the area model have?`, cells.length)});
+    cells.forEach(([x,y])=>steps.push({t:`Part: ${x} × ${y}.`, check:ci(`${x} × ${y} = ?`, x*y, (x*y).toLocaleString("en-US"))}));
+    steps.push({t:`Add all the parts: ${cells.map(([x,y])=>(x*y).toLocaleString("en-US")).join(" + ")}. That is why the algorithm's partial products work.${stackMul(a,b,cells.map(([x,y])=>x*y),prod)}`, check:finalCheck(p)});
   } else if(variant==="distributive"){
     const tens=Math.floor(b/10)*10, ones=b%10;
     steps.push({t:`Break ${b} into ${tens} + ${ones}. Then ${a} × ${b} = (${a} × ${tens}) + (${a} × ${ones}). That is the distributive property.`, check:cm(`Which shows the distributive property for ${a} × ${b}?`, shuffle([`(${a} × ${tens}) + (${a} × ${ones})`,`(${a} × ${tens}) × (${a} × ${ones})`,`(${a} + ${tens}) × (${a} + ${ones})`]), null)});
@@ -1293,36 +1307,280 @@ Object.assign(SKILLS, {
 });
 SKILL_ORDER.push("orderops","expressions","primes","multiply");
 
-// ---- lesson map (from Lily's homework headers; "inferred" = lesson not seen, mapped by likely content) ----
+
+// ---- Place value relationship (5.NBT.1): a place is 10× the place to its right and 1/10 of the place to its left ----
+function genPlaceValue(level, focus){
+  const f=focus&&focus.tag;
+  let variant = level<=3 ? "times" : level===4 ? "value" : pick(["times","value","which"]);
+  if(focus && focus.variant) variant=focus.variant;
+  const placeIdx=p=> p>=0 ? WHOLE_PLACES[p] : DEC_PLACES[-p-1];  // p: 0 ones, 1 tens, -1 tenths ...
+  if(variant==="value"){
+    const num = level>=4 ? {w:ri(1,999), d:nonZeroDigits(ri(1,3))} : {w:ri(1,99), d:nonZeroDigits(2)};
+    const m=chartModel(num); const cells=[...m.whole,...m.dec].filter(c=>c.digit&&c.digit!=="0"); const c=pick(cells);
+    const pos = c.key[0]==="w" ? +c.key[1] : -(+c.key[1]);
+    const val = +c.digit*Math.pow(10,pos); const valNum = pos>=0 ? {w:val,d:""} : fixedFrom(Math.round(val*1000), -pos);
+    const p={skill:"placevalue", level, prompt:`What is the <b>value</b> of the digit <b>${c.digit}</b> in<br><span class="big-num">${fmt(num)}</span>`, type:"input", answer:val, display:fmt(valNum), show:num, meta:{variant, num, digit:c.digit, place:c.place}};
+    p.steps=[
+      {t:`Find the ${c.digit} in the chart and name its place.`, chart:num, hl:{[c.key]:"ul"}, check:cm(`Which place is the ${c.digit} in?`, shuffle([c.place, ...shuffle([...WHOLE_PLACES.slice(0,4),...DEC_PLACES].filter(x=>x!==c.place)).slice(0,3)]), null)},
+      {t:`A digit's value is the digit × the value of its place. The ${c.place} place is worth ${pos>=0?WHOLE_VALUE[pos]:DEC_FRACTION[-pos-1]}.`, check:ci(`${c.digit} × ${pos>=0?WHOLE_VALUE[pos]:DEC_FRACTION[-pos-1]} = ?`, val, fmt(valNum))},
+      {t:`So the ${c.digit} is worth <b>${fmt(valNum)}</b>.`, check:finalCheck(p)}
+    ];
+    p.steps[0].check.answer=p.steps[0].check.options.indexOf(c.place); p.steps[0].check.display=c.place;
+    p.hints=[{t:`Name the place first, then multiply the digit by that place's value.`},{t:`The ${c.digit} is in the <b>${c.place}</b> place.`, chart:num, hl:{[c.key]:"ul"}},{t:`${c.digit} × ${pos>=0?WHOLE_VALUE[pos]:DEC_FRACTION[-pos-1]}.`}];
+    return p;
+  }
+  // times / which: same digit in two places
+  const digit=ri(1,9);
+  let gap = level===1 ? 1 : level===2 ? 1 : level===3 ? pick([1,2]) : pick([1,2,3]);
+  if(f==="direction") gap=1;
+  const lo = level===1 ? ri(0,2) : ri(-3,2); const hi=lo+gap; if(hi>4) return genPlaceValue(level, focus);
+  // build a number with `digit` at positions lo and hi, other positions random (nonzero to avoid confusion), within thousandths..ten-thousands
+  const positions=[]; for(let q=Math.max(lo,-3); q<=Math.max(hi,0); q++) positions.push(q);
+  let V=0; const used={};
+  for(const q of positions){ let dg = (q===lo||q===hi) ? digit : ri(0,9); if(dg===digit && q!==lo && q!==hi) dg=(digit%9)+1; if(q===Math.max(hi,0) && dg===0) dg=1; used[q]=dg; V+=dg*Math.pow(10,q+3); }
+  const num=fromThousandths(Math.round(V)); if(lo<0){ const need=-lo; num.d=String(Math.round(V)%1000).padStart(3,"0").slice(0,Math.max(need,num.d.length)); }
+  const askLeft = Math.random()<0.5; // ask about the left (bigger) digit relative to the right one, or the reverse
+  const big=placeIdx(hi), small=placeIdx(lo); const factor=Math.pow(10,gap);
+  if(variant==="which"){
+    // "Which number has a `digit` worth 10 times the `digit` in X?"
+    const base = fromThousandths(digit*Math.pow(10,lo+3)); const target=fromThousandths(digit*Math.pow(10,hi+3));
+    const D=[{text:fmt(fromThousandths(digit*Math.pow(10,Math.max(-3,lo-gap)+3))), tag:"direction"},{text:fmt(fromThousandths(digit*Math.pow(10,Math.min(4,hi+1)+3))), tag:"count"},{text:fmt(base), tag:"same"}];
+    const o=buildOptions(fmt(target), D.filter(x=>x.text!==fmt(target)));
+    const p={skill:"placevalue", level, prompt:`Which number has a <b>${digit}</b> that is worth <b>${factor.toLocaleString("en-US")} times</b> as much as the ${digit} in<br><span class="big-num">${fmt(base)}</span>`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:fmt(target), show:base, meta:{variant, digit, lo, hi}};
+    p.steps=[
+      {t:`The ${digit} in ${fmt(base)} is in the <b>${small}</b> place.`, chart:base, hl:{[lo>=0?"w"+lo:"d"+(-lo)]:"ul"}, check:ci(`How many places to the left must the ${digit} move to be worth ${factor.toLocaleString("en-US")} times as much?`, gap)},
+      {t:`Each place to the <b>left</b> is worth <b>10 times</b> as much. ${gap===1?"One place left: 10 times.":gap+" places left: "+factor.toLocaleString("en-US")+" times."} That puts the ${digit} in the <b>${big}</b> place.`, chart:target, hl:{[hi>=0?"w"+hi:"d"+(-hi)]:"ul"}},
+      {t:`So the number is <b>${fmt(target)}</b>.`, check:finalCheck(p)}
+    ];
+    p.hints=[{t:`Moving a digit one place left makes it worth 10 times as much.`},{t:`${factor.toLocaleString("en-US")} times means ${gap} place${gap>1?"s":""} to the left.`},{t:`From the ${small} place, ${gap} left is the ${big} place.`, chart:target}];
+    return p;
+  }
+  // times: "The digit in the big place is ___ times the value of the digit in the small place" (or 1/10 the other way)
+  const askBig = askLeft;
+  const correct = askBig ? `${factor.toLocaleString("en-US")} times` : `1/${factor.toLocaleString("en-US")} of`;
+  const D=[{text: askBig ? `1/${factor.toLocaleString("en-US")} of` : `${factor.toLocaleString("en-US")} times`, tag:"direction"},{text: askBig ? `${(factor*10).toLocaleString("en-US")} times` : `1/${(factor*10).toLocaleString("en-US")} of`, tag:"count"},{text: askBig ? `${Math.max(1,factor/10).toLocaleString("en-US")} times` : `1/${Math.max(1,factor/10).toLocaleString("en-US")} of`, tag:"count"},{text:"the same as", tag:"same"}];
+  const o=buildOptions(correct, D.filter(x=>x.text!==correct));
+  const from = askBig ? big : small, to = askBig ? small : big;
+  const p={skill:"placevalue", level, prompt:`In <span class="big-num">${fmt(num)}</span>the <b>${digit}</b> in the <b>${from}</b> place is ___ the value of the ${digit} in the <b>${to}</b> place.`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:correct, show:num, meta:{variant, digit, lo, hi, askBig, num}};
+  const kLo = lo>=0?"w"+lo:"d"+(-lo), kHi = hi>=0?"w"+hi:"d"+(-hi);
+  p.steps=[
+    {t:`Find both ${digit}s in the chart.`, chart:num, hl:{[kLo]:"ul",[kHi]:"ul"}, check:ci(`How many places apart are they?`, gap)},
+    {t:`Each place to the <b>left</b> is worth <b>10 times</b> as much; each place to the <b>right</b> is worth <b>1/10</b> as much. The ${from} place is to the ${askBig?"left":"right"} of the ${to} place.`, check:cm(`Going from the ${to} place to the ${from} place, the value gets…`, ["10 times bigger each step","1/10 as big each step"], askBig?0:1)},
+    {t:`${gap} step${gap>1?"s":""} ${askBig?"left":"right"}: ${askBig ? Array(gap).fill("10").join(" × ")+" = "+factor.toLocaleString("en-US")+" times" : "1/"+factor.toLocaleString("en-US")+" of"}.`, check:finalCheck(p)}
+  ];
+  p.hints=[{t:`Left is 10 times more. Right is 1/10 as much. Count the places between the two digits.`},{t:`The two ${digit}s are ${gap} place${gap>1?"s":""} apart.`, chart:num, hl:{[kLo]:"ul",[kHi]:"ul"}},{t:`The ${from} place is to the ${askBig?"left":"right"}, so its ${digit} is worth ${askBig?"more":"less"}.`}];
+  return p;
+}
+
+// ---- Division (5.NBT.6): place value strategy (partial quotients by place) and area model ----
+function genDivide(level, focus){
+  const f=focus&&focus.tag;
+  let variant = level>=3 && Math.random()<0.4 ? "area" : "placevalue";
+  if(focus && focus.variant) variant=focus.variant;
+  let d, q;
+  if(level===1){ d=ri(2,9); q=ri(11,99); }
+  else if(level===2){ d=ri(2,9)*10; q=ri(11,199); }
+  else if(level===3){ d=ri(11,25); q=ri(11,99); }
+  else if(level===4){ d=ri(11,49); q=ri(21,199); }
+  else { d=ri(12,99); q=ri(101,499); }
+  if(focus && focus.d && level!==1) d=focus.d;
+  const N=d*q; if(N>9999){ return genDivide(Math.max(1,level-1), focus); }
+  const qd=String(q).split("").map(Number); const L=qd.length;
+  const parts=qd.map((dg,i)=>({qpart:dg*Math.pow(10,L-1-i), piece:dg*Math.pow(10,L-1-i)*d})).filter(x=>x.qpart>0);
+  const p={skill:"divide", level, prompt:`<span class="big-num">${N.toLocaleString("en-US")} ÷ ${d} = ?</span>`, type:"input", answer:q, display:q.toLocaleString("en-US"), show:null, meta:{N,d,q,variant,parts}};
+  const steps=[];
+  if(variant==="placevalue"){
+    steps.push({t:`Place value strategy: break the dividend into <b>friendly parts</b> that each divide by ${d} with no leftover, using place value: ${N.toLocaleString("en-US")} = ${parts.map(x=>"<b>"+x.piece.toLocaleString("en-US")+"</b>").join(" + ")}.`, check:ci(`Check the parts: ${parts.map(x=>x.piece.toLocaleString("en-US")).join(" + ")} = ?`, N, N.toLocaleString("en-US"))});
+    parts.forEach(x=>steps.push({t:`Divide each part by ${d}. ${x.piece.toLocaleString("en-US")} ÷ ${d}: think ${x.piece/Math.pow(10,String(x.qpart).length-1)/d} × ${Math.pow(10,String(x.qpart).length-1).toLocaleString("en-US")}.`, check:ci(`${x.piece.toLocaleString("en-US")} ÷ ${d} = ?`, x.qpart)}));
+    steps.push({t:`Add the partial quotients: ${parts.map(x=>x.qpart).join(" + ")}.`, check:finalCheck(p)});
+  } else {
+    steps.push({t:`Area model: draw a rectangle with a width of <b>${d}</b>. Its total area is the dividend, <b>${N.toLocaleString("en-US")}</b>. The length is the quotient we want.`});
+    let remaining=N;
+    parts.forEach((x,i)=>{ steps.push({t:`Piece ${i+1}: how long a piece of width ${d} has area about ${remaining.toLocaleString("en-US")}? Try a length of <b>${x.qpart}</b>: ${d} × ${x.qpart} = ${x.piece.toLocaleString("en-US")}. Left over: ${remaining.toLocaleString("en-US")} − ${x.piece.toLocaleString("en-US")} = ${(remaining-x.piece).toLocaleString("en-US")}.`, check:ci(`${d} × ${x.qpart} = ?`, x.piece, x.piece.toLocaleString("en-US"))}); remaining-=x.piece; });
+    steps.push({t:`Nothing is left over. The total length is the sum of the pieces: ${parts.map(x=>x.qpart).join(" + ")}.`, check:finalCheck(p)});
+  }
+  p.steps=steps;
+  p.hints=[{t:`Break the dividend into place-value parts that divide evenly by ${d}, divide each, then add.`},{t:`Start big: how many hundreds (or tens) of ${d} fit into ${N.toLocaleString("en-US")}? ${d} × ${parts[0].qpart} = ${parts[0].piece.toLocaleString("en-US")}.`},{t:`Parts: ${parts.map(x=>x.piece.toLocaleString("en-US")).join(" + ")}. Divide each by ${d} and add the answers.`}];
+  return p;
+}
+Object.assign(SKILLS, {
+  placevalue:{name:"Place value relationship", gen:safeGen(genPlaceValue), blurb:"In 4.44, the tenths 4 is 1/10 of the ones 4", std:"5.NBT.1"},
+  divide:{name:"Divide whole numbers", gen:safeGen(genDivide), blurb:"3,660 ÷ 30 → 100 + 20 + 2 = 122", std:"5.NBT.6"},
+});
+SKILL_ORDER.push("placevalue","divide");
+Object.assign(NOTES, {
+  "same":"Those digits are in different places, so they are not worth the same. Each place changes the value by 10.",
+  "missing-part":"One of the partial quotients was left out. Every place-value part of the dividend gets divided, then all the answers are added.",
+  "count":NOTES["count"]||"", 
+});
+const _diagnose2=diagnose;
+diagnose=function(prob, yours){
+  if(prob.type==="input" && prob.skill==="divide"){ const v=parseAnswer(yours); const m=prob.meta; let tag="other";
+    const partial=m.parts.map(x=>x.qpart); for(let i=0;i<partial.length;i++){ const s=partial.reduce((a,b,j)=>a+(j===i?0:b),0); if(near(v,s)){ tag="missing-part"; break; } }
+    if(tag==="other" && (near(v,m.q*10)||near(v,m.q/10))) tag="place";
+    return {tag, note: tag==="place" ? "The answer is off by a factor of ten. Check the place value of each partial quotient (hundreds, tens, ones)." : (NOTES[tag]||"")}; }
+  if(prob.type==="input" && prob.skill==="placevalue"){ const v=parseAnswer(yours); const m=prob.meta; let tag="other"; const lg=Math.log10(v/prob.answer); if(Number.isFinite(lg) && Math.abs(lg-Math.round(lg))<1e-6 && Math.round(lg)!==0) tag="place"; return {tag, note: tag==="place" ? "The digit is right but it was given the value of a different place. Name the place first." : ""}; }
+  return _diagnose2(prob, yours);
+};
+const _focusFor2=focusFor;
+focusFor=function(prob, tag){ const f=_focusFor2(prob, tag); const m=prob.meta||{}; if(prob.skill==="divide"){ f.variant=m.variant; f.d=m.d; } if(prob.skill==="placevalue"){ f.variant=m.variant; } return f; };
+
+// ---- Official MCS 2026-27 Grade 5 Claims & Pacing Guide (Swun Math). Dates are the district calendar; lesson position within a unit is estimated by school day.
+const UNITS=[{"unit": 1, "name": "Place Value System", "start": "2026-08-13", "end": "2026-09-02", "days": 15, "assess": "September 3 & 4"}, {"unit": 2, "name": "Multiplication and Division of Whole Numbers", "start": "2026-09-08", "end": "2026-09-28", "days": 15, "assess": "September 29 & 30"}, {"unit": 3, "name": "Add and Subtract Decimals", "start": "2026-10-01", "end": "2026-10-09", "days": 7, "assess": "October 12 & 13"}, {"unit": 4, "name": "Multiply and Divide Decimals", "start": "2026-10-14", "end": "2026-10-28", "days": 11, "assess": "October 29 & 30"}, {"unit": 5, "name": "Add Fractions", "start": "2026-11-10", "end": "2026-11-30", "days": 12, "assess": "December 1 & 2"}, {"unit": 6, "name": "Subtract Fractions", "start": "2026-12-03", "end": "2027-01-13", "days": 15, "assess": "January 14 & 15"}, {"unit": 7, "name": "Multiply Fractions", "start": "2027-01-19", "end": "2027-02-03", "days": 12, "assess": "February 4 & 5"}, {"unit": 8, "name": "Divide Fractions", "start": "2027-02-09", "end": "2027-02-19", "days": 8, "assess": "February 22 & 23"}, {"unit": 9, "name": "Polygons and Volume", "start": "2027-03-04", "end": "2027-03-17", "days": 10, "assess": "March 18 & 19"}, {"unit": 10, "name": "Graphing", "start": "2027-03-30", "end": "2027-04-21", "days": 17, "assess": "April 22 & 23"}, {"unit": 11, "name": "Measurement and Data", "start": "2027-04-26", "end": "2027-05-12", "days": 13, "assess": "May 13 & 14"}];
 const LESSONS=[
-  {id:"U1L1", unit:1, lesson:1, name:"Place value to thousandths (not seen)", skills:["standard","words"], std:"5.NBT.3a", inferred:true},
-  {id:"U1L2", unit:1, lesson:2, name:"Read and write decimals (not seen)", skills:["standard","words"], std:"5.NBT.3a", inferred:true},
-  {id:"U1L3", unit:1, lesson:3, name:"Expanded form (not seen)", skills:["expanded"], std:"5.NBT.3a", inferred:true},
-  {id:"U1L4", unit:1, lesson:4, name:"Lesson 4 (not seen)", skills:[], std:"", inferred:true},
-  {id:"U1L5", unit:1, lesson:5, name:"Lesson 5 (not seen)", skills:[], std:"", inferred:true},
-  {id:"U1L6", unit:1, lesson:6, name:"Lesson 6 (not seen)", skills:[], std:"", inferred:true},
-  {id:"U1L7", unit:1, lesson:7, name:"Lesson 7 (not seen)", skills:[], std:"", inferred:true},
-  {id:"U1L8", unit:1, lesson:8, name:"Powers of 10 with Whole Numbers", skills:["powers"], std:"5.NBT.2"},
-  {id:"U1L9", unit:1, lesson:9, name:"Lesson 9 (not seen)", skills:["powers"], std:"5.NBT.2", inferred:true},
-  {id:"U1L10", unit:1, lesson:10, name:"Powers of Ten with Decimals", skills:["shift"], std:"5.NBT.2"},
-  {id:"U1L11", unit:1, lesson:11, name:"Comparing Decimals", skills:["compare"], std:"5.NBT.3b"},
-  {id:"U1L12", unit:1, lesson:12, name:"Compare Decimals", skills:["compare"], std:"5.NBT.3b"},
-  {id:"U1L13", unit:1, lesson:13, name:"Round Decimals to Any Place", skills:["rounding"], std:"5.NBT.4"},
-  {id:"U1L14", unit:1, lesson:14, name:"Round Decimals to Any Place", skills:["rounding"], std:"5.NBT.4"},
-  {id:"U1L15", unit:1, lesson:15, name:"Place Value", skills:["compare","shift","standard"], std:"5.NBT.1-4"},
-  {id:"U2L1", unit:2, lesson:1, name:"Evaluate Expressions Containing Parentheses", skills:["orderops"], std:"5.OA.1"},
-  {id:"U2L2", unit:2, lesson:2, name:"Interpret Numerical Expressions", skills:["expressions"], std:"5.OA.2"},
-  {id:"U2L3", unit:2, lesson:3, name:"Prime Factorization", skills:["primes"], std:"5.OA.2.1"},
-  {id:"U2L4", unit:2, lesson:4, name:"Write & Evaluate Expressions", skills:["expressions","orderops"], std:"5.OA.2"},
-  {id:"U2L5", unit:2, lesson:5, name:"Introduction to the Order of Operations", skills:["orderops"], std:"5.OA.1"},
-  {id:"U2L6", unit:2, lesson:6, name:"Lesson 6 (not seen)", skills:["orderops","expressions"], std:"5.OA", inferred:true},
-  {id:"U2L7", unit:2, lesson:7, name:"Linking the Distributive Property to the Multiplication Algorithm", skills:["multiply"], std:"5.NBT.5"},
-  {id:"U2L8", unit:2, lesson:8, name:"Multiply Using the Standard Algorithm", skills:["multiply"], std:"5.NBT.5"},
-  {id:"U2L9", unit:2, lesson:9, name:"Spiral Review U2 L7 (5.NBT.5)", skills:["multiply"], std:"5.NBT.5"},
-  {id:"U2L10", unit:2, lesson:10, name:"Division (not seen yet)", skills:[], std:"5.NBT.6", inferred:true},
+  {"id": "U1L1", "unit": 1, "lesson": 1, "name": "Read and Write Numbers to the Thousandths Place", "std": "5.NBT.3a", "type": "C", "skills": ["standard", "words"]},
+  {"id": "U1L2", "unit": 1, "lesson": 2, "name": "Read and Write Numbers to the Thousandths Place", "std": "5.NBT.3a", "type": "P", "skills": ["standard", "words"]},
+  {"id": "U1L3", "unit": 1, "lesson": 3, "name": "Expanded Form to the Thousandths Place", "std": "5.NBT.3a", "type": "C", "skills": ["expanded"]},
+  {"id": "U1L4", "unit": 1, "lesson": 4, "name": "Expanded Form to the Thousandths Place", "std": "5.NBT.3a", "type": "P", "skills": ["expanded"]},
+  {"id": "U1L5", "unit": 1, "lesson": 5, "name": "Place Value Relationship", "std": "5.NBT.1", "type": "C", "skills": ["placevalue"]},
+  {"id": "U1L6", "unit": 1, "lesson": 6, "name": "Place Value Relationship", "std": "5.NBT.1", "type": "P", "skills": ["placevalue"]},
+  {"id": "U1L7", "unit": 1, "lesson": 7, "name": "Powers of 10 with Whole Numbers", "std": "5.NBT.2", "type": "C", "skills": ["powers"]},
+  {"id": "U1L8", "unit": 1, "lesson": 8, "name": "Powers of 10 with Whole Numbers", "std": "5.NBT.2", "type": "P", "skills": ["powers"]},
+  {"id": "U1L9", "unit": 1, "lesson": 9, "name": "Powers of 10 with Decimals", "std": "5.NBT.2", "type": "C", "skills": ["shift"]},
+  {"id": "U1L10", "unit": 1, "lesson": 10, "name": "Powers of 10 with Decimals", "std": "5.NBT.2", "type": "P", "skills": ["shift"]},
+  {"id": "U1L11", "unit": 1, "lesson": 11, "name": "Compare Decimals", "std": "5.NBT.3b", "type": "C", "skills": ["compare"]},
+  {"id": "U1L12", "unit": 1, "lesson": 12, "name": "Compare Decimals", "std": "5.NBT.3b", "type": "P", "skills": ["compare"]},
+  {"id": "U1L13", "unit": 1, "lesson": 13, "name": "Round Decimals to Any Place", "std": "5.NBT.4", "type": "C", "skills": ["rounding"]},
+  {"id": "U1L14", "unit": 1, "lesson": 14, "name": "Round Decimals to Any Place", "std": "5.NBT.4", "type": "P", "skills": ["rounding"]},
+  {"id": "U1L15", "unit": 1, "lesson": 15, "name": "Place Value", "std": "5.NBT.1 5.NBT.2 5.NBT.3 5.NBT.4", "type": "MT", "skills": ["standard", "words", "expanded", "placevalue", "powers", "shift", "compare", "rounding"]},
+  {"id": "U2L1", "unit": 2, "lesson": 1, "name": "Evaluate Expressions Containing Parentheses", "std": "5.OA.1", "type": "P", "skills": ["orderops"]},
+  {"id": "U2L2", "unit": 2, "lesson": 2, "name": "Interpret Numerical Expressions", "std": "5.OA.2", "type": "P", "skills": ["expressions"]},
+  {"id": "U2L3", "unit": 2, "lesson": 3, "name": "Prime Factorization", "std": "5.OA.2.1", "type": "P", "skills": ["primes"]},
+  {"id": "U2L4", "unit": 2, "lesson": 4, "name": "Write and Evaluate Expressions", "std": "5.OA.1,2", "type": "P", "skills": ["expressions", "orderops"]},
+  {"id": "U2L5", "unit": 2, "lesson": 5, "name": "Introduction to Order of Operations", "std": "5.OA.1", "type": "P", "skills": ["orderops"]},
+  {"id": "U2L6", "unit": 2, "lesson": 6, "name": "Linking the Area Model to the Multiplication Algorithm", "std": "5.NBT.5", "type": "C", "skills": ["multiply"], "focus": {"multiply": {"variant": "area"}}},
+  {"id": "U2L7", "unit": 2, "lesson": 7, "name": "Linking the Distributive Property to the Multiplication Algorithm", "std": "5.NBT.5", "type": "C", "skills": ["multiply"], "focus": {"multiply": {"variant": "distributive"}}},
+  {"id": "U2L8", "unit": 2, "lesson": 8, "name": "Multiply Using the Standard Algorithm", "std": "5.NBT.5", "type": "P", "skills": ["multiply"], "focus": {"multiply": {"variant": "algorithm"}}},
+  {"id": "U2L9", "unit": 2, "lesson": 9, "name": "Divide Using the Place Value Strategy", "std": "5.NBT.6", "type": "C", "skills": ["divide"], "focus": {"divide": {"variant": "placevalue"}}},
+  {"id": "U2L10", "unit": 2, "lesson": 10, "name": "Divide Using the Place Value Strategy", "std": "5.NBT.6", "type": "P", "skills": ["divide"], "focus": {"divide": {"variant": "placevalue"}}},
+  {"id": "U2L11", "unit": 2, "lesson": 11, "name": "Divide Using an Area Model", "std": "5.NBT.6", "type": "C", "skills": ["divide"], "focus": {"divide": {"variant": "area"}}},
+  {"id": "U2L12", "unit": 2, "lesson": 12, "name": "Divide Using an Area Model", "std": "5.NBT.6", "type": "P", "skills": ["divide"], "focus": {"divide": {"variant": "area"}}},
+  {"id": "U2L13", "unit": 2, "lesson": 13, "name": "Divide Using the Area Model", "std": "5.NBT.6", "type": "C", "skills": ["divide"], "focus": {"divide": {"variant": "area"}}},
+  {"id": "U2L14", "unit": 2, "lesson": 14, "name": "Divide Using an Area Model", "std": "5.NBT.6", "type": "P", "skills": ["divide"], "focus": {"divide": {"variant": "area"}}},
+  {"id": "U2L15", "unit": 2, "lesson": 15, "name": "Multiplication and Division", "std": "5.OA.1 5.OA.2 5.NBT.5 5.NBT.6", "type": "MT", "skills": ["orderops", "expressions", "primes", "multiply", "divide"]},
+  {"id": "U3L1", "unit": 3, "lesson": 1, "name": "Build & Add Decimals on the Place Value Chart", "std": "5.NBT.7", "type": "C", "skills": ["addsub"], "focus": {"addsub": {"op": "+"}}},
+  {"id": "U3L2", "unit": 3, "lesson": 2, "name": "Add Decimals: Number Line Strategy", "std": "5.NBT.7", "type": "C", "skills": ["addsub"], "focus": {"addsub": {"op": "+"}}},
+  {"id": "U3L3", "unit": 3, "lesson": 3, "name": "Add Decimals", "std": "5.NBT.7", "type": "P", "skills": ["addsub"], "focus": {"addsub": {"op": "+"}}},
+  {"id": "U3L4", "unit": 3, "lesson": 4, "name": "Subtract Decimals: Build & Subtract on the Place Value Chart", "std": "5.NBT.7", "type": "C", "skills": ["addsub"], "focus": {"addsub": {"op": "−"}}},
+  {"id": "U3L5", "unit": 3, "lesson": 5, "name": "Subtract Decimals: Number Line Strategy", "std": "5.NBT.7", "type": "C", "skills": ["addsub"], "focus": {"addsub": {"op": "−"}}},
+  {"id": "U3L6", "unit": 3, "lesson": 6, "name": "Subtract Decimals", "std": "5.NBT.7", "type": "P", "skills": ["addsub"], "focus": {"addsub": {"op": "−"}}},
+  {"id": "U3L7", "unit": 3, "lesson": 7, "name": "Add and Subtract Decimals", "std": "5.NBT.7", "type": "MT", "skills": ["addsub"]},
+  {"id": "U4L1", "unit": 4, "lesson": 1, "name": "Multiply Decimals by Whole Numbers: Area Model", "std": "5.NBT.7", "type": "C", "skills": []},
+  {"id": "U4L2", "unit": 4, "lesson": 2, "name": "Multiply Decimals by Whole Numbers: Area Model", "std": "5.NBT.7", "type": "P", "skills": []},
+  {"id": "U4L3", "unit": 4, "lesson": 3, "name": "Multiply Decimals by Whole Numbers: Distributive Property", "std": "5.NBT.7", "type": "C", "skills": []},
+  {"id": "U4L4", "unit": 4, "lesson": 4, "name": "Multiply Decimals by Whole Numbers", "std": "5.NBT.7", "type": "P", "skills": []},
+  {"id": "U4L5", "unit": 4, "lesson": 5, "name": "Multiply Decimals by Decimals: Area Model", "std": "5.NBT.7", "type": "C", "skills": []},
+  {"id": "U4L6", "unit": 4, "lesson": 6, "name": "Multiply Decimals by Decimals: Area Model", "std": "5.NBT.7", "type": "P", "skills": []},
+  {"id": "U4L7", "unit": 4, "lesson": 7, "name": "Multiply Decimals by Decimals: Distributive Property", "std": "5.NBT.7", "type": "C", "skills": []},
+  {"id": "U4L8", "unit": 4, "lesson": 8, "name": "Multiply Decimals by Decimals", "std": "5.NBT.7", "type": "P", "skills": []},
+  {"id": "U4L9", "unit": 4, "lesson": 9, "name": "Divide Decimals: Measuring Up Strategy", "std": "5.NBT.7", "type": "C", "skills": []},
+  {"id": "U4L10", "unit": 4, "lesson": 10, "name": "Divide Decimals: Dealing Strategy", "std": "5.NBT.7", "type": "C", "skills": []},
+  {"id": "U4L11", "unit": 4, "lesson": 11, "name": "Divide Decimals", "std": "5.NBT.7", "type": "P", "skills": []},
+  {"id": "U4L12", "unit": 4, "lesson": 12, "name": "Multiply and Divide Decimals", "std": "5.NBT.7", "type": "MT", "skills": []},
+  {"id": "U5L1", "unit": 5, "lesson": 1, "name": "Simplify Fractions", "std": "5.NF.1", "type": "C", "skills": []},
+  {"id": "U5L2", "unit": 5, "lesson": 2, "name": "Simplify Fractions", "std": "5.NF.1", "type": "P", "skills": []},
+  {"id": "U5L3", "unit": 5, "lesson": 3, "name": "Reasonable Estimates: Fraction Sums", "std": "5.NF.2", "type": "C", "skills": []},
+  {"id": "U5L4", "unit": 5, "lesson": 4, "name": "Convert between Mixed Numbers and Improper Fractions", "std": "5.NF.4a", "type": "P", "skills": []},
+  {"id": "U5L5", "unit": 5, "lesson": 5, "name": "Add Fractions with Unlike Denominators Using an Area Model", "std": "5.NF.1 5.NF.2", "type": "C", "skills": []},
+  {"id": "U5L6", "unit": 5, "lesson": 6, "name": "Add Fractions with Unlike Denominators Using an Area Model", "std": "5.NF.1 5.NF.2", "type": "P", "skills": []},
+  {"id": "U5L7", "unit": 5, "lesson": 7, "name": "Add Fractions with Unlike Denominators Using a Number Line", "std": "5.NF.1 5.NF.2", "type": "C", "skills": []},
+  {"id": "U5L8", "unit": 5, "lesson": 8, "name": "Add Fractions with Unlike Denominators Using a Number Line", "std": "5.NF.1 5.NF.2", "type": "P", "skills": []},
+  {"id": "U5L9", "unit": 5, "lesson": 9, "name": "Add Fractions with Unlike Denominators Using an Algorithm", "std": "5.NF.1 5.NF.2", "type": "C", "skills": []},
+  {"id": "U5L10", "unit": 5, "lesson": 10, "name": "Add Fractions with Unlike Denominators Using an Algorithm", "std": "5.NF.1 5.NF.2", "type": "P", "skills": []},
+  {"id": "U5L11", "unit": 5, "lesson": 11, "name": "Add Fractions", "std": "5.NF.1 5.NF.2", "type": "MT", "skills": []},
+  {"id": "U6L1", "unit": 6, "lesson": 1, "name": "Reasonable Estimates: Fraction Differences", "std": "5.NF.1 5.NF.2", "type": "C", "skills": []},
+  {"id": "U6L2", "unit": 6, "lesson": 2, "name": "Subtract Fractions with Unlike Denominators Using an Area Model (without regrouping)", "std": "5.NF.1 5.NF.2", "type": "C", "skills": []},
+  {"id": "U6L3", "unit": 6, "lesson": 3, "name": "Subtract Fractions with Unlike Denominators Using an Area Model (without regrouping)", "std": "5.NF.1 5.NF.2", "type": "P", "skills": []},
+  {"id": "U6L4", "unit": 6, "lesson": 4, "name": "Subtract Fractions with Unlike Denominators Using a Number Line", "std": "5.NF.1 5.NF.2", "type": "C", "skills": []},
+  {"id": "U6L5", "unit": 6, "lesson": 5, "name": "Subtract Fractions with Unlike Denominators Using a Number Line", "std": "5.NF.1 5.NF.2", "type": "P", "skills": []},
+  {"id": "U6L6", "unit": 6, "lesson": 6, "name": "Subtract Fractions with Unlike Denominators Using an Algorithm", "std": "5.NF.1 5.NF.2", "type": "C", "skills": []},
+  {"id": "U6L7", "unit": 6, "lesson": 7, "name": "Subtract Fractions with Unlike Denominators Using an Algorithm", "std": "5.NF.1 5.NF.2", "type": "P", "skills": []},
+  {"id": "U6L8", "unit": 6, "lesson": 8, "name": "Subtract Fractions with Unlike Denominators Using an Area Model (with regrouping)", "std": "5.NF.1 5.NF.2", "type": "C", "skills": []},
+  {"id": "U6L9", "unit": 6, "lesson": 9, "name": "Subtract Fractions with Unlike Denominators Using an Area Model (with regrouping)", "std": "5.NF.1 5.NF.2", "type": "P", "skills": []},
+  {"id": "U6L10", "unit": 6, "lesson": 10, "name": "Subtract Fractions with Regrouping Using an Algorithm", "std": "5.NF.1 5.NF.2", "type": "C", "skills": []},
+  {"id": "U6L11", "unit": 6, "lesson": 11, "name": "Subtract Fractions with Regrouping Using an Algorithm", "std": "5.NF.1 5.NF.2", "type": "P", "skills": []},
+  {"id": "U6L12", "unit": 6, "lesson": 12, "name": "Subtract Fractions", "std": "5.NF.1 5.NF.2", "type": "MT", "skills": []},
+  {"id": "U7L1", "unit": 7, "lesson": 1, "name": "Fractions as Division", "std": "5.NF.3", "type": "C", "skills": []},
+  {"id": "U7L2", "unit": 7, "lesson": 2, "name": "Fractions as Division", "std": "5.NF.3", "type": "P", "skills": []},
+  {"id": "U7L3", "unit": 7, "lesson": 3, "name": "Reason about Multiplying Fractions", "std": "5.NF.5a", "type": "C", "skills": []},
+  {"id": "U7L4", "unit": 7, "lesson": 4, "name": "Reason about Multiplying Fractions", "std": "5.NF.5a", "type": "P", "skills": []},
+  {"id": "U7L5", "unit": 7, "lesson": 5, "name": "Reason about Multiplying Fractions by One", "std": "5.NF.5b", "type": "C", "skills": []},
+  {"id": "U7L6", "unit": 7, "lesson": 6, "name": "Reason about Multiplying Fractions by One", "std": "4.NF.5b", "type": "P", "skills": []},
+  {"id": "U7L7", "unit": 7, "lesson": 7, "name": "Reason about Multiplying a Fraction by a Fraction", "std": "5.NF.4b", "type": "C", "skills": []},
+  {"id": "U7L8", "unit": 7, "lesson": 8, "name": "Multiply Fractions Using an Area Model", "std": "5.NF.4b", "type": "C", "skills": []},
+  {"id": "U7L9", "unit": 7, "lesson": 9, "name": "Multiply Fractions Using an Area Model", "std": "5.NF.4b", "type": "P", "skills": []},
+  {"id": "U7L10", "unit": 7, "lesson": 10, "name": "Multiply Fractions Using an Algorithm", "std": "5.NF.4a", "type": "P", "skills": []},
+  {"id": "U7L11", "unit": 7, "lesson": 11, "name": "Solve Word Problems by Multiplying Fractions Using an Algorithm", "std": "5.NF.4a 5.NF.6", "type": "P", "skills": []},
+  {"id": "U7L12", "unit": 7, "lesson": 12, "name": "Multiply Fractions", "std": "5.NF.3 5.NF.4 5.NF.5 5.NF.6", "type": "MT", "skills": []},
+  {"id": "U8L1", "unit": 8, "lesson": 1, "name": "Divide a Unit Fraction by a Whole Number-Word Problems", "std": "5.NF.7ac", "type": "C", "skills": []},
+  {"id": "U8L2", "unit": 8, "lesson": 2, "name": "Divide a Unit Fraction by a Whole Number-Create a Story", "std": "5.NF.7a", "type": "C", "skills": []},
+  {"id": "U8L3", "unit": 8, "lesson": 3, "name": "Divide a Unit Fraction by a Whole Number", "std": "5.NF.7ac", "type": "P", "skills": []},
+  {"id": "U8L4", "unit": 8, "lesson": 4, "name": "Divide a Whole Number by a Unit Fraction-Word Problems", "std": "5.NF.7bc", "type": "C", "skills": []},
+  {"id": "U8L5", "unit": 8, "lesson": 5, "name": "Divide a Whole Number by a Unit Fraction-Create a Story", "std": "5.NF.7bc", "type": "C", "skills": []},
+  {"id": "U8L6", "unit": 8, "lesson": 6, "name": "Divide a Whole Number by a Unit Fraction", "std": "5.NF.7bc", "type": "P", "skills": []},
+  {"id": "U8L7", "unit": 8, "lesson": 7, "name": "Word Problems Involving Unit Fractions and Whole Numbers", "std": "5.NF.7abc", "type": "P", "skills": []},
+  {"id": "U8L8", "unit": 8, "lesson": 8, "name": "Divide Fractions", "std": "5.NF.7abc", "type": "MT", "skills": []},
+  {"id": "U9L1", "unit": 9, "lesson": 1, "name": "Classifying Polygons", "std": "5.G.3 5.G.4", "type": "C", "skills": []},
+  {"id": "U9L2", "unit": 9, "lesson": 2, "name": "Classifying Polygons", "std": "5.G.3 5.G.4", "type": "C", "skills": []},
+  {"id": "U9L3", "unit": 9, "lesson": 3, "name": "Classifying Polygons", "std": "5.G.3 5.G.4", "type": "P", "skills": []},
+  {"id": "U9L4", "unit": 9, "lesson": 4, "name": "Finding Volume with Unit Cubes", "std": "5.MD.3b 5.MD.4", "type": "C", "skills": []},
+  {"id": "U9L5", "unit": 9, "lesson": 5, "name": "Finding Volume with Unit Cubes", "std": "5.MD.3b 5.MD.4", "type": "P", "skills": []},
+  {"id": "U9L6", "unit": 9, "lesson": 6, "name": "Finding Volume Using the Area of the Base", "std": "5.MD.3b 5.MD.4", "type": "C", "skills": []},
+  {"id": "U9L7", "unit": 9, "lesson": 7, "name": "Finding Volume Using the Area of the Base", "std": "5.MD.3b 5.MD.4", "type": "P", "skills": []},
+  {"id": "U9L8", "unit": 9, "lesson": 8, "name": "Finding Volume Using an Algorithm", "std": "5.MD.5b", "type": "C", "skills": []},
+  {"id": "U9L9", "unit": 9, "lesson": 9, "name": "Finding Volume Using an Algorithm", "std": "5.MD.5b", "type": "P", "skills": []},
+  {"id": "U9L10", "unit": 9, "lesson": 10, "name": "Finding the Volume of Three-Dimensional Figures", "std": "5.MD.5c", "type": "C", "skills": []},
+  {"id": "U9L11", "unit": 9, "lesson": 11, "name": "Finding the Volume of Three-Dimensional Figures", "std": "5.MD.5c", "type": "P", "skills": []},
+  {"id": "U9L12", "unit": 9, "lesson": 12, "name": "Polygons and Volume", "std": "5.MD.5abc 5.MD.4", "type": "MT", "skills": []},
+  {"id": "U10L1", "unit": 10, "lesson": 1, "name": "Plotting Ordered Pairs", "std": "5.G.1", "type": "C", "skills": []},
+  {"id": "U10L2", "unit": 10, "lesson": 2, "name": "Plotting Ordered Pairs: Scaled Coordinate Plane", "std": "5.G.1", "type": "C", "skills": []},
+  {"id": "U10L3", "unit": 10, "lesson": 3, "name": "Plotting Ordered Pairs: Scaled Coordinate Plane", "std": "5.G.1", "type": "P", "skills": []},
+  {"id": "U10L4", "unit": 10, "lesson": 4, "name": "Graphing Shapes", "std": "5.G.1", "type": "C", "skills": []},
+  {"id": "U10L5", "unit": 10, "lesson": 5, "name": "Graphing Shapes", "std": "5.G.1", "type": "P", "skills": []},
+  {"id": "U10L6", "unit": 10, "lesson": 6, "name": "Finding the Location of an Ending Point Given a Starting Point", "std": "5.G.1, 2", "type": "C", "skills": []},
+  {"id": "U10L7", "unit": 10, "lesson": 7, "name": "Finding the Location of an Ending Point Given a Starting Point", "std": "5.G.1, 2", "type": "P", "skills": []},
+  {"id": "U10L8", "unit": 10, "lesson": 8, "name": "Locating a Point on the Coordinate Grid Using Cardinal Directions", "std": "5.G.1, 2", "type": "C", "skills": []},
+  {"id": "U10L9", "unit": 10, "lesson": 9, "name": "Locating a Point on the Coordinate Grid Using Cardinal Directions", "std": "5.G.1, 2", "type": "P", "skills": []},
+  {"id": "U10L10", "unit": 10, "lesson": 10, "name": "Coordinate Plane", "std": "5.G.1, 2", "type": "MT", "skills": []},
+  {"id": "U10L11", "unit": 10, "lesson": 11, "name": "Identifying Relationships between Numerical Patterns", "std": "5.OA.3", "type": "C", "skills": []},
+  {"id": "U10L12", "unit": 10, "lesson": 12, "name": "Identifying Relationships between Numerical Patterns", "std": "5.OA.3", "type": "P", "skills": []},
+  {"id": "U10L13", "unit": 10, "lesson": 13, "name": "Graphing Patterns", "std": "5.OA.3", "type": "C", "skills": []},
+  {"id": "U10L14", "unit": 10, "lesson": 14, "name": "Graphing Patterns", "std": "5.OA.3", "type": "P", "skills": []},
+  {"id": "U10L15", "unit": 10, "lesson": 15, "name": "Graph & Analyze Real World Data", "std": "5.G.2 5.OA.3", "type": "C", "skills": []},
+  {"id": "U10L16", "unit": 10, "lesson": 16, "name": "Graph & Analyze Real World Data", "std": "5.G.2 5.OA.3", "type": "P", "skills": []},
+  {"id": "U10L17", "unit": 10, "lesson": 17, "name": "Representing Numerical Patterns", "std": "5.G.1 2.G.2 5.OA.3", "type": "MT", "skills": []},
+  {"id": "U11L1", "unit": 11, "lesson": 1, "name": "Length: Multi-Step Word Problems", "std": "5.MD.1", "type": "C", "skills": []},
+  {"id": "U11L2", "unit": 11, "lesson": 2, "name": "Length: Multi-Step Word Problems", "std": "5.MD.1", "type": "P", "skills": []},
+  {"id": "U11L3", "unit": 11, "lesson": 3, "name": "Weight: Multi-Step Word Problems", "std": "5.MD.1", "type": "C", "skills": []},
+  {"id": "U11L4", "unit": 11, "lesson": 4, "name": "Weight: Multi-Step Word Problems", "std": "5.MD.1", "type": "P", "skills": []},
+  {"id": "U11L5", "unit": 11, "lesson": 5, "name": "Volume: Multi-Step Word Problems", "std": "5.MD.1", "type": "C", "skills": []},
+  {"id": "U11L6", "unit": 11, "lesson": 6, "name": "Volume: Multi-Step Word Problems", "std": "5.MD.1", "type": "P", "skills": []},
+  {"id": "U11L7", "unit": 11, "lesson": 7, "name": "Measurement: Multi-Step word problems", "std": "5.MD.1", "type": "MT", "skills": []},
+  {"id": "U11L8", "unit": 11, "lesson": 8, "name": "Line Plots: Multi-Step Word Problems", "std": "5.MD.2", "type": "C", "skills": []},
+  {"id": "U11L9", "unit": 11, "lesson": 9, "name": "Line Plots: Multi-Step Word Problems", "std": "5.MD.2", "type": "P", "skills": []},
+  {"id": "U11L10", "unit": 11, "lesson": 10, "name": "Line Plots: Multi-Step Word Problems with Division", "std": "5.MD.2", "type": "C", "skills": []},
+  {"id": "U11L11", "unit": 11, "lesson": 11, "name": "Line Plots: Multi-Step Word Problems with Division", "std": "5.MD.2", "type": "P", "skills": []},
+  {"id": "U11L12", "unit": 11, "lesson": 12, "name": "Line Plots", "std": "5.MD.2", "type": "MT", "skills": []}
 ];
+
 for(const k of SKILL_ORDER){ SKILLS[k].lessons = LESSONS.filter(L=>L.skills.includes(k)).map(L=>L.id); }
-const NOT_YET_COVERED = "Not yet in the app from the grade-five major clusters: division with two-digit divisors (5.NBT.6), multiplying and dividing decimals (rest of 5.NBT.7), 5.NBT.1 as a stated 10× / 1/10 relationship, all of fractions (5.NF.1–7), and volume (5.MD.3–5). Also not covered: 5.OA.3 patterns, 5.MD.1–2, 5.G. Unit 1 Lessons 1–7 and 9 and Unit 2 Lesson 6 were not in the homework sample, so their skill mapping is inferred.";
+function lessonTypeLabel(t){ return t==="C" ? "Concept lesson (C)" : t==="P" ? "Practice lesson (P)" : t==="MT" ? "Unit review (MT)" : String(t||""); }
+function _isoToDate(iso){ const [y,m,d]=iso.split("-").map(Number); return new Date(y,m-1,d); }
+function _schoolDays(a,b){ let n=0; const d=new Date(a); while(d<=b){ const w=d.getDay(); if(w!==0&&w!==6) n++; d.setDate(d.getDate()+1); } return n; }
+// Estimated lesson for a date: within a unit, spread its lessons evenly over the unit's school days; between units, sit on the previous unit's last lesson (review).
+function lessonForDate(date){
+  const d=new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const first=UNITS[0], last=UNITS[UNITS.length-1];
+  if(d < _isoToDate(first.start)) return LESSONS.find(L=>L.unit===first.unit).id;
+  for(let i=0;i<UNITS.length;i++){ const u=UNITS[i]; const st=_isoToDate(u.start), en=_isoToDate(u.end);
+    const mine=LESSONS.filter(L=>L.unit===u.unit);
+    if(d>=st && d<=en){ const total=Math.max(1,_schoolDays(st,en)); const done=Math.max(0,_schoolDays(st,d)-1); const idx=Math.min(mine.length-1, Math.floor(done/total*mine.length)); return mine[idx].id; }
+    const nxt=UNITS[i+1]; if(d>en && (!nxt || d<_isoToDate(nxt.start))) return mine[mine.length-1].id;
+  }
+  const ml=LESSONS.filter(L=>L.unit===last.unit); return ml[ml.length-1].id;
+}
+const NOT_YET_COVERED = (()=>{ const missing=UNITS.filter(u=>!LESSONS.some(L=>L.unit===u.unit && L.skills.length)); const partial=UNITS.filter(u=>LESSONS.some(L=>L.unit===u.unit && L.skills.length) && LESSONS.some(L=>L.unit===u.unit && !L.skills.length && L.type!=="MT"));
+  return "Built from the MCS 2026-27 Grade 5 Claims & Pacing Guide (Swun Math). Units not yet in the app: "+missing.map(u=>`Unit ${u.unit} ${u.name} (${u.start.slice(5).replace("-","/")}–${u.end.slice(5).replace("-","/")})`).join("; ")+"."+(partial.length?" Units partly covered: "+partial.map(u=>"Unit "+u.unit).join(", ")+".":"")+" Lesson types: C = concept lesson, P = practice lesson, MT = unit review (labels as used in the guide; meanings inferred). Optional lessons are italicized in the guide and cannot be told apart in this copy."; })();
 const NOTES2={
   "left-to-right":"That is what you get by working straight across from left to right. Multiplication and division come before addition and subtraction, even when they appear later in the line.",
   "parens":"The parentheses were skipped. Whatever is inside grouping symbols happens first, no matter what operation it is.",
@@ -1375,13 +1633,28 @@ const lessonSkills=l=>(l && Array.isArray(l.skills) ? l.skills : []).filter(k=>S
 const lessonShort=l=>l ? `U${l.unit} L${l.lesson}` : "";
 const lessonShortById=id=>{ const l=lessonById(id); return l ? lessonShort(l) : String(id).replace(/^U(\d+)L(\d+)$/,"U$1 L$2"); };
 const lessonLong=l=>l ? `Unit ${esc(l.unit)} · Lesson ${esc(l.lesson)} · ${esc(l.name)}` : "";
+// ---- Units / pacing calendar (also optional in the engine) ----
+const unitList=()=>(typeof UNITS!=="undefined" && Array.isArray(UNITS)) ? UNITS : [];
+const unitById=n=>unitList().find(u=>u && +u.unit===+n) || null;
+const typeLabel=t=>{ if(!t) return ""; if(typeof lessonTypeLabel==="function"){ try{ const s=lessonTypeLabel(t); if(s) return String(s); }catch(e){} }
+  return ({C:"Concept lesson (C)", P:"Practice lesson (P)", MT:"Unit review (MT)"})[t] || String(t); };
+const MONTHS_SHORT=["Jan","Feb","Mar","Apr","May","June","July","Aug","Sept","Oct","Nov","Dec"];
+const fmtISO=s=>{ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s||"")); return m ? `${MONTHS_SHORT[+m[2]-1]||m[2]} ${+m[3]}` : String(s||""); }; // "2026-09-08" → "Sept 8"
+const unitRange=u=>(u && u.start && u.end) ? `${fmtISO(u.start)} – ${fmtISO(u.end)}` : "";
+const unitTitle=n=>{ const u=unitById(n); return `Unit ${n}${u&&u.name?` · ${u.name}`:""}${unitRange(u)?` · ${unitRange(u)}`:""}`; };
 function defaultClassAt(){ // first lesson whose skills are all in the app (and has at least one), else the first lesson
   const L=lessonList(); if(!L.length) return null;
   const f=L.find(l=>l && Array.isArray(l.skills) && l.skills.length && l.skills.every(k=>SKILLS[k]));
   return (f||L[0]).id;
 }
+function calendarClassAt(){ // where the district pacing calendar says the class is today (engine estimate), else the old default
+  if(typeof lessonForDate==="function"){ try{ const id=lessonForDate(new Date()); if(lessonById(id)) return id; }catch(e){} }
+  return defaultClassAt();
+}
+// Effective class position: a lesson the grown-up pinned, otherwise the calendar. S.classPin is a lesson id or null (= follow the calendar).
+const effectiveClassAt=()=>(S && lessonById(S.classPin)) ? S.classPin : calendarClassAt();
 const blankProfile=name=>({name, levels:Object.fromEntries(SKILL_ORDER.map(s=>[s,1])), hist:Object.fromEntries(SKILL_ORDER.map(s=>[s,[]])),
-  correct:0, attempted:0, best:0, run:0, guided:0, persist:0, logTrimmed:0, today:{d:todayStr(), c:0, a:0}, log:[], created:Date.now(), classAt:defaultClassAt()});
+  correct:0, attempted:0, best:0, run:0, guided:0, persist:0, logTrimmed:0, today:{d:todayStr(), c:0, a:0}, log:[], created:Date.now(), classPin:null});
 function normalize(p){ // fill in anything missing (older saves, imports)
   const b=blankProfile(p.name||"Player");
   // history: keep only real entries (non-null objects with a finite numeric time); coerce the fields the report keys on
@@ -1391,7 +1664,11 @@ function normalize(p){ // fill in anything missing (older saves, imports)
   for(const k of SKILL_ORDER){ out.levels[k]=Math.min(MAX_LEVEL, Math.max(1, +out.levels[k]||1)); if(!Array.isArray(out.hist[k])) out.hist[k]=[]; }
   for(const k of ["correct","attempted","best","run","guided","persist","logTrimmed"]) out[k]=Math.max(0, +out[k]||0);
   if(out.today.d!==todayStr()) out.today={d:todayStr(), c:0, a:0};
-  out.classAt = lessonById(out.classAt) ? out.classAt : defaultClassAt(); // unknown or missing lesson id → default
+  // Class position. Migrate the old manual classAt: keep it as a pin only if it disagrees with the calendar today,
+  // so profiles that were merely on the old default switch to following the calendar automatically.
+  if(!("classPin" in p) && p.classAt!==undefined){ out.classPin = (lessonById(p.classAt) && p.classAt!==calendarClassAt()) ? p.classAt : null; }
+  out.classPin = lessonById(out.classPin) ? out.classPin : null; // unknown or missing lesson id → follow the calendar
+  delete out.classAt;
   return out;
 }
 let DB={profiles:{}, current:null};
@@ -1502,17 +1779,25 @@ function home(){
   S=normalize(S); DB.profiles[S.name]=S;
   const pct = S.attempted ? Math.round(100*S.correct/S.attempted) : null;
   const t=S.today;
-  // "This week in class": the lesson the parent set from the homework header, plus the one before it for spiral review
-  const L=lessonList(), ci=lessonIdx(S.classAt), curL=ci>=0?L[ci]:null, prevL=ci>0?L[ci-1]:null, nextL=(ci>=0&&ci<L.length-1)?L[ci+1]:null;
+  // "This week in class": the lesson the district calendar (or a grown-up's pin) puts the class on, plus the one before it for spiral review
+  const L=lessonList(), ci=lessonIdx(effectiveClassAt()), curL=ci>=0?L[ci]:null, prevL=ci>0?L[ci-1]:null, nextL=(ci>=0&&ci<L.length-1)?L[ci+1]:null;
+  const unit=curL?unitById(curL.unit):null;
+  const lessonLine=(l,withUnit)=>[withUnit?`Unit ${esc(l.unit)}`:"", `Lesson ${esc(l.lesson)}`, esc(l.name), l.std?esc(l.std):"", l.type?esc(typeLabel(l.type)):""].filter(Boolean).join(" · ");
   const weekHTML = curL ? `
     <div class="card week">
-      <div class="week-head"><h2 style="margin:0">This week in class</h2>${curL.std?`<span class="std">${esc(curL.std)}</span>`:""}</div>
-      <div class="week-lesson">${lessonLong(curL)}${curL.inferred?` <span class="muted inferred">(inferred)</span>`:""}</div>
-      ${prevL?`<div class="week-prev muted">Spiral review: ${lessonLong(prevL)}${prevL.std?` · ${esc(prevL.std)}`:""}</div>`:""}
+      <div class="week-head"><h2 style="margin:0">This week in class</h2>${S.classPin?`<span class="std" title="Set on the grown-ups page">Pinned</span>`:`<span class="std" title="Estimated from the district pacing calendar">Calendar</span>`}</div>
+      <div class="week-unit muted">${unit?esc(unitTitle(unit.unit)):`Unit ${esc(curL.unit)}`}</div>
+      <div class="week-lesson">${lessonLine(curL,false)}${curL.inferred?` <span class="muted inferred">(inferred)</span>`:""}</div>
+      ${prevL?`<div class="week-prev muted">Spiral review: ${lessonLine(prevL, prevL.unit!==curL.unit)}</div>`:""}
+      ${unit&&unit.assess?`<div class="week-prev muted">Next assessment: Unit ${esc(unit.unit)} Assessment: ${esc(unit.assess)}</div>`:""}
       ${lessonSkills(curL).length?"":`<p class="muted week-note">The app doesn't have this lesson yet. Practicing the two lessons before it.</p>`}
       <div class="actions" style="margin-top:12px"><button class="btn primary" data-skill="week" id="week">Practice this week</button>${nextL?`<button class="btn quiet small" id="moved" title="Advance to ${esc(lessonShort(nextL))}">Class moved on →</button>`:""}</div>
+      <p class="muted week-foot">${S.classPin?"Lesson position was pinned on the grown-ups page; choose “Follow the calendar” there to go back to the district pacing estimate.":"Lesson position is estimated from the district pacing calendar; use the grown-ups page to pin the exact lesson from the homework header."}</p>
     </div>` : "";
-  const tagsHTML=k=>{ const ids=Array.isArray(SKILLS[k].lessons)?SKILLS[k].lessons:[]; return ids.length?`<div class="tags" aria-label="Lessons">${ids.map(id=>`<span class="tag">${esc(lessonShortById(id))}</span>`).join("")}</div>`:""; };
+  const tagsHTML=k=>{ let ids=L.filter(l=>l && Array.isArray(l.skills) && l.skills.includes(k)).map(l=>l.id); // derive from the lesson list, else the skill's own list
+    if(!ids.length) ids=Array.isArray(SKILLS[k].lessons)?SKILLS[k].lessons:[];
+    const extra=Math.max(0, ids.length-6); ids=ids.slice(0,6);
+    return ids.length?`<div class="tags" aria-label="Lessons">${ids.map(id=>`<span class="tag">${esc(lessonShortById(id))}</span>`).join("")}${extra?`<span class="tag">+${extra} more</span>`:""}</div>`:""; };
   app.innerHTML=`
     <div class="topbar"><h1 style="margin:0">Hi, ${esc(S.name)}.</h1><button class="btn quiet small" id="switch">Not ${esc(S.name)}?</button></div>${warnHTML()}
     <p class="muted" style="margin:6px 0 16px">Pick something to practice. It gets harder as you get better, and if you miss one, we slow down and walk through it.</p>
@@ -1525,7 +1810,7 @@ function home(){
   app.querySelector("#switch").onclick=players;
   app.querySelector("#grown").onclick=grownups;
   const mv=app.querySelector("#moved"); if(mv) mv.onclick=()=>{ if(!nextL) return;
-    if(confirm(`Move the class position to ${lessonShort(nextL)} · ${nextL.name}?`)){ S.classAt=nextL.id; save(); home(); } };
+    if(confirm(`Move the class position to ${lessonShort(nextL)} · ${nextL.name}?`)){ S.classPin=nextL.id; save(); home(); } };
   (app.querySelector("#week")||app.querySelector(".skill")).focus({preventScroll:true});
 }
 
@@ -1535,7 +1820,7 @@ function drawWeighted(keys, weights){
   return keys[0];
 }
 function weekWeights(){ // current lesson's skills ×3, the two lessons before it ×1 each; skills the app lacks are skipped
-  const L=lessonList(), ci=lessonIdx(S.classAt); const w={};
+  const L=lessonList(), ci=lessonIdx(effectiveClassAt()); const w={};
   if(ci<0) return w;
   [[ci,3],[ci-1,1],[ci-2,1]].forEach(([i,wt])=>{ if(i>=0) for(const k of lessonSkills(L[i])) w[k]=(w[k]||0)+wt; });
   return w;
@@ -1553,7 +1838,11 @@ function start(m){ mode=m; next(); }
 function next(){ // a fresh problem: new help chain
   const sk=pickSkill();
   stage="fresh"; chain=0;
-  cur=SKILLS[sk].gen(S.levels[sk]); resetProblemState(); render();
+  // Week mode: the current lesson may ask for a particular flavour of a skill (e.g. area-model multiplication). Skill mode passes nothing.
+  let focus;
+  if(mode==="week"){ const l=lessonById(effectiveClassAt()); if(l && l.focus && typeof l.focus==="object" && l.focus[sk]) focus=l.focus[sk]; }
+  cur = focus!==undefined ? SKILLS[sk].gen(S.levels[sk], focus) : SKILLS[sk].gen(S.levels[sk]);
+  resetProblemState(); render();
 }
 function followup(){ // "Try one like it": same skill, same level as the one she missed, aimed at the same mistake
   const prev=cur, sk=prev.skill, tag=prev.mistake?prev.mistake.tag:"other";
@@ -1813,22 +2102,38 @@ function grownups(){
   const skillName=k=>SKILLS[k]?SKILLS[k].name:esc(str(k)||"?");
   const missMeta=e=>`${Number.isFinite(e.t)?fmtDate(e.t):"unknown time"} · ${skillName(e.sk)}${e.lvl!=null?` · level ${esc(str(e.lvl))}`:""} · ${e.stage?esc(str(e.stage)):(e.retry?"retry":"fresh")}${+e.hints>0?" · "+(+e.hints)+" hint"+(+e.hints>1?"s":""):""}${typeof e.tag==="string"&&e.tag?` · <span class="tag">${esc(e.tag)}</span>`:""}${e.revealed!==undefined?` · walkthrough: ${+e.passed||0} step${+e.passed===1?"":"s"} right, ${+e.revealed||0} shown`:""}`;
   const exportText=JSON.stringify(DB); const nPlayers=Object.keys(DB.profiles).length;
-  // Class position: which lesson the class is on, set from the homework header
-  const L=lessonList();
-  const lessonOpt=l=>`<option value="${esc(l.id)}" ${l.id===S.classAt?"selected":""}>${esc(lessonShort(l))} · ${esc(l.name)}${l.std?` · ${esc(l.std)}`:""}${l.inferred?" (inferred)":""}</option>`;
-  const skillMap=SKILL_ORDER.map(k=>{ const ids=Array.isArray(SKILLS[k].lessons)?SKILLS[k].lessons:[];
-    return `<tr><td>${SKILLS[k].name}</td><td>${ids.length?ids.map(id=>`<span class="tag">${esc(lessonShortById(id))}</span>`).join(" "):"<span class=\"muted\">—</span>"}</td></tr>`; }).join("");
-  const noSkill=L.filter(l=>l && !lessonSkills(l).length);
+  // Class position: the district calendar's estimate, or a lesson pinned here from the homework header
+  const L=lessonList(), classId=effectiveClassAt(), calId=calendarClassAt();
+  const byUnit=[]; for(const l of L){ if(!l) continue; let g=byUnit.find(x=>x.unit===l.unit); if(!g){ g={unit:l.unit, ls:[]}; byUnit.push(g); } g.ls.push(l); }
+  const optLabel=l=>`${lessonShort(l)} · ${l.name}${l.std?` · ${l.std}`:""}${l.type?` · ${l.type}`:""}${l.inferred?" (inferred)":""}${lessonSkills(l).length?"":" · not in the app yet"}`;
+  const lessonOpts=byUnit.map(g=>`<optgroup label="${esc(unitTitle(g.unit))}">${g.ls.map(l=>`<option value="${esc(l.id)}" ${l.id===classId?"selected":""}>${esc(optLabel(l))}</option>`).join("")}</optgroup>`).join("");
+  const classModeHTML=()=>S.classPin
+    ? `<b>Pinned by you:</b> ${esc(lessonShortById(S.classPin))}. The district calendar puts the class at ${calId?esc(lessonShortById(calId)):"—"} today.`
+    : `<b>Following the district calendar:</b> ${calId?esc(lessonShortById(calId)):"—"} today (estimated from the unit dates, weekdays only).`;
+  // Skill → lesson table, grouped by unit, with lesson type letters
+  const covered=byUnit.filter(g=>g.ls.some(l=>lessonSkills(l).length));
+  const coveredUnits=new Set(covered.map(g=>g.unit));
+  const allUnits = unitList().length ? unitList().map(u=>u.unit) : byUnit.map(g=>g.unit);
+  const notYetUnits=allUnits.filter(n=>!coveredUnits.has(n)).map(n=>esc(unitTitle(n)));
+  const lessonTag=l=>`<span class="tag">L${esc(l.lesson)}${l.type?` ${esc(l.type)}`:""}</span>`;
+  const skillMap=covered.map(g=>{ const skillsIn=SKILL_ORDER.filter(k=>g.ls.some(l=>lessonSkills(l).includes(k)));
+    const missing=g.ls.filter(l=>!lessonSkills(l).length);
+    return `<tr class="unit-row"><th colspan="2" scope="colgroup">${esc(unitTitle(g.unit))}</th></tr>`
+      + skillsIn.map(k=>`<tr><td>${SKILLS[k].name}</td><td>${g.ls.filter(l=>lessonSkills(l).includes(k)).map(lessonTag).join(" ")}</td></tr>`).join("")
+      + (missing.length?`<tr><td class="muted">Not in the app yet</td><td class="muted">${missing.map(l=>`L${esc(l.lesson)}${l.type?` ${esc(l.type)}`:""}`).join(", ")}</td></tr>`:""); }).join("");
   const classHTML = L.length ? `
     <div class="card">
       <h2 style="margin-top:0">Class position</h2>
-      <p class="muted" style="font-size:14px;margin:0 0 8px">Set this from the header on the homework sheet ("Homework · Unit 2 Lesson 5"). "Practice this week" on the home screen draws mostly from this lesson, with some from the two before it for spiral review.</p>
+      <p class="muted" style="font-size:14px;margin:0 0 8px">By default the app follows the district pacing calendar. If the homework header says otherwise ("Homework · Unit 2 Lesson 5"), pick that lesson and pin it. "Practice this week" on the home screen draws mostly from this lesson, with some from the two before it for spiral review.</p>
+      <p class="muted classmode" id="classmode" style="font-size:14px;margin:0 0 8px" role="status" aria-live="polite">${classModeHTML()}</p>
       <label class="vh" for="classat">Lesson the class is on</label>
-      <div class="row"><select class="sel" id="classat">${L.map(lessonOpt).join("")}</select><button class="btn" id="saveclass">Save</button><span class="muted" id="classsaved" style="font-size:13px" role="status" aria-live="polite"></span></div>
+      <div class="row"><select class="sel" id="classat">${lessonOpts}</select></div>
+      <div class="actions" style="margin-top:10px"><button class="btn" id="saveclass">Save (pin this lesson)</button><button class="btn quiet" id="followcal">Follow the calendar</button><span class="muted" id="classsaved" style="font-size:13px" role="status" aria-live="polite"></span></div>
       <h2>Which lessons each skill practices</h2>
-      <div style="overflow-x:auto"><table class="report"><tr><th>Skill here</th><th>Lessons</th></tr>${skillMap}</table></div>
-      ${noSkill.length?`<p class="muted" style="font-size:13px;margin:10px 0 0">Lessons with no skill in the app yet: ${noSkill.map(l=>`${esc(lessonShort(l))} · ${esc(l.name)}`).join("; ")}.</p>`:`<p class="muted" style="font-size:13px;margin:10px 0 0">Every lesson in the list has at least one skill here.</p>`}
+      <div style="overflow-x:auto"><table class="report"><tr><th>Skill here</th><th>Lessons</th></tr>${skillMap||`<tr><td colspan="2" class="muted">No lesson in the list has a skill here yet.</td></tr>`}</table></div>
+      <p class="muted" style="font-size:13px;margin:10px 0 0">Lesson types: C = concept lesson, P = practice lesson, MT = unit review.</p>
     </div>` : "";
+  const notYetUnitsHTML = notYetUnits.length ? `<p class="muted" style="font-size:13px;margin:10px 0 4px">Units with nothing in the app yet:</p><ul class="units muted">${notYetUnits.map(t=>`<li>${t}</li>`).join("")}</ul>` : "";
   const notYet = typeof NOT_YET_COVERED==="string" && NOT_YET_COVERED.trim() ? NOT_YET_COVERED : `Covered: 5.NBT.2, 5.NBT.3a, 5.NBT.3b, 5.NBT.4, and the add/subtract part of 5.NBT.7. Not yet covered from the grade-five "major" clusters: 5.NBT.1 as a stated relationship (10× / 1/10 between places), 5.NBT.5–6 (multi-digit multiplication and division), multiplying and dividing decimals (rest of 5.NBT.7), all of fractions (5.NF.1–7), and volume (5.MD.3–5). Also not covered: 5.OA, 5.MD.1–2, 5.G. Matching this to the SWUN unit and lesson sequence needs the classroom unit materials; the framework itself does not mention SWUN.`;
   app.innerHTML=`
     <div class="topbar"><button class="btn quiet" id="back">Home</button><h1 style="margin:0">${esc(S.name)}'s progress</h1><span></span></div>${warnHTML()}
@@ -1862,6 +2167,7 @@ function grownups(){
       <p class="muted" style="font-size:14px;margin:0 0 8px">Mapped to the California Mathematics Framework, Grade Five (CDE), which uses the Common Core standard codes. This app is decimal place-value practice; it is not a full fifth-grade program.</p>
       <div style="overflow-x:auto"><table class="report"><tr><th>Skill here</th><th>Standard</th></tr>${SKILL_ORDER.map(k=>`<tr><td>${SKILLS[k].name}</td><td>${SKILLS[k].std}</td></tr>`).join("")}</table></div>
       <p class="muted" style="font-size:13px;margin:10px 0 0">${esc(notYet)}</p>
+      ${notYetUnitsHTML}
     </div>
     <div class="card">
       <h2 style="margin-top:0">Danger zone</h2>
@@ -1869,9 +2175,12 @@ function grownups(){
     </div>`;
   const q=id=>app.querySelector("#"+id);
   q("back").onclick=home; q("back").focus({preventScroll:true});
+  const setClassMode=()=>{ const m=q("classmode"); if(m) m.innerHTML=classModeHTML(); };
   if(q("saveclass")) q("saveclass").onclick=()=>{ const id=q("classat").value; const l=lessonById(id);
     if(!l){ q("classsaved").textContent="Pick a lesson from the list."; return; }
-    S.classAt=l.id; const okSave=save(); q("classsaved").textContent=okSave?`Saved: ${lessonShort(l)}.`:"Set for now, but this device refused to save it."; };
+    S.classPin=l.id; const okSave=save(); q("classsaved").textContent=okSave?`Pinned: ${lessonShort(l)}.`:"Pinned for now, but this device refused to save it."; setClassMode(); };
+  if(q("followcal")) q("followcal").onclick=()=>{ S.classPin=null; const okSave=save(); const id=calendarClassAt(); if(id) q("classat").value=id;
+    q("classsaved").textContent=okSave?`Following the calendar: ${id?lessonShortById(id):"—"} today.`:"Following the calendar for now, but this device refused to save it."; setClassMode(); };
   q("copy").onclick=async()=>{ const ta=q("export"); ta.select(); let done=false; try{ await navigator.clipboard.writeText(ta.value); done=true; }catch(e){ try{ done=document.execCommand("copy"); }catch(e2){} } q("copied").textContent=done?"Copied.":"Select the text and copy it by hand."; };
   q("doimport").onclick=()=>{ const r=validateBackup(q("import").value); if(!r.ok){ q("imperr").textContent=r.err; return; } q("imperr").textContent="";
     if(!confirm(`Restore ${r.names.length} player${r.names.length>1?"s":""}?\n\n${r.summary.join("\n")}\n\nPlayers with the same name on this device will be replaced.`)) return;
