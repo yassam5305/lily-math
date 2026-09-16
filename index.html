@@ -122,6 +122,12 @@ pre.stack .pad{color:#9AA5B3}
 pre.stack .carry{font-size:.6em;color:var(--hi-ink);vertical-align:top}
 pre.stack .cr{color:#B45309;font-weight:600}
 .build{font-size:12px;margin-left:auto;align-self:center;white-space:nowrap}
+.substep.why{border-style:solid;border-color:var(--ink);background:#fff}
+.scratch{margin-top:16px}
+.scratch-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;font-size:14px}
+.scratch canvas{display:block;width:100%;height:300px;border:2px solid var(--line);border-radius:12px;background:#FFFEF8;touch-action:none;cursor:crosshair}
+.btn[aria-pressed="true"]{border-color:var(--ink);background:#EEF2F7}
+.substep.why.ok{border-color:var(--ok);background:var(--ok-bg)} .substep.why.bad{border-color:var(--no);background:var(--no-bg)}
 .card.hw{margin:0 0 14px;padding-top:14px;border-color:var(--line)}
 .card.hw .skill{width:100%;margin:4px 0 0;background:#F7F9FC}
 .card.hw .week-head .std{font-size:12px;font-weight:700;color:var(--graphite);border:1px solid var(--line);border-radius:999px;padding:1px 8px;background:#fff}
@@ -418,7 +424,8 @@ function genExpanded(level, focus){
     const idx=allVals.indexOf(val); const cand=[val]; for(let dlt=1; cand.length<4 && dlt<7; dlt++){ if(allVals[idx-dlt]) cand.push(allVals[idx-dlt]); if(cand.length<4 && allVals[idx+dlt]) cand.push(allVals[idx+dlt]); }
     const opts=shuffle(cand);
     steps.push({t:`The <b>${c.digit}</b> is in the <b>${c.place}</b> place.`, chart:num, hl:{[c.key]:"ul"}, check: i<2 ? cm(`The value of the ${c.digit} is ${c.digit} × …?`, opts, opts.indexOf(val)) : undefined}); });
-  if(z) steps.push({t:`A zero has <b>no value to write</b>, but it still <b>holds its place</b>. Skip the zero; do not move the next digit into its place.`, check:cm(`What happens with the 0 in the ${z.place} place?`, ["No addend, but it holds its place","An addend: 0 × "+valOf(z),"It is skipped and the next digit moves into its place"], 0)});
+  if(z) steps.push({t:`The 0 in the ${z.place} place is worth 0 × ${valOf(z)} = 0. Writing that addend is not wrong, but expanded form <b>leaves it out</b> because it adds nothing. The zero still <b>holds its place</b>: the next digit does not move over.`, check:cm(`Which addend can be left out without changing the value?`, shuffle([`0 × ${valOf(z)}, because it equals 0`, `${nz[0].digit} × ${valOf(nz[0])}`, `the ${nz[nz.length-1].place} addend, because it is last`]), null)});
+  if(z){ const st=steps[steps.length-1]; st.check.answer=st.check.options.findIndex(o=>o.startsWith("0 ×")); st.check.display=st.check.options[st.check.answer]; }
   steps.push({t:`Join the addends with plus signs. Count them: there should be ${nz.length}.`, check:finalCheck(p)});
   p.steps=steps;
   const fc=nz[0];
@@ -441,6 +448,7 @@ function genShift(level, focus){
   else { op=pick(["×","÷"]); factor=pick([10,100,1000]); }
   if(focus && focus.op) op=focus.op;
   if(focus && focus.factor && (f==="count"||f==="direction")) factor=focus.factor;
+  if(focus && focus.fixed){ op=focus.fixed.op; factor=+focus.fixed.factor; }
   const n=Math.round(Math.log10(factor));
   // 2) build a number whose result still fits in the chart (at most 3 decimal places). For ÷ that means
   //    the number may have at most 3-n decimal digits; we regenerate until V is exactly divisible.
@@ -455,6 +463,7 @@ function genShift(level, focus){
     V=toThousandths(num);
   } while(tries++<50 && op==="÷" && V%factor!==0);
   if(op==="÷" && V%factor!==0){ num={w:ri(11,99), d:""}; V=toThousandths(num); } // whole numbers always divide by 10/100/1000 exactly
+  if(focus && focus.fixed){ num={w:+focus.fixed.num.w, d:String(focus.fixed.num.d||"")}; op=focus.fixed.op; factor=+focus.fixed.factor; V=toThousandths(num); }
 
   const RV = op==="×" ? V*factor : V/factor;
   const result=fromThousandths(RV);
@@ -494,6 +503,7 @@ function genPowers(level, focus){
   if(variant==="threefactor"){ if(other===null) other=ri(2,9); if(num.d){ num={w:ri(2,9),d:""}; } }
   if(focus && focus.e && level!==3) e=focus.e;
   if(f==="trailing-zeros" && !num.d && variant==="plain") num.w = pick([ri(2,9)*10, ri(1,9)*100]);
+  if(focus && focus.fixed){ num={w:+focus.fixed.num.w, d:String(focus.fixed.num.d||"")}; e=+focus.fixed.e; variant=focus.fixed.variant||"plain"; other=focus.fixed.other!==undefined?+focus.fixed.other:null; }
   const sup=String(e).split("").map(ch=>"⁰¹²³⁴⁵⁶⁷⁸⁹"[+ch]).join("");
   const pow=Math.pow(10,e);
   const baseZeros = num.d ? 0 : (String(num.w).match(/0+$/)||[""])[0].length;
@@ -509,11 +519,13 @@ function genPowers(level, focus){
   const steps=[];
   if(variant==="repeated"){
     steps.push({t:`Each <b>× 10</b> is one factor of ten. Count them.`, check:ci(`How many times is 10 a factor?`, e)});
+    steps.push({t:`Write it with an exponent. Keep the <b>×</b> between ${fmt(num)} and the power of ten (it is a product, not a sum).`, check:Object.assign(ci(`Type ${fmt(num)} × 10 with the exponent, like ${fmt(num)} x 10^${e===2?3:2}.`, e, `${fmt(num)} × 10^${e}`), {text:true, validate:str=>{ const m=String(str).replace(/\s+/g,"").replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g,ch=>"^"+"⁰¹²³⁴⁵⁶⁷⁸⁹".indexOf(ch)).match(/^([\d,]+(?:\.\d+)?)[x×*·]10\^(\d+)$/i); return !!m && parseAnswer(m[1])===numValue(num) && +m[2]===e; }})});
     steps.push({t:`The exponent is that count: ${fmt(num)} × 10${sup}. The power of 10 value is 10${sup} = <b>${pow.toLocaleString("en-US")}</b>.`, check:ci(`What is 10${sup} in standard form?`, pow, pow.toLocaleString("en-US"))});
     steps.push({t:`Final product: ${fmt(num)} × ${pow.toLocaleString("en-US")} = <b>${fmt(ans)}</b>. The decimal point moves ${plural(e,"place")} right.`, check:ci(`What is the final product?`, numValue(ans), fmt(ans))});
     steps.push({t:`So the exponent is <b>${e}</b>.`, check:finalCheck(p)});
   } else {
-    if(variant==="threefactor") steps.push({t:`First multiply the factors without the power of 10: ${fmt(num)} × ${other}.`, check:ci(`${fmt(num)} × ${other} = ?`, prod.w, fmt(prod))});
+    if(variant==="threefactor"){ steps.push({t:`First multiply the factors without the power of 10: ${fmt(num)} × ${other}.`, check:ci(`${fmt(num)} × ${other} = ?`, prod.w, fmt(prod))});
+      steps.push({t:`Rewrite the problem with that product. The power of 10 <b>keeps its exponent</b>: ${fmt(num)} × 10${sup} × ${other} becomes ${fmt(prod)} × 10<sup>?</sup>.`, check:ci(`What exponent stays on the 10? (${fmt(prod)} × 10 to the …)`, e)}); }
     steps.push({t:`Write the exponent number in standard form.`, check:ci(`10${sup} = ?`, pow, pow.toLocaleString("en-US"))});
     const mv=shuffle([`${e} to the right`, `${e} to the left`, `${e+1} to the right`]);
     steps.push({t:`Multiplication makes the number greater, so the decimal point moves <b>right</b>. 10${sup} has <b>${plural(e,"zero")}</b>, so it moves ${plural(e,"place")}.`, check:cm(`How many places does the decimal point move, and which way?`, mv, mv.indexOf(`${e} to the right`))});
@@ -588,6 +600,7 @@ function genRoundNumber(level, focus){
   // focus: same place as the missed problem; force the trap that bit her
   if(focus && typeof focus.p==="number" && level!==4){ p=focus.p; num=numForPlace(p); if(level<=2 && p>=0){ num={w:ri(1000,9999), d:""}; } }
   if(f==="chop"||f==="direction"){ let V=toThousandths(num); const unit=Math.pow(10,p+3); V += (ri(5,9)-digitAt(V,p-1))*(unit/10); num = p<0 ? (()=>{const n=fixedFrom(V,3); n.d=trimDec(n.d); return n;})() : fromThousandths(V); }
+  if(focus && focus.fixed){ num={w:+focus.fixed.num.w, d:String(focus.fixed.num.d||"")}; p=+focus.fixed.p; }
   const p0={skill:"rounding", level, prompt:`Round to the nearest <b>${placeSing(p)}</b>.<br><span class="big-num">${fmt(num)}</span>`, type:"input", show:num};
   const rs=roundingSteps(num,p,null);
   p0.answer=numValue(rs.ans); p0.display=fmt(rs.ans); p0.minCols=rs.minCols; p0.meta={V:toThousandths(num), p, R:rs.R, C:rs.C};
@@ -630,6 +643,7 @@ function genRoundWhich(level, focus){
   return p0;
 }
 function genRounding(level, focus){
+  if(focus && focus.fixed) return genRoundNumber(level, focus);
   if(focus && focus.which!==undefined) return focus.which ? genRoundWhich(level, focus) : genRoundNumber(level, focus);
   const pWhich = level<2 ? 0 : level>=5 ? 0.5 : 0.35; return Math.random()<pWhich ? genRoundWhich(level, focus) : genRoundNumber(level, focus);
 }
@@ -845,7 +859,34 @@ function validProblem(p){
   for(const st of p.steps){ const c=st.check; if(!c) continue; if(c.type==="input" && !c.text && !Number.isFinite(c.answer)) return false; if(c.type==="mc" && (c.answer<0||c.answer>=c.options.length)) return false; }
   return true;
 }
-function safeGen(gen){ return function(level, focus){
+// After a right answer, one multiple-choice "why" in SWUN's own wording. Not every skill has one; none affect levels.
+function whyFor(p){
+  const m=p.meta||{}; const sk=p.skill; let q, right, wrong;
+  const sup=n=>String(n).split("").map(ch=>"⁰¹²³⁴⁵⁶⁷⁸⁹"[+ch]).join("");
+  if(sk==="powers" && m.variant!=="repeated"){ const e=m.e; q=`Explain the pattern of zeros: why does the product look like that?`;
+    right=`10${sup(e)} has ${plural(e,"zero")}, so the decimal point moves ${plural(e,"place")} to the right when multiplying.`;
+    wrong=[`10${sup(e)} has ${plural(e,"zero")}, so the decimal point moves ${plural(e,"place")} to the left when multiplying.`, `Multiplying by 10${sup(e)} adds ${e} to the number.`, `The exponent ${e} tells how many times to double the number.`]; }
+  else if(sk==="shift" && m.factor){ const n=m.n, mult=m.op==="×"; q=`Explain the pattern of the zeros and the decimal point.`;
+    right=`${m.factor.toLocaleString("en-US")} has ${plural(n,"zero")}, so the decimal point moves ${plural(n,"place")} to the ${mult?"right":"left"} when ${mult?"multiplying":"dividing"}.`;
+    wrong=[`${m.factor.toLocaleString("en-US")} has ${plural(n,"zero")}, so the decimal point moves ${plural(n,"place")} to the ${mult?"left":"right"} when ${mult?"multiplying":"dividing"}.`, `The decimal point always moves one place for any power of ten.`, `${mult?"Multiplying":"Dividing"} by ${m.factor.toLocaleString("en-US")} ${mult?"adds":"subtracts"} ${n} zero${n===1?"":"s"} from the whole number part only.`]; }
+  else if(sk==="rounding" && m.p!==undefined && !m.which && m.V!==undefined){ const c=digitAt(m.V,m.p-1); const up=c>=5; q=`Explain your thinking: why does it round that way?`;
+    right=`The circled digit is ${c}. ${up?"It is 5 or greater, so the underlined digit goes up one":"It is 4 or less, so the underlined digit stays the same"}, and the digits to the right become zeros.`;
+    wrong=[`The circled digit is ${c}. ${up?"It is 5 or greater, so the underlined digit stays the same":"It is 4 or less, so the underlined digit goes up one"}, and the digits to the right become zeros.`, `Drop every digit after the rounding place; the underlined digit never changes.`, `Add one to the underlined digit whenever there are digits to the right of it.`]; }
+  else if(sk==="compare" && m.a && m.b && !m.nums && !m.open){ const A=padTo(m.a,m.k), B=padTo(m.b,m.k); const sa=String(A.w)+A.d, sb=String(B.w)+B.d; const L=Math.max(sa.length,sb.length); const pa=sa.padStart(L,"0"), pb=sb.padStart(L,"0"); let i=0; while(i<L && pa[i]===pb[i]) i++;
+    if(i<L){ const wl=String(Math.max(A.w,B.w)).length; const placeName = i<wl ? WHOLE_PLACES[wl-1-i] : DEC_PLACES[i-wl]; q=`Prove your answer: how do you know?`;
+      right=`Line up the decimal points and compare from the left. The first place where the digits differ is the ${placeName}: ${pa[i]} and ${pb[i]}.`;
+      wrong=[`The number with more digits is greater.`, `Compare the digits after the decimal point as whole numbers: ${parseInt(m.a.d||"0",10)} and ${parseInt(m.b.d||"0",10)}.`, `The number with the smaller last digit is less.`]; }
+    else { q=`Prove your answer: how do you know?`; right=`Zeros on the end of a decimal add nothing, so after lining up the decimal points every digit matches: they are equivalent decimals.`; wrong=[`The longer decimal is greater because it has more digits.`, `The shorter decimal is greater because its digits are worth more.`, `They can only be equal if they have the same number of digits.`]; } }
+  else if(sk==="multiply" && m.b>=10 && m.variant==="algorithm"){ const a=m.a, t=Math.floor(m.b/10)*10; q=`Why does the second partial product start with a 0?`;
+    right=`The second row multiplies ${a} by the tens digit, so it is really ${a} × ${t}. Multiplying by tens puts a 0 in the ones place.`;
+    wrong=[`The 0 is a placeholder you add whenever the bottom number has two digits.`, `The second row is ${a} × ${t/10}; the 0 is added so the rows are the same length.`, `The 0 comes from the ones digit of ${m.b} being multiplied.`]; }
+  else if(sk==="expressions" && m.variant==="relation" && m.rel){ return null; }
+  if(!q) return null;
+  const o=buildOptions(right, wrong.map(text=>({text, tag:"why-wrong"})));
+  return {q, options:o.options, answer:o.answer, display:right};
+}
+function safeGen(gen){ const raw=_safeGenRaw(gen); return function(level, focus){ const out=raw(level, focus); try{ if(out && out.why===undefined) out.why=whyFor(out); }catch(e){ out.why=null; } return out; }; }
+function _safeGenRaw(gen){ return function(level, focus){
   for(let i=0;i<5;i++){ let p=null; try{ p=gen(level, focus); }catch(e){} if(validProblem(p)) return p; }
   for(let i=0;i<5;i++){ let p=null; try{ p=gen(level); }catch(e){} if(validProblem(p)) return p; }   // drop the focus if it keeps failing
   for(let i=0;i<20;i++){ let p=null; try{ p=gen(1); }catch(e){} if(validProblem(p)) return p; }      // last resort: level 1
@@ -888,6 +929,7 @@ function inputIssue(target, str){
   if(target && target.text) return "";
   const cleaned=s.replace(/[,\s]/g,"");
   if((cleaned.match(/\./g)||[]).length>1) return "A number can only have one decimal point.";
+  if(s.includes(",") && !/^-?\d{1,3}(,\d{3})+(\.\d*)?$/.test(s.replace(/\s/g,""))) return "Commas go between groups of three digits, like 1,234 or 72,585.";
   if(/[^0-9.\-]/.test(cleaned)) return "Type a number, like 72.585 (digits and one decimal point).";
   if(isNaN(parseAnswer(s))) return "Type a number, like 72.585";
   return "";
@@ -924,6 +966,7 @@ const NOTES={
   "dec-as-whole":"Decimal digits were treated like whole numbers. Digits after the decimal point are worth 1/10, 1/100, 1/1000.",
   "zeros":"The digits are right but they are in the wrong places. Count the zeros you need right after the decimal point.",
   "no-whole":"There is no word 'and', so there is no whole number part. Start with 0 and the decimal point.",
+  "two-points":"A number has only <b>one</b> decimal point. Adding a 0 on the end does not make a number greater: 0.05 and 0.050 are equivalent decimals. To change the value, change a digit.",
   "other":""
 };
 function diagnose(prob, yours){
@@ -1247,16 +1290,19 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v7.2 · September 15, 2026";
+const BUILD="v8 · September 15, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
+// Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
-  const w=Math.max(String(a).length, String(b).length+1, ...(parts||[]).map(x=>String(x).length), total!==undefined?String(total).length:0)+1;
-  const pad=s=>String(s).padStart(w," ");
+  const cols=Math.max(String(a).length, String(b).length, ...(parts||[]).map(x=>String(x).length), total!==undefined?String(total).length:0)+1;
+  const W=3, blank=" ".repeat(W);
+  const cell=x=>x===" "||x===undefined ? blank : String(x).slice(-W).padStart(W," ");
+  const row=str=>{ const chars=String(str).split(""); let out=""; for(let i=0;i<cols;i++){ const j=chars.length-cols+i; out+=cell(j>=0?chars[j]:" "); } return out; };
   let html="";
-  if(carries && String(carries).trim()) html+=`<span class="cr"> ${pad(carries)}</span>\n`;
-  html+=` ${pad(a)}\n×${pad(b)}\n`;
-  if(parts&&parts.length){ html+=`<span class="rule"> ${pad(parts[0])}</span>\n`; for(let i=1;i<parts.length;i++) html+=(i===parts.length-1?"+":" ")+pad(parts[i])+"\n"; if(total!==undefined) html+=`<span class="rule"> ${pad(total)}</span>`; }
-  else if(total!==undefined) html+=`<span class="rule"> ${pad(total)}</span>`;
+  if(Array.isArray(carries) && carries.some(Boolean)){ let out=""; for(let i=0;i<cols;i++){ const j=carries.length-cols+i; const c=j>=0?carries[j]:null; out+= c ? ("+"+c).padStart(W," ") : blank; } html+=`<span class="cr"> ${out}</span>\n`; }
+  html+=` ${row(a)}\n×${row(b)}\n`;
+  if(parts&&parts.length){ html+=`<span class="rule"> ${row(parts[0])}</span>\n`; for(let i=1;i<parts.length;i++) html+=(i===parts.length-1?"+":" ")+row(parts[i])+"\n"; if(total!==undefined) html+=`<span class="rule"> ${row(total)}</span>`; }
+  else if(total!==undefined) html+=`<span class="rule"> ${row(total)}</span>`;
   return `<pre class="stack">${html}</pre>`;
 }
 // Does any partial-product row of a × b regroup? (b may have one or two digits)
@@ -1269,20 +1315,20 @@ function mulNeedsRegroup(a,b){
 function mulRowSteps(a,b,d,shift,doneRows){
   const digs=String(a).split("").map(Number).reverse(); const steps=[]; const written=[]; const carryAt=[]; let carry=0;
   const rowStr=()=>written.slice().reverse().join("");
-  const carryStr=()=>{ let s=""; for(let j=digs.length-1;j>=0;j--) s+=carryAt[j]?String(carryAt[j]):" "; return s; };
-  const pic=()=>stackMul(a,b,[...(doneRows||[]), rowStr()],undefined,carryStr());
+  const carryArr=()=>{ const out=[]; for(let j=digs.length-1;j>=0;j--) out.push(carryAt[j]||null); return out; }; // left to right, one slot per digit of a
+  const pic=()=>stackMul(a,b,[...(doneRows||[]), rowStr()],undefined,carryArr());
   const place=j=>WHOLE_PLACES[j+shift];
   if(shift){ steps.push({t:`This row multiplies by the <b>tens digit</b>, ${d}, so it is really ${a} × ${d*10}. Every tens row starts with a <b>0</b> in the ones place.${pic()}`, check:ci(`What digit goes in the ones place of this row?`, 0)}); written.push("0"); }
   digs.forEach((g,j)=>{
     const last=j===digs.length-1, prodD=g*d, sum=prodD+carry, cin=carry;
-    const fact={t:`<b>${cap(place(j))}</b>: multiply ${d} × ${g}${cin?`, then add the regrouped <b>${cin}</b>`:""}.${pic()}`, check:ci(cin?`${d} × ${g} + ${cin} = ?`:`${d} × ${g} = ?`, sum)};
-    if(cin){ fact.sub=[{t:`First just the fact: ${d} × ${g}.${pic()}`, check:ci(`${d} × ${g} = ?`, prodD)},{t:`Now add the <b>${cin}</b> that was regrouped into the ${place(j)} place.${pic()}`, check:ci(`${prodD} + ${cin} = ?`, sum)}]; fact.tAfter=`So ${d} × ${g} + ${cin}: put those two steps together.`; }
+    const fact={t:`<b>${cap(place(j))}</b>: multiply ${d} × ${g}${cin?`, then add the <b>+${cin}</b> written above it`:""}.${pic()}`, check:ci(cin?`${d} × ${g} + ${cin} = ?`:`${d} × ${g} = ?`, sum)};
+    if(cin){ fact.sub=[{t:`First just the fact: ${d} × ${g}.${pic()}`, check:ci(`${d} × ${g} = ?`, prodD)},{t:`Now add the <b>+${cin}</b> that was regrouped into the ${place(j)} place.${pic()}`, check:ci(`${prodD} + ${cin} = ?`, sum)}]; fact.tAfter=`So ${d} × ${g} + ${cin}: put those two steps together.`; }
     steps.push(fact);
     if(last){ steps.push({t:`This is the last digit of ${a}, so there is nowhere left to regroup. Write the whole <b>${sum}</b> here, starting in the ${place(j)} place.${pic()}`, check:ci(`What do you write in the ${place(j)} place and up?`, sum)}); written.push(String(sum)); carry=0; }
     else if(sum>=10){
       steps.push({t:`${sum} is 10 or more, so only one digit fits in the ${place(j)} place. Write that digit here and regroup the other to the ${place(j+1)} place.${pic()}`, check:ci(`What digit do you write in the ${place(j)} place?`, sum%10)}); written.push(String(sum%10));
-      const c=Math.floor(sum/10);
-      steps.push({t:`The other digit of ${sum} is regrouped into the ${place(j+1)} place. Write it small above the next digit of ${a} to the left, the <b>${digs[j+1]}</b>${shift?` (it lands in the ${place(j+1)} place because this row already starts one place over)`:""}.${pic()}`, check:ci(`What do you regroup to the ${place(j+1)} place?`, c)}); carryAt[j+1]=c; carry=c;
+      const c=Math.floor(sum/10); carryAt[j+1]=c; carry=c; // written before the picture so the +digit shows above its column
+      steps.push({t:`The other digit of ${sum} is regrouped into the ${place(j+1)} place. Write it small as <b>+${c}</b> above the next digit of ${a} to the left, the <b>${digs[j+1]}</b>${shift?` (it lands in the ${place(j+1)} place because this row already starts one place over)`:""}.${pic()}`, check:ci(`What do you regroup to the ${place(j+1)} place?`, c)});
     } else { steps.push({t:`${sum} is less than 10, so it fits in the ${place(j)} place. Nothing to regroup.${pic()}`, check:ci(`What digit goes in the ${place(j)} place?`, sum)}); written.push(String(sum)); carry=0; }
   });
   const value=a*d*(shift?10:1);
@@ -1317,10 +1363,12 @@ function genMultiply(level, focus){
     if(focus && focus.variant) variant=focus.variant;
   };
   draw();
-  { let g=0; while(b>=10 && b%10===0 && g++<60) draw(); } // a two-digit multiplier ending in 0 makes the ones row all zeros; the worksheet never does that
+  const fixed=focus && focus.fixed;
+  if(fixed){ a=+fixed.a; b=+fixed.b; variant=(focus.variant)||"algorithm"; }
+  else { let g=0; while(b>=10 && b%10===0 && g++<60) draw(); } // a two-digit multiplier ending in 0 makes the ones row all zeros; the worksheet never does that
   // A follow-up aimed at a mistake must contain that mistake's trap: a regroup for "carry", a tens row for the shift and missing-row tags.
-  if(f==="carry"){ let g=0; while(!mulNeedsRegroup(a,b) && g++<60) draw(); }
-  if((f==="shift-partial"||f==="missing-row") && b<10){ let g=0; while(b<10 && g++<60) draw(); if(b<10) b=ri(12,29); }
+  if(!fixed && f==="carry"){ let g=0; while(!mulNeedsRegroup(a,b) && g++<60) draw(); }
+  if(!fixed && (f==="shift-partial"||f==="missing-row") && b<10){ let g=0; while(b<10 && g++<60) draw(); if(b<10) b=ri(12,29); }
   if((f==="shift-partial"||f==="missing-row"||f==="carry") && variant!=="algorithm" && b>=10) variant="algorithm";
   const prod=a*b;
   const p={skill:"multiply", level, prompt:`<span class="big-num">${a.toLocaleString("en-US")} × ${b} = ?</span>`, type:"input", answer:prod, display:prod.toLocaleString("en-US"), show:null, meta:{a,b,variant,regroup:mulNeedsRegroup(a,b)}};
@@ -1354,7 +1402,7 @@ function genMultiply(level, focus){
     steps.push({t:`Step 3: add the two partial products.${stackMul(a,b,[a*ones,a*tens*10])}`, check:finalCheck(p), sub:ad.steps, tAfter:`Step 3, finished: read the total from the digits you wrote (${ad.readBack}).`});
   }
   p.steps=steps;
-  p.hints= b<10 ? [{t:`Multiply from the ones place. Regroup when a place makes 10 or more.`},{t:`Ones first: ${b} × ${a%10} = ${b*(a%10)}.`},{t:`Write the ones digit, regroup the rest to the next place, and keep going left.`}]
+  p.hints= b<10 ? [{t:`Multiply from the ones place. Regroup when a place makes 10 or more.`},{t:`Ones first: ${b} × ${a%10} = ${b*(a%10)}.`},{t:`Write the ones digit, write the regrouped digit as +digit above the next place, and keep going left.`}]
     : [{t:`Two partial products: ${a} × ${b%10}, then ${a} × ${Math.floor(b/10)*10}. Add them.`},{t:`The second partial product needs a 0 in the ones place because you are really multiplying by ${Math.floor(b/10)*10}.`},{t:`Start the first partial product in the ones place: ${b%10} × ${a%10} = ${(b%10)*(a%10)}.`}];
   return p;
 }
@@ -1466,7 +1514,8 @@ function genDivide(level, focus){
   else if(level===4){ d=ri(11,49); q=ri(21,199); }
   else { d=ri(12,99); q=ri(101,499); }
   if(focus && focus.d && level!==1) d=focus.d;
-  const N=d*q; if(N>9999){ return genDivide(Math.max(1,level-1), focus); }
+  if(focus && focus.fixed){ d=+focus.fixed.d; q=+focus.fixed.q; }
+  const N=d*q; if(N>9999 && !(focus&&focus.fixed)){ return genDivide(Math.max(1,level-1), focus); }
   const qd=String(q).split("").map(Number); const L=qd.length;
   const parts=qd.map((dg,i)=>({qpart:dg*Math.pow(10,L-1-i), piece:dg*Math.pow(10,L-1-i)*d})).filter(x=>x.qpart>0);
   const p={skill:"divide", level, prompt:`<span class="big-num">${N.toLocaleString("en-US")} ÷ ${d} = ?</span>`, type:"input", answer:q, display:q.toLocaleString("en-US"), show:null, meta:{N,d,q,variant,parts}};
@@ -1734,7 +1783,7 @@ function calendarClassAt(){ // where the district pacing calendar says the class
 // Effective class position: a lesson the grown-up pinned, otherwise the calendar. S.classPin is a lesson id or null (= follow the calendar).
 const effectiveClassAt=()=>(S && lessonById(S.classPin)) ? S.classPin : calendarClassAt();
 const blankProfile=name=>({name, levels:Object.fromEntries(SKILL_ORDER.map(s=>[s,1])), hist:Object.fromEntries(SKILL_ORDER.map(s=>[s,[]])),
-  correct:0, attempted:0, best:0, run:0, guided:0, persist:0, shown:0, logTrimmed:0, today:{d:todayStr(), c:0, a:0}, log:[], created:Date.now(), classPin:null});
+  correct:0, attempted:0, best:0, run:0, guided:0, persist:0, shown:0, logTrimmed:0, scratch:(typeof window!=="undefined" && window.innerWidth>=700), today:{d:todayStr(), c:0, a:0}, log:[], created:Date.now(), classPin:null});
 function normalize(p){ // fill in anything missing (older saves, imports)
   const b=blankProfile(p.name||"Player");
   // history: keep only real entries (non-null objects with a finite numeric time); coerce the fields the report keys on
@@ -1743,6 +1792,7 @@ function normalize(p){ // fill in anything missing (older saves, imports)
   const out={...b, ...p, levels:{...b.levels, ...(p.levels||{})}, hist:{...b.hist, ...(p.hist||{})}, today:{...b.today, ...(p.today||{})}, log};
   for(const k of SKILL_ORDER){ out.levels[k]=Math.min(MAX_LEVEL, Math.max(1, +out.levels[k]||1)); if(!Array.isArray(out.hist[k])) out.hist[k]=[]; }
   for(const k of ["correct","attempted","best","run","guided","persist","shown","logTrimmed"]) out[k]=Math.max(0, +out[k]||0);
+  out.scratch = ("scratch" in p) ? !!p.scratch : b.scratch;
   if(out.today.d!==todayStr()) out.today={d:todayStr(), c:0, a:0};
   // Class position. Migrate the old manual classAt: keep it as a pin only if it disagrees with the calendar today,
   // so profiles that were merely on the old default switch to following the calendar automatically.
@@ -1823,6 +1873,8 @@ let sc=null;     // state of the current step's check: {tries, state:"open"|"con
                  // open = still trying; confirm = answer shown, she must enter it to close the step; ok / revealed = closed
 let stepRes=[];  // per-step outcome for the walkthrough ("ok" | "revealed")
 let revealed=0, passed=0, expanded=0, missEntry=null;
+let whyState=null, okEntry=null;
+let scratchStrokes=[]; let penSeen=false; // scratch paper for the current problem; once a pencil is used, finger touches are ignored (palm rejection) // the "say why" question after a right answer: {sel, done, ok}; okEntry is the log entry it annotates
 function expandAll(steps){ const out=[]; for(const s of steps){ if(Array.isArray(s.sub)&&s.sub.length){ out.push(...expandAll(s.sub)); const c={...s, expanded:true}; if(c.tAfter) c.t=c.tAfter; out.push(c); } else out.push(s); } return out; }
 
 function askName(){
@@ -1834,13 +1886,29 @@ function askName(){
       <input class="ans" id="name" type="text" autocomplete="given-name" autocapitalize="words" placeholder="Your first name" maxlength="24">
       <div class="inline-err" id="err" role="status" aria-live="polite"></div>
       <div class="actions"><button class="btn primary" id="go">Let's go</button>${Object.keys(DB.profiles).length?`<button class="btn quiet" id="cancel">Cancel</button>`:""}</div>
-    </div>`;
+    </div>
+    <p class="muted" style="font-size:14px;margin-top:14px">Moving from another iPad? <button class="btn quiet small" id="restorelink">Paste a transfer code</button></p>`;
   const inp=app.querySelector("#name"); inp.focus();
   const go=()=>{ const v=inp.value.trim(); if(!v){ inp.focus(); return; }
     if(DB.profiles[v]){ app.querySelector("#err").textContent=`There is already a player named ${v}. Pick that name on the players screen, or add a last initial.`; return; }
     S=normalize(blankProfile(v)); DB.profiles[v]=S; DB.current=v; save(); home(); };
   app.querySelector("#go").onclick=go; inp.addEventListener("keydown",e=>{ if(e.key==="Enter") go(); });
   const c=app.querySelector("#cancel"); if(c) c.onclick=players;
+  app.querySelector("#restorelink").onclick=restoreScreen;
+}
+function restoreScreen(){ // first-launch restore: paste the transfer code from the old iPad
+  app.innerHTML=`
+    <h1>Bring progress over</h1>${warnHTML()}
+    <p class="muted" style="margin:0 0 14px">On the old iPad, open the app, tap <b>For grown-ups</b>, then <b>Copy transfer code</b>. Paste it here. (Same iCloud account: copy there, paste here; the clipboard carries over on its own.)</p>
+    <div class="card" style="margin-top:0">
+      <label class="vh" for="rcode">Transfer code or backup text</label>
+      <textarea class="io" id="rcode" placeholder="Paste the transfer code (starts with LM1.) or backup text"></textarea>
+      <div class="inline-err" id="rerr" role="status" aria-live="polite"></div>
+      <div class="actions"><button class="btn primary" id="rgo">Restore</button><button class="btn quiet" id="rcancel">Back</button></div>
+    </div>`;
+  const q=id=>app.querySelector("#"+id); q("rcode").focus();
+  q("rgo").onclick=async()=>{ q("rerr").textContent="Checking…"; const r=await importBackupText(q("rcode").value); if(!r.ok){ q("rerr").textContent=r.err; return; } if(r.err){ q("rerr").textContent=r.err; return; } home(); };
+  q("rcancel").onclick=()=>{ if(Object.keys(DB.profiles).length) players(); else askName(); };
 }
 function players(){
   cur=null;
@@ -1886,6 +1954,7 @@ function home(){
     <div class="card hw">
       <div class="week-head"><h2 style="margin:0">Homework practice</h2><span class="std" title="Problem shapes from the worksheet, not from your level">Worksheet shapes</span></div>
       <p class="muted" style="font-size:14px;margin:6px 0 10px">Tonight's page, at tonight's size. These use the worksheet's problem shapes no matter what the dots say, and they never move a level up or down.</p>
+      <button class="skill" data-skill="hw:check"><div style="flex:1"><div class="name">Check a problem from the page</div><div class="blurb">Type the exact problem (148 × 19, 3,660 ÷ 30, 8 × 10^5 × 6, round 2.98 to the nearest tenth). Answer it here; a miss walks through that problem.</div></div></button>
       ${Object.keys(HW_MODES).map(id=>{ const h=HW_MODES[id]; return `<button class="skill" data-skill="hw:${id}"><div style="flex:1"><div class="name">${esc(h.name)}</div><div class="blurb">${esc(h.blurb)}</div><div class="tags" aria-label="Standard"><span class="tag">${esc(h.std)}</span></div></div></button>`; }).join("")}
       <p class="muted week-note" style="margin:10px 0 0"><b>Need to build up to it?</b> “${esc(SKILLS.multiply.name)}” below is the easier, step-up practice: it starts at your level (level ${S.levels.multiply}: ${MUL_SHAPE_BY_LEVEL[S.levels.multiply]||""}) and grows as you level up. That is prerequisite practice, not tonight's page.</p>
     </div>
@@ -1908,6 +1977,51 @@ const HW_MODES={
     shapes:[[2,1],[3,1],[2,2],[3,2],[3,2]], variant:"algorithm"}
 };
 const hwId=m=>typeof m==="string"&&m.startsWith("hw:")?m.slice(3):null;
+// "Check my homework": read a problem typed from the page. Returns {skill, focus, level, label} or {err}.
+function parseHomework(text){
+  let t=String(text||"").trim().toLowerCase().replace(/\s+/g," ").replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g,m=>"^"+[...m].map(ch=>"⁰¹²³⁴⁵⁶⁷⁸⁹".indexOf(ch)).join("")).replace(/=\s*\??\s*$/,"").trim();
+  if(!t) return {err:"Type the problem first."};
+  const NUM="(\\d[\\d,]*(?:\\.\\d+)?|\\.\\d+)";
+  const numOf=str=>{ const v=parseAnswer(str); if(isNaN(v)) return null; const [w,d=""]=String(str).replace(/,/g,"").split("."); return {w:parseInt(w||"0",10), d:d.replace(/0+$/,""), v}; };
+  const isPow=str=>{ const m=str.match(/^10\^(\d+)$/); if(m) return +m[1]; const v=parseAnswer(str); if(!isNaN(v) && v>=10 && Number.isInteger(Math.log10(v)) && Math.log10(v)<=6) return Math.round(Math.log10(v)); return null; };
+  const PLACES={"one":0,"ones":0,"whole number":0,"whole":0,"ten":1,"tens":1,"hundred":2,"hundreds":2,"thousand":3,"thousands":3,"ten thousand":4,"ten thousands":4,"hundred thousand":5,"hundred thousands":5,"tenth":-1,"tenths":-1,"hundredth":-2,"hundredths":-2,"thousandth":-3,"thousandths":-3};
+  // rounding: "round 2.98 to the nearest tenth", "2.98 nearest tenth", "2.98 to the tenths"
+  let m=t.match(new RegExp("^(?:round\\s+)?"+NUM+"\\s+(?:to\\s+)?(?:the\\s+)?(?:nearest\\s+)?([a-z ]+?)(?:\\s+place)?$"));
+  if(m && PLACES[m[2].trim()]!==undefined){ const num=numOf(m[1]); const p=PLACES[m[2].trim()]; if(!num) return {err:"I could not read that number."};
+    if(num.d.length>3) return {err:"The app works up to thousandths (3 decimal places)."}; if(p<0 && num.d.length<= -p) return {err:`${fmt(num)} already stops at the ${placeName(p)} place, so there is nothing to round.`}; if(p>=0 && num.w<Math.pow(10,p)) return {err:`${fmt(num)} is too small to round to the nearest ${placeSing(p)}.`};
+    return {skill:"rounding", focus:{fixed:{num:{w:num.w,d:num.d},p}}, level:3, label:`Round ${fmt(num)} to the nearest ${placeSing(p)}`}; }
+  // powers with an exponent: "8 × 10^5 × 6", "47 × 10^6", "72 x 10^4"
+  m=t.match(new RegExp("^"+NUM+"\\s*[x×*·]\\s*(10\\^\\d+)(?:\\s*[x×*·]\\s*"+NUM+")?$"));
+  if(m){ const num=numOf(m[1]); const e=isPow(m[2]); const other=m[3]?numOf(m[3]):null;
+    if(!num||e===null) return {err:"I could not read that."}; if(e<1||e>6) return {err:"Exponents from 1 to 6, please."};
+    if(other){ if(num.d||other.d) return {err:"With three factors, the app expects whole numbers (like 8 × 10^5 × 6)."}; return {skill:"powers", focus:{fixed:{num:{w:num.w,d:""},e,variant:"threefactor",other:other.w}}, level:3, label:`${fmt(num)} × 10^${e} × ${other.w}`}; }
+    if(num.d.length>3) return {err:"The app works up to thousandths (3 decimal places)."};
+    return {skill:"powers", focus:{fixed:{num:{w:num.w,d:num.d},e,variant:"plain"}}, level:num.d?5:2, label:`${fmt(num)} × 10^${e}`}; }
+  // "7 × 10 × 10 × 10 × 10" → repeated factors of ten
+  m=t.match(new RegExp("^"+NUM+"((?:\\s*[x×*·]\\s*10)+)$"));
+  if(m){ const num=numOf(m[1]); const e=(m[2].match(/10/g)||[]).length; if(!num||num.d) return {err:"Repeated × 10 works with a whole number in front."}; return {skill:"powers", focus:{fixed:{num:{w:num.w,d:""},e,variant:"repeated"}}, level:2, label:`${fmt(num)}${" × 10".repeat(e)}`}; }
+  // shift: "4.5 × 1,000", "2.99 ÷ 10^3", "365 / 100"
+  m=t.match(new RegExp("^"+NUM+"\\s*([x×*·÷/])\\s*(10\\^\\d+|1(?:,?0)+|10|100|1000|1,000|10000|10,000)$"));
+  if(m){ const num=numOf(m[1]); const e=isPow(m[3]); const op=/[÷/]/.test(m[2])?"÷":"×"; if(!num||e===null) return {err:"I could not read that."};
+    if(e>3) return {err:"Powers of ten up to 1,000 for moving the decimal point, please."}; if(num.d.length>3) return {err:"The app works up to thousandths (3 decimal places)."};
+    const V=toThousandths({w:num.w,d:num.d}); if(op==="÷" && V%Math.pow(10,e)!==0) return {err:`${fmt(num)} ÷ ${Math.pow(10,e).toLocaleString("en-US")} goes past thousandths, which the chart cannot show.`};
+    if(op==="×" && V*Math.pow(10,e)>999999999*1000) return {err:"That result is too large for the chart."};
+    return {skill:"shift", focus:{fixed:{num:{w:num.w,d:num.d},op,factor:Math.pow(10,e)}}, level:3, label:`${fmt(num)} ${op} ${Math.pow(10,e).toLocaleString("en-US")}`}; }
+  // multiplication: "148 × 19", "23 x 72", "222*43"
+  m=t.match(new RegExp("^"+NUM+"\\s*[x×*·]\\s*"+NUM+"$"));
+  if(m){ const A=numOf(m[1]), B=numOf(m[2]); if(!A||!B) return {err:"I could not read those numbers."}; if(A.d||B.d) return {err:"Multiplying decimals is Unit 4; the app does not have it yet."};
+    let a=A.w, b=B.w; if(String(b).length>String(a).length) [a,b]=[b,a]; if(a<2||b<2) return {err:"Both factors should be 2 or more."};
+    if(String(a).length>4) return {err:"Up to a 4-digit number times a 2-digit number, please."}; if(String(b).length>2) return {err:"The standard-algorithm walkthrough handles a 1- or 2-digit multiplier (two partial products)."};
+    if(b>=10 && b%10===0) return {err:`${a} × ${b}: a multiplier ending in 0 is a powers-of-ten pattern (${a} × ${b/10}, then × 10). Type ${a} × ${b/10} for the algorithm, or use "Multiply and divide by 10" for the pattern.`};
+    return {skill:"multiply", focus:{fixed:{a,b},variant:"algorithm"}, level:shapeLevel([String(a).length,String(b).length]), label:`${a.toLocaleString("en-US")} × ${b}`}; }
+  // division: "3,660 ÷ 30", "1728 / 12"
+  m=t.match(new RegExp("^"+NUM+"\\s*[÷/]\\s*"+NUM+"$"));
+  if(m){ const A=numOf(m[1]), B=numOf(m[2]); if(!A||!B) return {err:"I could not read those numbers."}; if(A.d||B.d) return {err:"Dividing decimals is Unit 4; the app does not have it yet."};
+    const N=A.w, d=B.w; if(d<2) return {err:"The divisor should be 2 or more."}; if(N%d!==0) return {err:`${N.toLocaleString("en-US")} ÷ ${d} has a remainder (${N%d}). The app's place-value strategy handles division that comes out even.`};
+    if(N>99999) return {err:"Dividends up to 99,999, please."}; const q=N/d; if(q<2) return {err:"The quotient should be 2 or more."};
+    return {skill:"divide", focus:{fixed:{d,q},variant:"placevalue"}, level:3, label:`${N.toLocaleString("en-US")} ÷ ${d}`}; }
+  return {err:"I did not recognize that. Try shapes like 148 × 19, 3,660 ÷ 30, 8 × 10^5 × 6, 4.5 × 1,000, or round 2.98 to the nearest tenth."};
+}
 const hwMode=()=>HW_MODES[hwId(mode)]||null;
 const MUL_SHAPE_BY_LEVEL={1:"2-digit × 1-digit",2:"3-digit × 1-digit",3:"2-digit × 2-digit",4:"3-digit × 2-digit",5:"3-digit × 2-digit with larger numbers"};
 const shapeLevel=([da,db])=>db>=2 ? (da>=3?4:3) : (da>=3?2:1); // the ordinary level where this shape first appears, for the log
@@ -1924,15 +2038,37 @@ function weekWeights(){ // current lesson's skills ×3, the two lessons before i
 }
 function pickSkill(){
   if(mode==="week"){ const w=weekWeights(), keys=Object.keys(w); if(keys.length) return drawWeighted(keys, keys.map(k=>w[k])); }
+  else if(mode==="hw:check") return (pendingHW && pendingHW.skill) || "multiply";
   else if(hwMode()) return hwMode().skill;
   else if(mode!=="mix") return mode;
   return drawWeighted(SKILL_ORDER, SKILL_ORDER.map(k=>(MAX_LEVEL+1-S.levels[k])*2+1)); // mix (and week with nothing to draw from)
 }
 function resetProblemState(){ // everything that must not leak from one problem into the next
   phase="q"; stepIdx=0; selected=-1; lastAnswer=""; hintIdx=0; lastChange=0; inlineErr="";
-  sc=null; stepRes=[]; revealed=0; passed=0; expanded=0; missEntry=null;
+  sc=null; stepRes=[]; revealed=0; passed=0; expanded=0; missEntry=null; whyState=null; okEntry=null; scratchStrokes=[];
 }
-function start(m){ mode=m; next(); }
+let pendingHW=null; // the parsed problem waiting to be served by next() in "hw:check" mode
+function start(m){ mode=m; if(m==="hw:check"){ pendingHW=null; hwEntry(); return; } next(); }
+// "Check my homework": type the problem from the page, then answer it like any other problem; a miss walks through that exact problem.
+function hwEntry(prefill, err){
+  mode="hw:check"; cur=null; pendingHW=null;
+  app.innerHTML=`
+    <div class="topbar"><button class="btn quiet" id="back">Home</button><div class="row"><span class="pill week">Homework</span></div></div>${warnHTML()}
+    <div class="card">
+      <h2 style="margin-top:0">Check a problem from the page</h2>
+      <p class="muted" style="margin:0 0 10px">Type the problem exactly as it appears on the worksheet. You will answer it here, and if it is not right, the app walks through <b>that</b> problem step by step. Nothing here changes your levels.</p>
+      <label class="vh" for="hwq">The problem</label>
+      <input class="ans text" id="hwq" type="text" inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="like 148 × 19" value="${esc(prefill||"")}">
+      <div class="inline-err" id="hwerr" role="status" aria-live="polite">${esc(err||"")}</div>
+      <div class="actions"><button class="btn primary" id="hwgo">Set it up</button></div>
+      <p class="muted" style="font-size:14px;margin:14px 0 0">Shapes the app knows: <b>148 × 19</b> (standard algorithm), <b>3,660 ÷ 30</b> (place value strategy), <b>8 × 10^5 × 6</b> or <b>47 × 10^6</b> (powers of ten), <b>4.5 × 1,000</b> or <b>2.99 ÷ 10^3</b> (moving the decimal point), <b>round 2.98 to the nearest tenth</b>. Use x or × for times, ÷ or / for divide, ^ for the exponent.</p>
+    </div>`;
+  const q=id=>app.querySelector("#"+id); const inp=q("hwq");
+  q("back").onclick=home;
+  const go=()=>{ const r=parseHomework(inp.value); if(r.err){ q("hwerr").textContent=r.err; inp.focus(); return; } pendingHW=r; next(); };
+  q("hwgo").onclick=go; inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); go(); } });
+  inp.focus({preventScroll:true});
+}
 function next(){ // a fresh problem: new help chain
   const sk=pickSkill();
   stage="fresh"; chain=0;
@@ -1940,7 +2076,8 @@ function next(){ // a fresh problem: new help chain
   let focus;
   if(mode==="week"){ const l=lessonById(effectiveClassAt()); if(l && l.focus && typeof l.focus==="object" && l.focus[sk]) focus=l.focus[sk]; }
   const hw=hwMode();
-  if(hw){ const shape=pick(hw.shapes); cur=SKILLS[sk].gen(shapeLevel(shape), {shape, variant:hw.variant}); cur.hw=true; }
+  if(mode==="hw:check"){ if(!pendingHW){ hwEntry(); return; } cur=SKILLS[pendingHW.skill].gen(pendingHW.level, pendingHW.focus); cur.hw=true; cur.fixed=true; cur.hwLabel=pendingHW.label; pendingHW=null; }
+  else if(hw){ const shape=pick(hw.shapes); cur=SKILLS[sk].gen(shapeLevel(shape), {shape, variant:hw.variant}); cur.hw=true; }
   else cur = focus!==undefined ? SKILLS[sk].gen(S.levels[sk], focus) : SKILLS[sk].gen(S.levels[sk]);
   resetProblemState(); render();
 }
@@ -1974,7 +2111,7 @@ function render(){
   const sk=cur.skill; const lvl = stage==="followup" ? cur.level : S.levels[sk]; // a follow-up stays at the level of the problem she missed
   const top=`
     <div class="topbar"><button class="btn quiet" id="back">Home</button>
-      <div class="row"><span class="pill">${SKILLS[sk].name}</span>${mode==="week"?`<span class="pill week">This week</span>`:""}${cur.hw?`<span class="pill week" title="Worksheet shapes; does not change levels">Homework</span>`:""}${stage==="followup"?`<span class="pill">One like it</span>`:""}${cur.hw?"":dots(lvl)}</div></div>${warnHTML()}`;
+      <div class="row"><button class="btn quiet small" id="scratchtoggle" aria-pressed="${S.scratch?"true":"false"}" title="Scratch paper for working it out with the pencil">${S.scratch?"Hide scratch paper":"Scratch paper"}</button><span class="pill">${SKILLS[sk].name}</span>${mode==="week"?`<span class="pill week">This week</span>`:""}${cur.hw?`<span class="pill week" title="${cur.fixed?"A problem typed from the page":"Worksheet shapes"}; does not change levels">${cur.fixed?"From the page":"Homework"}</span>`:""}${stage==="followup"?`<span class="pill">One like it</span>`:""}${cur.hw?"":dots(lvl)}</div></div>${warnHTML()}`;
   let body=`<p class="prompt">${cur.prompt}</p>`; let right="";
   const showChart = cur.show ? chartHTML(cur.show, null, cur.minCols) : "";
   const m=cur.mistake;
@@ -1996,8 +2133,11 @@ function render(){
       if(independent) msg=pick(["Correct.","Yes.","Nailed it.","That's right."])+(S.run>=3?`<small>${S.run} in a row.</small>`:"")+(lastChange>0?`<span class="lvl">Level up! ${SKILLS[sk].name} is now level ${lvl}${lvl===MAX_LEVEL?", the top":""}.</span>`:"")+(cur.hw?`<small>Homework practice: the dots stay put; this counts on the grown-ups page.</small>`:"");
       else if(stage==="fresh") msg=`You got it with a hint.<small>Level-ups come from problems you do on your own, so the next one is fresh, no hints needed yet.</small>`;
       else msg=`You worked through it. Persistence counts.<small>Here comes a fresh one.${S.persist>=2?` That is ${S.persist} tough ones finished in a row.`:""}</small>`;
-      body+=`<div class="banner ok" role="status" aria-live="polite"><span class="mark" aria-hidden="true">✓</span><div>${msg}</div></div>
-        <div class="actions"><button class="btn primary" id="next">Next</button></div>`;
+      body+=`<div class="banner ok" role="status" aria-live="polite"><span class="mark" aria-hidden="true">✓</span><div>${msg}</div></div>`;
+      if(whyState && cur.why){ const w=cur.why;
+        if(!whyState.done) body+=`<div class="substep why"><div class="cq">${w.q}</div>${optsHTML("wopts", w.options, whyState.sel, w.answer, false, "opt copt")}<div class="actions" style="margin-top:10px"><button class="btn primary" id="wcheck">Check</button></div></div>`;
+        else body+=`<div class="substep why ${whyState.ok?"ok":"bad"}"><div class="cq">${w.q}</div>${optsHTML("wopts", w.options, whyState.sel, w.answer, true, "opt copt")}<div class="res">${whyState.ok?`<span aria-hidden="true">✓</span> That is the reason.`:`<span aria-hidden="true">•</span> The reason: ${w.display}`}</div></div>`; }
+      if(!whyState || whyState.done) body+=`<div class="actions"><button class="btn primary" id="next">Next</button></div>`;
     }
     if(phase==="reveal"){ // full solution shown; she copies the answer in before Next appears
       const c = sc ? cur.steps[stepIdx].check : null; const done = !sc || sc.state==="ok";
@@ -2021,9 +2161,47 @@ function render(){
       <div class="wt" id="wt">${cur.steps.slice(0,stepIdx+1).map((s,i)=>stepHTML(s,i,i<stepIdx,true)).join("")}</div>
       <div class="actions">${open?"":(!last?`<button class="btn primary" id="step">Next step</button>`:`<button class="btn primary" id="retry">Try one like it</button>`)}</div>`;
   }
+  if(S.scratch) body+=scratchHTML();
   const card = right ? `<div class="card two"><div class="left">${body}</div><div class="right">${right}</div></div>` : `<div class="card">${body}</div>`;
   app.innerHTML=top+card+`<p class="streak" style="margin-top:12px">${S.today.c} right today${S.run>=2?` · ${S.run} in a row`:""}</p>`;
-  bind();
+  bind(); if(S.scratch) bindScratch();
+}
+function scratchHTML(){
+  return `<div class="scratch" id="scratch">
+    <div class="scratch-bar"><span class="muted">Scratch paper</span>
+      <div class="row"><button class="btn quiet small" id="sp-pen" aria-pressed="${scratchTool==="pen"}">Pencil</button><button class="btn quiet small" id="sp-eraser" aria-pressed="${scratchTool==="eraser"}">Eraser</button><button class="btn quiet small" id="sp-undo">Undo</button><button class="btn quiet small" id="sp-clear">Clear</button></div></div>
+    <canvas id="spc" aria-label="Scratch paper. Write here with the pencil; nothing here is checked." role="img"></canvas>
+  </div>`;
+}
+let scratchTool="pen";
+function drawScratch(cv){ // redraw every stroke (called after each render and each stroke)
+  const ctx=cv.getContext ? cv.getContext("2d") : null; if(!ctx) return; const dpr=window.devicePixelRatio||1; const w=cv.width/dpr, h=cv.height/dpr;
+  ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,cv.width,cv.height); ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.fillStyle="#FFFEF8"; ctx.fillRect(0,0,w,h);
+  const g=34; ctx.strokeStyle="#E6E9EE"; ctx.lineWidth=1; ctx.beginPath(); for(let x=g;x<w;x+=g){ ctx.moveTo(x+0.5,0); ctx.lineTo(x+0.5,h); } for(let y=g;y<h;y+=g){ ctx.moveTo(0,y+0.5); ctx.lineTo(w,y+0.5); } ctx.stroke();
+  ctx.lineCap="round"; ctx.lineJoin="round";
+  for(const st of scratchStrokes){ if(st.pts.length<1) continue;
+    ctx.globalCompositeOperation = st.erase ? "destination-out" : "source-over"; ctx.strokeStyle="#1B2733"; ctx.lineWidth = st.erase ? 26 : st.width;
+    ctx.beginPath(); ctx.moveTo(st.pts[0][0], st.pts[0][1]); if(st.pts.length===1) ctx.lineTo(st.pts[0][0]+0.1, st.pts[0][1]); for(let i=1;i<st.pts.length;i++) ctx.lineTo(st.pts[i][0], st.pts[i][1]); ctx.stroke(); }
+  ctx.globalCompositeOperation="source-over";
+}
+function bindScratch(){
+  const cv=app.querySelector("#spc"); if(!cv) return;
+  const q=id=>app.querySelector("#"+id);
+  const size=()=>{ const dpr=window.devicePixelRatio||1; const r=cv.getBoundingClientRect(); const w=Math.max(200,Math.round(r.width)); const h=Math.max(220, Math.min(420, Math.round(window.innerHeight*0.38))); cv.style.height=h+"px"; cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr); drawScratch(cv); };
+  size(); if(!bindScratch.resizeBound){ bindScratch.resizeBound=true; window.addEventListener("resize",()=>{ const c=app.querySelector("#spc"); if(c) setTimeout(()=>{ const dpr=window.devicePixelRatio||1; const r=c.getBoundingClientRect(); c.width=Math.round(r.width*dpr); c.height=Math.round(r.height*dpr); drawScratch(c); },60); }); }
+  let cur=null;
+  const pos=e=>{ const r=cv.getBoundingClientRect(); return [e.clientX-r.left, e.clientY-r.top]; };
+  cv.addEventListener("pointerdown",e=>{ if(e.pointerType==="pen") penSeen=true; if(e.pointerType==="touch" && penSeen) return; if(e.button!==0 && e.pointerType==="mouse") return;
+    e.preventDefault(); cv.setPointerCapture(e.pointerId);
+    const erase = scratchTool==="eraser" || (e.pointerType==="pen" && (e.buttons&32)); // the pencil's barrel eraser, where supported
+    cur={pts:[pos(e)], erase, width: e.pointerType==="pen" ? 2.4 + (e.pressure||0.5)*2 : 3}; scratchStrokes.push(cur); drawScratch(cv); });
+  cv.addEventListener("pointermove",e=>{ if(!cur) return; if(e.pointerType==="touch" && penSeen) return; e.preventDefault(); const pts = typeof e.getCoalescedEvents==="function" ? e.getCoalescedEvents() : [e]; for(const ev of pts) cur.pts.push(pos(ev)); drawScratch(cv); });
+  const end=()=>{ cur=null; }; cv.addEventListener("pointerup",end); cv.addEventListener("pointercancel",end); cv.addEventListener("pointerleave",end);
+  q("sp-pen").onclick=()=>{ scratchTool="pen"; q("sp-pen").setAttribute("aria-pressed","true"); q("sp-eraser").setAttribute("aria-pressed","false"); };
+  q("sp-eraser").onclick=()=>{ scratchTool="eraser"; q("sp-pen").setAttribute("aria-pressed","false"); q("sp-eraser").setAttribute("aria-pressed","true"); };
+  q("sp-undo").onclick=()=>{ scratchStrokes.pop(); drawScratch(cv); };
+  q("sp-clear").onclick=()=>{ scratchStrokes=[]; drawScratch(cv); };
 }
 function stepHTML(s,i,dim,withCheck){
   let sub="";
@@ -2047,12 +2225,13 @@ function checkCtlHTML(c){ // the entry control for a check, driven by sc. In con
   return `<label class="vh" for="cans">Your answer for this step</label><input class="ans small${isTextTarget(c)?" text":""}" id="cans" ${ansAttrs(c)} autocomplete="off" placeholder="${isTextTarget(c)?"Type your answer (like 2 × 2 × 3)":"Your answer"}" ${open?"":"disabled"} value="${esc(open?sc.val:c.display)}">`;
 }
 function focusFirst(){
-  const el = ["#ans:not([disabled])","#cans:not([disabled])","#check","#cstep","#step","#retry","#next"].map(s=>app.querySelector(s)).find(Boolean);
+  const el = ["#ans:not([disabled])","#cans:not([disabled])","#check","#cstep","#wopts .opt","#step","#retry","#next"].map(s=>app.querySelector(s)).find(Boolean);
   if(el) el.focus({preventScroll:true});
 }
 function bind(){
   const q=id=>app.querySelector("#"+id);
   q("back").onclick=home;
+  if(q("scratchtoggle")) q("scratchtoggle").onclick=()=>{ S.scratch=!S.scratch; save(); render(); };
   if(q("check")){
     q("check").onclick=submit;
     const inp=q("ans"); if(inp) inp.addEventListener("input",()=>{ lastAnswer=inp.value; });
@@ -2065,16 +2244,18 @@ function bind(){
     app.querySelectorAll("#copts .opt").forEach(b=>b.onclick=()=>setSel("copts",+b.dataset.i));
   }
   if(q("next")) q("next").onclick=next;
+  if(q("wcheck")){ q("wcheck").onclick=checkWhy; app.querySelectorAll("#wopts .opt").forEach(b=>b.onclick=()=>setSel("wopts",+b.dataset.i)); }
   if(q("step")) q("step").onclick=()=>{ stepIdx++; initStepCheck(); render(); const st=app.querySelectorAll("#wt .step"); if(st.length) st[st.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); };
   if(q("retry")) q("retry").onclick=followup;
   focusFirst();
 }
 function setSel(groupId, i, focusIt){ // select an MC option without re-rendering
-  if(groupId==="opts") selected=i; else if(sc) sc.sel=i;
+  if(groupId==="opts") selected=i; else if(groupId==="wopts"){ if(whyState) whyState.sel=i; } else if(sc) sc.sel=i;
   app.querySelectorAll("#"+groupId+" .opt").forEach(x=>{ const on=+x.dataset.i===i; x.classList.toggle("sel",on); x.setAttribute("aria-checked",on); if(on&&focusIt) x.focus({preventScroll:true}); });
 }
 function activeGroup(){ // the MC radiogroup the keyboard should drive right now, if any
   if(phase==="q"&&cur.type==="mc") return {id:"opts", n:cur.options.length, get:()=>selected};
+  if(phase==="ok"&&whyState&&!whyState.done&&cur.why) return {id:"wopts", n:cur.why.options.length, get:()=>whyState.sel};
   if((phase==="wt"||phase==="reveal")&&scActive()&&cur.steps[stepIdx].check.type==="mc") return {id:"copts", n:(cur.steps[stepIdx].check.options||[]).length, get:()=>sc.sel};
   return null;
 }
@@ -2087,7 +2268,7 @@ app.addEventListener("keydown", e=>{ // keyboard for the practice screen: Enter 
     if(tag==="BUTTON"&&!isOpt) return; // let ordinary buttons click natively
     e.preventDefault();
     if(isOpt&&g&&g.get()<0){ setSel(g.id,+tg.dataset.i); return; }
-    if(phase==="q") submit(); else if((phase==="wt"||phase==="reveal")&&scActive()) checkStep();
+    if(phase==="q") submit(); else if((phase==="wt"||phase==="reveal")&&scActive()) checkStep(); else if(phase==="ok"&&whyState&&!whyState.done) checkWhy();
     return;
   }
   if(tag==="INPUT"||!g) return;
@@ -2109,26 +2290,31 @@ function pushLog(e){
 function diag(yours){ try{ return (typeof diagnose==="function" && diagnose(cur, yours)) || {tag:"other", note:""}; }catch(e){ return {tag:"other", note:""}; } }
 function submit(){
   let ok, yours, raw;
+  let twoPoints=false;
   if(cur.type==="input"){ const inp=app.querySelector("#ans"); const v=inp.value; lastAnswer=v; if(!v.trim()){ inp.focus(); return; }
-    const issue=issueFor(cur,v); if(issue){ inlineErr=issue; render(); return; } // not a countable attempt yet
-    ok=!!checkInput(cur,v); yours=v.trim(); raw=v; }
+    twoPoints = !!(cur.meta && cur.meta.open) && (v.match(/\./g)||[]).length>1; // "0.05.0" on a write-a-decimal problem: a real mistake, walk it through
+    const issue=twoPoints ? "" : issueFor(cur,v); if(issue){ inlineErr=issue; render(); return; } // not a countable attempt yet
+    ok=twoPoints ? false : !!checkInput(cur,v); yours=v.trim(); raw=v; }
   else { if(selected<0){ inlineErr=""; const f=app.querySelector("#opts .opt"); if(f) f.focus(); return; } ok=(selected===cur.answer); yours=cur.options[selected]; raw=selected; }
   inlineErr="";
   const sk=cur.skill; S=normalize(S); S.attempted++; S.today.a++;
   // Only independent attempts (fresh, no hints) move levels, up or down. Hints, follow-ups, walkthroughs never do.
   const independent = stage==="fresh" && hintIdx===0;
   const entry={t:Date.now(), sk, lvl:cur.level, q:plain(cur.prompt), yours:String(yours), ans:cur.display, ok:ok?1:0, stage, hints:hintIdx, independent:(ok&&independent)?1:0, tag: cur.mistake ? cur.mistake.tag : (cur.focusTag||"")};
-  if(cur.hw) entry.hw=1;
+  if(cur.hw) entry.hw=1; if(cur.fixed) entry.page=1;
   lastChange=0;
   // Homework practice is level-neutral: the shape was chosen from the worksheet, not earned, so it moves nothing up or down.
   if(independent && !cur.hw){ const res=applyResult(S.hist[sk], S.levels[sk], ok); S.levels[sk]=res.level; S.hist[sk]=res.hist; lastChange=res.change; }
   if(ok){
     S.correct++; S.today.c++; S.run++; S.best=Math.max(S.best,S.run);
     if(!independent){ S.guided++; S.persist++; }
-    pushLog(entry); phase="ok";
+    okEntry=pushLog(entry); phase="ok";
+    if(cur.why && cur.why.options && cur.why.options.length>1) whyState={sel:-1, done:false, ok:null};
   } else {
     S.run=0;
-    const d=diag(raw); cur.mistake=d; entry.tag=d.tag;
+    const d=twoPoints ? {tag:"two-points", note:NOTES["two-points"]} : diag(raw); cur.mistake=d; entry.tag=d.tag;
+    if(twoPoints && !cur.twoPointsStep && cur.meta && cur.meta.x){ cur.twoPointsStep=true; const x=cur.meta.x, k=(x.d||"").length; const xx=padTo(x,Math.min(3,k+1));
+      cur.steps.unshift({t:`First, ${fmt(x)} and ${fmt(xx)} are the <b>same number</b>: a zero on the end of a decimal adds nothing. Compare them in the chart.`, charts:[x,xx], check:cm(`${fmt(xx)} is … ${fmt(x)}`, ["greater than","less than","equal to"], 2)}); }
     if(stage==="fresh") chain=1; else chain++;
     missEntry=pushLog(entry);
     if(chain<3){ phase="wt"; stepIdx=0; stepRes=[]; revealed=0; passed=0; initStepCheck(); }
@@ -2136,6 +2322,13 @@ function submit(){
   }
   save(); render();
   if(phase!=="ok") window.scrollTo({top:0,behavior:"smooth"});
+}
+function checkWhy(){ // the justification question: logged on the entry it belongs to, never touches levels
+  if(!whyState || whyState.done || !cur.why) return;
+  if(whyState.sel<0){ const f=app.querySelector("#wopts .opt"); if(f) f.focus(); return; }
+  whyState.done=true; whyState.ok = whyState.sel===cur.why.answer;
+  if(okEntry){ okEntry.why=whyState.ok?1:0; okEntry.whyPick=String(cur.why.options[whyState.sel]||""); }
+  save(); render(); const n=app.querySelector("#next"); if(n) n.focus({preventScroll:true});
 }
 function checkStep(){
   const c=cur.steps[stepIdx].check; if(!scActive()) return;
@@ -2181,6 +2374,34 @@ function fmtDate(ts){ const d=new Date(ts); return d.toLocaleDateString(undefine
 const isFresh=e=>e.stage?e.stage==="fresh":!e.retry; // older entries have retry instead of stage
 const indep=e=>e.independent!==undefined?e.independent:((isFresh(e)&&!e.hints)?1:0);
 const fmtBytes=n=>n<1024?n+" bytes":n<1048576?(n/1024).toFixed(1)+" KB":(n/1048576).toFixed(2)+" MB";
+// Transfer code = "LM1." + base64url(deflate(JSON of the whole DB)), or "LM0." + base64url(JSON) where compression is unavailable.
+const B64U={
+  enc:bytes=>{ let bin=""; for(let i=0;i<bytes.length;i+=0x8000) bin+=String.fromCharCode.apply(null, bytes.subarray(i,i+0x8000)); return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); },
+  dec:str=>{ const b=atob(String(str).replace(/-/g,"+").replace(/_/g,"/").padEnd(Math.ceil(str.length/4)*4,"=")); const out=new Uint8Array(b.length); for(let i=0;i<b.length;i++) out[i]=b.charCodeAt(i); return out; }
+};
+const isTransferCode=t=>/^LM[01]\.[A-Za-z0-9_-]+$/.test(String(t||"").trim());
+async function makeTransferCode(db, withHistory){
+  const o = withHistory ? db : {...db, profiles:Object.fromEntries(Object.entries(db.profiles).map(([n,p])=>[n,{...p, log:[], logTrimmed:(+p.logTrimmed||0)+((p.log||[]).length)}]))};
+  const bytes=new TextEncoder().encode(JSON.stringify(o));
+  if(typeof CompressionStream==="function"){ try{ const stream=new Blob([bytes]).stream().pipeThrough(new CompressionStream("deflate")); const buf=new Uint8Array(await new Response(stream).arrayBuffer()); return "LM1."+B64U.enc(buf); }catch(e){} }
+  return "LM0."+B64U.enc(bytes);
+}
+async function readTransferCode(text){ // → backup JSON text, or null if it is not a code
+  const t=String(text||"").trim(); const m=t.match(/^LM([01])\.([A-Za-z0-9_-]+)$/); if(!m) return null;
+  const bytes=B64U.dec(m[2]); if(m[1]==="0") return new TextDecoder().decode(bytes);
+  if(typeof DecompressionStream!=="function") throw new Error("This browser cannot open a compressed transfer code. Paste the plain backup text instead.");
+  const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate")); return await new Response(stream).text();
+}
+// Restore from a transfer code or backup text: validates, confirms, replaces same-named players. Returns {ok, err}.
+async function importBackupText(text){
+  let json=text; try{ const j=await readTransferCode(text); if(j!==null) json=j; }catch(e){ return {ok:false, err:e.message||"That transfer code could not be opened."}; }
+  const r=validateBackup(json); if(!r.ok) return r;
+  if(!confirm(`Restore ${r.names.length} player${r.names.length>1?"s":""}?\n\n${r.summary.join("\n")}\n\nPlayers with the same name on this device will be replaced.`)) return {ok:false, err:""};
+  for(const n of r.names){ DB.profiles[n]=normalize({...r.db.profiles[n], name:n}); }
+  DB.current = r.db.current && DB.profiles[r.db.current] ? r.db.current : (r.names[0]||DB.current); S=DB.profiles[DB.current]||S;
+  if(!save()) return {ok:true, err:"Restored in memory, but this device refused to save it. Progress will be lost when the page closes."};
+  return {ok:true, err:""};
+}
 function validateBackup(text){ // returns {ok:true, db, summary} or {ok:false, err}
   let o; try{ o=JSON.parse(text); }catch(e){ return {ok:false, err:"That is not valid backup text (it did not parse as JSON). Make sure you copied all of it."}; }
   if(!o||typeof o!=="object"||Array.isArray(o)) return {ok:false, err:"The backup should be a single block of text starting with { and ending with }."};
@@ -2190,7 +2411,7 @@ function validateBackup(text){ // returns {ok:true, db, summary} or {ok:false, e
   for(const n of names){ const p=o.profiles[n];
     if(!p||typeof p!=="object") return {ok:false, err:`Player "${n}" is not a valid record.`};
     if(!p.levels||typeof p.levels!=="object"||Array.isArray(p.levels)) return {ok:false, err:`Player "${n}" has no levels.`};
-    for(const k of SKILL_ORDER){ if(k in p.levels){ const v=p.levels[k]; if(typeof v!=="number"||!Number.isFinite(v)||v<1||v>MAX_LEVEL) return {ok:false, err:`Player "${n}" has an impossible level for ${SKILLS[k].name} (${String(v)}). Levels run 1 to ${MAX_LEVEL}.`}; } }
+    for(const k of SKILL_ORDER){ if(k in p.levels){ const v=p.levels[k]; if(typeof v!=="number"||!Number.isInteger(v)||v<1||v>MAX_LEVEL) return {ok:false, err:`Player "${n}" has an impossible level for ${SKILLS[k].name} (${String(v)}). Levels are whole numbers from 1 to ${MAX_LEVEL}.`}; } }
     if(p.log!==undefined && !Array.isArray(p.log)) return {ok:false, err:`Player "${n}" has a history that is not a list.`};
     if(Array.isArray(p.log)){ const bad=p.log.findIndex(e=>!e||typeof e!=="object"||Array.isArray(e)); if(bad>=0) return {ok:false, err:`Player "${n}" has a broken history entry at position ${bad}.`}; }
     const att = Array.isArray(p.log) ? p.log.length : (+p.attempted||0);
@@ -2212,7 +2433,7 @@ function grownups(){
   const weekAgo=Date.now()-7*864e5; const week=log.filter(e=>Number.isFinite(e.t)&&e.t>=weekAgo&&!e.guided);
   const days=new Set(week.map(e=>new Date(e.t).toDateString())).size;
   const skillName=k=>SKILLS[k]?SKILLS[k].name:esc(str(k)||"?");
-  const missMeta=e=>`${Number.isFinite(e.t)?fmtDate(e.t):"unknown time"} · ${skillName(e.sk)}${e.lvl!=null?` · level ${esc(str(e.lvl))}`:""} · ${e.stage?esc(str(e.stage)):(e.retry?"retry":"fresh")}${e.hw?" · homework":""}${e.shown?" · answer shown":""}${+e.hints>0?" · "+(+e.hints)+" hint"+(+e.hints>1?"s":""):""}${typeof e.tag==="string"&&e.tag?` · <span class="tag">${esc(e.tag)}</span>`:""}${e.revealed!==undefined?` · walkthrough: ${+e.passed||0} step${+e.passed===1?"":"s"} right, ${+e.revealed||0} shown`:""}`;
+  const missMeta=e=>`${Number.isFinite(e.t)?fmtDate(e.t):"unknown time"} · ${skillName(e.sk)}${e.lvl!=null?` · level ${esc(str(e.lvl))}`:""} · ${e.stage?esc(str(e.stage)):(e.retry?"retry":"fresh")}${e.page?" · from the page":e.hw?" · homework":""}${e.shown?" · answer shown":""}${+e.hints>0?" · "+(+e.hints)+" hint"+(+e.hints>1?"s":""):""}${typeof e.tag==="string"&&e.tag?` · <span class="tag">${esc(e.tag)}</span>`:""}${e.revealed!==undefined?` · walkthrough: ${+e.passed||0} step${+e.passed===1?"":"s"} right, ${+e.revealed||0} shown`:""}`;
   const exportText=JSON.stringify(DB); const nPlayers=Object.keys(DB.profiles).length;
   // Class position: the district calendar's estimate, or a lesson pinned here from the homework header
   const L=lessonList(), classId=effectiveClassAt(), calId=calendarClassAt();
@@ -2250,12 +2471,12 @@ function grownups(){
   const notYet = typeof NOT_YET_COVERED==="string" && NOT_YET_COVERED.trim() ? NOT_YET_COVERED : `Covered: 5.NBT.2, 5.NBT.3a, 5.NBT.3b, 5.NBT.4, and the add/subtract part of 5.NBT.7. Not yet covered from the grade-five "major" clusters: 5.NBT.1 as a stated relationship (10× / 1/10 between places), 5.NBT.5–6 (multi-digit multiplication and division), multiplying and dividing decimals (rest of 5.NBT.7), all of fractions (5.NF.1–7), and volume (5.MD.3–5). Also not covered: 5.OA, 5.MD.1–2, 5.G. Matching this to the SWUN unit and lesson sequence needs the classroom unit materials; the framework itself does not mention SWUN.`;
   app.innerHTML=`
     <div class="topbar"><button class="btn quiet" id="back">Home</button><h1 style="margin:0">${esc(S.name)}'s progress</h1><span class="muted build">Build ${esc(BUILD)}</span></div>${warnHTML()}
-    <p class="muted" style="margin:6px 0 0">Last 7 days: ${week.length} problems on ${days} day${days===1?"":"s"}, ${week.length?Math.round(100*week.filter(e=>e.ok).length/week.length)+"% right":"no data yet"}. All time: ${S.correct} of ${S.attempted}. Guided completions: ${S.guided}. Finished with the answer shown: ${S.shown||0}. Current persistence streak: ${S.persist}.</p>
+    <p class="muted" style="margin:6px 0 0">Last 7 days: ${week.length} problems on ${days} day${days===1?"":"s"}, ${week.length?Math.round(100*week.filter(e=>e.ok).length/week.length)+"% right":"no data yet"}. All time: ${S.correct} of ${S.attempted}. Guided completions: ${S.guided}. Finished with the answer shown: ${S.shown||0}. Guided completions since the answer was last shown: ${S.persist}.${(()=>{ const w=log.filter(e=>e.why!==undefined); return w.length?` "Say why" questions: ${w.filter(e=>e.why).length} of ${w.length} right.`:""; })()}</p>
     ${classHTML}
     <div class="card">
       <h2 style="margin-top:0">By skill</h2>
       <div style="overflow-x:auto"><table class="report"><tr><th>Skill</th><th>Level</th><th>On their own<br><span style="text-transform:none;letter-spacing:0">right / tried, last 20</span></th><th>Guided completions</th><th>Finished with the answer shown</th><th>Common mistake</th></tr>${rows}</table></div>
-      <p class="muted" style="font-size:13px;margin:10px 0 0">Only problems done fresh with no hints move levels: up after 3 right out of the last 4, down after 2 wrong out of the last 3. Hints, follow-ups, walkthroughs, and homework practice never move levels, up or down. Level ${MAX_LEVEL} mixes every trap at once. A guided completion is a problem finished with hints, inside a walkthrough, or on the follow-up. "Finished with the answer shown" means the answer was displayed after a third miss and typed in to move on; it is recorded, but it is not a right answer or a guided completion.</p>
+      <p class="muted" style="font-size:13px;margin:10px 0 0">Only problems done fresh with no hints move levels: up after 3 right out of the last 4, down after 2 wrong out of the last 3. Hints, follow-ups, walkthroughs, and homework practice never move levels, up or down. Level ${MAX_LEVEL} mixes every trap at once. A guided completion is a problem finished with hints, inside a walkthrough, or on the follow-up. After a right answer, some skills ask one "say why" question in SWUN's explain-and-prove wording; it is recorded but never moves a level. "Finished with the answer shown" means the answer was displayed after a third miss and typed in to move on; it is recorded, but it is not a right answer or a guided completion.</p>
       ${S.logTrimmed>0?`<p class="muted" style="font-size:13px;margin:6px 0 0">History shows the most recent ${LOG_CAP} attempts; older entries were trimmed.</p>`:""}
     </div>
     <div class="card">
@@ -2263,15 +2484,24 @@ function grownups(){
       ${misses.length?misses.map(e=>`<div class="miss"><div class="meta">${missMeta(e)}</div><div class="q">${esc(str(e.q))||"<span class=\"muted\">(question not recorded)</span>"}</div><div class="a">Answered <span class="bad">${esc(str(e.yours))||"—"}</span> · correct: <span class="good">${esc(str(e.ans))||"—"}</span></div></div>`).join(""):`<p class="muted">No misses logged yet.</p>`}
     </div>
     <div class="card">
-      <h2 style="margin-top:0">Back up or move progress</h2>
-      <p class="muted" style="font-size:14px;margin:0 0 8px">Progress lives only in this browser on this device. Copy this text somewhere safe (Notes, email to yourself) and paste it into the box on another device to carry everything over.</p>
+      <h2 style="margin-top:0">Move to a new iPad</h2>
+      <p class="muted" style="font-size:14px;margin:0 0 8px">Progress lives only inside the copy of the app it was made in. The <b>Home Screen icon</b> and <b>Safari</b> each keep their own copy, so do both steps inside the copy Lily actually uses.</p>
+      <ol class="muted" style="font-size:14px;margin:0 0 10px 18px;padding:0;line-height:1.5">
+        <li><b>On this iPad:</b> tap <b>Copy transfer code</b> (or <b>Share</b> it to the new iPad with AirDrop).</li>
+        <li><b>On the new iPad:</b> open the app the same way (Home Screen icon), tap <b>For grown-ups</b>, paste the code into <b>Restore</b> below, and tap Restore. Same iCloud account? Copy on one iPad and paste on the other; the clipboard carries over on its own.</li>
+      </ol>
+      <label class="row" style="font-size:14px;gap:8px;margin:0 0 8px"><input type="checkbox" id="tchist" checked> Include the attempt history (longer code; the grown-ups page on the new iPad keeps every miss)</label>
+      <div class="actions" style="margin-top:0"><button class="btn primary" id="tcopy">Copy transfer code</button>${typeof navigator!=="undefined"&&navigator.share?`<button class="btn" id="tshare">Share…</button>`:""}<button class="btn quiet" id="tshow">Show the code</button><span class="muted" id="tmsg" style="font-size:13px" role="status" aria-live="polite"></span></div>
+      <textarea class="io" id="tcode" readonly hidden aria-label="Transfer code"></textarea>
+      <h2>Plain backup text</h2>
+      <p class="muted" style="font-size:14px;margin:0 0 8px">The same progress as readable text, for keeping a copy in Notes or email. Either form pastes into Restore.</p>
       <label class="vh" for="export">Backup text</label>
       <textarea class="io" id="export" readonly>${esc(exportText)}</textarea>
       <div class="muted" style="font-size:13px;margin-top:4px">${fmtBytes(new Blob([exportText]).size)} · ${nPlayers} player${nPlayers===1?"":"s"}</div>
       <div class="actions" style="margin-top:8px"><button class="btn" id="copy">Copy backup</button><span class="muted" id="copied" style="font-size:13px" role="status" aria-live="polite"></span></div>
-      <h2>Restore from a backup</h2>
-      <label class="vh" for="import">Paste a backup here</label>
-      <textarea class="io" id="import" placeholder="Paste a backup here"></textarea>
+      <h2>Restore</h2>
+      <label class="vh" for="import">Paste a transfer code or backup here</label>
+      <textarea class="io" id="import" placeholder="Paste a transfer code (starts with LM1.) or backup text here"></textarea>
       <div class="inline-err" id="imperr" role="status" aria-live="polite"></div>
       <div class="actions" style="margin-top:8px"><button class="btn" id="doimport">Restore</button></div>
     </div>
@@ -2295,11 +2525,12 @@ function grownups(){
   if(q("followcal")) q("followcal").onclick=()=>{ S.classPin=null; const okSave=save(); const id=calendarClassAt(); if(id) q("classat").value=id;
     q("classsaved").textContent=okSave?`Following the calendar: ${id?lessonShortById(id):"—"} today.`:"Following the calendar for now, but this device refused to save it."; setClassMode(); };
   q("copy").onclick=async()=>{ const ta=q("export"); ta.select(); let done=false; try{ await navigator.clipboard.writeText(ta.value); done=true; }catch(e){ try{ done=document.execCommand("copy"); }catch(e2){} } q("copied").textContent=done?"Copied.":"Select the text and copy it by hand."; };
-  q("doimport").onclick=()=>{ const r=validateBackup(q("import").value); if(!r.ok){ q("imperr").textContent=r.err; return; } q("imperr").textContent="";
-    if(!confirm(`Restore ${r.names.length} player${r.names.length>1?"s":""}?\n\n${r.summary.join("\n")}\n\nPlayers with the same name on this device will be replaced.`)) return;
-    for(const n of r.names){ DB.profiles[n]=normalize({...r.db.profiles[n], name:n}); }
-    DB.current = r.db.current && DB.profiles[r.db.current] ? r.db.current : DB.current; S=DB.profiles[DB.current]||S;
-    if(!save()){ q("imperr").textContent="Restored in memory, but this device refused to save it. Progress will be lost when the page closes."; return; } home(); };
+  q("doimport").onclick=async()=>{ q("imperr").textContent="Checking…"; const r=await importBackupText(q("import").value); if(!r.ok){ q("imperr").textContent=r.err; return; } if(r.err){ q("imperr").textContent=r.err; return; } home(); };
+  const codeFor=async()=>makeTransferCode(DB, q("tchist").checked);
+  const copyText=async(text)=>{ let done=false; try{ await navigator.clipboard.writeText(text); done=true; }catch(e){ const ta=q("tcode"); ta.hidden=false; ta.value=text; ta.select(); try{ done=document.execCommand("copy"); }catch(e2){} } return done; };
+  q("tcopy").onclick=async()=>{ q("tmsg").textContent="Building…"; try{ const code=await codeFor(); const ok=await copyText(code); q("tmsg").textContent= ok ? `Copied (${fmtBytes(code.length)}). Now paste it into Restore on the new iPad.` : "Could not copy automatically; the code is shown below, select it and copy by hand."; if(!ok){ q("tcode").hidden=false; q("tcode").value=code; } }catch(e){ q("tmsg").textContent="Could not build the code: "+(e.message||e); } };
+  if(q("tshare")) q("tshare").onclick=async()=>{ try{ const code=await codeFor(); await navigator.share({title:"Math Practice transfer code", text:code}); q("tmsg").textContent="Shared. On the new iPad, copy the code from where it landed and paste it into Restore."; }catch(e){ if(e && e.name!=="AbortError") q("tmsg").textContent="Sharing did not work here; use Copy instead."; } };
+  q("tshow").onclick=async()=>{ const ta=q("tcode"); if(!ta.hidden){ ta.hidden=true; q("tshow").textContent="Show the code"; return; } ta.value="Building…"; ta.hidden=false; ta.value=await codeFor(); q("tshow").textContent="Hide the code"; };
   q("reset").onclick=()=>{ if(confirm(`Erase ${S.name}'s levels and history and start from level 1?`)){ const n=S.name; S=normalize(blankProfile(n)); DB.profiles[n]=S; save(); home(); } };
   q("remove").onclick=()=>{ if(confirm(`Remove ${S.name} completely? This cannot be undone (unless you saved a backup).`)){ delete DB.profiles[S.name]; DB.current=null; S=null; save(); home(); } };
 }
