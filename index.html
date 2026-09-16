@@ -1290,7 +1290,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v8 · September 15, 2026";
+const BUILD="v8.1 · September 15, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -2179,11 +2179,14 @@ function drawScratch(cv){ // redraw every stroke (called after each render and e
   ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,cv.width,cv.height); ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.fillStyle="#FFFEF8"; ctx.fillRect(0,0,w,h);
   const g=34; ctx.strokeStyle="#E6E9EE"; ctx.lineWidth=1; ctx.beginPath(); for(let x=g;x<w;x+=g){ ctx.moveTo(x+0.5,0); ctx.lineTo(x+0.5,h); } for(let y=g;y<h;y+=g){ ctx.moveTo(0,y+0.5); ctx.lineTo(w,y+0.5); } ctx.stroke();
-  ctx.lineCap="round"; ctx.lineJoin="round";
+  // Ink lives on its own layer so the eraser removes pencil marks without punching holes in the paper.
+  let layer=cv._layer; if(!layer || layer.width!==cv.width || layer.height!==cv.height){ layer=document.createElement("canvas"); layer.width=cv.width; layer.height=cv.height; cv._layer=layer; }
+  const lc=layer.getContext("2d"); if(!lc) return; lc.setTransform(1,0,0,1,0,0); lc.clearRect(0,0,layer.width,layer.height); lc.setTransform(dpr,0,0,dpr,0,0); lc.lineCap="round"; lc.lineJoin="round";
   for(const st of scratchStrokes){ if(st.pts.length<1) continue;
-    ctx.globalCompositeOperation = st.erase ? "destination-out" : "source-over"; ctx.strokeStyle="#1B2733"; ctx.lineWidth = st.erase ? 26 : st.width;
-    ctx.beginPath(); ctx.moveTo(st.pts[0][0], st.pts[0][1]); if(st.pts.length===1) ctx.lineTo(st.pts[0][0]+0.1, st.pts[0][1]); for(let i=1;i<st.pts.length;i++) ctx.lineTo(st.pts[i][0], st.pts[i][1]); ctx.stroke(); }
-  ctx.globalCompositeOperation="source-over";
+    lc.globalCompositeOperation = st.erase ? "destination-out" : "source-over"; lc.strokeStyle="#1B2733"; lc.lineWidth = st.erase ? 26 : st.width;
+    lc.beginPath(); lc.moveTo(st.pts[0][0], st.pts[0][1]); if(st.pts.length===1) lc.lineTo(st.pts[0][0]+0.1, st.pts[0][1]); for(let i=1;i<st.pts.length;i++) lc.lineTo(st.pts[i][0], st.pts[i][1]); lc.stroke(); }
+  lc.globalCompositeOperation="source-over";
+  ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(layer,0,0); ctx.setTransform(dpr,0,0,dpr,0,0);
 }
 function bindScratch(){
   const cv=app.querySelector("#spc"); if(!cv) return;
@@ -2193,10 +2196,10 @@ function bindScratch(){
   let cur=null;
   const pos=e=>{ const r=cv.getBoundingClientRect(); return [e.clientX-r.left, e.clientY-r.top]; };
   cv.addEventListener("pointerdown",e=>{ if(e.pointerType==="pen") penSeen=true; if(e.pointerType==="touch" && penSeen) return; if(e.button!==0 && e.pointerType==="mouse") return;
-    e.preventDefault(); cv.setPointerCapture(e.pointerId);
+    e.preventDefault(); try{ cv.setPointerCapture(e.pointerId); }catch(err){}
     const erase = scratchTool==="eraser" || (e.pointerType==="pen" && (e.buttons&32)); // the pencil's barrel eraser, where supported
     cur={pts:[pos(e)], erase, width: e.pointerType==="pen" ? 2.4 + (e.pressure||0.5)*2 : 3}; scratchStrokes.push(cur); drawScratch(cv); });
-  cv.addEventListener("pointermove",e=>{ if(!cur) return; if(e.pointerType==="touch" && penSeen) return; e.preventDefault(); const pts = typeof e.getCoalescedEvents==="function" ? e.getCoalescedEvents() : [e]; for(const ev of pts) cur.pts.push(pos(ev)); drawScratch(cv); });
+  cv.addEventListener("pointermove",e=>{ if(!cur) return; if(e.pointerType==="touch" && penSeen) return; e.preventDefault(); let pts = typeof e.getCoalescedEvents==="function" ? e.getCoalescedEvents() : []; if(!pts || !pts.length) pts=[e]; for(const ev of pts) cur.pts.push(pos(ev)); drawScratch(cv); });
   const end=()=>{ cur=null; }; cv.addEventListener("pointerup",end); cv.addEventListener("pointercancel",end); cv.addEventListener("pointerleave",end);
   q("sp-pen").onclick=()=>{ scratchTool="pen"; q("sp-pen").setAttribute("aria-pressed","true"); q("sp-eraser").setAttribute("aria-pressed","false"); };
   q("sp-eraser").onclick=()=>{ scratchTool="eraser"; q("sp-pen").setAttribute("aria-pressed","false"); q("sp-eraser").setAttribute("aria-pressed","true"); };
