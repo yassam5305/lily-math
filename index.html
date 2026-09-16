@@ -1247,7 +1247,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v7.1 · September 15, 2026";
+const BUILD="v7.2 · September 15, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 function stackMul(a,b,parts,total,carries){
   const w=Math.max(String(a).length, String(b).length+1, ...(parts||[]).map(x=>String(x).length), total!==undefined?String(total).length:0)+1;
@@ -1317,6 +1317,7 @@ function genMultiply(level, focus){
     if(focus && focus.variant) variant=focus.variant;
   };
   draw();
+  { let g=0; while(b>=10 && b%10===0 && g++<60) draw(); } // a two-digit multiplier ending in 0 makes the ones row all zeros; the worksheet never does that
   // A follow-up aimed at a mistake must contain that mistake's trap: a regroup for "carry", a tens row for the shift and missing-row tags.
   if(f==="carry"){ let g=0; while(!mulNeedsRegroup(a,b) && g++<60) draw(); }
   if((f==="shift-partial"||f==="missing-row") && b<10){ let g=0; while(b<10 && g++<60) draw(); if(b<10) b=ri(12,29); }
