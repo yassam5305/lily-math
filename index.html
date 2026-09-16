@@ -1247,7 +1247,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v7 · September 15, 2026";
+const BUILD="v7.1 · September 15, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 function stackMul(a,b,parts,total,carries){
   const w=Math.max(String(a).length, String(b).length+1, ...(parts||[]).map(x=>String(x).length), total!==undefined?String(total).length:0)+1;
@@ -1282,12 +1282,27 @@ function mulRowSteps(a,b,d,shift,doneRows){
     else if(sum>=10){
       steps.push({t:`${sum} is 10 or more, so only one digit fits in the ${place(j)} place. Write that digit here and regroup the other to the ${place(j+1)} place.${pic()}`, check:ci(`What digit do you write in the ${place(j)} place?`, sum%10)}); written.push(String(sum%10));
       const c=Math.floor(sum/10);
-      steps.push({t:`The other digit of ${sum} is regrouped. Write it small above the ${place(j+1)} digit of ${a}.${pic()}`, check:ci(`What do you regroup to the ${place(j+1)} place?`, c)}); carryAt[j+1]=c; carry=c;
+      steps.push({t:`The other digit of ${sum} is regrouped into the ${place(j+1)} place. Write it small above the next digit of ${a} to the left, the <b>${digs[j+1]}</b>${shift?` (it lands in the ${place(j+1)} place because this row already starts one place over)`:""}.${pic()}`, check:ci(`What do you regroup to the ${place(j+1)} place?`, c)}); carryAt[j+1]=c; carry=c;
     } else { steps.push({t:`${sum} is less than 10, so it fits in the ${place(j)} place. Nothing to regroup.${pic()}`, check:ci(`What digit goes in the ${place(j)} place?`, sum)}); written.push(String(sum)); carry=0; }
   });
   const value=a*d*(shift?10:1);
   const readBack=written.map((x,j)=>`${WHOLE_PLACES[j]}${j===written.length-1&&x.length>1?" and up":""}: <b>${x}</b>`).join(", ");
   return {steps, value, readBack, row:rowStr()};
+}
+// Column-by-column addition of two partial products, for when the final total is missed. Returns steps plus a read-back of the digits written.
+function addColSteps(a,b,x,y){
+  const X=String(x), Y=String(y); const n=Math.max(X.length,Y.length); const dx=X.padStart(n,"0").split("").map(Number).reverse(), dy=Y.padStart(n,"0").split("").map(Number).reverse();
+  const steps=[]; const written=[]; let carry=0; const pic=()=>stackMul(a,b,[x,y],written.slice().reverse().join("")||" ");
+  for(let j=0;j<n;j++){ const last=j===n-1, cin=carry, sum=dx[j]+dy[j]+cin, name=WHOLE_PLACES[j];
+    const parts=[dx[j],dy[j]].concat(cin?[cin]:[]);
+    const intro = j===0 ? `Add the two partial products the way you add any two numbers: line up the ones, then add one column at a time from the right. ` : "";
+    steps.push({t:`${intro}<b>${cap(name)}</b> column: ${dx[j]} + ${dy[j]}${cin?` + the regrouped ${cin}`:""}.${pic()}`, check:ci(`${parts.join(" + ")} = ?`, sum)});
+    if(last){ steps.push({t:`Last column, so write the whole <b>${sum}</b>.${pic()}`, check:ci(`What do you write in the ${name} place and up?`, sum)}); written.push(String(sum)); }
+    else if(sum>=10){ steps.push({t:`${sum} is 10 or more: write the ones digit of it in the ${name} column and regroup 1 to the ${WHOLE_PLACES[j+1]} column.${pic()}`, check:ci(`What digit do you write in the ${name} place?`, sum%10)}); written.push(String(sum%10)); carry=1; }
+    else { steps.push({t:`${sum} fits in the ${name} column. Nothing to regroup.${pic()}`, check:ci(`What digit goes in the ${name} place?`, sum)}); written.push(String(sum)); carry=0; }
+  }
+  const readBack=written.map((w,j)=>`${WHOLE_PLACES[j]}${j===written.length-1&&w.length>1?" and up":""}: <b>${w}</b>`).join(", ");
+  return {steps, readBack, total:parseInt(written.slice().reverse().join(""),10)};
 }
 function genMultiply(level, focus){
   const f=focus&&focus.tag;
@@ -1326,14 +1341,16 @@ function genMultiply(level, focus){
     const r1=mulRowSteps(a,b,tens/10,1,[]), r0=mulRowSteps(a,b,ones,0,[]);
     steps.push({t:`${a} × ${tens}: multiply ${a} × ${tens/10}, then add a zero.`, check:ci(`${a} × ${tens} = ?`, a*tens), sub:r1.steps, tAfter:`Read that row from the digits you wrote (${r1.readBack}).`});
     steps.push({t:`${a} × ${ones}.`, check:ci(`${a} × ${ones} = ?`, a*ones), sub:r0.steps, tAfter:`Read that row from the digits you wrote (${r0.readBack}).`});
-    steps.push({t:`Add the two partial products: ${a*tens} + ${a*ones}.${stackMul(a,b,[a*ones,a*tens])}`, check:finalCheck(p)});
+    const ad=addColSteps(a,b,a*ones,a*tens);
+    steps.push({t:`Add the two partial products: ${a*tens} + ${a*ones}.${stackMul(a,b,[a*ones,a*tens])}`, check:finalCheck(p), sub:ad.steps, tAfter:`Read the total from the digits you wrote (${ad.readBack}).`});
   } else {
     const ones=b%10, tens=Math.floor(b/10);
     const r0=mulRowSteps(a,b,ones,0,[]), r1=mulRowSteps(a,b,tens,1,[r0.row]);
     steps.push({t:`Line up the two factors one above the other.${stackMul(a,b)}`});
     steps.push({t:`Step 1: multiply ${a} by the <b>ones digit</b>, ${ones}. This is the first partial product.${stackMul(a,b,[""])}`, check:ci(`${a} × ${ones} = ?`, a*ones), sub:r0.steps, tAfter:`Step 1, finished: read the first partial product from the digits you wrote (${r0.readBack}).`});
     steps.push({t:`Step 2: multiply ${a} by the <b>tens digit</b>, ${tens}. That is really ${a} × ${tens*10}, so write a <b>0</b> in the ones place first, then multiply.${stackMul(a,b,[r0.row,""])}`, check:ci(`${a} × ${tens*10} = ? (the second partial product, with its 0)`, a*tens*10), sub:r1.steps, tAfter:`Step 2, finished: read the second partial product from the digits you wrote (${r1.readBack}).`});
-    steps.push({t:`Step 3: add the two partial products.${stackMul(a,b,[a*ones,a*tens*10])}`, check:finalCheck(p)});
+    const ad=addColSteps(a,b,a*ones,a*tens*10);
+    steps.push({t:`Step 3: add the two partial products.${stackMul(a,b,[a*ones,a*tens*10])}`, check:finalCheck(p), sub:ad.steps, tAfter:`Step 3, finished: read the total from the digits you wrote (${ad.readBack}).`});
   }
   p.steps=steps;
   p.hints= b<10 ? [{t:`Multiply from the ones place. Regroup when a place makes 10 or more.`},{t:`Ones first: ${b} × ${a%10} = ${b*(a%10)}.`},{t:`Write the ones digit, regroup the rest to the next place, and keep going left.`}]
@@ -1716,7 +1733,7 @@ function calendarClassAt(){ // where the district pacing calendar says the class
 // Effective class position: a lesson the grown-up pinned, otherwise the calendar. S.classPin is a lesson id or null (= follow the calendar).
 const effectiveClassAt=()=>(S && lessonById(S.classPin)) ? S.classPin : calendarClassAt();
 const blankProfile=name=>({name, levels:Object.fromEntries(SKILL_ORDER.map(s=>[s,1])), hist:Object.fromEntries(SKILL_ORDER.map(s=>[s,[]])),
-  correct:0, attempted:0, best:0, run:0, guided:0, persist:0, logTrimmed:0, today:{d:todayStr(), c:0, a:0}, log:[], created:Date.now(), classPin:null});
+  correct:0, attempted:0, best:0, run:0, guided:0, persist:0, shown:0, logTrimmed:0, today:{d:todayStr(), c:0, a:0}, log:[], created:Date.now(), classPin:null});
 function normalize(p){ // fill in anything missing (older saves, imports)
   const b=blankProfile(p.name||"Player");
   // history: keep only real entries (non-null objects with a finite numeric time); coerce the fields the report keys on
@@ -1724,7 +1741,7 @@ function normalize(p){ // fill in anything missing (older saves, imports)
     .map(e=>{ const o={...e}; if("sk" in o) o.sk=String(o.sk); if("ok" in o) o.ok=o.ok?1:0; return o; });
   const out={...b, ...p, levels:{...b.levels, ...(p.levels||{})}, hist:{...b.hist, ...(p.hist||{})}, today:{...b.today, ...(p.today||{})}, log};
   for(const k of SKILL_ORDER){ out.levels[k]=Math.min(MAX_LEVEL, Math.max(1, +out.levels[k]||1)); if(!Array.isArray(out.hist[k])) out.hist[k]=[]; }
-  for(const k of ["correct","attempted","best","run","guided","persist","logTrimmed"]) out[k]=Math.max(0, +out[k]||0);
+  for(const k of ["correct","attempted","best","run","guided","persist","shown","logTrimmed"]) out[k]=Math.max(0, +out[k]||0);
   if(out.today.d!==todayStr()) out.today={d:todayStr(), c:0, a:0};
   // Class position. Migrate the old manual classAt: keep it as a pin only if it disagrees with the calendar today,
   // so profiles that were merely on the old default switch to following the calendar automatically.
@@ -2125,8 +2142,10 @@ function checkStep(){
   if(c.type==="mc"){ if(sc.sel<0){ const f=app.querySelector("#copts .opt"); if(f) f.focus(); return; } ok = sc.sel===c.answer; }
   else { const inp=app.querySelector("#cans"); const v=inp.value; sc.val=v; if(!v.trim()){ inp.focus(); return; }
     const issue=issueFor(c,v); if(issue){ sc.msg=esc(issue); render(); return; } ok = stepAccepts(c,v); }
-  if(phase==="reveal"){ // copying the shown answer in: no stats, no log, it just unlocks Next
-    if(ok){ sc.state="ok"; sc.msg=`<span aria-hidden="true">✓</span> That's it.`; }
+  if(phase==="reveal"){ // copying the shown answer in unlocks Next. Logged as "finished with the answer shown": not a right answer, not a guided completion, never independent
+    if(ok){ sc.state="ok"; sc.msg=`<span aria-hidden="true">✓</span> That's it.`;
+      if(!cur.shownLogged){ cur.shownLogged=true; S.shown=(S.shown||0)+1;
+        pushLog({t:Date.now(), sk:cur.skill, lvl:cur.level, q:plain(cur.prompt), yours:c.type==="mc"?String((c.options||[])[sc.sel]):String(sc.val).trim(), ans:cur.display, ok:1, guided:1, shown:1, stage:"reveal", hints:hintIdx, independent:0, tag:cur.mistake?cur.mistake.tag:"", revealed, passed, expanded}); } }
     else { sc.msg = c.type==="mc" ? "Not that one. Pick the answer to continue." : "Not quite. Type the answer to continue."; sc.val=""; sc.sel=-1; }
     render(); return;
   }
@@ -2143,7 +2162,7 @@ function checkStep(){
       st.expanded=true; if(st.tAfter) st.t=st.tAfter;
       cur.steps.splice(stepIdx, 0, ...st.sub.map(x=>({...x})));
       expanded++; if(missEntry) missEntry.expanded=expanded;
-      initStepCheck(); sc.msg="Not quite. Let's build it one piece at a time."; save(); render();
+      initStepCheck(); if(sc) sc.msg="Not quite. Let's build it one piece at a time."; save(); render();
       const el=app.querySelectorAll("#wt .step"); if(el.length) el[el.length-1].scrollIntoView({behavior:"smooth",block:"nearest"});
       return; }
     if(sc.tries<2){ sc.msg="Not quite. Try once more."; sc.val=""; sc.sel=-1; }
@@ -2184,15 +2203,15 @@ function grownups(){
   const str=v=>v==null?"":String(v); // a missing field shows as blank, never "undefined"
   const rows=SKILL_ORDER.map(k=>{ const a=log.filter(e=>e.sk===k);
     const ind=a.filter(e=>isFresh(e)&&!e.hints&&!e.guided).slice(-20); const indRight=ind.filter(e=>e.ok).length;
-    const guided=a.filter(e=>e.ok&&indep(e)===0).length;
+    const guided=a.filter(e=>e.ok&&indep(e)===0&&!e.shown).length; const shown=a.filter(e=>e.shown).length;
     const missTags=a.filter(e=>!e.ok).slice(-20).map(e=>typeof e.tag==="string"?e.tag:"").filter(Boolean);
     const cnt={}; for(const t of missTags) cnt[t]=(cnt[t]||0)+1; const topTag=Object.keys(cnt).sort((x,y)=>cnt[y]-cnt[x])[0];
-    return `<tr><td><b>${SKILLS[k].name}</b></td><td>${S.levels[k]} of ${MAX_LEVEL}</td><td>${ind.length?`${indRight} of ${ind.length}`:"—"}</td><td>${guided||"—"}</td><td>${topTag?`${esc(topTag)} <span class="muted">(${cnt[topTag]})</span>`:"—"}</td></tr>`; }).join("");
+    return `<tr><td><b>${SKILLS[k].name}</b></td><td>${S.levels[k]} of ${MAX_LEVEL}</td><td>${ind.length?`${indRight} of ${ind.length}`:"—"}</td><td>${guided||"—"}</td><td>${shown||"—"}</td><td>${topTag?`${esc(topTag)} <span class="muted">(${cnt[topTag]})</span>`:"—"}</td></tr>`; }).join("");
   const misses=log.filter(e=>!e.ok).slice(-40).reverse();
   const weekAgo=Date.now()-7*864e5; const week=log.filter(e=>Number.isFinite(e.t)&&e.t>=weekAgo&&!e.guided);
   const days=new Set(week.map(e=>new Date(e.t).toDateString())).size;
   const skillName=k=>SKILLS[k]?SKILLS[k].name:esc(str(k)||"?");
-  const missMeta=e=>`${Number.isFinite(e.t)?fmtDate(e.t):"unknown time"} · ${skillName(e.sk)}${e.lvl!=null?` · level ${esc(str(e.lvl))}`:""} · ${e.stage?esc(str(e.stage)):(e.retry?"retry":"fresh")}${e.hw?" · homework":""}${+e.hints>0?" · "+(+e.hints)+" hint"+(+e.hints>1?"s":""):""}${typeof e.tag==="string"&&e.tag?` · <span class="tag">${esc(e.tag)}</span>`:""}${e.revealed!==undefined?` · walkthrough: ${+e.passed||0} step${+e.passed===1?"":"s"} right, ${+e.revealed||0} shown`:""}`;
+  const missMeta=e=>`${Number.isFinite(e.t)?fmtDate(e.t):"unknown time"} · ${skillName(e.sk)}${e.lvl!=null?` · level ${esc(str(e.lvl))}`:""} · ${e.stage?esc(str(e.stage)):(e.retry?"retry":"fresh")}${e.hw?" · homework":""}${e.shown?" · answer shown":""}${+e.hints>0?" · "+(+e.hints)+" hint"+(+e.hints>1?"s":""):""}${typeof e.tag==="string"&&e.tag?` · <span class="tag">${esc(e.tag)}</span>`:""}${e.revealed!==undefined?` · walkthrough: ${+e.passed||0} step${+e.passed===1?"":"s"} right, ${+e.revealed||0} shown`:""}`;
   const exportText=JSON.stringify(DB); const nPlayers=Object.keys(DB.profiles).length;
   // Class position: the district calendar's estimate, or a lesson pinned here from the homework header
   const L=lessonList(), classId=effectiveClassAt(), calId=calendarClassAt();
@@ -2230,12 +2249,12 @@ function grownups(){
   const notYet = typeof NOT_YET_COVERED==="string" && NOT_YET_COVERED.trim() ? NOT_YET_COVERED : `Covered: 5.NBT.2, 5.NBT.3a, 5.NBT.3b, 5.NBT.4, and the add/subtract part of 5.NBT.7. Not yet covered from the grade-five "major" clusters: 5.NBT.1 as a stated relationship (10× / 1/10 between places), 5.NBT.5–6 (multi-digit multiplication and division), multiplying and dividing decimals (rest of 5.NBT.7), all of fractions (5.NF.1–7), and volume (5.MD.3–5). Also not covered: 5.OA, 5.MD.1–2, 5.G. Matching this to the SWUN unit and lesson sequence needs the classroom unit materials; the framework itself does not mention SWUN.`;
   app.innerHTML=`
     <div class="topbar"><button class="btn quiet" id="back">Home</button><h1 style="margin:0">${esc(S.name)}'s progress</h1><span class="muted build">Build ${esc(BUILD)}</span></div>${warnHTML()}
-    <p class="muted" style="margin:6px 0 0">Last 7 days: ${week.length} problems on ${days} day${days===1?"":"s"}, ${week.length?Math.round(100*week.filter(e=>e.ok).length/week.length)+"% right":"no data yet"}. All time: ${S.correct} of ${S.attempted}. Guided completions: ${S.guided}. Current persistence streak: ${S.persist}.</p>
+    <p class="muted" style="margin:6px 0 0">Last 7 days: ${week.length} problems on ${days} day${days===1?"":"s"}, ${week.length?Math.round(100*week.filter(e=>e.ok).length/week.length)+"% right":"no data yet"}. All time: ${S.correct} of ${S.attempted}. Guided completions: ${S.guided}. Finished with the answer shown: ${S.shown||0}. Current persistence streak: ${S.persist}.</p>
     ${classHTML}
     <div class="card">
       <h2 style="margin-top:0">By skill</h2>
-      <div style="overflow-x:auto"><table class="report"><tr><th>Skill</th><th>Level</th><th>On their own<br><span style="text-transform:none;letter-spacing:0">right / tried, last 20</span></th><th>Guided completions</th><th>Common mistake</th></tr>${rows}</table></div>
-      <p class="muted" style="font-size:13px;margin:10px 0 0">Only problems done fresh with no hints move levels: up after 3 right out of the last 4, down after 2 wrong out of the last 3. Hints, follow-ups, walkthroughs, and homework practice never move levels, up or down. Level ${MAX_LEVEL} mixes every trap at once. A guided completion is a problem finished with hints, inside a walkthrough, or on the follow-up.</p>
+      <div style="overflow-x:auto"><table class="report"><tr><th>Skill</th><th>Level</th><th>On their own<br><span style="text-transform:none;letter-spacing:0">right / tried, last 20</span></th><th>Guided completions</th><th>Finished with the answer shown</th><th>Common mistake</th></tr>${rows}</table></div>
+      <p class="muted" style="font-size:13px;margin:10px 0 0">Only problems done fresh with no hints move levels: up after 3 right out of the last 4, down after 2 wrong out of the last 3. Hints, follow-ups, walkthroughs, and homework practice never move levels, up or down. Level ${MAX_LEVEL} mixes every trap at once. A guided completion is a problem finished with hints, inside a walkthrough, or on the follow-up. "Finished with the answer shown" means the answer was displayed after a third miss and typed in to move on; it is recorded, but it is not a right answer or a guided completion.</p>
       ${S.logTrimmed>0?`<p class="muted" style="font-size:13px;margin:6px 0 0">History shows the most recent ${LOG_CAP} attempts; older entries were trimmed.</p>`:""}
     </div>
     <div class="card">
