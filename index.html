@@ -73,6 +73,7 @@ h2{font-size:20px;margin:18px 0 6px}
 .dot.on{background:var(--ink)}
 .dot.max{background:var(--hi-ink);border-color:var(--hi-ink)}
 .mix{margin-top:14px;width:100%}
+.actions .mix{flex:1 1 220px;width:auto}
 .stats{margin-top:22px;font-size:14px}
 .footer{margin-top:18px;display:flex;gap:8px;flex-wrap:wrap}
 
@@ -1104,9 +1105,10 @@ function genOrderOps(level, focus){
   if(focus && focus.variant) variant=focus.variant;
   if(variant==="place") return genPlaceParens(level, focus);
   if(variant==="which") return genWhichExpr(level, focus);
-  let tokens=pickExpr(level);
-  if(f==="left-to-right" && !hasGroup(tokens)){ tokens=pickExpr(1); let g=0; while(g++<30 && (tokens[1]==="×"||tokens[1]==="÷")) tokens=pickExpr(1); } // put the × later so left-to-right fails
-  if(f==="parens" && !hasGroup(tokens)) tokens=pickExpr(2);
+  const fixedTokens = focus && focus.fixed && Array.isArray(focus.fixed.tokens) ? focus.fixed.tokens : null; // a problem typed from the worksheet
+  let tokens = fixedTokens ? JSON.parse(JSON.stringify(fixedTokens)) : pickExpr(level);
+  if(!fixedTokens && f==="left-to-right" && !hasGroup(tokens)){ tokens=pickExpr(1); let g=0; while(g++<30 && (tokens[1]==="×"||tokens[1]==="÷")) tokens=pickExpr(1); } // put the × later so left-to-right fails
+  if(!fixedTokens && f==="parens" && !hasGroup(tokens)) tokens=pickExpr(2);
   const trace=traceTokens(tokens); const value=evalTokens(tokens); const expr=tokStr(tokens);
   const ltr=(()=>{ try{ const flat=tokens.map(t=>typeof t==="object"?evalTokens(t.grp):t); let r=flat[0]; for(let i=1;i<flat.length;i+=2) r=OPS[flat[i]](r,flat[i+1]); return r; }catch(e){ return NaN; } })();
   const noParen=(()=>{ try{ const flat=[]; const walk=ts=>ts.forEach(t=>typeof t==="object"?walk(t.grp):flat.push(t)); walk(tokens); return evalTokens(flat); }catch(e){ return NaN; } })();
@@ -1290,7 +1292,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v8.1 · September 15, 2026";
+const BUILD="v8.2 · September 19, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -1947,6 +1949,7 @@ function home(){
     if(!ids.length) ids=Array.isArray(SKILLS[k].lessons)?SKILLS[k].lessons:[];
     const extra=Math.max(0, ids.length-6); ids=ids.slice(0,6);
     return ids.length?`<div class="tags" aria-label="Lessons">${ids.map(id=>`<span class="tag">${esc(lessonShortById(id))}</span>`).join("")}${extra?`<span class="tag">+${extra} more</span>`:""}</div>`:""; };
+  const mw=missWeights().w, missSkills=Object.keys(mw).sort((a,b)=>mw[b]-mw[a]);
   app.innerHTML=`
     <div class="topbar"><h1 style="margin:0">Hi, ${esc(S.name)}.</h1><button class="btn quiet small" id="switch">Not ${esc(S.name)}?</button></div>${warnHTML()}
     <p class="muted" style="margin:6px 0 16px">Pick something to practice. It gets harder as you get better, and if you miss one, we slow down and walk through it.</p>
@@ -1954,12 +1957,13 @@ function home(){
     <div class="card hw">
       <div class="week-head"><h2 style="margin:0">Homework practice</h2><span class="std" title="Problem shapes from the worksheet, not from your level">Worksheet shapes</span></div>
       <p class="muted" style="font-size:14px;margin:6px 0 10px">Tonight's page, at tonight's size. These use the worksheet's problem shapes no matter what the dots say, and they never move a level up or down.</p>
-      <button class="skill" data-skill="hw:check"><div style="flex:1"><div class="name">Check a problem from the page</div><div class="blurb">Type the exact problem (148 × 19, 3,660 ÷ 30, 8 × 10^5 × 6, round 2.98 to the nearest tenth). Answer it here; a miss walks through that problem.</div></div></button>
+      <button class="skill" data-skill="hw:check"><div style="flex:1"><div class="name">Check a problem from the page</div><div class="blurb">Type the exact problem (148 × 19, 3,660 ÷ 30, 8 × 10^5 × 6, 2 + 3 × 4, round 2.98 to the nearest tenth). Answer it here; a miss walks through that problem.</div></div></button>
       ${Object.keys(HW_MODES).map(id=>{ const h=HW_MODES[id]; return `<button class="skill" data-skill="hw:${id}"><div style="flex:1"><div class="name">${esc(h.name)}</div><div class="blurb">${esc(h.blurb)}</div><div class="tags" aria-label="Standard"><span class="tag">${esc(h.std)}</span></div></div></button>`; }).join("")}
       <p class="muted week-note" style="margin:10px 0 0"><b>Need to build up to it?</b> “${esc(SKILLS.multiply.name)}” below is the easier, step-up practice: it starts at your level (level ${S.levels.multiply}: ${MUL_SHAPE_BY_LEVEL[S.levels.multiply]||""}) and grows as you level up. That is prerequisite practice, not tonight's page.</p>
     </div>
     <div class="skills">${SKILL_ORDER.map(k=>`<button class="skill" data-skill="${k}"><div style="flex:1"><div class="name">${SKILLS[k].name}</div><div class="blurb">${esc(SKILLS[k].blurb)}</div>${tagsHTML(k)}</div>${dots(S.levels[k])}</button>`).join("")}</div>
-    <button class="btn primary mix" data-skill="mix">Mix it up</button>
+    <div class="actions" style="margin-top:0"><button class="btn primary mix" data-skill="mix">Mix it up</button>${missSkills.length?`<button class="btn mix" data-skill="miss" title="Skills you have missed in the last 30 days, most-missed first; ignores the class calendar">Focus on where I missed</button>`:""}</div>
+    ${missSkills.length?`<p class="muted week-note" style="margin:6px 0 0">Focus draws from: ${missSkills.map(k=>esc(SKILLS[k].name)).join(", ")}.</p>`:`<p class="muted week-note" style="margin:6px 0 0">“Focus on where I missed” appears here once a miss is logged.</p>`}
     <div class="stats muted">${t.a ? `Today: ${t.c} right out of ${t.a}.` : "Nothing tried yet today."} ${S.attempted ? `All time: ${S.correct} of ${S.attempted} (${pct}%). Best streak: ${S.best}.` : "The dots fill in as you level up; gold means maxed out."}</div>
     <div class="footer"><button class="btn quiet small" id="grown">For grown-ups</button><span class="muted build">Build ${esc(BUILD)}</span></div>`;
   app.querySelectorAll("[data-skill]").forEach(b=>b.onclick=()=>start(b.dataset.skill));
@@ -1981,6 +1985,8 @@ const hwId=m=>typeof m==="string"&&m.startsWith("hw:")?m.slice(3):null;
 function parseHomework(text){
   let t=String(text||"").trim().toLowerCase().replace(/\s+/g," ").replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g,m=>"^"+[...m].map(ch=>"⁰¹²³⁴⁵⁶⁷⁸⁹".indexOf(ch)).join("")).replace(/=\s*\??\s*$/,"").trim();
   if(!t) return {err:"Type the problem first."};
+  // Commas must sit between groups of three digits, the same rule the answer fields apply: "1,2 × 3" is not "12 × 3".
+  for(const n of t.match(/\d[\d,]*(?:\.\d+)?/g)||[]){ if(n.includes(",") && !/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(n)) return {err:`${n}: commas go between groups of three digits, like 1,234 or 72,585.`}; }
   const NUM="(\\d[\\d,]*(?:\\.\\d+)?|\\.\\d+)";
   const numOf=str=>{ const v=parseAnswer(str); if(isNaN(v)) return null; const [w,d=""]=String(str).replace(/,/g,"").split("."); return {w:parseInt(w||"0",10), d:d.replace(/0+$/,""), v}; };
   const isPow=str=>{ const m=str.match(/^10\^(\d+)$/); if(m) return +m[1]; const v=parseAnswer(str); if(!isNaN(v) && v>=10 && Number.isInteger(Math.log10(v)) && Math.log10(v)<=6) return Math.round(Math.log10(v)); return null; };
@@ -1997,8 +2003,8 @@ function parseHomework(text){
     if(other){ if(num.d||other.d) return {err:"With three factors, the app expects whole numbers (like 8 × 10^5 × 6)."}; return {skill:"powers", focus:{fixed:{num:{w:num.w,d:""},e,variant:"threefactor",other:other.w}}, level:3, label:`${fmt(num)} × 10^${e} × ${other.w}`}; }
     if(num.d.length>3) return {err:"The app works up to thousandths (3 decimal places)."};
     return {skill:"powers", focus:{fixed:{num:{w:num.w,d:num.d},e,variant:"plain"}}, level:num.d?5:2, label:`${fmt(num)} × 10^${e}`}; }
-  // "7 × 10 × 10 × 10 × 10" → repeated factors of ten
-  m=t.match(new RegExp("^"+NUM+"((?:\\s*[x×*·]\\s*10)+)$"));
+  // "7 × 10 × 10 × 10 × 10" → repeated factors of ten. Needs at least two: a single "7 × 10" is a multiplication (70), handled below.
+  m=t.match(new RegExp("^"+NUM+"((?:\\s*[x×*·]\\s*10){2,})$"));
   if(m){ const num=numOf(m[1]); const e=(m[2].match(/10/g)||[]).length; if(!num||num.d) return {err:"Repeated × 10 works with a whole number in front."}; return {skill:"powers", focus:{fixed:{num:{w:num.w,d:""},e,variant:"repeated"}}, level:2, label:`${fmt(num)}${" × 10".repeat(e)}`}; }
   // shift: "4.5 × 1,000", "2.99 ÷ 10^3", "365 / 100"
   m=t.match(new RegExp("^"+NUM+"\\s*([x×*·÷/])\\s*(10\\^\\d+|1(?:,?0)+|10|100|1000|1,000|10000|10,000)$"));
@@ -2020,7 +2026,20 @@ function parseHomework(text){
     const N=A.w, d=B.w; if(d<2) return {err:"The divisor should be 2 or more."}; if(N%d!==0) return {err:`${N.toLocaleString("en-US")} ÷ ${d} has a remainder (${N%d}). The app's place-value strategy handles division that comes out even.`};
     if(N>99999) return {err:"Dividends up to 99,999, please."}; const q=N/d; if(q<2) return {err:"The quotient should be 2 or more."};
     return {skill:"divide", focus:{fixed:{d,q},variant:"placevalue"}, level:3, label:`${N.toLocaleString("en-US")} ÷ ${d}`}; }
-  return {err:"I did not recognize that. Try shapes like 148 × 19, 3,660 ÷ 30, 8 × 10^5 × 6, 4.5 × 1,000, or round 2.98 to the nearest tenth."};
+  // order of operations: "2 + 3 x 4", "12 / (8 - 4) * 2", "[3 + 5] × 2 − 6". Whole numbers only; every step must come out a whole number.
+  const oo=t.replace(/[x*·]/g,"×").replace(/\//g,"÷").replace(/[-–—]/g,"−").replace(/\{/g,"[").replace(/\}/g,"]");
+  if(/^[\d\s.,+−×÷()\[\]]+$/.test(oo) && /[+−×÷]/.test(oo) && /[.,]/.test(oo) && !/^[\d,.]+\s*[×÷]\s*[\d,.]+$/.test(oo)) return {err:"Order of operations here works with whole numbers (no decimal points)."};
+  if(/^[\d\s+−×÷()\[\]]+$/.test(oo) && /[+−×÷]/.test(oo)){
+    if(/\d\s+\d/.test(oo)) return {err:"Two numbers next to each other with nothing between them. Put +, −, × or ÷ between every pair of numbers."};
+    const tokens=parseBack(oo);
+    const wellFormed=ts=>ts.length%2===1 && ts.every((tk,i)=> i%2===0 ? (typeof tk==="number" || (typeof tk==="object" && wellFormed(tk.grp))) : typeof tk==="string");
+    if(!wellFormed(tokens) || tokStr(tokens).replace(/\s/g,"")!==oo.replace(/\s/g,"")) return {err:"I could not read that expression. Check that every ( or [ has a partner and that an operation sign sits between every pair of numbers."};
+    const nums=[]; const walk=ts=>ts.forEach(tk=>typeof tk==="object"?walk(tk.grp):typeof tk==="number"&&nums.push(tk)); walk(tokens);
+    if(nums.some(n=>n>999)) return {err:"Order of operations works with numbers up to 999 in each spot."};
+    if((oo.match(/[+−×÷]/g)||[]).length>6) return {err:"Up to 6 operations in one expression, please."};
+    if(!validTokens(tokens)) return {err:"Somewhere in that expression a step does not come out a whole number (a fraction, a negative, or dividing by 0). The app's order of operations stays with whole numbers."};
+    return {skill:"orderops", focus:{fixed:{tokens}, variant:"evaluate"}, level:hasGroup(tokens)?2:1, label:tokStr(tokens)}; }
+  return {err:"I did not recognize that. Try shapes like 148 × 19, 3,660 ÷ 30, 8 × 10^5 × 6, 4.5 × 1,000, 2 + 3 × 4, or round 2.98 to the nearest tenth."};
 }
 const hwMode=()=>HW_MODES[hwId(mode)]||null;
 const MUL_SHAPE_BY_LEVEL={1:"2-digit × 1-digit",2:"3-digit × 1-digit",3:"2-digit × 2-digit",4:"3-digit × 2-digit",5:"3-digit × 2-digit with larger numbers"};
@@ -2036,8 +2055,20 @@ function weekWeights(){ // current lesson's skills ×3, the two lessons before i
   [[ci,3],[ci-1,1],[ci-2,1]].forEach(([i,wt])=>{ if(i>=0) for(const k of lessonSkills(L[i])) w[k]=(w[k]||0)+wt; });
   return w;
 }
+// "Focus on where I missed": weights come from her own misses (last 30 days, the last 7 count double), not from the lesson calendar or the dots.
+// Only fresh and follow-up misses count: walkthrough sub-steps and shown answers are already downstream of a miss.
+function missWeights(){
+  const now=Date.now(), month=now-30*864e5, week=now-7*864e5; const w={}, tags={};
+  for(const e of (S&&S.log)||[]){ if(!e || e.ok || !SKILLS[e.sk] || !SKILL_ORDER.includes(e.sk) || !(Number.isFinite(e.t)&&e.t>=month)) continue;
+    const st=e.stage||(e.retry?"followup":"fresh"); if(st!=="fresh" && st!=="followup") continue;
+    const wt = e.t>=week ? 2 : 1; w[e.sk]=(w[e.sk]||0)+wt;
+    if(e.tag){ tags[e.sk]=tags[e.sk]||{}; tags[e.sk][e.tag]=(tags[e.sk][e.tag]||0)+wt; } }
+  const tag={}; for(const k in tags){ tag[k]=Object.keys(tags[k]).sort((a,b)=>tags[k][b]-tags[k][a])[0]; }
+  return {w, tag};
+}
 function pickSkill(){
   if(mode==="week"){ const w=weekWeights(), keys=Object.keys(w); if(keys.length) return drawWeighted(keys, keys.map(k=>w[k])); }
+  else if(mode==="miss"){ const {w}=missWeights(), keys=Object.keys(w); if(keys.length) return drawWeighted(keys, keys.map(k=>w[k])); }
   else if(mode==="hw:check") return (pendingHW && pendingHW.skill) || "multiply";
   else if(hwMode()) return hwMode().skill;
   else if(mode!=="mix") return mode;
@@ -2061,7 +2092,7 @@ function hwEntry(prefill, err){
       <input class="ans text" id="hwq" type="text" inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="like 148 × 19" value="${esc(prefill||"")}">
       <div class="inline-err" id="hwerr" role="status" aria-live="polite">${esc(err||"")}</div>
       <div class="actions"><button class="btn primary" id="hwgo">Set it up</button></div>
-      <p class="muted" style="font-size:14px;margin:14px 0 0">Shapes the app knows: <b>148 × 19</b> (standard algorithm), <b>3,660 ÷ 30</b> (place value strategy), <b>8 × 10^5 × 6</b> or <b>47 × 10^6</b> (powers of ten), <b>4.5 × 1,000</b> or <b>2.99 ÷ 10^3</b> (moving the decimal point), <b>round 2.98 to the nearest tenth</b>. Use x or × for times, ÷ or / for divide, ^ for the exponent.</p>
+      <p class="muted" style="font-size:14px;margin:14px 0 0">Shapes the app knows: <b>148 × 19</b> (standard algorithm), <b>3,660 ÷ 30</b> (place value strategy), <b>8 × 10^5 × 6</b> or <b>47 × 10^6</b> (powers of ten), <b>4.5 × 1,000</b> or <b>2.99 ÷ 10^3</b> (moving the decimal point), <b>round 2.98 to the nearest tenth</b>, <b>2 + 3 × 4</b> or <b>12 ÷ (8 − 4) × 2</b> (order of operations). Use x or × for times, ÷ or / for divide, ^ for the exponent.</p>
     </div>`;
   const q=id=>app.querySelector("#"+id); const inp=q("hwq");
   q("back").onclick=home;
@@ -2075,6 +2106,7 @@ function next(){ // a fresh problem: new help chain
   // Week mode: the current lesson may ask for a particular flavour of a skill (e.g. area-model multiplication). Skill mode passes nothing.
   let focus;
   if(mode==="week"){ const l=lessonById(effectiveClassAt()); if(l && l.focus && typeof l.focus==="object" && l.focus[sk]) focus=l.focus[sk]; }
+  else if(mode==="miss"){ const {tag}=missWeights(); if(tag[sk] && tag[sk]!=="other") focus={tag:tag[sk]}; } // aim at her most common mistake in that skill
   const hw=hwMode();
   if(mode==="hw:check"){ if(!pendingHW){ hwEntry(); return; } cur=SKILLS[pendingHW.skill].gen(pendingHW.level, pendingHW.focus); cur.hw=true; cur.fixed=true; cur.hwLabel=pendingHW.label; pendingHW=null; }
   else if(hw){ const shape=pick(hw.shapes); cur=SKILLS[sk].gen(shapeLevel(shape), {shape, variant:hw.variant}); cur.hw=true; }
@@ -2111,7 +2143,7 @@ function render(){
   const sk=cur.skill; const lvl = stage==="followup" ? cur.level : S.levels[sk]; // a follow-up stays at the level of the problem she missed
   const top=`
     <div class="topbar"><button class="btn quiet" id="back">Home</button>
-      <div class="row"><button class="btn quiet small" id="scratchtoggle" aria-pressed="${S.scratch?"true":"false"}" title="Scratch paper for working it out with the pencil">${S.scratch?"Hide scratch paper":"Scratch paper"}</button><span class="pill">${SKILLS[sk].name}</span>${mode==="week"?`<span class="pill week">This week</span>`:""}${cur.hw?`<span class="pill week" title="${cur.fixed?"A problem typed from the page":"Worksheet shapes"}; does not change levels">${cur.fixed?"From the page":"Homework"}</span>`:""}${stage==="followup"?`<span class="pill">One like it</span>`:""}${cur.hw?"":dots(lvl)}</div></div>${warnHTML()}`;
+      <div class="row"><button class="btn quiet small" id="scratchtoggle" aria-pressed="${S.scratch?"true":"false"}" title="Scratch paper for working it out with the pencil">${S.scratch?"Hide scratch paper":"Scratch paper"}</button><span class="pill">${SKILLS[sk].name}</span>${mode==="week"?`<span class="pill week">This week</span>`:""}${mode==="miss"?`<span class="pill week" title="Chosen from your recent misses">Where I missed</span>`:""}${cur.hw?`<span class="pill week" title="${cur.fixed?"A problem typed from the page":"Worksheet shapes"}; does not change levels">${cur.fixed?"From the page":"Homework"}</span>`:""}${stage==="followup"?`<span class="pill">One like it</span>`:""}${cur.hw?"":dots(lvl)}</div></div>${warnHTML()}`;
   let body=`<p class="prompt">${cur.prompt}</p>`; let right="";
   const showChart = cur.show ? chartHTML(cur.show, null, cur.minCols) : "";
   const m=cur.mistake;
@@ -2344,7 +2376,7 @@ function checkStep(){
       if(!cur.shownLogged){ cur.shownLogged=true; S.shown=(S.shown||0)+1;
         pushLog({t:Date.now(), sk:cur.skill, lvl:cur.level, q:plain(cur.prompt), yours:c.type==="mc"?String((c.options||[])[sc.sel]):String(sc.val).trim(), ans:cur.display, ok:1, guided:1, shown:1, stage:"reveal", hints:hintIdx, independent:0, tag:cur.mistake?cur.mistake.tag:"", revealed, passed, expanded}); } }
     else { sc.msg = c.type==="mc" ? "Not that one. Pick the answer to continue." : "Not quite. Type the answer to continue."; sc.val=""; sc.sel=-1; }
-    render(); return;
+    save(); render(); return; // saved now, not on the next action: a reload here must not lose the record
   }
   const last = stepIdx===cur.steps.length-1;
   const shown=`It's <b>${esc(c.display)}</b>.`, lockIn = c.type==="mc" ? "Tap it to lock it in." : "Type it in to lock it in.";
@@ -2365,9 +2397,11 @@ function checkStep(){
     if(sc.tries<2){ sc.msg="Not quite. Try once more."; sc.val=""; sc.sel=-1; }
     else { sc.state="confirm"; sc.msg=`${shown} ${lockIn}`; sc.val=""; sc.sel=-1; } }
   if(missEntry){ missEntry.revealed=revealed; missEntry.passed=passed; }
-  if(last && sc.state==="ok"){ // finished the whole problem inside the walkthrough: a guided completion
-    S.guided++;
-    pushLog({t:Date.now(), sk:cur.skill, lvl:cur.level, q:plain(cur.prompt), yours:c.type==="mc"?String((c.options||[])[sc.sel]):String(sc.val).trim(), ans:cur.display, ok:1, guided:1, stage:"wt", hints:hintIdx, independent:0, tag:cur.mistake?cur.mistake.tag:"", revealed, passed});
+  if(last && (sc.state==="ok" || sc.state==="revealed")){ // finished the whole problem inside the walkthrough
+    // "ok": she got the final answer herself → a guided completion. "revealed": the final answer was shown after repeated misses and she copied it in → finished with the answer shown (counted like the reveal path, never as guided).
+    const shownIn = sc.state==="revealed";
+    if(shownIn) S.shown=(S.shown||0)+1; else S.guided++;
+    pushLog({t:Date.now(), sk:cur.skill, lvl:cur.level, q:plain(cur.prompt), yours:c.type==="mc"?String((c.options||[])[sc.sel]):String(sc.val).trim(), ans:cur.display, ok:1, guided:1, ...(shownIn?{shown:1}:{}), stage:"wt", hints:hintIdx, independent:0, tag:cur.mistake?cur.mistake.tag:"", revealed, passed});
   }
   save(); render();
 }
