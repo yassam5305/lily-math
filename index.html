@@ -856,8 +856,9 @@ function genAddSub(level, focus){
     }
   };
   let nums=null, last=null, tries=0;
-  while(tries++<150){ const c=make(); if(!c) continue; last=c; if(okFocus(c,op)){ nums=c; break; } }
-  if(!nums) nums=last;
+  if(focus && focus.fixed && Array.isArray(focus.fixed.nums)){ nums=focus.fixed.nums.map(x=>({w:+x.w, d:String(x.d||"")})); op=focus.fixed.op||op; } // a problem typed from the page, exactly as written
+  else { while(tries++<150){ const c=make(); if(!c) continue; last=c; if(okFocus(c,op)){ nums=c; break; } }
+  if(!nums) nums=last; }
   const k=Math.max(1,...nums.map(x=>x.d.length));
   const Vs=nums.map(toThousandths);
   const RV = op==="+" ? Vs.reduce((s,v)=>s+v,0) : Vs[0]-Vs[1];
@@ -1347,7 +1348,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.6 · September 20, 2026";
+const BUILD="v9.7 · September 20, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -1438,7 +1439,17 @@ function genMultiply(level, focus){
           : variant==="distributive" ? ["fact","add-partials"] : ["fact"];
   if(variant==="algorithm") p.ws=true; // the aligned-digit workspace replaces the single answer box
   const steps=[];
-  if(b<10){
+  if(b<10 && (variant==="area"||variant==="distributive")){ // U2 L6/L7 with a one-digit multiplier: decompose the big factor by place value
+    p.ws=false; const parts=String(a).split("").map((ch,i,arr)=>+ch*Math.pow(10,arr.length-1-i)).filter(x=>x>0);
+    if(variant==="area"){ steps.push({t:`Area model: break ${a} by place value: ${parts.join(" + ")}. Draw a rectangle ${b} tall, divided into ${parts.length} section${parts.length===1?"":"s"}, one for each part.`, check:ci(`How many sections does the area model have?`, parts.length)});
+      parts.forEach(x=>steps.push({t:`Section: ${x} × ${b}.`, check:wc(ci(`${x} × ${b} = ?`, x*b, (x*b).toLocaleString("en-US")),"fact")}));
+      steps.push({t:`Add the sections: ${parts.map(x=>(x*b).toLocaleString("en-US")).join(" + ")}.${stackMul(a,b,parts.map(x=>x*b))}`, check:wc(finalCheck(p),"add-partials")}); }
+    else { steps.push({t:`Break ${a} into ${parts.join(" + ")}. Then ${a} × ${b} = ${parts.map(x=>`(${x} × ${b})`).join(" + ")}. That is the distributive property.`, check:cm(`Which shows the distributive property for ${a} × ${b}?`, shuffle([parts.map(x=>`(${x} × ${b})`).join(" + "), parts.map(x=>`(${x} × ${b})`).join(" × "), `(${parts.join(" × ")}) + ${b}`]), null)});
+      steps[0].check.answer=steps[0].check.options.indexOf(parts.map(x=>`(${x} × ${b})`).join(" + ")); steps[0].check.display=steps[0].check.options[steps[0].check.answer];
+      parts.forEach(x=>steps.push({t:`${x} × ${b}.`, check:wc(ci(`${x} × ${b} = ?`, x*b, (x*b).toLocaleString("en-US")),"fact")}));
+      steps.push({t:`Add the partial products: ${parts.map(x=>(x*b).toLocaleString("en-US")).join(" + ")}.${stackMul(a,b,parts.map(x=>x*b))}`, check:wc(finalCheck(p),"add-partials")}); }
+    p.traps=["fact"].concat(variant==="distributive"?["add-partials"]:[]);
+  } else if(b<10){
     steps.push({t:`Line up the factors, ${a} above ${b}. Multiply ${b} by each digit of ${a}, starting with the ones place.${stackMul(a,b)}`});
     const r=mulRowSteps(a,b,b,0,[]); steps.push(...r.steps);
     steps.push({t:`Read the product from the digits you wrote (${r.readBack}).${stackMul(a,b)}`, check:wc(finalCheck(p),"rows")});
@@ -1920,6 +1931,8 @@ function ctxOf(p){
 function hasTrap(p, comp){
   const m=(p&&p.meta)||{}; const sk=p&&p.skill;
   if(comp==="*" || !comp) return true;
+  if(comp==="why") return !!(p.why && p.why.options && p.why.options.length>1);
+  if(sk==="addsub" && comp==="alignment") return Array.isArray(m.nums) && new Set(m.nums.map(x=>(x.d||"").length)).size>1; // equal-length decimals cannot be misaligned
   if(sk==="rounding" && (comp==="chop"||comp==="direction")) return m.which ? true : (m.R!==undefined && m.C!==undefined ? m.R!==m.C : true);
   if(sk==="addsub" && (comp==="carry"||comp==="regroup"||comp==="borrow")) return typeof hasRegroup==="function" && Array.isArray(m.nums) ? hasRegroup(m.nums, m.op, m.k) : true;
   if(sk==="orderops"){ if(comp==="left-to-right") return m.variant==="evaluate" && !m.hasGroup && m.ltr!==m.value; // only an expression where left-to-right gives a different answer tests it
@@ -1934,7 +1947,7 @@ const weakKey=(sk,comp,ctx)=>{ const ck=ctxKey(ctx); return `${sk}:${comp||"*"}$
 function parseWeakKey(key){ const [head,ck=""]=key.split("|"); const [sk,comp]=head.split(":"); const ctx={}; if(ck) for(const kv of ck.split(",")){ const [k,v]=kv.split("="); ctx[k]=v; } return {sk, comp, ctx}; }
 // The focus a generator needs to produce a problem in this context (the same fields focusFor() uses for follow-ups).
 function focusFromCtx(sk, ctx){ const f={}; if(!ctx) return f; if(ctx.op) f.op=ctx.op; if(ctx.variant) f.variant=ctx.variant; if(sk==="rounding"){ if(ctx.p!==undefined) f.p=+ctx.p; else if(ctx.dec==="y") f.p=pick([-1,-2]); else if(ctx.dec==="n") f.p=pick([0,2,3,4,5]); if(ctx.which!==undefined) f.which=ctx.which==="y"; } return f; }
-const compName=(sk,comp)=> (sk==="multiply" && COMP_NAMES[comp]) ? COMP_NAMES[comp] : (comp && comp!=="*" && comp!=="other" ? comp.replace(/-/g," ") : (SKILLS[sk]?SKILLS[sk].name.toLowerCase():"the whole skill"));
+const compName=(sk,comp)=> comp==="why" ? "explaining the reason" : comp==="alignment" ? "lining up the decimal points" : (sk==="multiply" && COMP_NAMES[comp]) ? COMP_NAMES[comp] : (comp && comp!=="*" && comp!=="other" ? comp.replace(/-/g," ") : (SKILLS[sk]?SKILLS[sk].name.toLowerCase():"the whole skill"));
 const ctxLabel=(sk,ctx)=>{ if(!ctx) return ""; const parts=[]; if(ctx.op) parts.push(ctx.op==="×"?"multiplying":ctx.op==="÷"?"dividing":ctx.op==="+"?"adding":(ctx.op==="−"||ctx.op==="-")?"subtracting":ctx.op); if(ctx.variant) parts.push(ctx.variant==="repeated"?"repeated × 10":ctx.variant==="threefactor"?"three factors":ctx.variant); if(sk==="rounding"){ if(ctx.p!==undefined && typeof placeSing==="function") parts.push(`nearest ${placeSing(+ctx.p)}`); else if(ctx.dec==="y") parts.push("decimal places"); else if(ctx.dec==="n") parts.push("whole-number places"); if(ctx.which==="y") parts.push("which-number form"); } return parts.join(", "); };
 const weakLabel=key=>{ const {sk,comp,ctx}=parseWeakKey(key); const k=ctxLabel(sk,ctx); return compName(sk,comp)+(k?` (${k})`:""); };
 const compsOfMiss=(sk,tag)=>{ const t=(!tag||tag==="other"||tag==="correct")?"*":tag; return sk==="multiply" ? [TAG_TO_COMP[t]||"*"] : [t]; }; // which component a graded miss with this tag points at ("other" = the skill as a whole)
@@ -2137,8 +2150,9 @@ function home(){
       <div class="week-lesson">${lessonLine(curL,false)}${curL.inferred?` <span class="muted inferred">(inferred)</span>`:""}</div>
       ${prevL?`<div class="week-prev muted">Spiral review: ${lessonLine(prevL, prevL.unit!==curL.unit)}</div>`:""}
       ${unit&&unit.assess?`<div class="week-prev muted">Next assessment: Unit ${esc(unit.unit)} Assessment: ${esc(unit.assess)}</div>`:""}
-      ${lessonSkills(curL).length?"":`<p class="muted week-note">The app doesn't have this lesson yet. Practicing the two lessons before it.</p>`}
-      <div class="actions" style="margin-top:12px"><button class="btn primary" data-skill="week" id="week">Practice this week</button>${nextL?`<button class="btn quiet small" id="moved" title="Advance to ${esc(lessonShort(nextL))}">Class moved on →</button>`:""}</div>
+      ${lessonSkills(curL).length?"":(Object.keys(weekWeights()).length?`<p class="muted week-note">The app doesn't have this lesson yet. "Practice this week" uses the lessons just before it: ${[...new Set([ci-1,ci-2].filter(i=>i>=0).flatMap(i=>lessonSkills(L[i])))].map(k=>esc(SKILLS[k].name)).join(", ")}.</p>`:`<p class="muted week-note"><b>Nothing in the app yet for this lesson or the two before it.</b> The button below gives mixed review of everything the app does have; it is not this week's topic.</p>`)}
+      ${/number line/i.test(curL.name)&&lessonSkills(curL).length?`<p class="muted week-note">This lesson uses the <b>number-line strategy</b>. The app practices the same problems by place value; the number-line picture is not in the app yet.</p>`:""}
+      <div class="actions" style="margin-top:12px"><button class="btn primary" data-skill="week" id="week">${Object.keys(weekWeights()).length?"Practice this week":"Mixed review instead"}</button>${nextL?`<button class="btn quiet small" id="moved" title="Advance to ${esc(lessonShort(nextL))}">Class moved on →</button>`:""}</div>
       <p class="muted week-foot">${S.classPin?"Lesson position was pinned on the grown-ups page; choose “Follow the calendar” there to go back to the district pacing estimate.":"Lesson position is estimated from the district pacing calendar; use the grown-ups page to pin the exact lesson from the homework header."}</p>
     </div>` : "";
   const tagsHTML=k=>{ let ids=L.filter(l=>l && Array.isArray(l.skills) && l.skills.includes(k)).map(l=>l.id); // derive from the lesson list, else the skill's own list
@@ -2195,7 +2209,7 @@ function parseHomework(text){
   // rounding: "round 2.98 to the nearest tenth", "2.98 nearest tenth", "2.98 to the tenths"
   let m=t.match(new RegExp("^(?:round\\s+)?"+NUM+"\\s+(?:to\\s+)?(?:the\\s+)?(?:nearest\\s+)?([a-z ]+?)(?:\\s+place)?$"));
   if(m && PLACES[m[2].trim()]!==undefined){ const num=numOf(m[1]); const p=PLACES[m[2].trim()]; if(!num) return {err:"I could not read that number."};
-    if(num.d.length>3) return {err:"The app works up to thousandths (3 decimal places)."}; if(p<0 && num.d.length<= -p) return {err:`${fmt(num)} already stops at the ${placeName(p)} place, so there is nothing to round.`}; if(p>=0 && num.w<Math.pow(10,p)) return {err:`${fmt(num)} is too small to round to the nearest ${placeSing(p)}.`};
+    if(num.d.length>3) return {err:"The app works up to thousandths (3 decimal places)."}; if(p>5) return {err:"Rounding places up to hundred thousands, please."}; // small numbers round to 0 or to the next unit; a number that already stops at the place stays (with a 0 written in)
     return {skill:"rounding", focus:{fixed:{num:{w:num.w,d:num.d},p}}, level:3, label:`Round ${fmt(num)} to the nearest ${placeSing(p)}`}; }
   // powers with an exponent: "8 × 10^5 × 6", "47 × 10^6", "72 x 10^4"
   m=t.match(new RegExp("^"+NUM+"\\s*[x×*·]\\s*(10\\^\\d+)(?:\\s*[x×*·]\\s*"+NUM+")?$"));
@@ -2227,6 +2241,14 @@ function parseHomework(text){
     const N=A.w, d=B.w; if(d<2) return {err:"The divisor should be 2 or more."}; if(N%d!==0) return {err:`${N.toLocaleString("en-US")} ÷ ${d} has a remainder (${N%d}). The app's place-value strategy handles division that comes out even.`};
     if(N>99999) return {err:"Dividends up to 99,999, please."}; const q=N/d; if(q<2) return {err:"The quotient should be 2 or more."};
     return {skill:"divide", focus:{fixed:{d,q},variant:"placevalue"}, level:3, label:`${N.toLocaleString("en-US")} ÷ ${d}`}; }
+  // add / subtract, with decimals: "3.45 + 2.7", "12.5 − 3.75", "1.2 + 3.4 + 5"
+  m=t.match(new RegExp("^"+NUM+"\\s*([+−-])\\s*"+NUM+"(?:\\s*\\+\\s*"+NUM+")?$"));
+  if(m){ const A=numOf(m[1]), B=numOf(m[3]), C=m[4]?numOf(m[4]):null; const op=m[2]==="+"?"+":"−";
+    if(!A||!B||(m[4]&&!C)) return {err:"I could not read those numbers."}; if(op==="−" && m[4]) return {err:"Subtraction takes two numbers here."};
+    const ns=[A,B].concat(C?[C]:[]); if(ns.some(x=>x.d.length>3)) return {err:"The app works up to thousandths (3 decimal places)."}; if(ns.every(x=>!x.d) && op==="+" && ns.length===2 && A.w+B.w>999999) return {err:"Sums up to 999,999, please."};
+    if(op==="−" && toThousandths({w:A.w,d:A.d})<toThousandths({w:B.w,d:B.d})) return {err:`${fmt(A)} − ${fmt(B)} would go below zero; the app subtracts the smaller from the larger.`};
+    if(ns.every(x=>!x.d)) return {skill:"addsub", focus:{fixed:{nums:ns.map(x=>({w:x.w,d:""})), op}}, level:3, label:ns.map(fmt).join(` ${op} `)};
+    return {skill:"addsub", focus:{fixed:{nums:ns.map(x=>({w:x.w,d:x.d})), op}}, level:ns.length>2||ns.some(x=>x.d.length===3)?5:3, label:ns.map(fmt).join(` ${op} `)}; }
   // order of operations: "2 + 3 x 4", "12 / (8 - 4) * 2", "[3 + 5] × 2 − 6". Whole numbers only; every step must come out a whole number.
   const oo=t.replace(/[x*·]/g,"×").replace(/\//g,"÷").replace(/[-–—]/g,"−").replace(/\{/g,"[").replace(/\}/g,"]");
   if(/^[\d\s.,+−×÷()\[\]]+$/.test(oo) && /[+−×÷]/.test(oo) && /[.,]/.test(oo) && !/^[\d,.]+\s*[×÷]\s*[\d,.]+$/.test(oo)) return {err:"Order of operations here works with whole numbers (no decimal points)."};
@@ -2378,7 +2400,7 @@ function wsHTML(readonly, marks){
   g+=`</div>`;
   const pad = readonly ? "" : `<div class="pad" role="group" aria-label="Number pad">${[1,2,3,4,5,6,7,8,9,0].map(d=>`<button type="button" class="btn" data-d="${d}">${d}</button>`).join("")}<button type="button" class="btn" data-d="bs" aria-label="Erase">⌫</button><button type="button" class="btn" data-d="nx" aria-label="Next cell">→</button></div>`;
   const supNames=[sup>=2?"column labels":"", sup>=1?"carry boxes":"", sup>=3&&sp.two?"tens-row 0 written in":"", sup>=3?"coach line":""].filter(Boolean);
-  const supLine = readonly ? "" : `<p class="supports">${supNames.length?`Supports on: <b>${supNames.join(" · ")}</b> <span class="muted">(they come off as you get these right on your own)</span>`:`No supports: this is the bare page, like the worksheet.`}</p>`;
+  const supLine = readonly ? "" : `<p class="supports">${supNames.length?`Supports on: <b>${supNames.join(" · ")}</b> <span class="muted">(they come off as you get these right on your own)</span>`:`No supports: this is the bare page, like the worksheet.`}${sup<3?` <button type="button" class="btn quiet small" id="toolsback" title="Bring one support back for now; it fades again as you get these right">Bring a tool back</button>`:""}</p>`;
   const coach = (!readonly && sup>=3 && cur.hints && cur.hints[0]) ? `<div class="hints"><div class="step"><span class="n">Coach.</span>${cur.hints[0].t}</div></div>` : "";
   return `<div class="ws"><div class="ws-wrap">${g}</div>${pad}${supLine}${coach}</div>`;
 }
@@ -2389,6 +2411,7 @@ function wsPaint(){ app.querySelectorAll(".ws .cell[data-k]").forEach(el=>{ cons
 function bindWS(){
   app.querySelectorAll(".ws .cell[data-k]:not([disabled])").forEach(el=>el.onclick=()=>{ ws.sel=el.dataset.k; wsPaint(); });
   app.querySelectorAll(".pad .btn").forEach(b=>b.onclick=()=>{ const d=b.dataset.d; if(d==="bs") wsBack(); else if(d==="nx"){ wsMove(+1); wsPaint(); } else wsType(d); });
+  const tb=app.querySelector("#toolsback"); if(tb) tb.onclick=()=>{ S.support.multiply=Math.min(3,(S.support.multiply||0)+1); S.supportWins.multiply=0; const keep=ws?{...ws.vals}:{}; ws=null; wsInit(); Object.assign(ws.vals, keep); if(ws.locked["r1-0"]) ws.vals["r1-0"]="0"; save(); render(); }; // her call; a right answer with it on counts as supported
 }
 // Read the grid, grade it, and name the component behind every wrong cell.
 function gradeWS(){
@@ -2440,7 +2463,7 @@ function render(){
   const sk=cur.skill; const lvl = stage==="followup" ? cur.level : S.levels[sk]; // a follow-up stays at the level of the problem she missed
   const top=`
     <div class="topbar"><button class="btn quiet" id="back">Home</button>
-      <div class="row"><button class="btn quiet small" id="scratchtoggle" aria-pressed="${S.scratch?"true":"false"}" title="Scratch paper for working it out with the pencil">${S.scratch?"Hide scratch paper":"Scratch paper"}</button><span class="pill">${SKILLS[sk].name}</span>${mode==="week"?`<span class="pill week">This week</span>`:""}${mode==="miss"?`<span class="pill week" title="Chosen from your weakness profile, not the calendar">${cur.focusWhy?`Focus: ${esc(cur.focusWhy)}`:"Where I missed"}</span>`:""}${cur.hw?`<span class="pill week" title="${cur.fixed?"A problem typed from the page":"Worksheet shapes"}; does not change levels">${cur.fixed?"From the page":"Homework"}</span>`:""}${stage==="followup"?`<span class="pill">One like it</span>`:""}${cur.hw?"":dots(lvl)}</div></div>${warnHTML()}`;
+      <div class="row"><button class="btn quiet small" id="scratchtoggle" aria-pressed="${S.scratch?"true":"false"}" title="Scratch paper for working it out with the pencil">${S.scratch?"Hide scratch paper":"Scratch paper"}</button><span class="pill">${SKILLS[sk].name}</span>${mode==="week"?`<span class="pill week">${Object.keys(weekWeights()).length?"This week":"Mixed review"}</span>`:""}${mode==="miss"?`<span class="pill week" title="Chosen from your weakness profile, not the calendar">${cur.focusWhy?`Focus: ${esc(cur.focusWhy)}`:"Where I missed"}</span>`:""}${cur.hw?`<span class="pill week" title="${cur.fixed?"A problem typed from the page":"Worksheet shapes"}; does not change levels">${cur.fixed?"From the page":"Homework"}</span>`:""}${stage==="followup"?`<span class="pill">One like it</span>`:""}${cur.hw?"":dots(lvl)}</div></div>${warnHTML()}`;
   let body=`<p class="prompt">${cur.prompt}</p>`; let right="";
   const showChart = cur.show ? chartHTML(cur.show, null, cur.minCols) : "";
   const m=cur.mistake;
@@ -2659,14 +2682,18 @@ function submit(){
   const supported = !!cur.ws && (S.support.multiply||0)>=2;
   const independent = stage==="fresh" && hintIdx===0 && !supported;
   const entry={t:Date.now(), sk, lvl:cur.level, q:plain(cur.prompt), yours:String(yours), ans:cur.display, ok:ok?1:0, stage, hints:hintIdx, independent:(ok&&independent)?1:0, tag: cur.mistake ? cur.mistake.tag : (cur.focusTag||"")};
-  if(cur.hw) entry.hw=1; if(cur.fixed) entry.page=1; if(cur.ws){ entry.ws=1; entry.support=S.support.multiply; } if(mode==="miss"&&cur.focusKey) entry.focus=cur.focusKey; const eck=ctxKey(ctxOf(cur)); if(eck) entry.ctx=eck;
+  if(cur.hw) entry.hw=1; if(cur.fixed) entry.page=1; if(cur.ws){ entry.ws=1; entry.support=S.support.multiply; } if(supported) entry.supported=1; if(mode==="miss"&&cur.focusKey) entry.focus=cur.focusKey; const eck=ctxKey(ctxOf(cur)); if(eck) entry.ctx=eck;
   if(wsGrade){ entry.rows=wsGrade.yours; if(!ok) entry.wrong=wsGrade.wrongText; if(wsGrade.comps) entry.comps=wsGrade.compsTally; if(cur.unfinished) entry.unfinished=cur.unfinished; }
   lastChange=0; lastPraise=[];
   // Homework practice is level-neutral: the shape was chosen from the worksheet, not earned, so it moves nothing up or down.
   if(independent && !cur.hw){ const res=applyResult(S.hist[sk], S.levels[sk], ok); S.levels[sk]=res.level; S.hist[sk]=res.hist; lastChange=res.change; }
   // Fading supports (multiplication workspace): two clean successes in a row at this support level remove the next support; a fresh miss brings one back.
   if(cur.ws && stage==="fresh"){ const sp=S.support, sw=S.supportWins;
-    if(ok && hintIdx===0){ sw.multiply=(sw.multiply||0)+1; if(sw.multiply>=2 && sp.multiply>0){ sp.multiply--; sw.multiply=0; lastPraise.push({big:true, t:`You have not needed ${SUPPORT_NAMES[sp.multiply+1]} lately, so next time it comes off. The page is getting closer to the real worksheet.`}); } }
+    const qtext=plain(cur.prompt); const distinct = qtext!==S.supportLastQ; // the same worksheet problem again is not new evidence for taking a tool away
+    if(ok && hintIdx===0 && distinct){ S.supportLastQ=qtext; sw.multiply=(sw.multiply||0)+1;
+      const twoRow = cur.meta && cur.meta.b>=10; const lastOne = sp.multiply===1; // the carry boxes come off only after a two-row (two-digit multiplier) success
+      if(sw.multiply>=2 && sp.multiply>0 && (!lastOne || twoRow)){ sp.multiply--; sw.multiply=0; lastPraise.push({big:true, t:`You have not needed ${SUPPORT_NAMES[sp.multiply+1]} lately, so next time it comes off. The page is getting closer to the real worksheet.`}); }
+      else if(sw.multiply>=2 && lastOne && !twoRow) lastPraise.push({t:`Two clean ones. The carry boxes come off after a two-row problem like this at the next level.`}); }
     else if(!ok){ if(sp.multiply<3){ sp.multiply++; } sw.multiply=0; } }
   if(ok){
     S.correct++; S.today.c++; S.run++; S.best=Math.max(S.best,S.run);
@@ -2676,7 +2703,7 @@ function submit(){
     // Clean wins for every component this problem exercised; recovery praise for the ones that moved.
     if(independent){ const before=Object.keys(S.weak).filter(k=>S.weak[k].state!=="ok");
       const demonstrated = wsGrade ? wsGrade.evidence : trapsOf(cur); entry.proved=demonstrated.join(",");
-      const keys = evidenceKeys(cur).filter(k=>{ const {comp}=parseWeakKey(k); return sk!=="multiply" || comp==="*" || demonstrated.includes(comp); }); // same rule Focus used to pick the problem; multiplication also needs the step to have been hers
+      const keys = evidenceKeys(cur).filter(k=>{ const {comp}=parseWeakKey(k); if(comp==="why") return false; return sk!=="multiply" || comp==="*" || demonstrated.includes(comp); }); // "why" is credited only by the reasoning question itself // same rule Focus used to pick the problem; multiplication also needs the step to have been hers
       for(const key of keys){ const comp=parseWeakKey(key).comp; const tr=noteComp(sk, comp, true, {independent:true, key, q:plain(cur.prompt)}); const nm=weakLabel(key);
         if(tr==="win") lastPraise.push({t:`You handled ${nm} on your own. One more clean one and it comes off the watch list.`});
         else if(tr==="review") lastPraise.push({big:true, t:`Two in a row on ${nm}, no help. It moves to review: the app will check it again in a few days.`});
@@ -2704,6 +2731,14 @@ function checkWhy(){ // the justification question: logged on the entry it belon
   if(whyState.sel<0){ const f=app.querySelector("#wopts .opt"); if(f) f.focus(); return; }
   whyState.done=true; whyState.ok = whyState.sel===cur.why.answer;
   if(okEntry){ okEntry.why=whyState.ok?1:0; okEntry.whyPick=String(cur.why.options[whyState.sel]||""); }
+  // The calculation keeps its credit either way. The reason is tracked as its own weakness, "skill:why": a wrong pick opens it; a right pick on
+  // an independent attempt is evidence for it (two clean ones, then the usual reviews). It never touches levels.
+  const sk=cur.skill, ctx=ctxOf(cur);
+  if(!whyState.ok){ const tr=noteComp(sk, "why", false, {lvl:cur.level, ctx}); if(okEntry) okEntry.whyMiss=1; }
+  else if(okEntry && okEntry.independent){ for(const key of evidenceKeys(cur).filter(k=>parseWeakKey(k).comp==="why")){ const tr=noteComp(sk, "why", true, {independent:true, key, q:plain(cur.prompt)}); const nm=weakLabel(key);
+      if(tr==="win") lastPraise.push({t:`Right answer and the right reason. One more like that and ${nm} comes off the watch list.`});
+      else if(tr==="review") lastPraise.push({big:true, t:`Two clean explanations in a row. ${ucfirst(nm)} moves to review.`});
+      else if(tr==="stage2"||tr==="recovered") lastPraise.push({big:true, t:`${ucfirst(nm)}: ${tr==="recovered"?"recovered":"held up; one more check-in later"}.`}); } }
   save(); render(); const n=app.querySelector("#next"); if(n) n.focus({preventScroll:true});
 }
 // A walkthrough check's component outcome: tallied on the problem (cur.comps → the log entry) and, for a miss, into the weakness profile.
@@ -2760,6 +2795,17 @@ function checkStep(){
 function fmtDate(ts){ const d=new Date(ts); return d.toLocaleDateString(undefined,{month:"short",day:"numeric"})+" "+d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}); }
 const isFresh=e=>e.stage?e.stage==="fresh":!e.retry; // older entries have retry instead of stage
 const indep=e=>e.independent!==undefined?e.independent:((isFresh(e)&&!e.hints)?1:0);
+// ONE classification for every logged attempt, used by the table, the tiers, and the summary line:
+//   independent  fresh, no hints, supports off (or not a workspace problem), answered right
+//   indep-miss   the same conditions, answered wrong (an independent attempt that missed)
+//   supported    fresh, no hints, right, but with the multiplication supports on (level 2 or 3)
+//   copied       the answer was shown and typed in
+//   guided       everything else that ended right (hints, follow-up, walkthrough completion)
+//   miss         everything else that ended wrong
+function classifyEntry(e){ if(e.shown) return "copied"; const supported=!!e.supported || (!!e.ws && +e.support>=2); const fresh=isFresh(e), noHint=!(+e.hints>0);
+  if(fresh && noHint && !supported && !e.guided) return e.ok?"independent":"indep-miss";
+  if(e.ok && supported && fresh && noHint && !e.guided) return "supported";
+  return e.ok?"guided":"miss"; }
 const fmtBytes=n=>n<1024?n+" bytes":n<1048576?(n/1024).toFixed(1)+" KB":(n/1048576).toFixed(2)+" MB";
 // Transfer code = "LM1." + base64url(deflate(JSON of the whole DB)), or "LM0." + base64url(JSON) where compression is unavailable.
 const B64U={
@@ -2846,11 +2892,11 @@ function grownups(){
   const log=S.log.filter(e=>e&&typeof e==="object"); // normalize() already did this; belt and braces so nothing below can throw
   const str=v=>v==null?"":String(v); // a missing field shows as blank, never "undefined"
   const rows=SKILL_ORDER.map(k=>{ const a=log.filter(e=>e.sk===k);
-    const ind=a.filter(e=>isFresh(e)&&!e.hints&&!e.guided).slice(-20); const indRight=ind.filter(e=>e.ok).length;
-    const guided=a.filter(e=>e.ok&&indep(e)===0&&!e.shown).length; const shown=a.filter(e=>e.shown).length;
+    const cls=a.map(e=>[e,classifyEntry(e)]); const ind=cls.filter(([e,c])=>c==="independent"||c==="indep-miss").slice(-20); const indRight=ind.filter(([e,c])=>c==="independent").length;
+    const supported=cls.filter(([e,c])=>c==="supported").length; const guided=cls.filter(([e,c])=>c==="guided").length; const shown=cls.filter(([e,c])=>c==="copied").length;
     const missTags=a.filter(e=>!e.ok).slice(-20).map(e=>typeof e.tag==="string"?e.tag:"").filter(Boolean);
     const cnt={}; for(const t of missTags) cnt[t]=(cnt[t]||0)+1; const topTag=Object.keys(cnt).sort((x,y)=>cnt[y]-cnt[x])[0];
-    return `<tr><td><b>${SKILLS[k].name}</b></td><td>${S.levels[k]} of ${MAX_LEVEL}</td><td>${ind.length?`${indRight} of ${ind.length}`:"—"}</td><td>${guided||"—"}</td><td>${shown||"—"}</td><td>${topTag?`${esc(topTag)} <span class="muted">(${cnt[topTag]})</span>`:"—"}</td></tr>`; }).join("");
+    return `<tr><td><b>${SKILLS[k].name}</b></td><td>${S.levels[k]} of ${MAX_LEVEL}</td><td>${ind.length?`${indRight} of ${ind.length}`:"—"}</td><td>${supported||"—"}</td><td>${guided||"—"}</td><td>${shown||"—"}</td><td>${topTag?`${esc(topTag)} <span class="muted">(${cnt[topTag]})</span>`:"—"}</td></tr>`; }).join("");
   const misses=log.filter(e=>!e.ok).slice(-40).reverse();
   const weekAgo=Date.now()-7*864e5; const week=log.filter(e=>Number.isFinite(e.t)&&e.t>=weekAgo&&!e.guided);
   const days=new Set(week.map(e=>new Date(e.t).toDateString())).size;
@@ -2898,7 +2944,7 @@ function grownups(){
     ${classHTML}
     <div class="card">
       <h2 style="margin-top:0">By skill</h2>
-      <div style="overflow-x:auto"><table class="report"><tr><th>Skill</th><th>Level</th><th>Independent<br><span style="text-transform:none;letter-spacing:0">right / tried, last 20</span></th><th>Guided<br><span style="text-transform:none;letter-spacing:0">finished with help</span></th><th>Copied<br><span style="text-transform:none;letter-spacing:0">answer shown, typed in</span></th><th>Common mistake</th></tr>${rows}</table></div>
+      <div style="overflow-x:auto"><table class="report"><tr><th>Skill</th><th>Level</th><th>Independent<br><span style="text-transform:none;letter-spacing:0">right / tried, last 20</span></th><th>Supported<br><span style="text-transform:none;letter-spacing:0">right, tools on</span></th><th>Guided<br><span style="text-transform:none;letter-spacing:0">finished with help</span></th><th>Copied<br><span style="text-transform:none;letter-spacing:0">answer shown, typed in</span></th><th>Common mistake</th></tr>${rows}</table></div>
       <p class="muted" style="font-size:13px;margin:10px 0 0">Only problems done fresh with no hints move levels: up after 3 right out of the last 4, down after 2 wrong out of the last 3. Hints, follow-ups, walkthroughs, and homework practice never move levels, up or down. Level ${MAX_LEVEL} mixes every trap at once. A guided completion is a problem finished with hints, inside a walkthrough, or on the follow-up. After a right answer, some skills ask one "say why" question in SWUN's explain-and-prove wording; it is recorded but never moves a level. "Finished with the answer shown" means the answer was displayed after a third miss and typed in to move on; it is recorded, but it is not a right answer or a guided completion.</p>
       ${S.logTrimmed>0?`<p class="muted" style="font-size:13px;margin:6px 0 0">History shows the most recent ${LOG_CAP} attempts; older entries were trimmed.</p>`:""}
     </div>
