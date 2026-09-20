@@ -614,7 +614,7 @@ function roundingSteps(num, p, prob){
     {t:`If the circled digit is <b>5 or greater</b>, add one to the underlined digit. If it is <b>4 or less</b>, keep the underlined digit the same.`, check:cm(`The circled digit is ${dec}. What happens to the underlined ${ul}?`, [`Goes up to ${ul===9?"0, and 1 regroups to the place on the left":ul+1}`, `Stays ${ul}`], up?0:1)}
   ];
   if(up && ul===9) steps.push({t:`9 plus 1 is 10, so the 9 becomes <b>0</b> and you regroup 1 into the place on its left, just like regrouping in addition. If that place is a 9 too, it becomes 0 and you regroup again.`});
-  steps.push({t:`Change all digits to the <b>right</b> of the underlined digit to <b>zeros</b>. All digits to the <b>left</b> stay the same.`});
+  steps.push({t: (up && ul===9) ? `Change all digits to the <b>right</b> of the underlined digit to <b>zeros</b>. The digit to the left went up by one from the regroup; every digit further left stays the same.` : `Change all digits to the <b>right</b> of the underlined digit to <b>zeros</b>. All digits to the <b>left</b> stay the same.`});
   const ans=roundedNum(V,p);
   let last=`Read the answer off the chart.`;
   if(p<0 && /0$/.test(ans.d)) last+=` Zeros at the end of a decimal can be dropped, so <b>${fmt(ans)}</b> can also be written <b>${fmt(fromThousandths(R))}</b>. Both are correct.`;
@@ -1153,7 +1153,9 @@ function genOrderOps(level, focus){
   if(variant==="which") return genWhichExpr(level, focus);
   const fixedTokens = focus && focus.fixed && Array.isArray(focus.fixed.tokens) ? focus.fixed.tokens : null; // a problem typed from the worksheet
   let tokens = fixedTokens ? JSON.parse(JSON.stringify(fixedTokens)) : pickExpr(level);
-  if(!fixedTokens && f==="left-to-right" && !hasGroup(tokens)){ tokens=pickExpr(1); let g=0; while(g++<30 && (tokens[1]==="×"||tokens[1]==="÷")) tokens=pickExpr(1); } // put the × later so left-to-right fails
+  if(!fixedTokens && f==="left-to-right"){ // a flat expression where working left to right gives the wrong answer, so the rule is actually tested
+    const ltrOf=ts=>{ let r=ts[0]; for(let i=1;i<ts.length;i+=2) r=OPS[ts[i]](r,ts[i+1]); return r; };
+    let g=0; do{ tokens=pickExpr(1); }while(g++<60 && (hasGroup(tokens) || tokens[1]==="×" || tokens[1]==="÷" || ltrOf(tokens)===evalTokens(tokens))); }
   if(!fixedTokens && f==="parens" && !hasGroup(tokens)) tokens=pickExpr(2);
   const trace=traceTokens(tokens); const value=evalTokens(tokens); const expr=tokStr(tokens);
   const ltr=(()=>{ try{ const flat=tokens.map(t=>typeof t==="object"?evalTokens(t.grp):t); let r=flat[0]; for(let i=1;i<flat.length;i+=2) r=OPS[flat[i]](r,flat[i+1]); return r; }catch(e){ return NaN; } })();
@@ -1338,7 +1340,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.3 · September 20, 2026";
+const BUILD="v9.4 · September 20, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -1864,7 +1866,7 @@ function normalize(p){ // fill in anything missing (older saves, imports)
   for(const k of Object.keys(out.weak)){ const e=out.weak[k]; if(!e||typeof e!=="object"||!k.includes(":")){ delete out.weak[k]; continue; }
     e.state=["weak","review","ok"].includes(e.state)?e.state:"weak"; for(const f of ["wins","misses","lvl","last","due","stage","recovered","served"]) e[f]=Math.max(0,+e[f]||0); e.lvl=Math.min(MAX_LEVEL,Math.max(1,e.lvl||1));
     if(e.ctx && typeof e.ctx==="object" && !k.includes("|")){ // v9.2 kept the context on the entry; from v9.3 it is part of the key
-      const [sk,comp]=k.split(":"); const ctx={}; if(e.ctx.op) ctx.op=e.ctx.op; if(e.ctx.variant) ctx.variant=e.ctx.variant; // v9.2 rounding used dec:y/n, which no generator can target: dropped, so it accepts any rounding place
+      const [sk,comp]=k.split(":"); const ctx={}; if(e.ctx.op) ctx.op=e.ctx.op; if(e.ctx.variant) ctx.variant=e.ctx.variant; if(e.ctx.dec==="y"||e.ctx.dec==="n") ctx.dec=e.ctx.dec; // v9.2 rounding kept decimal-vs-whole; that is honoured (Focus picks a matching place)
       const ck=Object.keys(ctx).sort().map(x=>`${x}=${ctx[x]}`).join(","); const nk=`${sk}:${comp}${ck?"|"+ck:""}`; delete e.ctx; if(nk!==k && !out.weak[nk]){ out.weak[nk]=e; delete out.weak[k]; } else if(nk!==k){ out.weak[nk].misses+=e.misses; out.weak[nk].lvl=Math.max(out.weak[nk].lvl,e.lvl); delete out.weak[k]; } } }
   out.support={...b.support, ...((p.support&&typeof p.support==="object")?p.support:{})}; out.supportWins={...b.supportWins, ...((p.supportWins&&typeof p.supportWins==="object")?p.supportWins:{})};
   out.support.multiply=Math.min(3,Math.max(0,+out.support.multiply||0)); if(!("support" in p)) out.support.multiply=3; out.supportWins.multiply=Math.max(0,+out.supportWins.multiply||0);
@@ -1902,17 +1904,31 @@ const DAY=864e5, REVIEW_GAPS=[3*DAY, 7*DAY];
 function ctxOf(p){
   const m=(p&&p.meta)||{}; const sk=p&&p.skill; const c={};
   if(sk==="shift"||sk==="addsub"){ if(m.op) c.op=m.op; }
-  else if(sk==="powers"){ if(m.variant) c.variant=m.variant; }
-  else if(sk==="rounding"){ if(m.p!==undefined) c.p=String(m.p); c.which=m.which?"y":"n"; }
+  else if(sk==="powers"||sk==="orderops"||sk==="expressions"||sk==="placevalue"||sk==="divide"){ if(m.variant) c.variant=m.variant; } // the question form is part of what was missed
+  else if(sk==="rounding"){ if(m.p!==undefined){ c.p=String(m.p); c.dec=m.p<0?"y":"n"; } c.which=m.which?"y":"n"; }
   return c;
 }
+// Does this problem actually contain the trap a named (non-multiplication) component refers to? A rounding problem where nothing rounds
+// up cannot prove "chop" is fixed; an addition with no regrouping cannot prove "carry" is fixed. Unknown tags: any problem of the skill.
+function hasTrap(p, comp){
+  const m=(p&&p.meta)||{}; const sk=p&&p.skill;
+  if(comp==="*" || !comp) return true;
+  if(sk==="rounding" && (comp==="chop"||comp==="direction")) return m.which ? true : (m.R!==undefined && m.C!==undefined ? m.R!==m.C : true);
+  if(sk==="addsub" && (comp==="carry"||comp==="regroup"||comp==="borrow")) return typeof hasRegroup==="function" && Array.isArray(m.nums) ? hasRegroup(m.nums, m.op, m.k) : true;
+  if(sk==="orderops"){ if(comp==="left-to-right") return m.variant==="evaluate" && !m.hasGroup && m.ltr!==m.value; // only an expression where left-to-right gives a different answer tests it
+    if(comp==="parens"||comp==="no-parens") return m.variant==="evaluate" ? !!m.hasGroup && m.noParen!==m.value : true;
+    if(comp==="placement") return m.variant==="place"; if(comp==="other-expr") return m.variant==="which"; }
+  if(sk==="rounding" && comp==="whole"){ return m.which ? true : (m.R!==undefined && m.C!==undefined ? m.R!==m.C : true); }
+  return true;
+}
 const ctxKey=ctx=>Object.keys(ctx||{}).filter(k=>ctx[k]!==undefined&&ctx[k]!=="").sort().map(k=>`${k}=${ctx[k]}`).join(",");
+const ctxMatches=(wantKey, haveKey)=>{ const have=Object.fromEntries(String(haveKey).split(",").map(kv=>kv.split("="))); return wantKey.split(",").every(kv=>{ const [k,v]=kv.split("="); return have[k]===undefined || have[k]===v; }); }; // every field the weakness names must agree with the entry
 const weakKey=(sk,comp,ctx)=>{ const ck=ctxKey(ctx); return `${sk}:${comp||"*"}${ck?"|"+ck:""}`; };
 function parseWeakKey(key){ const [head,ck=""]=key.split("|"); const [sk,comp]=head.split(":"); const ctx={}; if(ck) for(const kv of ck.split(",")){ const [k,v]=kv.split("="); ctx[k]=v; } return {sk, comp, ctx}; }
 // The focus a generator needs to produce a problem in this context (the same fields focusFor() uses for follow-ups).
-function focusFromCtx(sk, ctx){ const f={}; if(!ctx) return f; if(ctx.op) f.op=ctx.op; if(ctx.variant) f.variant=ctx.variant; if(sk==="rounding"){ if(ctx.p!==undefined) f.p=+ctx.p; if(ctx.which!==undefined) f.which=ctx.which==="y"; } return f; }
+function focusFromCtx(sk, ctx){ const f={}; if(!ctx) return f; if(ctx.op) f.op=ctx.op; if(ctx.variant) f.variant=ctx.variant; if(sk==="rounding"){ if(ctx.p!==undefined) f.p=+ctx.p; else if(ctx.dec==="y") f.p=pick([-1,-2]); else if(ctx.dec==="n") f.p=pick([0,2,3,4,5]); if(ctx.which!==undefined) f.which=ctx.which==="y"; } return f; }
 const compName=(sk,comp)=> (sk==="multiply" && COMP_NAMES[comp]) ? COMP_NAMES[comp] : (comp && comp!=="*" && comp!=="other" ? comp.replace(/-/g," ") : (SKILLS[sk]?SKILLS[sk].name.toLowerCase():"the whole skill"));
-const ctxLabel=(sk,ctx)=>{ if(!ctx) return ""; const parts=[]; if(ctx.op) parts.push(ctx.op==="×"?"multiplying":ctx.op==="÷"?"dividing":ctx.op==="+"?"adding":(ctx.op==="−"||ctx.op==="-")?"subtracting":ctx.op); if(ctx.variant) parts.push(ctx.variant==="repeated"?"repeated × 10":ctx.variant==="threefactor"?"three factors":ctx.variant); if(sk==="rounding"){ if(ctx.p!==undefined && typeof placeSing==="function") parts.push(`nearest ${placeSing(+ctx.p)}`); if(ctx.which==="y") parts.push("which-number form"); } return parts.join(", "); };
+const ctxLabel=(sk,ctx)=>{ if(!ctx) return ""; const parts=[]; if(ctx.op) parts.push(ctx.op==="×"?"multiplying":ctx.op==="÷"?"dividing":ctx.op==="+"?"adding":(ctx.op==="−"||ctx.op==="-")?"subtracting":ctx.op); if(ctx.variant) parts.push(ctx.variant==="repeated"?"repeated × 10":ctx.variant==="threefactor"?"three factors":ctx.variant); if(sk==="rounding"){ if(ctx.p!==undefined && typeof placeSing==="function") parts.push(`nearest ${placeSing(+ctx.p)}`); else if(ctx.dec==="y") parts.push("decimal places"); else if(ctx.dec==="n") parts.push("whole-number places"); if(ctx.which==="y") parts.push("which-number form"); } return parts.join(", "); };
 const weakLabel=key=>{ const {sk,comp,ctx}=parseWeakKey(key); const k=ctxLabel(sk,ctx); return compName(sk,comp)+(k?` (${k})`:""); };
 const compsOfMiss=(sk,tag)=>{ const t=(!tag||tag==="other"||tag==="correct")?"*":tag; return sk==="multiply" ? [TAG_TO_COMP[t]||"*"] : [t]; }; // which component a graded miss with this tag points at ("other" = the skill as a whole)
 // THE eligibility rule, used both to pick what Focus serves and to grade whether a success counts. A problem p is evidence for weakness
@@ -1921,6 +1937,7 @@ const compsOfMiss=(sk,tag)=>{ const t=(!tag||tag==="other"||tag==="correct")?"*"
 function eligible(key, p){
   if(!p) return false; const {sk,comp,ctx}=parseWeakKey(key); const e=S.weak[key]; if(!e || p.skill!==sk) return false;
   if(sk==="multiply" && comp!=="*"){ if(!Array.isArray(p.traps) || !p.traps.includes(comp)) return false; }
+  else if(!hasTrap(p, comp)) return false;
   const pc=ctxOf(p); for(const k in ctx){ if(ctx[k]!=="" && pc[k]!==undefined && String(pc[k])!==String(ctx[k])) return false; }
   if((+p.level||1) < (e.lvl||1)) return false;
   return true;
@@ -1941,6 +1958,8 @@ function noteComp(sk, comp, ok, o){
     return was==="none" ? "opened" : (was==="ok"||was==="review") ? "reopened" : "";
   }
   const key=o.key; const e=W[key]; if(!e || !o.independent) return "";
+  if(o.q && e.lastQ===o.q) return ""; // the same problem again (a worksheet problem typed twice) is not new evidence
+  if(o.q) e.lastQ=o.q;
   if(e.state==="weak"){ e.wins++; e.last=t; if(e.wins>=2){ e.state="review"; e.stage=1; e.due=t+REVIEW_GAPS[0]; return "review"; } return "win"; }
   if(e.state==="review"){ if(e.due>t) return ""; e.stage++; e.last=t; if(e.stage>=3){ e.state="ok"; e.recovered=t; e.due=0; return "recovered"; } e.due=t+REVIEW_GAPS[1]; return "stage2"; }
   return "";
@@ -1957,7 +1976,7 @@ function recoveryTarget(){
   const level=Math.min(MAX_LEVEL, e.lvl + (harder?1:0));
   const focus={...focusFromCtx(sk,ctx)}; if(comp!=="*") focus.tag = sk==="multiply" ? (COMP_TO_TAG[comp]||comp) : comp;
   const nm=weakLabel(key);
-  const why = e.state==="review" ? `review: ${nm}` : e.wins>=1 ? `one more clean win on ${nm}, a notch harder` : nm;
+  const why = e.state==="review" ? `${nm} · review ${e.stage} of 2` : `${nm} · ${e.wins} of 2 on your own${e.wins>=1?", a notch harder":""}`;
   return {key, sk, comp, ctx, level, focus, harder, state:e.state, wins:e.wins, why};
 }
 // Generate a problem for the target and make sure it really is eligible evidence for it; otherwise try again. Selection and grading
@@ -2632,7 +2651,7 @@ function submit(){
   const supported = !!cur.ws && (S.support.multiply||0)>=2;
   const independent = stage==="fresh" && hintIdx===0 && !supported;
   const entry={t:Date.now(), sk, lvl:cur.level, q:plain(cur.prompt), yours:String(yours), ans:cur.display, ok:ok?1:0, stage, hints:hintIdx, independent:(ok&&independent)?1:0, tag: cur.mistake ? cur.mistake.tag : (cur.focusTag||"")};
-  if(cur.hw) entry.hw=1; if(cur.fixed) entry.page=1; if(cur.ws){ entry.ws=1; entry.support=S.support.multiply; } if(mode==="miss"&&cur.focusKey) entry.focus=cur.focusKey;
+  if(cur.hw) entry.hw=1; if(cur.fixed) entry.page=1; if(cur.ws){ entry.ws=1; entry.support=S.support.multiply; } if(mode==="miss"&&cur.focusKey) entry.focus=cur.focusKey; const eck=ctxKey(ctxOf(cur)); if(eck) entry.ctx=eck;
   if(wsGrade){ entry.rows=wsGrade.yours; if(!ok) entry.wrong=wsGrade.wrongText; if(wsGrade.comps) entry.comps=wsGrade.compsTally; if(cur.unfinished) entry.unfinished=cur.unfinished; }
   lastChange=0; lastPraise=[];
   // Homework practice is level-neutral: the shape was chosen from the worksheet, not earned, so it moves nothing up or down.
@@ -2649,8 +2668,8 @@ function submit(){
     // Clean wins for every component this problem exercised; recovery praise for the ones that moved.
     if(independent){ const before=Object.keys(S.weak).filter(k=>S.weak[k].state!=="ok");
       const demonstrated = wsGrade ? wsGrade.evidence : trapsOf(cur); entry.proved=demonstrated.join(",");
-      const keys = evidenceKeys(cur).filter(k=>{ const {comp}=parseWeakKey(k); return comp==="*" || demonstrated.includes(comp); }); // same rule Focus used to pick the problem
-      for(const key of keys){ const comp=parseWeakKey(key).comp; const tr=noteComp(sk, comp, true, {independent:true, key}); const nm=weakLabel(key);
+      const keys = evidenceKeys(cur).filter(k=>{ const {comp}=parseWeakKey(k); return sk!=="multiply" || comp==="*" || demonstrated.includes(comp); }); // same rule Focus used to pick the problem; multiplication also needs the step to have been hers
+      for(const key of keys){ const comp=parseWeakKey(key).comp; const tr=noteComp(sk, comp, true, {independent:true, key, q:plain(cur.prompt)}); const nm=weakLabel(key);
         if(tr==="win") lastPraise.push({t:`You handled ${nm} on your own. One more clean one and it comes off the watch list.`});
         else if(tr==="review") lastPraise.push({big:true, t:`Two in a row on ${nm}, no help. It moves to review: the app will check it again in a few days.`});
         else if(tr==="stage2") lastPraise.push({big:true, t:`${ucfirst(nm)} held up after a few days off. One more review in about a week.`});
@@ -2784,9 +2803,9 @@ function tiersHTML(log){
   const str=v=>v==null?"":String(v); const q=e=>esc(str(e.q))||"(question not recorded)";
   const exMiss=e=>`<span class="ex">${fmtDate(e.t)}: ${q(e)} · answered <span class="bad">${esc(str(e.yours))||"—"}</span>, correct <span class="good">${esc(str(e.ans))||"—"}</span>${e.wrong?` · ${esc(str(e.wrong))}`:""}</span>`;
   const exOk=e=>`<span class="ex">${fmtDate(e.t)}: ${q(e)} → ${esc(str(e.ans))}${e.support!==undefined?` (supports ${e.support} of 3)`:""}</span>`;
-  const hits=(sk,comp)=>log.filter(e=>e.sk===sk && !e.ok && (comp==="*" || (e.comps&&e.comps[comp]) || TAG_TO_COMP[e.tag]===comp || e.tag===comp));
+  const hits=(sk,comp,ctx)=>{ const ck=ctxKey(ctx||{}); return log.filter(e=>e.sk===sk && !e.ok && (comp==="*" || (e.comps&&e.comps[comp]) || TAG_TO_COMP[e.tag]===comp || e.tag===comp) && (!ck || (e.ctx && ctxMatches(ck, e.ctx)))); }; // an example must be the same kind of problem as the weakness
   const wsum=weakSummary(); const help=[], next=[], ready=[];
-  for(const w of wsum.weak.sort((a,b)=>(b.misses-b.wins)-(a.misses-a.wins))){ const h=hits(w.sk,w.comp); const last=h[h.length-1];
+  for(const w of wsum.weak.sort((a,b)=>(b.misses-b.wins)-(a.misses-a.wins))){ const h=hits(w.sk,w.comp,w.ctx); const last=h[h.length-1];
     const kind=ctxLabel(w.sk,w.ctx); help.push(`<li><b>${esc(SKILLS[w.sk].name)}</b>: ${esc(w.name)}, level ${w.lvl}. Missed ${w.misses} time${w.misses===1?"":"s"}${w.wins?`, ${w.wins} of 2 clean wins so far`:""}${w.migrated?" · from before v9":""}. Clears with two independent wins at level ${w.lvl} or higher${kind?` on ${esc(kind)}`:""}.${last?exMiss(last):""}</li>`); }
   for(const w of wsum.review.sort((a,b)=>a.due-b.due)){ const due=w.due<=Date.now()?"due now":`check-in ${new Date(w.due).toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}`;
     next.push(`<li><b>${esc(SKILLS[w.sk].name)}</b>: ${esc(w.name)}. Two clean wins; ${due} (review ${w.stage} of 2).</li>`); }
