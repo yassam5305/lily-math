@@ -1338,7 +1338,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.0 · September 19, 2026";
+const BUILD="v9.1 · September 20, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -1423,7 +1423,10 @@ function genMultiply(level, focus){
   const prod=a*b;
   const p={skill:"multiply", level, prompt:`<span class="big-num">${a.toLocaleString("en-US")} × ${b} = ?</span>`, type:"input", answer:prod, display:prod.toLocaleString("en-US"), show:null, meta:{a,b,variant,regroup:mulNeedsRegroup(a,b)}};
   // Which components this problem exercises. An independent success counts as a clean win for each of them in the weakness profile.
-  p.traps=["fact","rows"].concat(mulNeedsRegroup(a,b)?["regroup"]:[]).concat(b>=10?["tens-zero","add-partials"]:[]);
+  // Only the standard algorithm demonstrates the algorithm's steps. An area-model or distributive answer proves the facts (and, for
+  // distributive, adding the partial products), never the tens-row zero, the regrouping, or the row setup.
+  p.traps = variant==="algorithm" ? ["fact","rows"].concat(mulNeedsRegroup(a,b)?["regroup"]:[]).concat(b>=10?["tens-zero","add-partials"]:[])
+          : variant==="distributive" ? ["fact","add-partials"] : ["fact"];
   if(variant==="algorithm") p.ws=true; // the aligned-digit workspace replaces the single answer box
   const steps=[];
   if(b<10){
@@ -1859,7 +1862,7 @@ function normalize(p){ // fill in anything missing (older saves, imports)
   if(out.today.d!==todayStr()) out.today={d:todayStr(), c:0, a:0};
   out.weak = (p.weak && typeof p.weak==="object" && !Array.isArray(p.weak)) ? {...p.weak} : {};
   for(const k in out.weak){ const e=out.weak[k]; if(!e||typeof e!=="object"||!k.includes(":")){ delete out.weak[k]; continue; }
-    e.state=["weak","review","ok"].includes(e.state)?e.state:"weak"; for(const f of ["wins","misses","lvl","last","due","stage","recovered"]) e[f]=Math.max(0,+e[f]||0); e.lvl=Math.min(MAX_LEVEL,Math.max(1,e.lvl||1)); }
+    e.state=["weak","review","ok"].includes(e.state)?e.state:"weak"; for(const f of ["wins","misses","lvl","last","due","stage","recovered","served"]) e[f]=Math.max(0,+e[f]||0); e.lvl=Math.min(MAX_LEVEL,Math.max(1,e.lvl||1)); }
   out.support={...b.support, ...((p.support&&typeof p.support==="object")?p.support:{})}; out.supportWins={...b.supportWins, ...((p.supportWins&&typeof p.supportWins==="object")?p.supportWins:{})};
   out.support.multiply=Math.min(3,Math.max(0,+out.support.multiply||0)); if(!("support" in p)) out.support.multiply=3; out.supportWins.multiply=Math.max(0,+out.supportWins.multiply||0);
   // Class position. Migrate the old manual classAt: keep it as a pin only if it disagrees with the calendar today,
@@ -1887,7 +1890,8 @@ const compsOfMiss=(sk,tag)=>{ const t=(!tag||tag==="other"||tag==="correct")?"*"
 // Components a problem exercises. multiply declares p.traps; other skills count every currently-weak component of that skill (a success there is evidence for all of them).
 function trapsOf(p){
   if(!p) return [];
-  if(Array.isArray(p.traps)) return p.traps;
+  const general = S.weak[weakKey(p.skill,"*")] ? ["*"] : []; // an unclassified weakness in this skill: any independent success on the skill is evidence
+  if(Array.isArray(p.traps)) return p.traps.concat(general);
   return Object.keys(S.weak).filter(k=>k.startsWith(p.skill+":") && S.weak[k].state!=="ok").map(k=>k.split(":")[1]);
 }
 // Record one outcome for one component. Returns a transition ("opened" | "reopened" | "win" | "review" | "stage2" | "recovered" | "") for praise.
@@ -1908,9 +1912,11 @@ function noteComp(sk, comp, ok, o){
 // What "Focus on where I missed" should serve next: the most-missed open weakness, else a review that has come due. null → nothing to focus on.
 function recoveryTarget(){
   const W=S.weak, now=Date.now();
-  const open=Object.keys(W).filter(k=>W[k].state==="weak" && SKILLS[k.split(":")[0]]).sort((a,b)=>(W[b].misses-W[b].wins)-(W[a].misses-W[a].wins) || W[b].last-W[a].last);
+  // Fair rotation: among open weaknesses, the one served least recently goes first (e.served), so three weak spots take turns instead of
+  // the most-missed one hogging every problem. Ties break toward the most missed. Reviews wait their turn until they are due.
+  const open=Object.keys(W).filter(k=>W[k].state==="weak" && SKILLS[k.split(":")[0]]).sort((a,b)=>(W[a].served||0)-(W[b].served||0) || (W[b].misses-W[b].wins)-(W[a].misses-W[a].wins));
   const due=Object.keys(W).filter(k=>W[k].state==="review" && W[k].due<=now && SKILLS[k.split(":")[0]]).sort((a,b)=>W[a].due-W[b].due);
-  const key=open[0]||due[0]; if(!key) return null;
+  const key=due[0]||open[0]; if(!key) return null; // a review that has come due goes before new work on open ones
   const [sk,comp]=key.split(":"); const e=W[key];
   // The cycle: targeted problem at the level she missed → (help if needed) → a fresh independent attempt → a harder variation → review later.
   const harder = e.state==="weak" ? e.wins>=1 : true;
@@ -1993,7 +1999,7 @@ let stepRes=[];  // per-step outcome for the walkthrough ("ok" | "revealed")
 let revealed=0, passed=0, expanded=0, missEntry=null;
 let whyState=null, okEntry=null;
 let lastPraise=[];   // recovery / independence messages for the current right answer: [{t, big}]
-let sessionN=0, stopOfferedAt=-1, sessionDone=false; // fresh problems answered since the app opened; the last count at which the stopping point was offered; she tapped "Done for today"
+let sessionN=0, stopOfferedAt=-1, sessionDone=false, sessionMissRun=0, breakOfferedAt=-1; // fresh problems answered since the app opened; the last count at which the stopping point was offered; she tapped "Done for today"
 let ws=null;         // multiplication workspace state for the current problem: {vals:{cellKey:digit}, sel:cellKey}
 const SUPPORT_NAMES={3:"the pre-written tens-row zero and the opening coach line", 2:"the column labels", 1:"the carry boxes"}; // what each support level adds on top of the one below it
 function prevNeededHelp(sk){ const a=S.log.filter(e=>e.sk===sk); const p=a[a.length-2]; return !!p && (!p.ok || +p.hints>0); } // the attempt before the one just logged
@@ -2073,7 +2079,7 @@ function home(){
   const mw=missWeights().w, missSkills=Object.keys(mw).sort((a,b)=>mw[b]-mw[a]);
   const wsum=weakSummary(), target=recoveryTarget();
   const focusLine = target ? `Next up: <b>${esc(SKILLS[target.sk].name)}</b>, ${esc(target.why)}${wsum.weak.length>1?`; ${wsum.weak.length-1} more on the list`:""}${wsum.review.length?`; ${wsum.review.length} in review`:""}.` : wsum.review.length ? `Nothing open right now. ${wsum.review.length} thing${wsum.review.length===1?"":"s"} in review, not due yet.` : "";
-  const showFocus = !!target || missSkills.length>0;
+  const showFocus = !!target || wsum.weak.length>0 || wsum.review.length>0;
   const doneLine = sessionDone ? `<p class="muted week-note" style="margin:0 0 10px"><b>Nice stopping point.</b> ${S.today.c} right today${S.today.a?` of ${S.today.a}`:""}. Come back tomorrow, or pick something below if you want more.</p>` : "";
   app.innerHTML=`
     <div class="topbar"><h1 style="margin:0">Hi, ${esc(S.name)}.</h1><button class="btn quiet small" id="switch">Not ${esc(S.name)}?</button></div>${warnHTML()}
@@ -2193,7 +2199,7 @@ function missWeights(){
 }
 function pickSkill(){
   if(mode==="week"){ const w=weekWeights(), keys=Object.keys(w); if(keys.length) return drawWeighted(keys, keys.map(k=>w[k])); }
-  else if(mode==="miss"){ const tg=recoveryTarget(); if(tg) return tg.sk; const {w}=missWeights(), keys=Object.keys(w); if(keys.length) return drawWeighted(keys, keys.map(k=>w[k])); }
+  else if(mode==="miss"){ const tg=recoveryTarget(); if(tg) return tg.sk; } // nothing open or due → plain mix; a component in review is left alone until its check-in
   else if(mode==="hw:check") return (pendingHW && pendingHW.skill) || "multiply";
   else if(hwMode()) return hwMode().skill;
   else if(mode!=="mix") return mode;
@@ -2232,7 +2238,7 @@ function next(){ // a fresh problem: new help chain
   let focus;
   if(mode==="week"){ const l=lessonById(effectiveClassAt()); if(l && l.focus && typeof l.focus==="object" && l.focus[sk]) focus=l.focus[sk]; }
   let target=null;
-  if(mode==="miss"){ target=recoveryTarget(); if(target && target.sk===sk) focus=target.focus; else { target=null; const {tag}=missWeights(); if(tag[sk] && tag[sk]!=="other") focus={tag:tag[sk]}; } } // the recovery cycle, else her most common mistake in that skill
+  if(mode==="miss"){ target=recoveryTarget(); if(target && target.sk===sk){ focus=target.focus; S.weak[target.key].served=Date.now(); } else target=null; } // the recovery cycle; with nothing open or due this is an ordinary mix problem
   const hw=hwMode();
   if(mode==="hw:check"){ if(!pendingHW){ hwEntry(); return; } cur=SKILLS[pendingHW.skill].gen(pendingHW.level, pendingHW.focus); cur.hw=true; cur.fixed=true; cur.hwLabel=pendingHW.label; pendingHW=null; }
   else if(hw){ const shape=pick(hw.shapes); cur=SKILLS[sk].gen(shapeLevel(shape), {shape, variant:hw.variant}); cur.hw=true; }
@@ -2302,7 +2308,7 @@ function wsHTML(readonly, marks){
   g+=`</div>`;
   const pad = readonly ? "" : `<div class="pad" role="group" aria-label="Number pad">${[1,2,3,4,5,6,7,8,9,0].map(d=>`<button type="button" class="btn" data-d="${d}">${d}</button>`).join("")}<button type="button" class="btn" data-d="bs" aria-label="Erase">⌫</button><button type="button" class="btn" data-d="nx" aria-label="Next cell">→</button></div>`;
   const supNames=[sup>=2?"column labels":"", sup>=1?"carry boxes":"", sup>=3&&sp.two?"tens-row 0 written in":"", sup>=3?"coach line":""].filter(Boolean);
-  const supLine = readonly ? "" : `<p class="supports">${supNames.length?`Supports on: ${supNames.map(s=>`<span class="tag">${s}</span>`).join("")} <span class="muted">(they come off as you get these right on your own)</span>`:`No supports: this is the bare page, like the worksheet.`}</p>`;
+  const supLine = readonly ? "" : `<p class="supports">${supNames.length?`Supports on: <b>${supNames.join(" · ")}</b> <span class="muted">(they come off as you get these right on your own)</span>`:`No supports: this is the bare page, like the worksheet.`}</p>`;
   const coach = (!readonly && sup>=3 && cur.hints && cur.hints[0]) ? `<div class="hints"><div class="step"><span class="n">Coach.</span>${cur.hints[0].t}</div></div>` : "";
   return `<div class="ws"><div class="ws-wrap">${g}</div>${pad}${supLine}${coach}</div>`;
 }
@@ -2317,11 +2323,15 @@ function bindWS(){
 // Read the grid, grade it, and name the component behind every wrong cell.
 function gradeWS(){
   const sp=wsSpec(cur); const V=ws.vals;
-  const readRow=key=>{ let L=-1; for(let p=sp.cols-1;p>=0;p--){ if(V[`${key}-${p}`]!==undefined && V[`${key}-${p}`]!==""){ L=p; break; } } if(L<0) return null; let s=""; for(let p=L;p>=0;p--) s+=V[`${key}-${p}`]||"0"; return parseInt(s,10); };
+  // A blank box inside a number is not a 0. It is read as a gap (so the row can still be compared) and graded as a wrong cell.
+  const gaps={}; const readRow=key=>{ let L=-1; for(let p=sp.cols-1;p>=0;p--){ if(V[`${key}-${p}`]!==undefined && V[`${key}-${p}`]!==""){ L=p; break; } } if(L<0) return null; let s=""; for(let p=L;p>=0;p--){ const v=V[`${key}-${p}`]; if(v===undefined||v===""){ gaps[`${key}-${p}`]=true; s+="0"; } else s+=v; } return parseInt(s,10); };
   const rows={}; for(const r of sp.rowsDef) rows[r.key]=readRow(r.key); if(sp.two) rows.t=readRow("t");
   if(sp.two && (rows.r0===null || rows.r1===null)) return {err:"Fill in both partial products, then the total on the bottom row."};
   if(rows.t===null) return {err:"Fill in the answer on the bottom row."};
   const wrong=[]; const comps=[]; const tally={}; const marks={};
+  // An empty box inside a number is almost always an unfinished entry, so it is sent back to be filled, with one exception: the tens row's
+  // ones box. Leaving that one blank is the classic skipped-zero mistake, so it is graded as one rather than hinted away.
+  const gapKeys=Object.keys(gaps).filter(k=>k!=="r1-0"); if(gapKeys.length) return {err:`There is an empty box inside a number (${gapKeys.map(k=>{ const [row,p]=k.split("-"); return `${row==="t"?"answer":row==="r0"?"ones row":"tens row"}, ${WHOLE_PLACES[+p]}`; }).join("; ")}). Fill every place.`};
   const note=(k,comp)=>{ wrong.push(k); marks[k]="bad"; if(comp){ comps.push(comp); tally[comp]=tally[comp]||{ok:0,miss:0}; tally[comp].miss++; } };
   const digitOK=(k)=>{ const e=sp.exp[k]; const v=V[k]; if(e===undefined) return v===undefined||v===""||v==="0"; return v===e; };
   for(const r of sp.rowsDef){ const rowVal=rows[r.key];
@@ -2341,6 +2351,7 @@ function gradeWS(){
     else if(rows.r0===sp.a*sp.ones && rows.r1===sp.a*sp.tens*10){ for(let p=0;p<sp.cols;p++){ const k=`t-${p}`; if(!digitOK(k)) note(k,"add-partials"); else if(sp.exp[k]!==undefined) marks[k]="good"; } }
     else if(rows.t!==herSum){ for(let p=0;p<sp.cols;p++){ const k=`t-${p}`; if(!digitOK(k)) note(k,"add-partials"); } } // her rows were wrong AND she added them wrong
     else { for(let p=0;p<sp.cols;p++){ const k=`t-${p}`; if(!digitOK(k)) marks[k]="bad"; } } } // wrong total, but it is the right sum of her own rows: downstream of the row mistake
+  if(gaps["r1-0"] && !wrong.includes("r1-0")){ marks["r1-0"]="bad"; note("r1-0","tens-zero"); } // the tens row was read as if the 0 were there; it was not
   for(const k in sp.carries){ if(V[k]!==undefined && V[k]!=="" && V[k]!==sp.carries[k]) note(k,"regroup"); }
   for(const k in V){ if(k.startsWith("c") && V[k]!=="" && sp.carries[k]===undefined && V[k]!=="0") note(k,"regroup"); } // a carry written where nothing regroups
   const ok = wrong.length===0 && rows.t===sp.a*sp.b && (!sp.two || (rows.r0===sp.a*sp.ones && rows.r1===sp.a*sp.tens*10));
@@ -2350,7 +2361,9 @@ function gradeWS(){
   const yours = sp.two ? `${fmtN(rows.r0)} + ${fmtN(rows.r1)} = ${fmtN(rows.t)}` : fmtN(rows.t);
   const wrongText = wrong.map(k=>{ const [row,p]=k.split("-"); const nm=row==="t"?"answer":row==="r0"?"ones row":row==="r1"?"tens row":row.startsWith("c")?"carry":row; return p===undefined?`${nm} missing`:`${nm}, ${WHOLE_PLACES[+p]||""}`; }).join("; ");
   ws.marks=marks;
-  return {ok, comps:[...new Set(comps)], compsTally:tally, main, product:rows.t, yours, wrongText, marks};
+  // What a right answer here actually demonstrates. The pre-written tens-row 0 (support level 3) is the app's work, not hers.
+  const evidence = new Set(trapsOf(cur)); if(ws.locked["r1-0"]) evidence.delete("tens-zero");
+  return {ok, comps:[...new Set(comps)], compsTally:tally, main, product:rows.t, yours, wrongText, marks, evidence:[...evidence]};
 }
 
 function render(){
@@ -2409,8 +2422,11 @@ function render(){
     else if(cur.type==="input") body+=`<div class="yours" id="yourslbl">Your answer</div><input class="ans" disabled aria-labelledby="yourslbl" value="${esc(lastAnswer)}">`;
     else body+=optsHTML("opts", cur.options, selected, -1, true, "opt");
     const head = chain>=2 ? "Still not there. One more walk through, then another try." : "Not yet. Let's walk through it.";
+    // A break is offered during sustained struggle, not only after success: three fresh misses in a row this sitting, or three shown answers inside one walkthrough.
+    const struggling = (sessionMissRun>=3 && breakOfferedAt!==sessionMissRun) || (revealed>=3 && breakOfferedAt!==-2);
+    const breakHTML = struggling ? `<div class="stop" role="status"><b>This one is hard today.</b>${sessionMissRun>=3?`${sessionMissRun} tough ones in a row. `:""}Brains learn more after a break than after a fourth try. Stop here and come back tomorrow, or keep going?<div class="actions" style="margin-top:8px"><button class="btn primary" id="breaknow">Take a break</button><button class="btn quiet" id="keepgoing">Keep going</button></div></div>` : "";
     right=`<div class="banner no" style="margin-top:0" role="status" aria-live="polite"><span class="mark" aria-hidden="true">✕</span><div>${head}${noteHTML}<small>Step ${stepIdx+1} of ${total}</small>${downHTML}</div></div>
-      <div class="progress" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${stepIdx+1}" aria-label="Walkthrough progress"><i style="width:${Math.round(100*(stepIdx+1)/total)}%"></i></div>
+      ${breakHTML}<div class="progress" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${stepIdx+1}" aria-label="Walkthrough progress"><i style="width:${Math.round(100*(stepIdx+1)/total)}%"></i></div>
       <div class="wt" id="wt">${cur.steps.slice(0,stepIdx+1).map((s,i)=>stepHTML(s,i,i<stepIdx,true)).join("")}</div>
       <div class="actions">${open?"":(!last?`<button class="btn primary" id="step">Next step</button>`:`<button class="btn primary" id="retry">Try one like it</button>`)}</div>`;
   }
@@ -2501,6 +2517,8 @@ function bind(){
   }
   if(q("next")) q("next").onclick=next;
   if(q("stopnow")) q("stopnow").onclick=()=>{ stopOfferedAt=sessionN; sessionDone=true; home(); };
+  if(q("breaknow")) q("breaknow").onclick=()=>{ breakOfferedAt=sessionMissRun; sessionDone=true; save(); home(); };
+  if(q("keepgoing")) q("keepgoing").onclick=()=>{ breakOfferedAt = sessionMissRun>=3 ? sessionMissRun : -2; render(); };
   if(q("onemore")) q("onemore").onclick=()=>{ stopOfferedAt=sessionN; next(); };
   if(cur.ws && phase==="q") bindWS();
   if(q("wcheck")){ q("wcheck").onclick=checkWhy; app.querySelectorAll("#wopts .opt").forEach(b=>b.onclick=()=>setSel("wopts",+b.dataset.i)); }
@@ -2564,7 +2582,7 @@ function submit(){
   else { if(selected<0){ inlineErr=""; const f=app.querySelector("#opts .opt"); if(f) f.focus(); return; } ok=(selected===cur.answer); yours=cur.options[selected]; raw=selected; }
   inlineErr="";
   const sk=cur.skill; S=normalize(S); S.attempted++; S.today.a++;
-  if(stage==="fresh") sessionN++;
+  if(stage==="fresh"){ sessionN++; sessionMissRun = ok ? 0 : sessionMissRun+1; }
   // Only independent attempts (fresh, no hints) move levels, up or down. Hints, follow-ups, walkthroughs never do.
   // In the multiplication workspace, "independent" also means the heavy supports are off (support level 1 or 0): with carry boxes and
   // column labels still on, a right answer is a supported success, which fades the supports but does not move the level.
@@ -2587,7 +2605,8 @@ function submit(){
     if(cur.why && cur.why.options && cur.why.options.length>1) whyState={sel:-1, done:false, ok:null};
     // Clean wins for every component this problem exercised; recovery praise for the ones that moved.
     if(independent){ const before=Object.keys(S.weak).filter(k=>S.weak[k].state!=="ok");
-      for(const comp of trapsOf(cur)){ const tr=noteComp(sk, comp, true, {independent:true, lvl:cur.level}); const nm=compName(sk,comp);
+      const demonstrated = wsGrade ? wsGrade.evidence : trapsOf(cur); entry.proved=demonstrated.join(",");
+      for(const comp of demonstrated){ const tr=noteComp(sk, comp, true, {independent:true, lvl:cur.level}); const nm=compName(sk,comp);
         if(tr==="win") lastPraise.push({t:`You handled ${nm} on your own. One more clean one and it comes off the watch list.`});
         else if(tr==="review") lastPraise.push({big:true, t:`Two in a row on ${nm}, no help. It moves to review: the app will check it again in a few days.`});
         else if(tr==="stage2") lastPraise.push({big:true, t:`${ucfirst(nm)} held up after a few days off. One more review in about a week.`});
