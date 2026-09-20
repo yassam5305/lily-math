@@ -613,8 +613,15 @@ function roundingSteps(num, p, prob){
     {t:`Circle the digit to the right of the underlined digit. Only the <b>circled digit</b> decides; the digits past it do not matter.`, chart:num, hl:{[key]:"ul",[dkey]:"circle"}, minCols, check:ci(`What is the deciding digit?`, dec)},
     {t:`If the circled digit is <b>5 or greater</b>, add one to the underlined digit. If it is <b>4 or less</b>, keep the underlined digit the same.`, check:cm(`The circled digit is ${dec}. What happens to the underlined ${ul}?`, [`Goes up to ${ul===9?"0, and 1 regroups to the place on the left":ul+1}`, `Stays ${ul}`], up?0:1)}
   ];
-  if(up && ul===9) steps.push({t:`9 plus 1 is 10, so the 9 becomes <b>0</b> and you regroup 1 into the place on its left, just like regrouping in addition. If that place is a 9 too, it becomes 0 and you regroup again.`});
-  steps.push({t: (up && ul===9) ? `Change all digits to the <b>right</b> of the underlined digit to <b>zeros</b>. The digit to the left went up by one from the regroup; every digit further left stays the same.` : `Change all digits to the <b>right</b> of the underlined digit to <b>zeros</b>. All digits to the <b>left</b> stay the same.`});
+  // How far the regroup travels: the run of 9s starting at the rounding place. The digit just past the run goes up by one (or a new 1 appears).
+  let run=0; if(up){ while(digitAt(V,p+run)===9 && run<12) run++; }
+  const beyond=digitAt(V,p+run), topPlace=Math.floor(Math.log10(Math.max(1,V)))-3; // highest place that has a digit
+  if(run>=1) steps.push({t: run===1
+    ? `9 plus 1 is 10, so the 9 becomes <b>0</b> and you regroup 1 into the ${placeName(p+1)} place, just like regrouping in addition. The ${beyond} there becomes <b>${beyond+1}</b>.`
+    : `9 plus 1 is 10, so the 9 becomes <b>0</b> and you regroup 1 to the left. The next digit is a 9 too, so it also becomes 0 and regroups again: all <b>${run}</b> of those 9s become 0s. The regroup lands in the ${placeName(p+run)} place, where ${p+run>topPlace?`a new <b>1</b> appears`:`the ${beyond} becomes <b>${beyond+1}</b>`}.`});
+  steps.push({t: run>=1
+    ? `Change all digits to the <b>right</b> of the underlined digit to <b>zeros</b>. The ${run===1?"9 that regrouped is now 0":run+" nines that regrouped are now 0s"}, the ${placeName(p+run)} digit went up by one, and every digit further left stays the same.`
+    : `Change all digits to the <b>right</b> of the underlined digit to <b>zeros</b>. All digits to the <b>left</b> stay the same.`});
   const ans=roundedNum(V,p);
   let last=`Read the answer off the chart.`;
   if(p<0 && /0$/.test(ans.d)) last+=` Zeros at the end of a decimal can be dropped, so <b>${fmt(ans)}</b> can also be written <b>${fmt(fromThousandths(R))}</b>. Both are correct.`;
@@ -1340,7 +1347,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.4 · September 20, 2026";
+const BUILD="v9.5 · September 20, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -2811,13 +2818,14 @@ function tiersHTML(log){
     next.push(`<li><b>${esc(SKILLS[w.sk].name)}</b>: ${esc(w.name)}. Two clean wins; ${due} (review ${w.stage} of 2).</li>`); }
   const openSkills=new Set([...wsum.weak,...wsum.review].map(w=>w.sk));
   for(const k of SKILL_ORDER){ const a=log.filter(e=>e.sk===k); const fresh=a.filter(e=>isFresh(e)).slice(-5); if(!fresh.length) continue;
-    const withHints=fresh.filter(e=>+e.hints>0).length, ind=fresh.filter(e=>indep(e)===1).length, misses=fresh.filter(e=>!e.ok).length;
+    const withHints=fresh.filter(e=>+e.hints>0).length, misses=fresh.filter(e=>!e.ok).length;
+    const indAll=fresh.filter(e=>indep(e)===1); const seenQ=new Set(); const indDistinct=indAll.filter(e=>{ const key=String(e.q||"")+"|"+String(e.ans||""); if(seenQ.has(key)) return false; seenQ.add(key); return true; }); const ind=indDistinct.length; // the same problem repeated is one piece of evidence, not four
     if(!openSkills.has(k) && withHints>=2) next.push(`<li><b>${esc(SKILLS[k].name)}</b>: gets there, but ${withHints} of the last ${fresh.length} needed a hint. Worth a few fresh ones without.</li>`);
-    else if(!openSkills.has(k) && fresh.length>=4 && ind>=4 && misses===0){ const indOk=fresh.filter(e=>e.ok&&indep(e)===1); const last=indOk.slice(-1)[0];
+    else if(!openSkills.has(k) && fresh.length>=4 && ind>=4 && misses===0){ const indOk=indDistinct.filter(e=>e.ok); const last=indOk.slice(-1)[0];
       const byLvl={}; indOk.forEach(e=>{ const l=+e.lvl||1; byLvl[l]=(byLvl[l]||0)+1; }); const lvls=Object.keys(byLvl).map(Number).sort((a,b)=>a-b);
       const solid=lvls.filter(l=>byLvl[l]>=2).pop()||lvls[0]; // the highest level with at least two independent successes, else the lowest seen
       const counts=lvls.map(l=>`${byLvl[l]} at level ${l}`).join(", "); const hwOnly=indOk.every(e=>e.hw);
-      ready.push(`<li><b>${esc(SKILLS[k].name)}</b>: ${ind} of the last ${fresh.length} right on her own (${counts}). Solid at level ${solid}${solid<S.levels[k]?`; practice level is ${S.levels[k]}, not yet shown there`:""}${hwOnly?" · homework shapes only":""}.${last?exOk(last):""}</li>`); } }
+      ready.push(`<li><b>${esc(SKILLS[k].name)}</b>: ${ind} different problem${ind===1?"":"s"} of the last ${fresh.length} right on her own (${counts}). Solid at level ${solid}${solid<S.levels[k]?`; practice level is ${S.levels[k]}, not yet shown there`:""}${hwOnly?" · homework shapes only":""}.${last?exOk(last):""}</li>`); } }
   for(const w of wsum.ok.sort((a,b)=>b.recovered-a.recovered)) ready.push(`<li><b>${esc(SKILLS[w.sk].name)}</b>: ${esc(w.name)} recovered ${fmtDate(w.recovered)} after ${w.misses} miss${w.misses===1?"":"es"}, two clean wins, and two later check-ins.</li>`);
   if(S.support && S.support.multiply<3) ready.push(`<li><b>Multiplication page</b>: working with ${S.support.multiply===0?"no supports, the bare page":`${S.support.multiply} of 3 supports`} (${[S.support.multiply>=1?"carry boxes":"",S.support.multiply>=2?"column labels":""].filter(Boolean).join(", ")||"none"}).</li>`);
   const empty=t=>`<li class="muted">${t}</li>`;
