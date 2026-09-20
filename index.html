@@ -1338,7 +1338,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.1 · September 20, 2026";
+const BUILD="v9.2 · September 20, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -1865,6 +1865,14 @@ function normalize(p){ // fill in anything missing (older saves, imports)
     e.state=["weak","review","ok"].includes(e.state)?e.state:"weak"; for(const f of ["wins","misses","lvl","last","due","stage","recovered","served"]) e[f]=Math.max(0,+e[f]||0); e.lvl=Math.min(MAX_LEVEL,Math.max(1,e.lvl||1)); }
   out.support={...b.support, ...((p.support&&typeof p.support==="object")?p.support:{})}; out.supportWins={...b.supportWins, ...((p.supportWins&&typeof p.supportWins==="object")?p.supportWins:{})};
   out.support.multiply=Math.min(3,Math.max(0,+out.support.multiply||0)); if(!("support" in p)) out.support.multiply=3; out.supportWins.multiply=Math.max(0,+out.supportWins.multiply||0);
+  // One-time migration: misses logged before the weakness profile existed (v8 and earlier) become open weaknesses, so Focus does not
+  // go quiet on errors that were never worked back. Only fresh and follow-up misses from the last 60 days; walkthrough sub-steps had no tags then.
+  if(!p.weakMigrated){ const since=Date.now()-60*DAY;
+    for(const e of out.log){ if(e.ok || !e.sk || !(e.t>=since)) continue; const st=e.stage||(e.retry?"followup":"fresh"); if(st!=="fresh"&&st!=="followup") continue;
+      const comps = (typeof compsOfMiss==="function") ? compsOfMiss(e.sk, typeof e.tag==="string"?e.tag:"") : ["*"];
+      for(const c of comps){ const k=`${e.sk}:${c}`; let w=out.weak[k]; if(!w) w=out.weak[k]={state:"weak",wins:0,misses:0,lvl:1,last:0,due:0,stage:0,recovered:0,migrated:1}; else if(!w.migrated) continue; // never touch an entry the live system already manages
+        w.misses++; w.lvl=Math.min(MAX_LEVEL,Math.max(w.lvl,+e.lvl||1)); w.last=Math.max(w.last,e.t); } }
+    out.weakMigrated=1; }
   // Class position. Migrate the old manual classAt: keep it as a pin only if it disagrees with the calendar today,
   // so profiles that were merely on the old default switch to following the calendar automatically.
   if(!("classPin" in p) && p.classAt!==undefined){ out.classPin = (lessonById(p.classAt) && p.classAt!==calendarClassAt()) ? p.classAt : null; }
@@ -1895,6 +1903,17 @@ function trapsOf(p){
   return Object.keys(S.weak).filter(k=>k.startsWith(p.skill+":") && S.weak[k].state!=="ok").map(k=>k.split(":")[1]);
 }
 // Record one outcome for one component. Returns a transition ("opened" | "reopened" | "win" | "review" | "stage2" | "recovered" | "") for praise.
+// The part of a problem that must match between the miss and the win for the win to count as evidence: the operation for shift and
+// add/subtract, the flavour for powers, decimal-vs-whole for rounding. Multiplication components already say what they are.
+function ctxOf(p){
+  const m=(p&&p.meta)||{}; const sk=p&&p.skill;
+  if(sk==="shift") return {op:m.op||""};
+  if(sk==="addsub") return {op:m.op||""};
+  if(sk==="powers") return {variant:m.variant||""};
+  if(sk==="rounding") return {dec: m.p!==undefined ? (m.p<0?"y":"n") : ""};
+  return {};
+}
+const ctxLabel=ctx=>{ if(!ctx) return ""; const parts=[]; if(ctx.op) parts.push(ctx.op==="×"?"multiplying":ctx.op==="÷"?"dividing":ctx.op==="+"?"adding":ctx.op==="−"||ctx.op==="-"?"subtracting":ctx.op); if(ctx.variant) parts.push(ctx.variant); if(ctx.dec==="y") parts.push("decimal places"); if(ctx.dec==="n") parts.push("whole-number places"); return parts.join(", "); };
 function noteComp(sk, comp, ok, o){
   o=o||{}; const t=o.t||Date.now(); const key=weakKey(sk,comp); const W=S.weak;
   let e=W[key];
@@ -1902,9 +1921,13 @@ function noteComp(sk, comp, ok, o){
     const was=e?e.state:"none";
     if(!e) e=W[key]={state:"weak", wins:0, misses:0, lvl:o.lvl||1, last:t, due:0, stage:0, recovered:0};
     e.state="weak"; e.wins=0; e.misses++; e.lvl=Math.min(MAX_LEVEL, Math.max(1, +o.lvl||e.lvl||1)); e.last=t;
+    if(o.ctx && Object.keys(o.ctx).some(k=>o.ctx[k])) e.ctx=o.ctx; // remember what kind of problem it was
     return was==="none" ? "opened" : (was==="ok"||was==="review") ? "reopened" : "";
   }
   if(!e || !o.independent) return "";
+  // Evidence has to be at least as hard as the miss, and the same kind of problem. Two easy 3 × 10s do not clear a level-5 division miss.
+  if((+o.lvl||1) < (e.lvl||1)) return "";
+  if(e.ctx && o.ctx){ for(const k in e.ctx){ if(e.ctx[k] && o.ctx[k]!==undefined && o.ctx[k]!==e.ctx[k]) return ""; } }
   if(e.state==="weak"){ e.wins++; e.last=t; if(e.wins>=2){ e.state="review"; e.stage=1; e.due=t+REVIEW_GAPS[0]; return "review"; } return "win"; }
   if(e.state==="review"){ if(e.due>t) return ""; e.stage++; e.last=t; if(e.stage>=3){ e.state="ok"; e.recovered=t; e.due=0; return "recovered"; } e.due=t+REVIEW_GAPS[1]; return "stage2"; }
   return "";
@@ -2002,6 +2025,7 @@ let lastPraise=[];   // recovery / independence messages for the current right a
 let sessionN=0, stopOfferedAt=-1, sessionDone=false, sessionMissRun=0, breakOfferedAt=-1; // fresh problems answered since the app opened; the last count at which the stopping point was offered; she tapped "Done for today"
 let ws=null;         // multiplication workspace state for the current problem: {vals:{cellKey:digit}, sel:cellKey}
 const SUPPORT_NAMES={3:"the pre-written tens-row zero and the opening coach line", 2:"the column labels", 1:"the carry boxes"}; // what each support level adds on top of the one below it
+function resetSession(){ sessionN=0; stopOfferedAt=-1; sessionDone=false; sessionMissRun=0; breakOfferedAt=-1; } // a new learner starts a fresh sitting
 function prevNeededHelp(sk){ const a=S.log.filter(e=>e.sk===sk); const p=a[a.length-2]; return !!p && (!p.ok || +p.hints>0); } // the attempt before the one just logged
 let scratchStrokes=[]; let penSeen=false; // scratch paper for the current problem; once a pencil is used, finger touches are ignored (palm rejection) // the "say why" question after a right answer: {sel, done, ok}; okEntry is the log entry it annotates
 function expandAll(steps){ const out=[]; for(const s of steps){ if(Array.isArray(s.sub)&&s.sub.length){ out.push(...expandAll(s.sub)); const c={...s, expanded:true}; if(c.tAfter) c.t=c.tAfter; out.push(c); } else out.push(s); } return out; }
@@ -2020,7 +2044,7 @@ function askName(){
   const inp=app.querySelector("#name"); inp.focus();
   const go=()=>{ const v=inp.value.trim(); if(!v){ inp.focus(); return; }
     if(DB.profiles[v]){ app.querySelector("#err").textContent=`There is already a player named ${v}. Pick that name on the players screen, or add a last initial.`; return; }
-    S=normalize(blankProfile(v)); DB.profiles[v]=S; DB.current=v; save(); home(); };
+    S=normalize(blankProfile(v)); DB.profiles[v]=S; DB.current=v; resetSession(); save(); home(); };
   app.querySelector("#go").onclick=go; inp.addEventListener("keydown",e=>{ if(e.key==="Enter") go(); });
   const c=app.querySelector("#cancel"); if(c) c.onclick=players;
   app.querySelector("#restorelink").onclick=restoreScreen;
@@ -2046,7 +2070,7 @@ function players(){
     <div class="topbar">${S?`<button class="btn quiet" id="back">Back</button>`:"<span></span>"}<h1 style="margin:0">Who's playing?</h1><span></span></div>${warnHTML()}
     ${names.map(n=>{ const p=DB.profiles[n]; const lv=SKILL_ORDER.reduce((s,k)=>s+p.levels[k],0); return `<div class="profile"><div><div class="pname">${esc(n)}</div><div class="muted" style="font-size:13px">${p.attempted} tried · ${p.correct} right · ${lv-SKILL_ORDER.length} levels earned</div></div><button class="btn primary" data-name="${esc(n)}" aria-label="${S&&S.name===n?"Continue":"Play"} as ${esc(n)}">${S&&S.name===n?"Continue":"Play"}</button></div>`; }).join("")}
     <button class="btn" id="add" style="margin-top:10px;width:100%">+ Add a player</button>`;
-  app.querySelectorAll("[data-name]").forEach(b=>b.onclick=()=>{ DB.current=b.dataset.name; S=DB.profiles[DB.current]; save(); home(); });
+  app.querySelectorAll("[data-name]").forEach(b=>b.onclick=()=>{ if(DB.current!==b.dataset.name) resetSession(); DB.current=b.dataset.name; S=DB.profiles[DB.current]; save(); home(); });
   app.querySelector("#add").onclick=askName;
   const bk=app.querySelector("#back"); if(bk) bk.onclick=home;
   (app.querySelector("[data-name]")||app.querySelector("#add")).focus();
@@ -2574,7 +2598,7 @@ function diag(yours){ try{ return (typeof diagnose==="function" && diagnose(cur,
 function submit(){
   let ok, yours, raw, wsGrade=null;
   let twoPoints=false;
-  if(cur.ws){ const g=gradeWS(); if(g.err){ inlineErr=g.err; render(); return; } wsGrade=g; ok=g.ok; yours=g.yours; raw=g.product; }
+  if(cur.ws){ const g=gradeWS(); if(g.err){ cur.unfinished=(cur.unfinished||0)+1; inlineErr=g.err; render(); return; } wsGrade=g; ok=g.ok; yours=g.yours; raw=g.product; } // an incomplete grid is sent back, not graded: unfinished is not the same as wrong
   else if(cur.type==="input"){ const inp=app.querySelector("#ans"); const v=inp.value; lastAnswer=v; if(!v.trim()){ inp.focus(); return; }
     twoPoints = !!(cur.meta && cur.meta.open) && (v.match(/\./g)||[]).length>1; // "0.05.0" on a write-a-decimal problem: a real mistake, walk it through
     const issue=twoPoints ? "" : issueFor(cur,v); if(issue){ inlineErr=issue; render(); return; } // not a countable attempt yet
@@ -2590,7 +2614,7 @@ function submit(){
   const independent = stage==="fresh" && hintIdx===0 && !supported;
   const entry={t:Date.now(), sk, lvl:cur.level, q:plain(cur.prompt), yours:String(yours), ans:cur.display, ok:ok?1:0, stage, hints:hintIdx, independent:(ok&&independent)?1:0, tag: cur.mistake ? cur.mistake.tag : (cur.focusTag||"")};
   if(cur.hw) entry.hw=1; if(cur.fixed) entry.page=1; if(cur.ws){ entry.ws=1; entry.support=S.support.multiply; } if(mode==="miss"&&cur.focusKey) entry.focus=cur.focusKey;
-  if(wsGrade){ entry.rows=wsGrade.yours; if(!ok) entry.wrong=wsGrade.wrongText; if(wsGrade.comps) entry.comps=wsGrade.compsTally; }
+  if(wsGrade){ entry.rows=wsGrade.yours; if(!ok) entry.wrong=wsGrade.wrongText; if(wsGrade.comps) entry.comps=wsGrade.compsTally; if(cur.unfinished) entry.unfinished=cur.unfinished; }
   lastChange=0; lastPraise=[];
   // Homework practice is level-neutral: the shape was chosen from the worksheet, not earned, so it moves nothing up or down.
   if(independent && !cur.hw){ const res=applyResult(S.hist[sk], S.levels[sk], ok); S.levels[sk]=res.level; S.hist[sk]=res.hist; lastChange=res.change; }
@@ -2606,7 +2630,7 @@ function submit(){
     // Clean wins for every component this problem exercised; recovery praise for the ones that moved.
     if(independent){ const before=Object.keys(S.weak).filter(k=>S.weak[k].state!=="ok");
       const demonstrated = wsGrade ? wsGrade.evidence : trapsOf(cur); entry.proved=demonstrated.join(",");
-      for(const comp of demonstrated){ const tr=noteComp(sk, comp, true, {independent:true, lvl:cur.level}); const nm=compName(sk,comp);
+      for(const comp of demonstrated){ const tr=noteComp(sk, comp, true, {independent:true, lvl:cur.level, ctx:ctxOf(cur)}); const nm=compName(sk,comp);
         if(tr==="win") lastPraise.push({t:`You handled ${nm} on your own. One more clean one and it comes off the watch list.`});
         else if(tr==="review") lastPraise.push({big:true, t:`Two in a row on ${nm}, no help. It moves to review: the app will check it again in a few days.`});
         else if(tr==="stage2") lastPraise.push({big:true, t:`${ucfirst(nm)} held up after a few days off. One more review in about a week.`});
@@ -2617,7 +2641,7 @@ function submit(){
     S.run=0;
     const d=twoPoints ? {tag:"two-points", note:NOTES["two-points"]} : wsGrade ? {tag:COMP_TO_TAG[wsGrade.main]||wsGrade.main, note:NOTES[COMP_TO_TAG[wsGrade.main]]||""} : diag(raw); cur.mistake=d; entry.tag=d.tag;
     // The miss opens (or re-opens) the components it points at: the workspace names them per cell; a single answer box is read from its mistake tag.
-    for(const comp of (wsGrade && wsGrade.comps && wsGrade.comps.length) ? wsGrade.comps : compsOfMiss(sk, d.tag)) noteComp(sk, comp, false, {lvl:cur.level});
+    for(const comp of (wsGrade && wsGrade.comps && wsGrade.comps.length) ? wsGrade.comps : compsOfMiss(sk, d.tag)) noteComp(sk, comp, false, {lvl:cur.level, ctx:ctxOf(cur)});
     if(twoPoints && !cur.twoPointsStep && cur.meta && cur.meta.x){ cur.twoPointsStep=true; const x=cur.meta.x, k=(x.d||"").length; const xx=padTo(x,Math.min(3,k+1));
       cur.steps.unshift({t:`First, ${fmt(x)} and ${fmt(xx)} are the <b>same number</b>: a zero on the end of a decimal adds nothing. Compare them in the chart.`, charts:[x,xx], check:cm(`${fmt(xx)} is … ${fmt(x)}`, ["greater than","less than","equal to"], 2)}); }
     if(stage==="fresh") chain=1; else chain++;
@@ -2640,7 +2664,7 @@ function noteStepComp(c, sc, ok){
   let comp=c.comp; if(typeof comp==="function"){ try{ comp=comp(c.type==="mc"?String((c.options||[])[sc.sel]):String(sc.val)); }catch(e){ comp=null; } }
   if(!comp) return;
   cur.comps=cur.comps||{}; const t=cur.comps[comp]=cur.comps[comp]||{ok:0,miss:0}; if(ok) t.ok++; else t.miss++;
-  if(!ok) noteComp(cur.skill, comp, false, {lvl:cur.level});
+  if(!ok) noteComp(cur.skill, comp, false, {lvl:cur.level, ctx:ctxOf(cur)});
   if(missEntry) missEntry.comps=cur.comps;
 }
 function checkStep(){
@@ -2743,14 +2767,16 @@ function tiersHTML(log){
   const hits=(sk,comp)=>log.filter(e=>e.sk===sk && !e.ok && (comp==="*" || (e.comps&&e.comps[comp]) || TAG_TO_COMP[e.tag]===comp || e.tag===comp));
   const wsum=weakSummary(); const help=[], next=[], ready=[];
   for(const w of wsum.weak.sort((a,b)=>(b.misses-b.wins)-(a.misses-a.wins))){ const h=hits(w.sk,w.comp); const last=h[h.length-1];
-    help.push(`<li><b>${esc(SKILLS[w.sk].name)}</b>: ${esc(w.name)}. Missed ${w.misses} time${w.misses===1?"":"s"}${w.wins?`, ${w.wins} of 2 clean wins so far`:""}.${last?exMiss(last):""}</li>`); }
+    const kind=ctxLabel(w.ctx); help.push(`<li><b>${esc(SKILLS[w.sk].name)}</b>: ${esc(w.name)}${kind?` (${esc(kind)})`:""}, level ${w.lvl}. Missed ${w.misses} time${w.misses===1?"":"s"}${w.wins?`, ${w.wins} of 2 clean wins so far`:""}${w.migrated?" · from before v9":""}. Clears with two independent wins at level ${w.lvl} or higher${kind?` on ${esc(kind)}`:""}.${last?exMiss(last):""}</li>`); }
   for(const w of wsum.review.sort((a,b)=>a.due-b.due)){ const due=w.due<=Date.now()?"due now":`check-in ${new Date(w.due).toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}`;
     next.push(`<li><b>${esc(SKILLS[w.sk].name)}</b>: ${esc(w.name)}. Two clean wins; ${due} (review ${w.stage} of 2).</li>`); }
   const openSkills=new Set([...wsum.weak,...wsum.review].map(w=>w.sk));
   for(const k of SKILL_ORDER){ const a=log.filter(e=>e.sk===k); const fresh=a.filter(e=>isFresh(e)).slice(-5); if(!fresh.length) continue;
     const withHints=fresh.filter(e=>+e.hints>0).length, ind=fresh.filter(e=>indep(e)===1).length, misses=fresh.filter(e=>!e.ok).length;
     if(!openSkills.has(k) && withHints>=2) next.push(`<li><b>${esc(SKILLS[k].name)}</b>: gets there, but ${withHints} of the last ${fresh.length} needed a hint. Worth a few fresh ones without.</li>`);
-    else if(!openSkills.has(k) && fresh.length>=4 && ind>=4 && misses===0){ const last=fresh.filter(e=>e.ok).slice(-1)[0]; ready.push(`<li><b>${esc(SKILLS[k].name)}</b> at level ${S.levels[k]}: ${ind} of the last ${fresh.length} right on her own.${last?exOk(last):""}</li>`); } }
+    else if(!openSkills.has(k) && fresh.length>=4 && ind>=4 && misses===0){ const indOk=fresh.filter(e=>e.ok&&indep(e)===1); const last=indOk.slice(-1)[0];
+      const shown=Math.max(...indOk.map(e=>+e.lvl||1)); const hwOnly=indOk.every(e=>e.hw); // the level she actually did, not the level the dots sit at
+      ready.push(`<li><b>${esc(SKILLS[k].name)}</b>: ${ind} of the last ${fresh.length} right on her own, at level ${shown}${shown<S.levels[k]?` (practice level is ${S.levels[k]}; not yet shown there)`:""}${hwOnly?" · homework shapes only":""}.${last?exOk(last):""}</li>`); } }
   for(const w of wsum.ok.sort((a,b)=>b.recovered-a.recovered)) ready.push(`<li><b>${esc(SKILLS[w.sk].name)}</b>: ${esc(w.name)} recovered ${fmtDate(w.recovered)} after ${w.misses} miss${w.misses===1?"":"es"}, two clean wins, and two later check-ins.</li>`);
   if(S.support && S.support.multiply<3) ready.push(`<li><b>Multiplication page</b>: working with ${S.support.multiply===0?"no supports, the bare page":`${S.support.multiply} of 3 supports`} (${[S.support.multiply>=1?"carry boxes":"",S.support.multiply>=2?"column labels":""].filter(Boolean).join(", ")||"none"}).</li>`);
   const empty=t=>`<li class="muted">${t}</li>`;
@@ -2779,7 +2805,7 @@ function grownups(){
   const weekAgo=Date.now()-7*864e5; const week=log.filter(e=>Number.isFinite(e.t)&&e.t>=weekAgo&&!e.guided);
   const days=new Set(week.map(e=>new Date(e.t).toDateString())).size;
   const skillName=k=>SKILLS[k]?SKILLS[k].name:esc(str(k)||"?");
-  const missMeta=e=>`${Number.isFinite(e.t)?fmtDate(e.t):"unknown time"} · ${skillName(e.sk)}${e.lvl!=null?` · level ${esc(str(e.lvl))}`:""} · ${e.stage?esc(str(e.stage)):(e.retry?"retry":"fresh")}${e.page?" · from the page":e.hw?" · homework":""}${e.shown?" · answer shown":""}${+e.hints>0?" · "+(+e.hints)+" hint"+(+e.hints>1?"s":""):""}${typeof e.tag==="string"&&e.tag?` · <span class="tag">${esc(e.tag)}</span>`:""}${e.revealed!==undefined?` · walkthrough: ${+e.passed||0} step${+e.passed===1?"":"s"} right, ${+e.revealed||0} shown`:""}${e.comps&&typeof e.comps==="object"?(()=>{ const m=Object.keys(e.comps).filter(c=>e.comps[c]&&e.comps[c].miss); return m.length?` · missed: ${m.map(c=>esc(compName(e.sk,c))).join(", ")}`:""; })():""}${e.support!==undefined?` · supports ${esc(str(e.support))} of 3`:""}`;
+  const missMeta=e=>`${Number.isFinite(e.t)?fmtDate(e.t):"unknown time"} · ${skillName(e.sk)}${e.lvl!=null?` · level ${esc(str(e.lvl))}`:""} · ${e.stage?esc(str(e.stage)):(e.retry?"retry":"fresh")}${e.page?" · from the page":e.hw?" · homework":""}${e.shown?" · answer shown":""}${+e.hints>0?" · "+(+e.hints)+" hint"+(+e.hints>1?"s":""):""}${typeof e.tag==="string"&&e.tag?` · <span class="tag">${esc(e.tag)}</span>`:""}${e.revealed!==undefined?` · walkthrough: ${+e.passed||0} step${+e.passed===1?"":"s"} right, ${+e.revealed||0} shown`:""}${e.comps&&typeof e.comps==="object"?(()=>{ const m=Object.keys(e.comps).filter(c=>e.comps[c]&&e.comps[c].miss); return m.length?` · missed: ${m.map(c=>esc(compName(e.sk,c))).join(", ")}`:""; })():""}${e.support!==undefined?` · supports ${esc(str(e.support))} of 3`:""}${e.unfinished?` · sent back ${+e.unfinished} time${+e.unfinished===1?"":"s"} for empty boxes before this`:""}${e.proved?` · proved: ${esc(str(e.proved)).replace(/,/g,", ")}`:""}`;
   const exportText=JSON.stringify(DB); const nPlayers=Object.keys(DB.profiles).length;
   // Class position: the district calendar's estimate, or a lesson pinned here from the homework header
   const L=lessonList(), classId=effectiveClassAt(), calId=calendarClassAt();
