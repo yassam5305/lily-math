@@ -634,7 +634,7 @@ function genRoundNumber(level, focus){
   if(level===1){ p=pick([0,-1]); num={w:ri(10,99), d:nonZeroDigits(2)}; }
   else if(level===2){ if(Math.random()<0.5){ p=-2; num={w:ri(1,999), d:nonZeroDigits(3)}; } else { p=2; num={w:ri(1000,9999), d: Math.random()<0.5?nonZeroDigits(ri(1,3)):""}; } }
   else if(level===3){ p=pick([3,4,5]); num={w:ri(100000,9999999), d:""}; }
-  else if(level===4){ p=pick([-1,-2,2,5]); num = p<0 ? {w:ri(10,999), d:nonZeroDigits(3)} : {w:ri(100000,9999999), d:""};
+  else if(level===4){ p=(focus&&typeof focus.p==="number")?focus.p:pick([-1,-2,2,5]); num = p<0 ? {w:ri(10,999), d:nonZeroDigits(3)} : {w:ri(100000,9999999), d:""};
     let V=toThousandths(num); const unit=Math.pow(10,p+3);
     V += (9-digitAt(V,p))*unit; V += (ri(5,9)-digitAt(V,p-1))*(unit/10);
     num=fromThousandths(V); }
@@ -1338,7 +1338,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.2 · September 20, 2026";
+const BUILD="v9.3 · September 20, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -1861,8 +1861,11 @@ function normalize(p){ // fill in anything missing (older saves, imports)
   out.scratch = ("scratch" in p) ? !!p.scratch : b.scratch;
   if(out.today.d!==todayStr()) out.today={d:todayStr(), c:0, a:0};
   out.weak = (p.weak && typeof p.weak==="object" && !Array.isArray(p.weak)) ? {...p.weak} : {};
-  for(const k in out.weak){ const e=out.weak[k]; if(!e||typeof e!=="object"||!k.includes(":")){ delete out.weak[k]; continue; }
-    e.state=["weak","review","ok"].includes(e.state)?e.state:"weak"; for(const f of ["wins","misses","lvl","last","due","stage","recovered","served"]) e[f]=Math.max(0,+e[f]||0); e.lvl=Math.min(MAX_LEVEL,Math.max(1,e.lvl||1)); }
+  for(const k of Object.keys(out.weak)){ const e=out.weak[k]; if(!e||typeof e!=="object"||!k.includes(":")){ delete out.weak[k]; continue; }
+    e.state=["weak","review","ok"].includes(e.state)?e.state:"weak"; for(const f of ["wins","misses","lvl","last","due","stage","recovered","served"]) e[f]=Math.max(0,+e[f]||0); e.lvl=Math.min(MAX_LEVEL,Math.max(1,e.lvl||1));
+    if(e.ctx && typeof e.ctx==="object" && !k.includes("|")){ // v9.2 kept the context on the entry; from v9.3 it is part of the key
+      const [sk,comp]=k.split(":"); const ctx={}; if(e.ctx.op) ctx.op=e.ctx.op; if(e.ctx.variant) ctx.variant=e.ctx.variant; // v9.2 rounding used dec:y/n, which no generator can target: dropped, so it accepts any rounding place
+      const ck=Object.keys(ctx).sort().map(x=>`${x}=${ctx[x]}`).join(","); const nk=`${sk}:${comp}${ck?"|"+ck:""}`; delete e.ctx; if(nk!==k && !out.weak[nk]){ out.weak[nk]=e; delete out.weak[k]; } else if(nk!==k){ out.weak[nk].misses+=e.misses; out.weak[nk].lvl=Math.max(out.weak[nk].lvl,e.lvl); delete out.weak[k]; } } }
   out.support={...b.support, ...((p.support&&typeof p.support==="object")?p.support:{})}; out.supportWins={...b.supportWins, ...((p.supportWins&&typeof p.supportWins==="object")?p.supportWins:{})};
   out.support.multiply=Math.min(3,Math.max(0,+out.support.multiply||0)); if(!("support" in p)) out.support.multiply=3; out.supportWins.multiply=Math.max(0,+out.supportWins.multiply||0);
   // One-time migration: misses logged before the weakness profile existed (v8 and earlier) become open weaknesses, so Focus does not
@@ -1892,63 +1895,79 @@ let S=null;
 //   review → a miss at any time → weak again
 // A weakness never lingers by the calendar: it clears by recovery, and only reopens by a new miss.
 const DAY=864e5, REVIEW_GAPS=[3*DAY, 7*DAY];
-const weakKey=(sk,comp)=>`${sk}:${comp||"*"}`;
-const compName=(sk,comp)=> (sk==="multiply" && COMP_NAMES[comp]) ? COMP_NAMES[comp] : (comp && comp!=="*" && comp!=="other" ? comp.replace(/-/g," ") : (SKILLS[sk]?SKILLS[sk].name.toLowerCase():"the whole skill"));
-const compsOfMiss=(sk,tag)=>{ const t=(!tag||tag==="other"||tag==="correct")?"*":tag; return sk==="multiply" ? [TAG_TO_COMP[t]||"*"] : [t]; }; // which component a graded miss with this tag points at ("other" = the skill as a whole)
-// Components a problem exercises. multiply declares p.traps; other skills count every currently-weak component of that skill (a success there is evidence for all of them).
-function trapsOf(p){
-  if(!p) return [];
-  const general = S.weak[weakKey(p.skill,"*")] ? ["*"] : []; // an unclassified weakness in this skill: any independent success on the skill is evidence
-  if(Array.isArray(p.traps)) return p.traps.concat(general);
-  return Object.keys(S.weak).filter(k=>k.startsWith(p.skill+":") && S.weak[k].state!=="ok").map(k=>k.split(":")[1]);
-}
-// Record one outcome for one component. Returns a transition ("opened" | "reopened" | "win" | "review" | "stage2" | "recovered" | "") for praise.
-// The part of a problem that must match between the miss and the win for the win to count as evidence: the operation for shift and
-// add/subtract, the flavour for powers, decimal-vs-whole for rounding. Multiplication components already say what they are.
+// Identity of a weakness = skill : component | context. Context is the part of the problem that must match for evidence to count
+// (multiplying vs dividing by powers of ten, adding vs subtracting, the rounding place, the powers variant). Because it is in the key,
+// a division weakness and a multiplication weakness in the same skill are tracked separately and never overwrite each other, and
+// Focus can generate exactly that kind of problem.
 function ctxOf(p){
-  const m=(p&&p.meta)||{}; const sk=p&&p.skill;
-  if(sk==="shift") return {op:m.op||""};
-  if(sk==="addsub") return {op:m.op||""};
-  if(sk==="powers") return {variant:m.variant||""};
-  if(sk==="rounding") return {dec: m.p!==undefined ? (m.p<0?"y":"n") : ""};
-  return {};
+  const m=(p&&p.meta)||{}; const sk=p&&p.skill; const c={};
+  if(sk==="shift"||sk==="addsub"){ if(m.op) c.op=m.op; }
+  else if(sk==="powers"){ if(m.variant) c.variant=m.variant; }
+  else if(sk==="rounding"){ if(m.p!==undefined) c.p=String(m.p); c.which=m.which?"y":"n"; }
+  return c;
 }
-const ctxLabel=ctx=>{ if(!ctx) return ""; const parts=[]; if(ctx.op) parts.push(ctx.op==="×"?"multiplying":ctx.op==="÷"?"dividing":ctx.op==="+"?"adding":ctx.op==="−"||ctx.op==="-"?"subtracting":ctx.op); if(ctx.variant) parts.push(ctx.variant); if(ctx.dec==="y") parts.push("decimal places"); if(ctx.dec==="n") parts.push("whole-number places"); return parts.join(", "); };
+const ctxKey=ctx=>Object.keys(ctx||{}).filter(k=>ctx[k]!==undefined&&ctx[k]!=="").sort().map(k=>`${k}=${ctx[k]}`).join(",");
+const weakKey=(sk,comp,ctx)=>{ const ck=ctxKey(ctx); return `${sk}:${comp||"*"}${ck?"|"+ck:""}`; };
+function parseWeakKey(key){ const [head,ck=""]=key.split("|"); const [sk,comp]=head.split(":"); const ctx={}; if(ck) for(const kv of ck.split(",")){ const [k,v]=kv.split("="); ctx[k]=v; } return {sk, comp, ctx}; }
+// The focus a generator needs to produce a problem in this context (the same fields focusFor() uses for follow-ups).
+function focusFromCtx(sk, ctx){ const f={}; if(!ctx) return f; if(ctx.op) f.op=ctx.op; if(ctx.variant) f.variant=ctx.variant; if(sk==="rounding"){ if(ctx.p!==undefined) f.p=+ctx.p; if(ctx.which!==undefined) f.which=ctx.which==="y"; } return f; }
+const compName=(sk,comp)=> (sk==="multiply" && COMP_NAMES[comp]) ? COMP_NAMES[comp] : (comp && comp!=="*" && comp!=="other" ? comp.replace(/-/g," ") : (SKILLS[sk]?SKILLS[sk].name.toLowerCase():"the whole skill"));
+const ctxLabel=(sk,ctx)=>{ if(!ctx) return ""; const parts=[]; if(ctx.op) parts.push(ctx.op==="×"?"multiplying":ctx.op==="÷"?"dividing":ctx.op==="+"?"adding":(ctx.op==="−"||ctx.op==="-")?"subtracting":ctx.op); if(ctx.variant) parts.push(ctx.variant==="repeated"?"repeated × 10":ctx.variant==="threefactor"?"three factors":ctx.variant); if(sk==="rounding"){ if(ctx.p!==undefined && typeof placeSing==="function") parts.push(`nearest ${placeSing(+ctx.p)}`); if(ctx.which==="y") parts.push("which-number form"); } return parts.join(", "); };
+const weakLabel=key=>{ const {sk,comp,ctx}=parseWeakKey(key); const k=ctxLabel(sk,ctx); return compName(sk,comp)+(k?` (${k})`:""); };
+const compsOfMiss=(sk,tag)=>{ const t=(!tag||tag==="other"||tag==="correct")?"*":tag; return sk==="multiply" ? [TAG_TO_COMP[t]||"*"] : [t]; }; // which component a graded miss with this tag points at ("other" = the skill as a whole)
+// THE eligibility rule, used both to pick what Focus serves and to grade whether a success counts. A problem p is evidence for weakness
+// `key` when: same skill; the problem exercises that component (multiply declares p.traps; other skills: any problem of the skill);
+// the context matches (a key without context, e.g. migrated from before v9, accepts any context); and the level is at least the miss level.
+function eligible(key, p){
+  if(!p) return false; const {sk,comp,ctx}=parseWeakKey(key); const e=S.weak[key]; if(!e || p.skill!==sk) return false;
+  if(sk==="multiply" && comp!=="*"){ if(!Array.isArray(p.traps) || !p.traps.includes(comp)) return false; }
+  const pc=ctxOf(p); for(const k in ctx){ if(ctx[k]!=="" && pc[k]!==undefined && String(pc[k])!==String(ctx[k])) return false; }
+  if((+p.level||1) < (e.lvl||1)) return false;
+  return true;
+}
+// Every weakness this problem is evidence for (open or in review). Used for wins.
+function evidenceKeys(p){ return Object.keys(S.weak).filter(k=>S.weak[k].state!=="ok" && eligible(k,p)); }
+// Components a problem exercises (for the workspace's "what did she actually prove" filter and the log's proved: field).
+function trapsOf(p){ if(!p) return []; if(Array.isArray(p.traps)) return p.traps.slice(); return ["*"]; }
+// Record one outcome. A miss opens/reopens the keyed weakness; a win (o.independent, and only through eligible()) advances it.
+// Returns a transition ("opened" | "reopened" | "win" | "review" | "stage2" | "recovered" | "") for praise.
 function noteComp(sk, comp, ok, o){
-  o=o||{}; const t=o.t||Date.now(); const key=weakKey(sk,comp); const W=S.weak;
-  let e=W[key];
+  o=o||{}; const t=o.t||Date.now(); const W=S.weak;
   if(!ok){
-    const was=e?e.state:"none";
+    const key=weakKey(sk,comp,o.ctx); let e=W[key]; const was=e?e.state:"none";
     if(!e) e=W[key]={state:"weak", wins:0, misses:0, lvl:o.lvl||1, last:t, due:0, stage:0, recovered:0};
-    e.state="weak"; e.wins=0; e.misses++; e.lvl=Math.min(MAX_LEVEL, Math.max(1, +o.lvl||e.lvl||1)); e.last=t;
-    if(o.ctx && Object.keys(o.ctx).some(k=>o.ctx[k])) e.ctx=o.ctx; // remember what kind of problem it was
+    // A repeat miss never lowers the bar: the level stays the highest level she has missed this at.
+    e.state="weak"; e.wins=0; e.misses++; e.lvl=Math.min(MAX_LEVEL, Math.max(1, e.lvl||1, +o.lvl||1)); e.last=t;
     return was==="none" ? "opened" : (was==="ok"||was==="review") ? "reopened" : "";
   }
-  if(!e || !o.independent) return "";
-  // Evidence has to be at least as hard as the miss, and the same kind of problem. Two easy 3 × 10s do not clear a level-5 division miss.
-  if((+o.lvl||1) < (e.lvl||1)) return "";
-  if(e.ctx && o.ctx){ for(const k in e.ctx){ if(e.ctx[k] && o.ctx[k]!==undefined && o.ctx[k]!==e.ctx[k]) return ""; } }
+  const key=o.key; const e=W[key]; if(!e || !o.independent) return "";
   if(e.state==="weak"){ e.wins++; e.last=t; if(e.wins>=2){ e.state="review"; e.stage=1; e.due=t+REVIEW_GAPS[0]; return "review"; } return "win"; }
   if(e.state==="review"){ if(e.due>t) return ""; e.stage++; e.last=t; if(e.stage>=3){ e.state="ok"; e.recovered=t; e.due=0; return "recovered"; } e.due=t+REVIEW_GAPS[1]; return "stage2"; }
   return "";
 }
-// What "Focus on where I missed" should serve next: the most-missed open weakness, else a review that has come due. null → nothing to focus on.
+// What "Focus on where I missed" should serve next: a review that has come due, else the open weakness served least recently. null → nothing.
 function recoveryTarget(){
-  const W=S.weak, now=Date.now();
-  // Fair rotation: among open weaknesses, the one served least recently goes first (e.served), so three weak spots take turns instead of
-  // the most-missed one hogging every problem. Ties break toward the most missed. Reviews wait their turn until they are due.
-  const open=Object.keys(W).filter(k=>W[k].state==="weak" && SKILLS[k.split(":")[0]]).sort((a,b)=>(W[a].served||0)-(W[b].served||0) || (W[b].misses-W[b].wins)-(W[a].misses-W[a].wins));
-  const due=Object.keys(W).filter(k=>W[k].state==="review" && W[k].due<=now && SKILLS[k.split(":")[0]]).sort((a,b)=>W[a].due-W[b].due);
-  const key=due[0]||open[0]; if(!key) return null; // a review that has come due goes before new work on open ones
-  const [sk,comp]=key.split(":"); const e=W[key];
+  const W=S.weak, now=Date.now(); const okKey=k=>SKILLS[parseWeakKey(k).sk];
+  const open=Object.keys(W).filter(k=>W[k].state==="weak" && okKey(k)).sort((a,b)=>(W[a].served||0)-(W[b].served||0) || (W[b].misses-W[b].wins)-(W[a].misses-W[a].wins));
+  const due=Object.keys(W).filter(k=>W[k].state==="review" && W[k].due<=now && okKey(k)).sort((a,b)=>W[a].due-W[b].due);
+  const key=due[0]||open[0]; if(!key) return null;
+  const {sk,comp,ctx}=parseWeakKey(key); const e=W[key];
   // The cycle: targeted problem at the level she missed → (help if needed) → a fresh independent attempt → a harder variation → review later.
   const harder = e.state==="weak" ? e.wins>=1 : true;
   const level=Math.min(MAX_LEVEL, e.lvl + (harder?1:0));
-  let focus; if(comp!=="*"){ focus = sk==="multiply" ? {tag:COMP_TO_TAG[comp]||comp} : {tag:comp}; }
-  const why = e.state==="review" ? `review: ${compName(sk,comp)}` : e.wins>=1 ? `one more clean win on ${compName(sk,comp)}, a notch harder` : `${compName(sk,comp)}`;
-  return {key, sk, comp, level, focus, harder, state:e.state, wins:e.wins, why};
+  const focus={...focusFromCtx(sk,ctx)}; if(comp!=="*") focus.tag = sk==="multiply" ? (COMP_TO_TAG[comp]||comp) : comp;
+  const nm=weakLabel(key);
+  const why = e.state==="review" ? `review: ${nm}` : e.wins>=1 ? `one more clean win on ${nm}, a notch harder` : nm;
+  return {key, sk, comp, ctx, level, focus, harder, state:e.state, wins:e.wins, why};
 }
-function weakSummary(){ const W=S.weak; const out={weak:[],review:[],ok:[]}; for(const k in W){ const e=W[k]; const [sk,comp]=k.split(":"); if(!SKILLS[sk]) continue; out[e.state].push({key:k, sk, comp, name:compName(sk,comp), ...e}); } return out; }
+// Generate a problem for the target and make sure it really is eligible evidence for it; otherwise try again. Selection and grading
+// share eligible(), so what Focus serves is exactly what can count. If the generator cannot hit it in 12 tries, the miss level is used as is.
+function genForTarget(t){
+  let p=null; for(let i=0;i<12;i++){ p=SKILLS[t.sk].gen(t.level, t.focus); if(eligible(t.key,p)) return p; }
+  for(let i=0;i<12;i++){ p=SKILLS[t.sk].gen(S.weak[t.key].lvl, t.focus); if(eligible(t.key,p)) return p; }
+  p.notEligible=true; return p;
+}
+function weakSummary(){ const W=S.weak; const out={weak:[],review:[],ok:[]}; for(const k in W){ const e=W[k]; const {sk,comp,ctx}=parseWeakKey(k); if(!SKILLS[sk]) continue; out[e.state].push({key:k, sk, comp, ctx, name:weakLabel(k), ...e}); } return out; }
 let saveFailed=false; // set when localStorage refuses to write (quota, private mode)
 function load(){
   try{
@@ -2266,7 +2285,7 @@ function next(){ // a fresh problem: new help chain
   const hw=hwMode();
   if(mode==="hw:check"){ if(!pendingHW){ hwEntry(); return; } cur=SKILLS[pendingHW.skill].gen(pendingHW.level, pendingHW.focus); cur.hw=true; cur.fixed=true; cur.hwLabel=pendingHW.label; pendingHW=null; }
   else if(hw){ const shape=pick(hw.shapes); cur=SKILLS[sk].gen(shapeLevel(shape), {shape, variant:hw.variant}); cur.hw=true; }
-  else if(target){ cur=SKILLS[sk].gen(target.level, focus); cur.focusKey=target.key; cur.focusWhy=target.why; cur.harder=target.harder&&target.state==="weak"; }
+  else if(target){ cur=genForTarget(target); cur.focusKey=target.key; cur.focusWhy=target.why; cur.harder=target.harder&&target.state==="weak"; }
   else cur = focus!==undefined ? SKILLS[sk].gen(S.levels[sk], focus) : SKILLS[sk].gen(S.levels[sk]);
   resetProblemState(); render();
 }
@@ -2630,7 +2649,8 @@ function submit(){
     // Clean wins for every component this problem exercised; recovery praise for the ones that moved.
     if(independent){ const before=Object.keys(S.weak).filter(k=>S.weak[k].state!=="ok");
       const demonstrated = wsGrade ? wsGrade.evidence : trapsOf(cur); entry.proved=demonstrated.join(",");
-      for(const comp of demonstrated){ const tr=noteComp(sk, comp, true, {independent:true, lvl:cur.level, ctx:ctxOf(cur)}); const nm=compName(sk,comp);
+      const keys = evidenceKeys(cur).filter(k=>{ const {comp}=parseWeakKey(k); return comp==="*" || demonstrated.includes(comp); }); // same rule Focus used to pick the problem
+      for(const key of keys){ const comp=parseWeakKey(key).comp; const tr=noteComp(sk, comp, true, {independent:true, key}); const nm=weakLabel(key);
         if(tr==="win") lastPraise.push({t:`You handled ${nm} on your own. One more clean one and it comes off the watch list.`});
         else if(tr==="review") lastPraise.push({big:true, t:`Two in a row on ${nm}, no help. It moves to review: the app will check it again in a few days.`});
         else if(tr==="stage2") lastPraise.push({big:true, t:`${ucfirst(nm)} held up after a few days off. One more review in about a week.`});
@@ -2767,7 +2787,7 @@ function tiersHTML(log){
   const hits=(sk,comp)=>log.filter(e=>e.sk===sk && !e.ok && (comp==="*" || (e.comps&&e.comps[comp]) || TAG_TO_COMP[e.tag]===comp || e.tag===comp));
   const wsum=weakSummary(); const help=[], next=[], ready=[];
   for(const w of wsum.weak.sort((a,b)=>(b.misses-b.wins)-(a.misses-a.wins))){ const h=hits(w.sk,w.comp); const last=h[h.length-1];
-    const kind=ctxLabel(w.ctx); help.push(`<li><b>${esc(SKILLS[w.sk].name)}</b>: ${esc(w.name)}${kind?` (${esc(kind)})`:""}, level ${w.lvl}. Missed ${w.misses} time${w.misses===1?"":"s"}${w.wins?`, ${w.wins} of 2 clean wins so far`:""}${w.migrated?" · from before v9":""}. Clears with two independent wins at level ${w.lvl} or higher${kind?` on ${esc(kind)}`:""}.${last?exMiss(last):""}</li>`); }
+    const kind=ctxLabel(w.sk,w.ctx); help.push(`<li><b>${esc(SKILLS[w.sk].name)}</b>: ${esc(w.name)}, level ${w.lvl}. Missed ${w.misses} time${w.misses===1?"":"s"}${w.wins?`, ${w.wins} of 2 clean wins so far`:""}${w.migrated?" · from before v9":""}. Clears with two independent wins at level ${w.lvl} or higher${kind?` on ${esc(kind)}`:""}.${last?exMiss(last):""}</li>`); }
   for(const w of wsum.review.sort((a,b)=>a.due-b.due)){ const due=w.due<=Date.now()?"due now":`check-in ${new Date(w.due).toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}`;
     next.push(`<li><b>${esc(SKILLS[w.sk].name)}</b>: ${esc(w.name)}. Two clean wins; ${due} (review ${w.stage} of 2).</li>`); }
   const openSkills=new Set([...wsum.weak,...wsum.review].map(w=>w.sk));
@@ -2775,8 +2795,10 @@ function tiersHTML(log){
     const withHints=fresh.filter(e=>+e.hints>0).length, ind=fresh.filter(e=>indep(e)===1).length, misses=fresh.filter(e=>!e.ok).length;
     if(!openSkills.has(k) && withHints>=2) next.push(`<li><b>${esc(SKILLS[k].name)}</b>: gets there, but ${withHints} of the last ${fresh.length} needed a hint. Worth a few fresh ones without.</li>`);
     else if(!openSkills.has(k) && fresh.length>=4 && ind>=4 && misses===0){ const indOk=fresh.filter(e=>e.ok&&indep(e)===1); const last=indOk.slice(-1)[0];
-      const shown=Math.max(...indOk.map(e=>+e.lvl||1)); const hwOnly=indOk.every(e=>e.hw); // the level she actually did, not the level the dots sit at
-      ready.push(`<li><b>${esc(SKILLS[k].name)}</b>: ${ind} of the last ${fresh.length} right on her own, at level ${shown}${shown<S.levels[k]?` (practice level is ${S.levels[k]}; not yet shown there)`:""}${hwOnly?" · homework shapes only":""}.${last?exOk(last):""}</li>`); } }
+      const byLvl={}; indOk.forEach(e=>{ const l=+e.lvl||1; byLvl[l]=(byLvl[l]||0)+1; }); const lvls=Object.keys(byLvl).map(Number).sort((a,b)=>a-b);
+      const solid=lvls.filter(l=>byLvl[l]>=2).pop()||lvls[0]; // the highest level with at least two independent successes, else the lowest seen
+      const counts=lvls.map(l=>`${byLvl[l]} at level ${l}`).join(", "); const hwOnly=indOk.every(e=>e.hw);
+      ready.push(`<li><b>${esc(SKILLS[k].name)}</b>: ${ind} of the last ${fresh.length} right on her own (${counts}). Solid at level ${solid}${solid<S.levels[k]?`; practice level is ${S.levels[k]}, not yet shown there`:""}${hwOnly?" · homework shapes only":""}.${last?exOk(last):""}</li>`); } }
   for(const w of wsum.ok.sort((a,b)=>b.recovered-a.recovered)) ready.push(`<li><b>${esc(SKILLS[w.sk].name)}</b>: ${esc(w.name)} recovered ${fmtDate(w.recovered)} after ${w.misses} miss${w.misses===1?"":"es"}, two clean wins, and two later check-ins.</li>`);
   if(S.support && S.support.multiply<3) ready.push(`<li><b>Multiplication page</b>: working with ${S.support.multiply===0?"no supports, the bare page":`${S.support.multiply} of 3 supports`} (${[S.support.multiply>=1?"carry boxes":"",S.support.multiply>=2?"column labels":""].filter(Boolean).join(", ")||"none"}).</li>`);
   const empty=t=>`<li class="muted">${t}</li>`;
