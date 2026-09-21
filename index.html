@@ -914,7 +914,7 @@ function validProblem(p){
   for(const st of p.steps){ const c=st.check; if(!c) continue; if(c.type==="input" && !c.text && !Number.isFinite(c.answer)) return false; if(c.type==="mc" && (c.answer<0||c.answer>=c.options.length)) return false; }
   return true;
 }
-// After a right answer, one multiple-choice "why" in SWUN's own wording. Not every skill has one; none affect levels.
+// After a right answer, one multiple-choice "why" in SWUN-style explain-and-prove wording (written for the app, not quoted from the program). Not every skill has one; none affect levels.
 function whyFor(p){
   const m=p.meta||{}; const sk=p.skill; let q, right, wrong;
   const sup=n=>String(n).split("").map(ch=>"⁰¹²³⁴⁵⁶⁷⁸⁹"[+ch]).join("");
@@ -1348,7 +1348,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.7 · September 20, 2026";
+const BUILD="v9.7.1 · September 20, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -1590,14 +1590,19 @@ function genDivide(level, focus){
   let variant = level>=3 && Math.random()<0.4 ? "area" : "placevalue";
   if(focus && focus.variant) variant=focus.variant;
   let d, q;
-  if(level===1){ d=ri(2,9); q=ri(11,99); }
-  else if(level===2){ d=ri(2,9)*10; q=ri(11,199); }
-  else if(level===3){ d=ri(11,25); q=ri(11,99); }
-  else if(level===4){ d=ri(11,49); q=ri(21,199); }
-  else { d=ri(12,99); q=ri(101,499); }
-  if(focus && focus.d && level!==1) d=focus.d;
+  const cap = level>=5 ? 99999 : 9999; // the dividend size the walkthrough pictures can show; level 5 is the "larger numbers" level
+  const draw=()=>{
+    if(level===1){ d=ri(2,9); q=ri(11,99); }
+    else if(level===2){ d=ri(2,9)*10; q=ri(11,199); }
+    else if(level===3){ d=ri(11,25); q=ri(11,99); }
+    else if(level===4){ d=ri(11,49); q=ri(21,199); }
+    else { d=ri(12,99); q=ri(101,499); }
+    if(focus && focus.d && level!==1) d=focus.d; };
+  // Redraw within the SAME level until the dividend fits; never quietly hand back an easier level.
+  let g=0; do{ draw(); }while(g++<80 && d*q>cap);
+  if(d*q>cap){ q=Math.max(11, Math.floor(cap/d)); } // a fixed divisor from a follow-up can force it: shrink the quotient, keep the level
   if(focus && focus.fixed){ d=+focus.fixed.d; q=+focus.fixed.q; }
-  const N=d*q; if(N>9999 && !(focus&&focus.fixed)){ return genDivide(Math.max(1,level-1), focus); }
+  const N=d*q;
   const qd=String(q).split("").map(Number); const L=qd.length;
   const parts=qd.map((dg,i)=>({qpart:dg*Math.pow(10,L-1-i), piece:dg*Math.pow(10,L-1-i)*d})).filter(x=>x.qpart>0);
   const p={skill:"divide", level, prompt:`<span class="big-num">${N.toLocaleString("en-US")} ÷ ${d} = ?</span>`, type:"input", answer:q, display:q.toLocaleString("en-US"), show:null, meta:{N,d,q,variant,parts}};
@@ -2172,7 +2177,7 @@ function home(){
     <div class="card hw">
       <div class="week-head"><h2 style="margin:0">Homework practice</h2><span class="std" title="Problem shapes from the worksheet, not from your level">Worksheet shapes</span></div>
       <p class="muted" style="font-size:14px;margin:6px 0 10px">Tonight's page, at tonight's size. These use the worksheet's problem shapes no matter what the dots say, and they never move a level up or down.</p>
-      <button class="skill" data-skill="hw:check"><div style="flex:1"><div class="name">Check a problem from the page</div><div class="blurb">Type the exact problem (148 × 19, 3,660 ÷ 30, 8 × 10^5 × 6, 2 + 3 × 4, round 2.98 to the nearest tenth). Answer it here; a miss walks through that problem.</div></div></button>
+      <button class="skill" data-skill="hw:check"><div style="flex:1"><div class="name">Check a problem from the page</div><div class="blurb">Type the exact problem (148 × 19, 3,660 ÷ 30, 3.45 + 2.7, 8 × 10^5 × 6, 2 + 3 × 4, round 2.98 to the nearest tenth). Answer it here; a miss walks through that problem.</div></div></button>
       ${Object.keys(HW_MODES).map(id=>{ const h=HW_MODES[id]; return `<button class="skill" data-skill="hw:${id}"><div style="flex:1"><div class="name">${esc(h.name)}</div><div class="blurb">${esc(h.blurb)}</div><div class="tags" aria-label="Standard"><span class="tag">${esc(h.std)}</span></div></div></button>`; }).join("")}
       <p class="muted week-note" style="margin:10px 0 0"><b>Need to build up to it?</b> “${esc(SKILLS.multiply.name)}” below is the easier, step-up practice: it starts at your level (level ${S.levels.multiply}: ${MUL_SHAPE_BY_LEVEL[S.levels.multiply]||""}) and grows as you level up. That is prerequisite practice, not tonight's page.</p>
     </div>
@@ -2262,7 +2267,7 @@ function parseHomework(text){
     if((oo.match(/[+−×÷]/g)||[]).length>6) return {err:"Up to 6 operations in one expression, please."};
     if(!validTokens(tokens)) return {err:"Somewhere in that expression a step does not come out a whole number (a fraction, a negative, or dividing by 0). The app's order of operations stays with whole numbers."};
     return {skill:"orderops", focus:{fixed:{tokens}, variant:"evaluate"}, level:hasGroup(tokens)?2:1, label:tokStr(tokens)}; }
-  return {err:"I did not recognize that. Try shapes like 148 × 19, 3,660 ÷ 30, 8 × 10^5 × 6, 4.5 × 1,000, 2 + 3 × 4, or round 2.98 to the nearest tenth."};
+  return {err:"I did not recognize that. Try shapes like 148 × 19, 3,660 ÷ 30, 3.45 + 2.7, 8 × 10^5 × 6, 4.5 × 1,000, 2 + 3 × 4, or round 2.98 to the nearest tenth."};
 }
 const hwMode=()=>HW_MODES[hwId(mode)]||null;
 const MUL_SHAPE_BY_LEVEL={1:"2-digit × 1-digit",2:"3-digit × 1-digit",3:"2-digit × 2-digit",4:"3-digit × 2-digit",5:"3-digit × 2-digit with larger numbers"};
@@ -2315,7 +2320,7 @@ function hwEntry(prefill, err){
       <input class="ans text" id="hwq" type="text" inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="like 148 × 19" value="${esc(prefill||"")}">
       <div class="inline-err" id="hwerr" role="status" aria-live="polite">${esc(err||"")}</div>
       <div class="actions"><button class="btn primary" id="hwgo">Set it up</button></div>
-      <p class="muted" style="font-size:14px;margin:14px 0 0">Shapes the app knows: <b>148 × 19</b> (standard algorithm), <b>3,660 ÷ 30</b> (place value strategy), <b>8 × 10^5 × 6</b> or <b>47 × 10^6</b> (powers of ten), <b>4.5 × 1,000</b> or <b>2.99 ÷ 10^3</b> (moving the decimal point), <b>round 2.98 to the nearest tenth</b>, <b>2 + 3 × 4</b> or <b>12 ÷ (8 − 4) × 2</b> (order of operations). Use x or × for times, ÷ or / for divide, ^ for the exponent.</p>
+      <p class="muted" style="font-size:14px;margin:14px 0 0">Shapes the app knows: <b>148 × 19</b> (standard algorithm), <b>3,660 ÷ 30</b> (place value strategy), <b>8 × 10^5 × 6</b> or <b>47 × 10^6</b> (powers of ten), <b>4.5 × 1,000</b> or <b>2.99 ÷ 10^3</b> (moving the decimal point), <b>round 2.98 to the nearest tenth</b>, <b>3.45 + 2.7</b> or <b>12.5 − 3.75</b> (adding and subtracting decimals), <b>2 + 3 × 4</b> or <b>12 ÷ (8 − 4) × 2</b> (order of operations). Use x or × for times, ÷ or / for divide, ^ for the exponent.</p>
     </div>`;
   const q=id=>app.querySelector("#"+id); const inp=q("hwq");
   q("back").onclick=home;
@@ -2730,7 +2735,7 @@ function checkWhy(){ // the justification question: logged on the entry it belon
   if(!whyState || whyState.done || !cur.why) return;
   if(whyState.sel<0){ const f=app.querySelector("#wopts .opt"); if(f) f.focus(); return; }
   whyState.done=true; whyState.ok = whyState.sel===cur.why.answer;
-  if(okEntry){ okEntry.why=whyState.ok?1:0; okEntry.whyPick=String(cur.why.options[whyState.sel]||""); }
+  if(okEntry){ okEntry.why=whyState.ok?1:0; okEntry.whyPick=String(cur.why.options[whyState.sel]||""); okEntry.whyRight=String(cur.why.display||""); okEntry.whyQ=plain(cur.why.q||""); }
   // The calculation keeps its credit either way. The reason is tracked as its own weakness, "skill:why": a wrong pick opens it; a right pick on
   // an independent attempt is evidence for it (two clean ones, then the usual reviews). It never touches levels.
   const sk=cur.skill, ctx=ctxOf(cur);
@@ -2855,9 +2860,9 @@ function validateBackup(text){ // returns {ok:true, db, summary} or {ok:false, e
 // The parent summary: three tiers built from the weakness profile and the log, each line with a real example from her work.
 function tiersHTML(log){
   const str=v=>v==null?"":String(v); const q=e=>esc(str(e.q))||"(question not recorded)";
-  const exMiss=e=>`<span class="ex">${fmtDate(e.t)}: ${q(e)} · answered <span class="bad">${esc(str(e.yours))||"—"}</span>, correct <span class="good">${esc(str(e.ans))||"—"}</span>${e.wrong?` · ${esc(str(e.wrong))}`:""}</span>`;
+  const exMiss=e=> e.whyMiss && e.ok ? `<span class="ex">${fmtDate(e.t)}: ${q(e)} → ${esc(str(e.ans))} (right). Reason picked: <span class="bad">${esc(str(e.whyPick))||"—"}</span>; the reason: <span class="good">${esc(str(e.whyRight))||"—"}</span></span>` : `<span class="ex">${fmtDate(e.t)}: ${q(e)} · answered <span class="bad">${esc(str(e.yours))||"—"}</span>, correct <span class="good">${esc(str(e.ans))||"—"}</span>${e.wrong?` · ${esc(str(e.wrong))}`:""}</span>`;
   const exOk=e=>`<span class="ex">${fmtDate(e.t)}: ${q(e)} → ${esc(str(e.ans))}${e.support!==undefined?` (supports ${e.support} of 3)`:""}</span>`;
-  const hits=(sk,comp,ctx)=>{ const ck=ctxKey(ctx||{}); return log.filter(e=>e.sk===sk && !e.ok && (comp==="*" || (e.comps&&e.comps[comp]) || TAG_TO_COMP[e.tag]===comp || e.tag===comp) && (!ck || (e.ctx && ctxMatches(ck, e.ctx)))); }; // an example must be the same kind of problem as the weakness
+  const hits=(sk,comp,ctx)=>{ const ck=ctxKey(ctx||{}); if(comp==="why") return log.filter(e=>e.sk===sk && e.whyMiss && (!ck || (e.ctx && ctxMatches(ck, e.ctx)))); return log.filter(e=>e.sk===sk && !e.ok && (comp==="*" || (e.comps&&e.comps[comp]) || TAG_TO_COMP[e.tag]===comp || e.tag===comp) && (!ck || (e.ctx && ctxMatches(ck, e.ctx)))); }; // an example must be the same kind of problem as the weakness
   const wsum=weakSummary(); const help=[], next=[], ready=[];
   for(const w of wsum.weak.sort((a,b)=>(b.misses-b.wins)-(a.misses-a.wins))){ const h=hits(w.sk,w.comp,w.ctx); const last=h[h.length-1];
     const kind=ctxLabel(w.sk,w.ctx); help.push(`<li><b>${esc(SKILLS[w.sk].name)}</b>: ${esc(w.name)}, level ${w.lvl}. Missed ${w.misses} time${w.misses===1?"":"s"}${w.wins?`, ${w.wins} of 2 clean wins so far`:""}${w.migrated?" · from before v9":""}. Clears with two independent wins at level ${w.lvl} or higher${kind?` on ${esc(kind)}`:""}.${last?exMiss(last):""}</li>`); }
@@ -2897,7 +2902,7 @@ function grownups(){
     const missTags=a.filter(e=>!e.ok).slice(-20).map(e=>typeof e.tag==="string"?e.tag:"").filter(Boolean);
     const cnt={}; for(const t of missTags) cnt[t]=(cnt[t]||0)+1; const topTag=Object.keys(cnt).sort((x,y)=>cnt[y]-cnt[x])[0];
     return `<tr><td><b>${SKILLS[k].name}</b></td><td>${S.levels[k]} of ${MAX_LEVEL}</td><td>${ind.length?`${indRight} of ${ind.length}`:"—"}</td><td>${supported||"—"}</td><td>${guided||"—"}</td><td>${shown||"—"}</td><td>${topTag?`${esc(topTag)} <span class="muted">(${cnt[topTag]})</span>`:"—"}</td></tr>`; }).join("");
-  const misses=log.filter(e=>!e.ok).slice(-40).reverse();
+  const misses=log.filter(e=>!e.ok || e.whyMiss).slice(-40).reverse(); // a right number with a wrong reason is a miss worth seeing too
   const weekAgo=Date.now()-7*864e5; const week=log.filter(e=>Number.isFinite(e.t)&&e.t>=weekAgo&&!e.guided);
   const days=new Set(week.map(e=>new Date(e.t).toDateString())).size;
   const skillName=k=>SKILLS[k]?SKILLS[k].name:esc(str(k)||"?");
@@ -2939,18 +2944,18 @@ function grownups(){
   const notYet = typeof NOT_YET_COVERED==="string" && NOT_YET_COVERED.trim() ? NOT_YET_COVERED : `Covered: 5.NBT.2, 5.NBT.3a, 5.NBT.3b, 5.NBT.4, and the add/subtract part of 5.NBT.7. Not yet covered from the grade-five "major" clusters: 5.NBT.1 as a stated relationship (10× / 1/10 between places), 5.NBT.5–6 (multi-digit multiplication and division), multiplying and dividing decimals (rest of 5.NBT.7), all of fractions (5.NF.1–7), and volume (5.MD.3–5). Also not covered: 5.OA, 5.MD.1–2, 5.G. Matching this to the SWUN unit and lesson sequence needs the classroom unit materials; the framework itself does not mention SWUN.`;
   app.innerHTML=`
     <div class="topbar"><button class="btn quiet" id="back">Home</button><h1 style="margin:0">${esc(S.name)}'s progress</h1><span class="muted build">Build ${esc(BUILD)}</span></div>${warnHTML()}
-    <p class="muted" style="margin:6px 0 0">Last 7 days: ${week.length} problems on ${days} day${days===1?"":"s"}, ${week.length?Math.round(100*week.filter(e=>e.ok).length/week.length)+"% right":"no data yet"}. All time: ${S.correct} of ${S.attempted}. Guided completions: ${S.guided}. Finished with the answer shown: ${S.shown||0}. Guided completions since the answer was last shown: ${S.persist}.${(()=>{ const w=log.filter(e=>e.why!==undefined); return w.length?` "Say why" questions: ${w.filter(e=>e.why).length} of ${w.length} right.`:""; })()}</p>
+    <p class="muted" style="margin:6px 0 0">Last 7 days: ${week.length} problems on ${days} day${days===1?"":"s"}, ${week.length?Math.round(100*week.filter(e=>e.ok).length/week.length)+"% right":"no data yet"}. All time: ${S.correct} of ${S.attempted}. ${(()=>{ const c={}; for(const e of log){ const k=classifyEntry(e); c[k]=(c[k]||0)+1; } return `Independent: ${c.independent||0} right of ${(c.independent||0)+(c["indep-miss"]||0)}. Supported (tools on): ${c.supported||0}. Guided: ${c.guided||0}. Copied (answer shown): ${c.copied||0}.`; })()} Guided completions since the answer was last shown: ${S.persist}.${(()=>{ const w=log.filter(e=>e.why!==undefined); return w.length?` "Say why" questions: ${w.filter(e=>e.why).length} of ${w.length} right.`:""; })()}</p>
     ${tiersHTML(log)}
     ${classHTML}
     <div class="card">
       <h2 style="margin-top:0">By skill</h2>
       <div style="overflow-x:auto"><table class="report"><tr><th>Skill</th><th>Level</th><th>Independent<br><span style="text-transform:none;letter-spacing:0">right / tried, last 20</span></th><th>Supported<br><span style="text-transform:none;letter-spacing:0">right, tools on</span></th><th>Guided<br><span style="text-transform:none;letter-spacing:0">finished with help</span></th><th>Copied<br><span style="text-transform:none;letter-spacing:0">answer shown, typed in</span></th><th>Common mistake</th></tr>${rows}</table></div>
-      <p class="muted" style="font-size:13px;margin:10px 0 0">Only problems done fresh with no hints move levels: up after 3 right out of the last 4, down after 2 wrong out of the last 3. Hints, follow-ups, walkthroughs, and homework practice never move levels, up or down. Level ${MAX_LEVEL} mixes every trap at once. A guided completion is a problem finished with hints, inside a walkthrough, or on the follow-up. After a right answer, some skills ask one "say why" question in SWUN's explain-and-prove wording; it is recorded but never moves a level. "Finished with the answer shown" means the answer was displayed after a third miss and typed in to move on; it is recorded, but it is not a right answer or a guided completion.</p>
+      <p class="muted" style="font-size:13px;margin:10px 0 0">Only problems done fresh with no hints move levels: up after 3 right out of the last 4, down after 2 wrong out of the last 3. Hints, follow-ups, walkthroughs, and homework practice never move levels, up or down. Level ${MAX_LEVEL} mixes every trap at once. A guided completion is a problem finished with hints, inside a walkthrough, or on the follow-up. After a right answer, some skills ask one "say why" question in SWUN-style explain-and-prove wording; it is recorded but never moves a level. "Finished with the answer shown" means the answer was displayed after a third miss and typed in to move on; it is recorded, but it is not a right answer or a guided completion.</p>
       ${S.logTrimmed>0?`<p class="muted" style="font-size:13px;margin:6px 0 0">History shows the most recent ${LOG_CAP} attempts; older entries were trimmed.</p>`:""}
     </div>
     <div class="card">
       <h2 style="margin-top:0">Recent misses</h2>
-      ${misses.length?misses.map(e=>`<div class="miss"><div class="meta">${missMeta(e)}</div><div class="q">${esc(str(e.q))||"<span class=\"muted\">(question not recorded)</span>"}</div><div class="a">Answered <span class="bad">${esc(str(e.yours))||"—"}</span> · correct: <span class="good">${esc(str(e.ans))||"—"}</span></div></div>`).join(""):`<p class="muted">No misses logged yet.</p>`}
+      ${misses.length?misses.map(e=>`<div class="miss"><div class="meta">${missMeta(e)}${e.whyMiss?" · <span class=\"tag\">reason</span>":""}</div><div class="q">${esc(str(e.q))||"<span class=\"muted\">(question not recorded)</span>"}</div>${e.whyMiss?`<div class="a">Answer <span class="good">${esc(str(e.ans))}</span> was right. Reason picked: <span class="bad">${esc(str(e.whyPick))||"—"}</span><br>The reason: <span class="good">${esc(str(e.whyRight))||"—"}</span></div>`:`<div class="a">Answered <span class="bad">${esc(str(e.yours))||"—"}</span> · correct: <span class="good">${esc(str(e.ans))||"—"}</span></div>`}</div>`).join(""):`<p class="muted">No misses logged yet.</p>`}
     </div>
     <div class="card">
       <h2 style="margin-top:0">Move to a new iPad</h2>
