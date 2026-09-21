@@ -124,6 +124,8 @@ pre.stack .carry{font-size:.6em;color:var(--hi-ink);vertical-align:top}
 pre.stack .cr{color:#B45309;font-weight:600}
 .build{font-size:12px;margin-left:auto;align-self:center;white-space:nowrap}
 .substep.why{border-style:solid;border-color:var(--ink);background:#fff}
+.substep.pre{border:2px solid #E9D8B5;background:#FFFBEF;border-radius:12px;padding:10px 12px;margin:8px 0 12px}
+.substep.pre .cq{margin-bottom:6px}
 .scratch{margin-top:16px}
 .scratch-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;font-size:14px}
 .scratch canvas{display:block;width:100%;height:300px;border:2px solid var(--line);border-radius:12px;background:#FFFEF8;touch-action:none;cursor:crosshair}
@@ -667,7 +669,7 @@ function genRoundNumber(level, focus){
   const rs=roundingSteps(num,p,null);
   p0.answer=numValue(rs.ans); p0.display=fmt(rs.ans); p0.minCols=rs.minCols; p0.meta={V:toThousandths(num), p, R:rs.R, C:rs.C};
   p0.steps=roundingSteps(num,p,p0).steps;
-  p0.hints=[{t:`Underline the rounding place. Circle the digit to its right. 5 or greater rounds up.`}, {...p0.steps[0], check:undefined}, {...p0.steps[1], check:undefined}];
+  p0.hints=[{t:`Underline the rounding place. Circle the digit to its right. 5 or greater rounds up.`}, {...p0.steps[0], check:undefined}, {...p0.steps[1], check:undefined}, {t:`The circled digit is <b>${digitAt(toThousandths(num),p-1)}</b>. ${digitAt(toThousandths(num),p-1)>=5?"That is 5 or more, so the underlined digit goes <b>up one</b>.":"That is 4 or less, so the underlined digit <b>stays the same</b>."} Then every digit to the right of it becomes 0 (or is dropped after the decimal point).`}];
   return p0;
 }
 function genRoundWhich(level, focus){
@@ -718,7 +720,9 @@ function genComparePair(level, focus){
   do{
     if(level===1 && f!=="length"){ const k=ri(1,2); const w=ri(0,9); a={w, d:digitsNoTrail(k)}; b={w: Math.random()<0.6? w : ri(0,9), d:digitsNoTrail(k)}; }
     else if(level===2 || f==="length"){ const w=ri(0,20); const long=ri(2,3); a={w, d:String(ri(1,9))}; b={w, d:digitsNoTrail(long)}; if(b.d[0]===a.d[0]) b.d=String(a.d[0]==="9"?1:+a.d[0]+1)+b.d.slice(1); if(f==="length" && +b.d[0] > +a.d[0]) { a.d=String(Math.min(9,+b.d[0]+1)); } if(Math.random()<0.5) [a,b]=[b,a]; }
-    else { if(Math.random()<0.35 || f==="equal"){ const k=ri(1,2); a={w:ri(0,99), d:digitsNoTrail(k)}; b={w:a.w, d:a.d+"0".repeat(ri(1,3-k))}; if(Math.random()<0.5) [a,b]=[b,a]; }
+    else if(f==="equal"){ // the "=" trap: same digits, different places (2.4 vs 2.04), so "=" is on offer and wrong
+      const k=ri(1,2); const w=ri(0,99); const d=digitsNoTrail(k); a={w, d}; b={w, d:"0"+d}; if(b.d.length>3) b.d=b.d.slice(0,3); if(cmpV(a,b)===0) b={w, d:d+"5"}; if(Math.random()<0.5) [a,b]=[b,a]; }
+    else { if(Math.random()<0.35){ const k=ri(1,2); a={w:ri(0,99), d:digitsNoTrail(k)}; b={w:a.w, d:a.d+"0".repeat(ri(1,3-k))}; if(Math.random()<0.5) [a,b]=[b,a]; }
       else { const w=ri(0,99); const ks=shuffle([1,2,3]); a={w, d:digitsNoTrail(ks[0])}; b={w, d:digitsNoTrail(ks[1])}; } }
     tries++;
   } while(tries<20 && level<3 && f!=="equal" && cmpV(a,b)===0);
@@ -746,7 +750,6 @@ function genComparePair(level, focus){
   p.hints=[
     {t:`Line up the decimal points. A longer decimal is not automatically greater.`},
     {t:`Add zeros on the end so both numbers have <b>${k}</b> decimal digits. Then compare place by place, starting from the left.`},
-    {...steps[0], check:undefined},
     diffPlace ? {t:`Start at the left. The first place where the digits are different is the <b>${diffPlace.name}</b>: ${diffPlace.da} on the left, ${diffPlace.db} on the right. The bigger digit there decides.`} : {t:`After the zeros are added, every digit matches. Two decimals that match in every place are equal.`},
     {t: diffPlace ? `${diffPlace.da} is ${+diffPlace.da>+diffPlace.db?"more":"less"} than ${diffPlace.db}, so the left number is ${+diffPlace.da>+diffPlace.db?"greater":"less"}: the symbol is <b>${symH}</b>.` : `They are equal: the symbol is <b>=</b>.`}
   ];
@@ -1362,12 +1365,12 @@ function genPrimes(level, focus){
   }
   steps.push({t:`Rewrite the circled primes as a multiplication expression, smallest first: <b>${answer}</b>. Check: they multiply back to ${n}.`, check:Object.assign(ci(`Type the prime factorization of ${n} (like 2 × 2 × 3, you can type x for ×).`, n, answer), {text:true, validate})});
   p.steps=steps;
-  p.hints=[{t:`Start with any factor pair. Circle the primes. Keep splitting the rest.`},{t:`${n} is even, so 2 is a factor: ${n} = 2 × ${n/2}.`.replace(/is even, so 2 is a factor: \d+ = 2 × \d+/, n%2===0?`is even, so 2 is a factor: ${n} = 2 × ${n/2}`:`is odd. Try 3, 5, or 7: ${n} = ${fs[0]} × ${n/fs[0]}`)},{t:`Prime factors of ${n}: there are ${fs.length} of them, and the smallest is ${fs[0]}.`}];
+  p.hints=[{t:`Start with any factor pair. Circle the primes. Keep splitting the rest.`},{t: n%2===0 ? `${n} is even, so 2 is a factor: ${n} = 2 × ${n/2}.` : `${n} is odd. Try 3, 5, or 7: ${n} = ${fs[0]} × ${n/fs[0]}.`},{t:`Prime factors of ${n}: there are ${fs.length} of them, and the smallest is ${fs[0]}.`}];
   return p;
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.7.6 · September 20, 2026";
+const BUILD="v9.9.1 · September 21, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -1450,7 +1453,8 @@ function genMultiply(level, focus){
   // A follow-up aimed at a mistake must contain that mistake's trap: a regroup for "carry", a tens row for the shift and missing-row tags.
   if(!fixed && f==="carry"){ let g=0; while(!mulNeedsRegroup(a,b) && g++<60) draw(); }
   if(!fixed && (f==="shift-partial"||f==="missing-row"||f==="add-partials") && b<10){ let g=0; while(b<10 && g++<60) draw(); if(b<10) b=ri(12,29); }
-  if((f==="shift-partial"||f==="missing-row"||f==="carry"||f==="add-partials"||f==="fact") && variant!=="algorithm" && b>=10) variant="algorithm";
+  if((f==="shift-partial"||f==="missing-row"||f==="carry"||f==="add-partials"||f==="fact") && variant!=="algorithm" && b>=10 && !(focus&&focus.variant)) variant="algorithm"; // a follow-up keeps the representation it was asked for
+  if(f==="why" && !fixed){ let g=0; while(g++<60 && b<10) draw(); if(b<10) b=ri(12,29); variant="algorithm"; } // the multiplication "why" question exists only for the two-row algorithm
   if(f==="fact" && !fixed){ let g=0; while(g++<60 && !String(a).split("").some(x=>+x>=6) && !String(b).split("").some(x=>+x>=6)) draw(); } // aim at the harder facts (6s to 9s)
   const prod=a*b;
   const p={skill:"multiply", level, prompt:`<span class="big-num">${a.toLocaleString("en-US")} × ${b} = ?</span>`, type:"input", answer:prod, display:prod.toLocaleString("en-US"), show:null, meta:{a,b,variant,regroup:mulNeedsRegroup(a,b)}};
@@ -1458,7 +1462,7 @@ function genMultiply(level, focus){
   // Only the standard algorithm demonstrates the algorithm's steps. An area-model or distributive answer proves the facts (and, for
   // distributive, adding the partial products), never the tens-row zero, the regrouping, or the row setup.
   p.traps = variant==="algorithm" ? ["fact","rows"].concat(mulNeedsRegroup(a,b)?["regroup"]:[]).concat(b>=10?["tens-zero","add-partials"]:[])
-          : variant==="distributive" ? ["fact","add-partials"] : ["fact"];
+          : ["fact","add-partials"]; // area and distributive both end by adding the sections
   if(variant==="algorithm") p.ws=true; // the aligned-digit workspace replaces the single answer box
   const steps=[];
   if(b<10 && (variant==="area"||variant==="distributive")){ // U2 L6/L7 with a one-digit multiplier: decompose the big factor by place value
@@ -1508,7 +1512,7 @@ function genMultiply(level, focus){
   const colPlan=(digit, shift, rowKey, rowName)=>{ const digs=String(a).split("").map(Number).reverse(); let carry=0; const out=[];
     digs.forEach((g,j)=>{ const nm=names[j+shift]||"next"; const prod=g*digit, sum=prod+carry, last=j===digs.length-1, cin=carry; const hs=[];
       hs.push(`${rowName}<b>${ucfirst(nm)} column</b>: the fact to do is <b>${digit} × ${g}</b>${cin?`, then add the <b>${cin}</b> you carried`:""}. Try it on the scratch paper first.`);
-      hs.push(`${digit} × ${g} = <b>${prod}</b>${cin?`, plus the carried ${cin} makes <b>${sum}</b>`:""}. ${last?"This is the last digit, so the whole number gets written.":sum>=10?"That is 10 or more, so only one digit fits here. Which digit do you write, and what do you carry? (SWUN: regroup.)":"That is less than 10, so it fits in one box. Nothing to carry."}`);
+      hs.push(`${ucfirst(nm)}: ${digit} × ${g} = <b>${prod}</b>${cin?`, plus the carried ${cin} makes <b>${sum}</b>`:""}. ${last?"This is the last digit, so the whole number gets written.":sum>=10?"That is 10 or more, so only one digit fits here. Which digit do you write, and what do you carry? (SWUN: regroup.)":"That is less than 10, so it fits in one box. Nothing to carry."}`);
       if(!last && sum>=10) hs.push(`Write the <b>${sum%10}</b> in the ${nm} box and carry the <b>${Math.floor(sum/10)}</b>: a small ${Math.floor(sum/10)} above the next digit of ${a}. Add it in on the next column.`);
       else if(last) hs.push(`Write <b>${sum}</b> here, starting in the ${nm} box and going left.`);
       out.push({key:`${rowKey}-${j+shift}`, hints:hs}); carry = last ? 0 : Math.floor(sum/10); });
@@ -1517,12 +1521,20 @@ function genMultiply(level, focus){
     for(let jj=0;jj<n;jj++){ const cin=carry, sum=dx[jj]+dy[jj]+cin, nm=names[jj]||"next", last=jj===n-1; const hs=[`<b>${ucfirst(nm)} column</b> of the total: add ${dx[jj]} + ${dy[jj]}${cin?` + the ${cin} you carried`:""}.`];
       hs.push(last?`${[dx[jj],dy[jj]].concat(cin?[cin]:[]).join(" + ")} = <b>${sum}</b>. Last column, so write the whole ${sum}.`:sum>=10?`${[dx[jj],dy[jj]].concat(cin?[cin]:[]).join(" + ")} = <b>${sum}</b>. Write the <b>${sum%10}</b> and carry 1 to the ${names[jj+1]} column.`:`${[dx[jj],dy[jj]].concat(cin?[cin]:[]).join(" + ")} = <b>${sum}</b>. Write it; nothing to carry.`);
       out.push({key:`t-${jj}`, hints:hs}); carry = last?0:(sum>=10?1:0); } return out; };
-  if(b<10){ p.hints=[{t:`Go one digit at a time, starting on the <b>right</b> (the ones place). Multiply ${b} by that digit. If the answer is 10 or more, write only its last digit and carry the other digit to the next column. (SWUN calls carrying <b>regrouping</b>.)`}];
+  if(variant==="area"||variant==="distributive"){ // model variants get their own ladder: partition, area of each piece, then combine. No column carrying here.
+    const partsA=String(a).split("").map((ch,i,arr)=>+ch*Math.pow(10,arr.length-1-i)).filter(x=>x>0); const partsB = b<10 ? [b] : [Math.floor(b/10)*10, b%10].filter(x=>x>0);
+    const pieces=[]; partsA.forEach(x=>partsB.forEach(y=>pieces.push([x,y])));
+    const modelName = variant==="area" ? "area model" : "distributive property";
+    p.hints=[{t: variant==="area" ? `Draw a rectangle. Split one side into the place-value parts of ${a} (${partsA.join(" + ")})${b<10?"":` and the other side into the parts of ${b} (${partsB.join(" + ")})`}. Every section is a small multiplication; the whole area is the answer. (SWUN calls this the <b>${modelName}</b>.)`
+                                     : `Break the numbers apart by place value: ${a} = ${partsA.join(" + ")}${b<10?"":`, ${b} = ${partsB.join(" + ")}`}. Multiply every part of one by every part of the other, then add. (SWUN calls this the <b>${modelName}</b>.)`}];
+    pieces.forEach(([x,y],k)=>{ p.hints.push({t:`Section ${k+1}: <b>${x} × ${y}</b>. Multiply the front digits, then put back the zeros from both numbers.`}); p.hints.push({t:`${x} × ${y} = <b>${(x*y).toLocaleString("en-US")}</b>. Write it in that section.`}); });
+    if(pieces.length>1) p.hints.push({t:`Add all the sections together: ${pieces.map(([x,y])=>(x*y).toLocaleString("en-US")).join(" + ")}. That total is the product.`}); else p.hints.pop(); // one section: its product is the answer, so the last hint stops before stating it
+    p.hintPlan=null; p.hintTotal=p.hints.length; }
+  else if(b<10){ p.hints=[{t:`Go one digit at a time, starting on the <b>right</b> (the ones place). Multiply ${b} by that digit. If the answer is 10 or more, write only its last digit and carry the other digit to the next column. (SWUN calls carrying <b>regrouping</b>.)`}];
     p.hintPlan=colPlan(b,0,"t",""); }
   else { const ones=b%10, tens=Math.floor(b/10); p.hints=[{t:`This kind has <b>two rows</b>, then you add them. Row 1: ${a} × the ones digit, ${ones}. Row 2: a <b>0</b> first (it is really ${a} × ${tens*10}), then ${a} × ${tens}. Add the rows. (SWUN calls the rows <b>partial products</b>.)`}];
     p.hintPlan=colPlan(ones,0,"r0","Row 1, ").concat([{key:"r1-0", hints:[`Row 2 starts with a <b>0</b> in the ones box, because this row is ${a} × ${tens*10}.`]}]).concat(colPlan(tens,1,"r1","Row 2, ")).concat([{key:"t-plan", hints:[`Now add row 1 and row 2 like any two numbers: line up the ones, add each column from the right, and carry when a column makes 10 or more.`]}]).concat(addPlan(a*ones, a*tens*10)); }
-  p.hints = p.hints.concat(p.hintPlan.flatMap(c=>c.hints.map(t=>({t, key:c.key})))); // the full ladder in order, for anything that reads hints as a list; the workspace serves them by cell
-  p.hintTotal = p.hints.length;
+  if(p.hintPlan){ p.hints = p.hints.concat(p.hintPlan.flatMap(c=>c.hints.map(t=>({t, key:c.key})))); p.hintTotal = p.hints.length; } // the full ladder in order, for anything that reads hints as a list; the workspace serves them by cell
   return p;
 }
 // Wrong values a learner gets for a × d when regrouped digits are lost: every regroup dropped, one regroup dropped, or no regrouping at all (each product written whole).
@@ -1607,7 +1619,7 @@ function genPlaceValue(level, focus){
       {t:`Each place to the <b>left</b> is worth <b>10 times</b> as much. ${gap===1?"One place left: 10 times.":gap+" places left: "+factor.toLocaleString("en-US")+" times."} That puts the ${digit} in the <b>${big}</b> place.`, chart:target, hl:{[hi>=0?"w"+hi:"d"+(-hi)]:"ul"}},
       {t:`So the number is <b>${fmt(target)}</b>.`, check:finalCheck(p)}
     ];
-    p.hints=[{t:`Moving a digit one place left makes it worth 10 times as much.`},{t:`${factor.toLocaleString("en-US")} times means ${gap} place${gap>1?"s":""} to the left.`},{t:`From the ${small} place, ${gap} left is the ${big} place.`, chart:target}];
+    p.hints=[{t:`Moving a digit one place to the left multiplies what it is worth by ten; one place to the right divides it by ten.`},{t:`${factor.toLocaleString("en-US")} times means ${gap} place${gap>1?"s":""} to the left.`},{t:`From the ${small} place, ${gap} left is the ${big} place.`, chart:target}];
     return p;
   }
   // times: "The digit in the big place is ___ times the value of the digit in the small place" (or 1/10 the other way)
@@ -1623,7 +1635,7 @@ function genPlaceValue(level, focus){
     {t:`Each place to the <b>left</b> is worth <b>10 times</b> as much; each place to the <b>right</b> is worth <b>1/10</b> as much. The ${from} place is to the ${askBig?"left":"right"} of the ${to} place.`, check:cm(`Going from the ${to} place to the ${from} place, the value becomes…`, ["10 times as much each place","1/10 as much each place"], askBig?0:1)},
     {t:`${gap} step${gap>1?"s":""} ${askBig?"left":"right"}: ${askBig ? Array(gap).fill("10").join(" × ")+" = "+factor.toLocaleString("en-US")+" times" : "1/"+factor.toLocaleString("en-US")+" of"}.`, check:finalCheck(p)}
   ];
-  p.hints=[{t:`Left is 10 times more. Right is 1/10 as much. Count the places between the two digits.`},{t:`The two ${digit}s are ${gap} place${gap>1?"s":""} apart.`, chart:num, hl:{[kLo]:"ul",[kHi]:"ul"}},{t:`The ${from} place is to the ${askBig?"left":"right"}, so its ${digit} is worth ${askBig?"more":"less"}.`}];
+  p.hints=[{t:`Every place to the <b>left</b> is worth ten of the place beside it; every place to the <b>right</b> is worth a tenth of it. Find both digits on the chart and count the places between them.`},{t:`The two ${digit}s are ${gap} place${gap>1?"s":""} apart.`, chart:num, hl:{[kLo]:"ul",[kHi]:"ul"}},{t:`The ${from} place is to the ${askBig?"left":"right"}, so its ${digit} is worth ${askBig?"more":"less"}.`}];
   return p;
 }
 
@@ -1858,6 +1870,407 @@ function lessonForDate(date){
   }
   const ml=LESSONS.filter(L=>L.unit===last.unit); return ml[ml.length-1].id;
 }
+// ===================== v9.8: Unit 3 representations, Unit 4 decimal × and ÷, story structures, Unit 5 fraction foundations =====================
+// Every lesson here declares its concept, its representation, what she must produce, the misconceptions it can detect, and how a fresh
+// problem is drawn. Numbers stay inside 5.NBT.7 (decimals to hundredths) and 5.NF.1/2/4a.
+
+// ---- decimal helpers: exact arithmetic in thousandths (integers), display through fmt ----
+const D=(v)=>fromThousandths(Math.round(v)); // thousandths → {w,d}
+const dV=(num)=>toThousandths(num);            // {w,d} → thousandths
+const dMul=(x,y)=>Math.round(x*y/1000);        // thousandths × thousandths → thousandths
+const decPlaces=num=>(num.d||"").length;
+const numFrom=(w,d)=>({w, d:String(d||"").replace(/0+$/,"")});
+const fmtV=v=>fmt(D(v));
+const placeWord=k=>k===0?"ones":k===1?"tenths":k===2?"hundredths":"thousandths";
+const unitCount=(n,k)=>`${n} ${n===1?placeWord(k).replace(/s$/,""):placeWord(k)}`; // "1 tenth", "28 tenths"
+
+// ---- small pictures: a number line with jumps, a partitioned rectangle ----
+function nlSVG(startV, jumps, endV){ // jumps: [{dv, label}], values in thousandths; direction from sign of dv
+  const pts=[startV]; let v=startV; for(const j of jumps){ v+=j.dv; pts.push(v); }
+  const lo=Math.min(...pts), hi=Math.max(...pts); const span=Math.max(hi-lo, 1); const W=560, H=110, x0=40, x1=W-40;
+  const X=val=>x0+(val-lo)/span*(x1-x0);
+  let svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;display:block;margin:8px auto" role="img" aria-label="number line with jumps">`;
+  svg+=`<line x1="${x0-20}" y1="78" x2="${x1+20}" y2="78" stroke="#1B2A41" stroke-width="2"/>`;
+  pts.forEach((pv,i)=>{ const x=X(pv); svg+=`<line x1="${x}" y1="70" x2="${x}" y2="86" stroke="#1B2A41" stroke-width="2"/><text x="${x}" y="102" font-size="13" text-anchor="middle" fill="#1B2A41" font-weight="700">${fmtV(pv)}</text>`; });
+  let cur=startV; jumps.forEach((j,i)=>{ const a=X(cur), b=X(cur+j.dv); const mid=(a+b)/2; const h=28+ (i%2)*10; const dir=j.dv>=0?1:-1;
+    svg+=`<path d="M ${a} 74 Q ${mid} ${74-h*1.6} ${b} 74" fill="none" stroke="#B45309" stroke-width="2.5"/><polygon points="${b},74 ${b-6*dir},66 ${b-9*dir},76" fill="#B45309"/><text x="${mid}" y="${74-h}" font-size="13" text-anchor="middle" fill="#B45309" font-weight="700">${j.label}</text>`; cur+=j.dv; });
+  svg+=`</svg>`; return `<div class="chart">${svg}</div>`;
+}
+function areaSVG(partsA, partsB, cellText){ // partsA across the top, partsB down the side; sizes are the actual magnitudes, so the picture is a true area model. Narrow parts get a callout instead of a squeezed label.
+  const W=560, left=70, top=34; const wA=partsA.map(p=>Math.max(1e-9,p.size)); const totA=wA.reduce((a,b)=>a+b,0); const hB=partsB.map(p=>Math.max(1e-9,p.size)); const totB=hB.reduce((a,b)=>a+b,0);
+  const rows=Math.min(300, Math.max(90, 200*Math.min(1, totB/totA))); const H=top+rows+24; const scaleX=(W-left-20)/totA; const callouts=[]; let svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;display:block;margin:8px auto" role="img" aria-label="area model, drawn to scale">`;
+  let x=left; partsA.forEach((p,i)=>{ const w=wA[i]*scaleX; const narrow=w<86; svg+=`<text x="${x+w/2}" y="22" font-size="${narrow?12:15}" text-anchor="middle" font-weight="700" fill="#1B2A41">${p.label}</text>`; let y=top; partsB.forEach((q,j)=>{ const h=hB[j]/totB*rows; const tight = narrow || h<30; svg+=`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${(i+j)%2?"#EEF2F7":"#FFF8D6"}" stroke="#1B2A41" stroke-width="2"/>`; if(tight){ const n=callouts.push(cellText(i,j)); svg+=`<text x="${x+w/2}" y="${y+h/2+5}" font-size="12" text-anchor="middle" fill="#B45309" font-weight="700">${n}</text>`; } else svg+=`<text x="${x+w/2}" y="${y+h/2+5}" font-size="14" text-anchor="middle" fill="#1B2A41">${cellText(i,j)}</text>`; y+=h; }); x+=w; });
+  let y=top; partsB.forEach((q,j)=>{ const h=hB[j]/totB*rows; svg+=`<text x="${left-10}" y="${y+h/2+5}" font-size="${h<30?12:15}" text-anchor="end" font-weight="700" fill="#1B2A41">${q.label}</text>`; y+=h; });
+  svg+=`</svg>`;
+  // Slivers: any part thinner than 12px in the overview gets a magnified inset (same labels, not to scale, and it says so), so the tiny place-value pieces are inspectable.
+  const thinA=partsA.map((p,i)=>({i, w:wA[i]*scaleX})).filter(o=>o.w<12), thinB=partsB.map((q,j)=>({j, h:hB[j]/totB*rows})).filter(o=>o.h<12);
+  let insets="";
+  if(thinA.length||thinB.length){ const cellW=150, cellH=44; const cols=thinA.length?thinA.map(o=>o.i):partsA.map((_,i)=>i); const rowsI=thinB.length?thinB.map(o=>o.j):partsB.map((_,j)=>j);
+    const IW=70+cols.length*cellW+10, IH=30+rowsI.length*cellH+10; let ins=`<svg viewBox="0 0 ${IW} ${IH}" width="100%" style="max-width:${IW}px;display:block;margin:6px auto" role="img" aria-label="zoomed-in view of the thin parts, not to scale">`;
+    cols.forEach((i,ci)=>{ ins+=`<text x="${70+ci*cellW+cellW/2}" y="18" font-size="13" text-anchor="middle" font-weight="700" fill="#1B2A41">${partsA[i].label}</text>`; });
+    rowsI.forEach((j,rj)=>{ ins+=`<text x="60" y="${30+rj*cellH+cellH/2+4}" font-size="13" text-anchor="end" font-weight="700" fill="#1B2A41">${partsB[j].label}</text>`; cols.forEach((i,ci)=>{ ins+=`<rect x="${70+ci*cellW}" y="${30+rj*cellH}" width="${cellW}" height="${cellH}" fill="#FFF8D6" stroke="#B45309" stroke-width="2" stroke-dasharray="4 3"/><text x="${70+ci*cellW+cellW/2}" y="${30+rj*cellH+cellH/2+4}" font-size="13" text-anchor="middle" fill="#1B2A41">${cellText(i,j)}</text>`; }); });
+    ins+=`</svg>`; insets=`<div class="chart-label">Zoomed in (not to scale): the thin ${thinA.length?"column"+(thinA.length>1?"s":""):"row"+(thinB.length>1?"s":"")} from the picture above</div>${ins}`; }
+  return `<div class="chart">${svg}${callouts.length?`<div class="chart-label">${callouts.map((c,i)=>`<b>${i+1}</b>: ${c}`).join(" &nbsp;·&nbsp; ")}</div>`:""}${insets}</div>`;
+}
+
+// ---- Unit 4: multiply decimals (area model / distributive property; decimal × whole, decimal × decimal) ----
+function decParts(num){ // place-value parts of a decimal as thousandths: 12.35 → [10000? no: 12000, 300, 50] ; whole part kept as one chunk unless two digits (then tens + ones)
+  const out=[]; const w=num.w; if(w>=10){ out.push(Math.floor(w/10)*10*1000); if(w%10) out.push((w%10)*1000); } else if(w>0) out.push(w*1000);
+  const d=(num.d||"").padEnd(3,"0"); [100,10,1].forEach((unit,i)=>{ const dg=+d[i]; if(dg) out.push(dg*unit); }); return out;
+}
+function genDecMul(level, focus){
+  const f=focus&&focus.tag; let variant = focus&&focus.variant ? focus.variant : pick(["area","distributive"]); let kind = focus&&focus.kind ? focus.kind : (level<=3 ? "whole" : "decimal");
+  let A,B; // A decimal, B whole (kind whole) or decimal (kind decimal); stored as {w,d}
+  const draw=()=>{
+    if(kind==="whole"){
+      if(level===1){ A=numFrom(ri(1,9), String(ri(1,9))); B={w:ri(2,9),d:""}; }
+      else if(level===2){ A=numFrom(ri(1,9), String(ri(1,9))+String(ri(1,9))); B={w:ri(2,9),d:""}; }
+      else if(level===3){ A=numFrom(ri(1,9), Math.random()<0.5?String(ri(1,9)):String(ri(1,9))+String(ri(1,9))); B={w:ri(11,29),d:""}; }
+      else { A=numFrom(ri(0,9), String(ri(1,9))+String(ri(0,9))); B={w:ri(2,39),d:""}; }
+    } else {
+      if(level<=4){ A=numFrom(ri(0,9), String(ri(1,9))); B=numFrom(ri(0,9), String(ri(1,9))); } // tenths × tenths → hundredths
+      else { A=numFrom(ri(0,9), String(ri(1,9))); B=numFrom(ri(0,9), String(ri(1,9))); if(Math.random()<0.5) A=numFrom(0, String(ri(1,9))); } // often a factor below 1
+      if(dV(A)===0) A=numFrom(1,"5"); if(dV(B)===0) B=numFrom(1,"5");
+    }
+    if(f==="point" && kind==="decimal" && dV(B)>=1000) B=numFrom(0, String(ri(2,9))); // a factor under 1 makes the point-placement decision matter
+  };
+  draw();
+  if(focus && focus.fixed){ A={w:+focus.fixed.a.w, d:String(focus.fixed.a.d||"")}; B={w:+focus.fixed.b.w, d:String(focus.fixed.b.d||"")}; kind = B.d ? "decimal" : "whole"; }
+  const V=dMul(dV(A), dV(B)); const ans=D(V);
+  const pa=decParts(A), pb = kind==="whole" ? (B.w>=10 ? [Math.floor(B.w/10)*10*1000, (B.w%10)*1000].filter(x=>x>0) : [B.w*1000]) : decParts(B);
+  const sections=[]; pa.forEach(x=>pb.forEach(y=>sections.push({x,y,v:dMul(x,y)})));
+  // A factor under 1 keeps one significant digit (0.47 → 0.5, 0.1 → 0.1, 0.09 → 0.1); a factor of 1 or more rounds to a whole number. The estimate
+  // is a product of those benchmarks, so "smaller than either factor" stays true whenever both are under 1 (invariant checked in the release tests).
+  const roundOrKeep=v=> v<1000 ? (v>=100 ? Math.round(v/100)*100 : Math.max(10, Math.round(v/10)*10)) : Math.round(v/1000)*1000;
+  const sig1=(v,floor)=>{ if(v<=0) return 0; const mag=Math.pow(10, Math.floor(Math.log10(v))); return (floor?Math.floor(v/mag):Math.round(v/mag))*mag; }; // one significant digit, in thousandths
+  // Benchmarks stay in the factor's own decade: under 1 → one significant digit, capped at 0.9; 1 or more → nearest whole number. (v9.8.1 capped every factor; fixed.)
+  const bench=v=> v<1000 ? Math.min(900, roundOrKeep(v)) : roundOrKeep(v);
+  let estA=bench(dV(A)), estB = kind==="whole" ? dV(B) : bench(dV(B));
+  let est=dMul(estA,estB);
+  // If the benchmarks reproduce the exact product (tenths × tenths), coarsen one factor to a half so the estimate stays an estimate.
+  const halfOf=v=>Math.max(500, Math.round(v/500)*500); const nearEnough=(orig,c)=>c>=orig/2 && c<=orig*2; // a benchmark may not distort a factor by more than 2× (0.1 is never "about 0.5")
+  if(est===V && dV(B)<1000){ const b2=halfOf(dV(B)); if(nearEnough(dV(B),b2) && dMul(estA,b2)!==V){ estB=b2; est=dMul(estA,estB); } }
+  if(est===V && dV(A)<1000){ const a2=halfOf(dV(A)); if(nearEnough(dV(A),a2) && dMul(a2,estB)!==V){ estA=a2; est=dMul(estA,estB); } }
+  // Invariant: the estimate agrees with the magnitude claim on screen. Both factors under 1 → estimate below both; one factor under 1 → estimate below the other factor.
+  const bound = (dV(A)<1000 && dV(B)<1000) ? Math.min(dV(A),dV(B)) : dV(A)<1000 ? dV(B) : (kind==="decimal" && dV(B)<1000) ? dV(A) : Infinity;
+  if(!(est>0 && est<bound)){ for(const cand of [sig1(V,false), sig1(V,true), Math.max(1,Math.floor(V/2))]){ if(cand>0 && cand<bound && cand!==V){ est=cand; break; } } }
+  const estIsExact = est===V; // only possible when every coarsening collapses (e.g. 0.5 × 0.5); then the screen speaks in bounds, not a number
+  const model = variant==="area" ? "area model" : "distributive property";
+  const p={skill:"decmul", level, prompt:`<span class="big-num">${fmt(A)} × ${fmt(B)} = ?</span>`, type:"input", answer:V/1000, display:fmt(ans), show:null,
+    meta:{a:A, b:B, kind, variant, V, sections:sections.map(s=>s.v), est, places:decPlaces(A)+decPlaces(B)}};
+  p.traps=["point","partition","fact"]; if(sections.length>1) p.traps.push("sections");
+  const partsLabel=n=>n.map(v=>fmtV(v)).join(" + ");
+  const fig=areaSVG(pa.map(v=>({label:fmtV(v), size:v})), pb.map(v=>({label:fmtV(v), size:v})), (i,j)=>`${fmtV(pa[i])} × ${fmtV(pb[j])}`); // drawn to scale
+  const steps=[];
+  const smallA = dV(A)<1000, smallB = kind==="decimal" && dV(B)<1000;
+  const estText = estIsExact ? `${smallA&&smallB?`Both factors are less than 1, so the answer is <b>smaller than either of them</b>, less than ${fmtV(Math.min(dV(A),dV(B)))}.`:`One factor is less than 1, so the answer is <b>less than ${fmt(bound===dV(A)?A:B)}</b>.`}` : smallA && smallB ? `Both factors are less than 1, so the answer is <b>smaller than either of them</b>: ${fmt(A)} is about ${fmtV(estA)} and ${fmt(B)} is about ${fmtV(estB)}, so about ${fmtV(est)}.` : smallB ? `${fmt(B)} is less than 1, so the answer is <b>less than ${fmt(A)}</b> (multiplying by a number under 1 makes it smaller). ${fmt(B)} is about ${fmtV(estB)}, so the answer is about ${fmtV(est)}.` : smallA ? `${fmt(A)} is less than 1, so the answer is <b>less than ${fmt(B)}</b>. ${fmt(A)} is about ${fmtV(estA)}, so about ${fmtV(est)}.` : `${fmt(A)} is about ${fmtV(estA)}${kind==="decimal"?` and ${fmt(B)} is about ${fmtV(estB)}`:""}, so the answer should be near ${fmtV(estA)} × ${fmtV(estB)} = <b>${fmtV(est)}</b>.`;
+  // When the benchmark product happens to equal the exact answer, the check asks about direction instead of size, so the estimate never hands over the answer.
+  const bigger = dV(A)>=dV(B) ? A : B;
+  steps.push({t:`<b>Estimate first.</b> ${estText} Keep that in mind for the decimal point at the end.`,
+    check: estIsExact ? wc(cm(`Will the answer be more or less than ${fmt(bigger)}?`, ["More","Less"], (smallA||smallB)?1:0),"point") : wc(cm(`About how big should ${fmt(A)} × ${fmt(B)} be?`, shuffle([...new Set([fmtV(est), fmtV(est*10), fmtV(Math.max(1,Math.round(est/10)))])]), null),"point")});
+  if(!estIsExact){ steps[0].check.answer=steps[0].check.options.indexOf(fmtV(est)); steps[0].check.display=steps[0].check.options[steps[0].check.answer]; }
+  steps.push({t: variant==="area" ? `<b>Area model.</b> Break each number into its place-value parts: ${fmt(A)} = ${partsLabel(pa)}${pb.length>1?` and ${fmt(B)} = ${partsLabel(pb)}`:""}. Each section of the rectangle is one small product.${fig}`
+                                    : `<b>Distributive property.</b> Break the numbers into place-value parts: ${fmt(A)} = ${partsLabel(pa)}${pb.length>1?`, ${fmt(B)} = ${partsLabel(pb)}`:""}. Then ${fmt(A)} × ${fmt(B)} = ${sections.map(s=>`(${fmtV(s.x)} × ${fmtV(s.y)})`).join(" + ")}.`,
+    check:wc(ci(`How many small products (sections) are there?`, sections.length),"partition")});
+  sections.forEach(s=>{ const xd=decPlaces(D(s.x)), yd=decPlaces(D(s.y)); const unitNote = (xd||yd) ? ` Think in ${placeWord(xd+yd)}: ${fmtV(s.x)} × ${fmtV(s.y)} is ${(s.x/Math.pow(10,3-xd))*(s.y/Math.pow(10,3-yd))} ${placeWord(xd+yd)}, which is ${fmtV(s.v)}.` : "";
+    steps.push({t:`Section <b>${fmtV(s.x)} × ${fmtV(s.y)}</b>.${unitNote}`, check:wc(ci(`${fmtV(s.x)} × ${fmtV(s.y)} = ?`, s.v/1000, fmtV(s.v)),"fact")}); });
+  if(sections.length>1) steps.push({t:`Add the sections: ${sections.map(s=>fmtV(s.v)).join(" + ")}. Line up the decimal points when you add.`, check:wc(ci(`${sections.map(s=>fmtV(s.v)).join(" + ")} = ?`, V/1000, fmt(ans)),"sections")});
+  steps.push({t:`<b>Check the decimal point</b> against the estimate: ${fmt(ans)} ${smallA||smallB?`is smaller than ${smallA&&smallB?"both factors":smallB?fmt(A):fmt(B)}, as it should be`:`is near ${fmtV(est)}`}, so it makes sense.${p.meta.places?` (${fmt(A)} has ${plural(decPlaces(A),"decimal place")}${kind==="decimal"?` and ${fmt(B)} has ${plural(decPlaces(B),"decimal place")}`:""}; the product has ${plural(p.meta.places,"decimal place")} before any end zeros are dropped.)`:""}`, check:wc(finalCheck(p),"point")});
+  p.steps=steps;
+  p.hints=[
+    {t:`Estimate first. ${estText} That tells you where the decimal point belongs at the end.`},
+    {t:`Break the numbers into place-value parts and multiply every part: ${fmt(A)} is ${partsLabel(pa)}${pb.length>1?`, ${fmt(B)} is ${partsLabel(pb)}`:""}. (SWUN: the <b>${model}</b>.)`},
+    ...sections.flatMap((s,i)=>{ const xd=decPlaces(D(s.x)), yd=decPlaces(D(s.y)); const digitsProd=(s.x/Math.pow(10,3-xd))*(s.y/Math.pow(10,3-yd)); return [
+      {t:`Section ${i+1}: <b>${fmtV(s.x)} × ${fmtV(s.y)}</b>. Multiply the digits first: ${s.x/Math.pow(10,3-xd)} × ${s.y/Math.pow(10,3-yd)} = ?`},
+      {t:`${s.x/Math.pow(10,3-xd)} × ${s.y/Math.pow(10,3-yd)} = ${digitsProd}. ${xd+yd?`Those are ${placeWord(xd+yd)}, so the section is <b>${fmtV(s.v)}</b>.`:`No decimal parts here, so the section is <b>${fmtV(s.v)}</b>.`}`}]; }),
+    {t:`Add all the sections, lining up the decimal points. Then compare with your estimate${estIsExact?"":` of about ${fmtV(est)}`}: if your total is about 10 times too big, move the decimal point one place to the <b>left</b>; if it is about 10 times too small, one place to the <b>right</b>.`}
+  ];
+  return p;
+}
+function diagnoseDecMul(prob, v){
+  const m=prob.meta; let tag="other"; if(!Number.isFinite(v)) return {tag, note:""};
+  const ans=m.V/1000;
+  for(const k of [1,2,-1,-2]){ if(Math.abs(v-ans*Math.pow(10,k))<1e-9){ tag="point"; break; } }
+  if(tag==="other" && m.kind==="whole" && Math.abs(v - m.a.w*m.b.w)<1e-9 && m.a.d) tag="whole-only";
+  if(tag==="other" && m.sections.length>1){ for(let i=0;i<m.sections.length;i++){ const s=m.sections.reduce((a,b,j)=>a+(j===i?0:b),0)/1000; if(Math.abs(v-s)<1e-9){ tag="sections"; break; } } }
+  if(tag==="other"){ const digitsOnly = String(fmt(m.a)).replace(/[.,]/g,"")*String(fmt(m.b)).replace(/[.,]/g,""); if(Math.abs(v-digitsOnly)<1e-9) tag="point"; }
+  return {tag, note: tag==="point" ? "The digits are right; the decimal point landed in the wrong place. Compare with your estimate: is the answer about the right size?"
+    : tag==="whole-only" ? "Only the whole-number part was multiplied. The decimal part is a section too: multiply it and add it in."
+    : tag==="sections" ? "One section of the model was left out. Every part of one number times every part of the other, then add them all." : ""};
+}
+
+// ---- Unit 4: divide decimals (measuring up = how many groups; dealing = share equally) ----
+function genDecDiv(level, focus){
+  const f=focus&&focus.tag; let variant = focus&&focus.variant ? focus.variant : (level===1||level===3 ? "dealing" : level===2||level===4 ? "measuring" : pick(["dealing","measuring"]));
+  let N,d,q; // thousandths for N and d; q as thousandths too
+  const draw=()=>{
+    if(variant==="dealing"){ // decimal ÷ whole: N = q × d with q in tenths (levels 1–2) or hundredths (3+)
+      const dd=ri(2,9); const qq = level<=2 ? ri(2,9)*100 + (Math.random()<0.4?0:ri(1,9)*1000) : ri(1,9)*100+ri(1,9)*10 + (Math.random()<0.5?ri(0,3)*1000:0); d=dd*1000; q=qq; N=dMul(q,d); if(level>=4){ d=ri(11,19)*1000; q=ri(1,9)*100+ri(0,9)*10; N=dMul(q,d); } }
+    else { // decimal ÷ decimal: how many d's fit in N; q whole
+      const dq = level<=2 ? ri(2,9)*100 : (Math.random()<0.5 ? ri(2,9)*100 : ri(15,95)*10); const groups = level<=2 ? ri(3,9) : level<=4 ? ri(4,15) : ri(6,24); d=dq; q=groups*1000; N=dMul(d,q); if(level>=5 && Math.random()<0.5){ d=ri(1,9)*100; q=ri(11,30)*1000; N=dMul(d,q); } }
+  };
+  draw(); let g=0; while(g++<40 && (N>99999 || N%10!==0 && level<3)) draw();
+  if(focus && focus.fixed){ N=dV({w:+focus.fixed.N.w, d:String(focus.fixed.N.d||"")}); d=dV({w:+focus.fixed.d.w, d:String(focus.fixed.d.d||"")}); q=Math.round(N/d*1000); variant = focus.fixed.d.d ? "measuring" : (focus.variant||"dealing"); }
+  const Nn=D(N), dn=D(d), qn=D(q);
+  const unitPlaces=Math.max(decPlaces(Nn), decPlaces(dn)); const unit=Math.pow(10,3-unitPlaces); const Nu=N/unit, du=d/unit; // both as counts of the same unit
+  const uName=placeWord(unitPlaces);
+  const est = variant==="dealing" ? Math.round(N/d)*1000 : Math.round(N/d)*1000;
+  const p={skill:"decdiv", level, prompt:`<span class="big-num">${fmt(Nn)} ÷ ${fmt(dn)} = ?</span>`, type:"input", answer:q/1000, display:fmt(qn), show:null, meta:{N:Nn, d:dn, q:qn, variant, V:q, unitPlaces, Nu, du}};
+  p.traps=["point","unit"]; if(variant==="measuring") p.traps.push("groups");
+  const steps=[];
+  if(variant==="dealing"){
+    const shareLess = N<d; // each share is less than 1 when there is less than one whole per group
+    const estOpts=shuffle([...new Set([shareLess?"less than 1":"about "+fmtV(est), shareLess?"about "+fmtV(Math.max(1000,Math.round(N/d/1000)*1000||1000)):"about "+fmtV(est*10), shareLess?"more than "+fmt(Nn):"about "+fmtV(Math.max(100,Math.round(est/10)))])]);
+    steps.push({t:`<b>Dealing strategy</b> (sharing equally): ${fmt(Nn)} shared into ${fmt(dn)} equal groups. Estimate first: ${shareLess?`${fmt(Nn)} is less than ${fmt(dn)}, so each share is <b>less than 1</b>.`:`${fmt(Nn)} is about ${fmtV(Math.round(N/1000)*1000)}, and ${fmtV(Math.round(N/1000)*1000)} ÷ ${fmt(dn)} is about ${fmtV(est)}.`}`, check:wc(cm(`About how big is each share?`, estOpts, estOpts.indexOf(shareLess?"less than 1":"about "+fmtV(est))),"point")});
+    steps[0].check.display=steps[0].check.options[steps[0].check.answer];
+    steps.push({t:`Rename ${fmt(Nn)} as a count of ${uName}: <b>${unitCount(Nu,unitPlaces)}</b>. Now it is whole-number sharing.`, check:wc(ci(`${fmt(Nn)} is how many ${uName}?`, Nu),"unit")});
+    steps.push({t:`Deal ${unitCount(Nu,unitPlaces)} into ${dn.w} equal groups: ${Nu} ÷ ${dn.w} = <b>${unitCount(Nu/dn.w,unitPlaces)}</b> in each group.`, check:wc(ci(`${Nu} ÷ ${dn.w} = ?`, Nu/dn.w),"fact")});
+    steps.push({t:`${unitCount(Nu/dn.w,unitPlaces)} written as a decimal is <b>${fmt(qn)}</b>. Check it against the estimate${shareLess?" (less than 1)":` of about ${fmtV(est)}`}.`, check:wc(finalCheck(p),"point")});
+    p.hints=[{t:`Sharing: ${fmt(Nn)} split into ${fmt(dn)} equal groups. About how big is each share? ${shareLess?`There is less than one whole per group, so each share is less than 1.`:`Round ${fmt(Nn)} to a whole number and divide in your head.`} (SWUN: the <b>dealing strategy</b>.)`},
+      {t:`Rename the decimal as a count of ${uName}: ${fmt(Nn)} is ${unitCount(Nu,unitPlaces)}. Now deal those ${uName} out like whole numbers.`},
+      {t:`${Nu} ÷ ${dn.w} = ? Each group gets that many ${uName}. Write that count as a decimal, and check it against your estimate.`}];
+  } else {
+    const jumps=Array.from({length:q/1000},()=>({dv:d, label:`+${fmt(dn)}`}));
+    steps.push({t:`<b>Measuring up</b> (how many groups): how many times does ${fmt(dn)} fit into ${fmt(Nn)}? Estimate: ${fmt(dn)} is ${d<1000?"less than 1":"about "+fmtV(Math.round(d/1000)*1000)}, so the answer is ${d<1000?"<b>more</b> than "+fmt(Nn):"about "+fmtV(est)}.`, check:wc(cm(`Will the answer be more or less than ${fmt(Nn)}?`, ["More", "Less", "The same"], d<1000?0:1),"groups")});
+    steps.push({t:`Make both numbers counts of the same unit, ${uName}: ${fmt(Nn)} = <b>${unitCount(Nu,unitPlaces)}</b> and ${fmt(dn)} = <b>${unitCount(du,unitPlaces)}</b>.`, check:wc(ci(`${fmt(dn)} is how many ${uName}?`, du),"unit")});
+    steps.push({t:`Now it is whole numbers: how many ${du}s in ${Nu}? ${Nu} ÷ ${du} = <b>${Nu/du}</b>.${q/1000<=12?nlSVG(0, jumps, N):""}`, check:wc(ci(`${Nu} ÷ ${du} = ?`, Nu/du),"fact")});
+    steps.push({t:`So ${fmt(dn)} fits into ${fmt(Nn)} exactly <b>${fmt(qn)}</b> times. Groups are counted, so the answer is a whole number even though we divided decimals.`, check:wc(finalCheck(p),"point")});
+    p.hints=[{t:`This asks how many ${fmt(dn)}s make ${fmt(Nn)}. Count up by ${fmt(dn)} on a number line, or think: about how many? ${d<1000?`Dividing by a number less than 1 gives more groups than ${fmt(Nn)}.`:""} (SWUN: <b>measuring up</b>.)`},
+      {t:`Give both numbers the same unit, ${uName}: ${fmt(Nn)} is ${unitCount(Nu,unitPlaces)}, ${fmt(dn)} is ${unitCount(du,unitPlaces)}. Now it is a whole-number question: how many ${du}s in ${Nu}?`},
+      {t:`${Nu} ÷ ${du} = ? That count is the answer. Counting groups gives a whole number.`}];
+  }
+  p.steps=steps;
+  return p;
+}
+function diagnoseDecDiv(prob, v){
+  const m=prob.meta; let tag="other"; if(!Number.isFinite(v)) return {tag, note:""}; const ans=m.V/1000;
+  for(const k of [1,2,-1,-2]){ if(Math.abs(v-ans*Math.pow(10,k))<1e-9){ tag="point"; break; } }
+  if(tag==="other" && m.variant==="measuring" && Math.abs(v-dV(m.N)/1000*dV(m.d)/1000)<1e-9) tag="groups";
+  if(tag==="other" && Math.abs(v-(m.Nu/m.du))<1e-9 && m.variant==="dealing") tag="unit";
+  return {tag, note: tag==="point" ? "The digits are right but the decimal point is off by a place. Check: is the answer about the size your estimate said?"
+    : tag==="groups" ? "That multiplied instead of counting groups. Ask: how many of the divisor fit inside the dividend?"
+    : tag==="unit" ? "You divided the unit counts but forgot to write the result back as a decimal (those were tenths or hundredths, not ones)." : ""};
+}
+
+// ---- Unit 3 representations: number-line jumps and the place-value chart for adding and subtracting decimals ----
+function nlSteps(p){ // replaces the column steps with number-line jumps when the lesson asks for the number-line strategy
+  const {nums,op}=p.meta; if(nums.length!==2) return null; const A=dV(nums[0]), B=dV(nums[1]); const sign = op==="+" ? 1 : -1;
+  const parts=decParts(nums[1]).sort((x,y)=>y-x); // biggest jump first: whole, then tenths, then hundredths
+  const jumps=parts.map(v=>({dv:sign*v, label:`${op==="+"?"+":"−"}${fmtV(v)}`}));
+  const steps=[{t:`<b>Number-line strategy.</b> Start at <b>${fmt(nums[0])}</b>. ${op==="+"?"Jump forward":"Jump back"} by the parts of ${fmt(nums[1])}: ${parts.map(v=>fmtV(v)).join(", then ")}. Big jump first, then the smaller ones.${nlSVG(A, jumps)}`, check:ci(`How many jumps will you make?`, jumps.length)}];
+  let cur=A; jumps.forEach((j,i)=>{ const nxt=cur+j.dv; steps.push({t:`Jump ${i+1}: from ${fmtV(cur)}, ${op==="+"?"forward":"back"} <b>${fmtV(Math.abs(j.dv))}</b>.${nlSVG(A, jumps.slice(0,i+1))}`, check:wc(ci(`${fmtV(cur)} ${op} ${fmtV(Math.abs(j.dv))} = ?`, nxt/1000, fmtV(nxt)),"jump")}); cur=nxt; });
+  steps.push({t:`You landed on <b>${fmt(p.meta.result||D(cur))}</b>. The last landing point is the answer.`, check:finalCheck(p)});
+  return steps;
+}
+function chartSteps(p){ // U3 L1/L4: build both numbers on the place-value chart, then add or subtract place by place (same arithmetic as the column steps, with the chart in view)
+  const {nums,op,k}=p.meta; if(nums.length!==2) return null; const padded=nums.map(n=>padTo(n,k));
+  const first={t:`<b>Build both numbers on the place value chart.</b> Same number of decimal digits for each (add zeros on the end), so every column lines up.`, charts:padded, check:wc(ci(`How many decimal digits should each number have?`, k),"chart")};
+  return [first].concat(p.steps.slice(1));
+}
+const _genAddSubBase=genAddSub;
+genAddSub=function(level, focus){ const v=focus&&focus.variant; const rep_=(v==="numberline"||v==="chart"); const lv = rep_ && level>=5 ? 4 : level; // the representation lessons use two numbers (level 5 adds three)
+  let p=_genAddSubBase(lv, focus);
+  if(rep_){ let g=0; while(g++<80 && (p.meta.nums.some(n=>(n.d||"").length>2) || p.meta.nums.length!==2)) p=_genAddSubBase(lv, focus); p.level=level; } // representation lessons stay within hundredths and two numbers
+  if(v==="numberline"){ const st=nlSteps(p); if(st){ p.steps=st; p.meta.variant="numberline"; p.hints=[{t:`Start at the first number on a number line. Jump by the second number in parts: its whole part first, then its tenths, then its hundredths. (SWUN calls this the <b>number-line strategy</b>.)`},{t:`After each jump, say where you landed. The parts of ${fmt(p.meta.nums[1])} are ${decParts(p.meta.nums[1]).map(x=>fmtV(x)).join(", ")}.`},{t:`The last landing spot is the answer. Check: does it make sense (${p.meta.op==="+"?"bigger":"smaller"} than ${fmt(p.meta.nums[0])})?`}]; } }
+  else if(v==="chart"){ const st=chartSteps(p); if(st){ p.steps=st; p.meta.variant="chart"; } }
+  return p; };
+SKILLS.addsub.gen=safeGen(genAddSub);
+
+// ---- powers of ten: the digits change place (supplementing "move the decimal point") ----
+const _genShiftBase=genShift;
+genShift=function(level, focus){ const p=_genShiftBase(level, focus); const m=p.meta||{}; if(!m.factor||!m.op) return p;
+  try{ const num=fromThousandths(m.V); const s=String(num.w)+(num.d||""); const digits=s.replace(/^0+(?=\d)/,""); const n=m.n||Math.round(Math.log10(m.factor)); const dir=m.op==="×"?"left":"right";
+    const places=["ones","tenths","hundredths","thousandths"]; const wholeNames=["ones","tens","hundreds","thousands","ten thousands"];
+    const nameOf=(k)=> k>=0 ? wholeNames[k]||"far left" : places[-k]||"far right"; // k = place index, 0 = ones, negative = decimals
+    const wl=String(num.w).length; const digitsWithPlaces=[]; for(let i=0;i<s.length;i++){ const k=wl-1-i; if(s[i]!=="0"||digitsWithPlaces.length) digitsWithPlaces.push({d:s[i], k}); }
+    const sing=(d,nm)=> d==="1" ? nm.replace(/ies$/,"y").replace(/s$/,"") : nm; const moves=digitsWithPlaces.filter(x=>x.d!=="0").slice(0,3).map(x=>`the ${x.d} ${sing(x.d,nameOf(x.k))} become${x.d==="1"?"s":""} ${x.d} ${sing(x.d,nameOf(x.k + (m.op==="×"?n:-n)))}`);
+    if(moves.length) p.steps.splice(1,0,{t:`<b>What really happens to the digits:</b> ${m.op==="×"?"multiplying":"dividing"} by ${m.factor.toLocaleString("en-US")} makes every digit worth ${m.factor.toLocaleString("en-US")} times ${m.op==="×"?"more":"less"}, so each one moves ${plural(n,"place")} to the ${dir} on the chart: ${moves.join("; ")}. "Moving the decimal point" is a shortcut for that.`});
+  }catch(e){} return p; };
+SKILLS.shift.gen=safeGen(genShift);
+
+// ---- Unit 2 L6: the area model made visible, and connected to the algorithm's partial products ----
+const _genMultiplyBase=genMultiply;
+genMultiply=function(level, focus){ const p=_genMultiplyBase(level, focus); const m=p.meta||{}; if(m.variant!=="area") return p;
+  if(m.b<10){ // one-digit multiplier (levels 1–2): the area picture is drawn too, so an area lesson shows an area model at every level
+    try{ const parts=String(m.a).split("").map((ch,i,arr)=>+ch*Math.pow(10,arr.length-1-i)).filter(x=>x>0); const fig=areaSVG(parts.map(v=>({label:String(v), size:v})), [{label:String(m.b), size:m.b}], (i,j)=>`${parts[i]} × ${m.b} = ${(parts[i]*m.b).toLocaleString("en-US")}`); p.steps[0].t += fig; p.traps=(p.traps||[]).concat(["model"]); }catch(e){} return p; }
+  try{ const a=m.a, b=m.b; const at=a-(a%10), ao=a%10, bt=b-(b%10), bo=b%10; const pa=[at,ao].filter(x=>x>0), pb=[bt,bo].filter(x=>x>0);
+    const fig=areaSVG(pa.map(v=>({label:String(v), size:v})), pb.map(v=>({label:String(v), size:v})), (i,j)=>`${pa[i]} × ${pb[j]} = ${(pa[i]*pb[j]).toLocaleString("en-US")}`); // drawn to scale
+    p.steps[0].t += fig;
+    const onesRow=pa.map(x=>x*bo), tensRow=pa.map(x=>x*bt); const rowSum=(r)=>r.reduce((s,x)=>s+x,0);
+    const opts=shuffle([`${onesRow.join(" + ")} = ${rowSum(onesRow).toLocaleString("en-US")}`, `${tensRow.join(" + ")} = ${rowSum(tensRow).toLocaleString("en-US")}`, `${pa.map(x=>x*bo)[0]} + ${pa.map(x=>x*bt)[0]} = ${(pa[0]*bo+pa[0]*bt).toLocaleString("en-US")}`]);
+    const right=`${onesRow.join(" + ")} = ${rowSum(onesRow).toLocaleString("en-US")}`;
+    p.steps.splice(p.steps.length-1, 0, {t:`<b>Bridge to the algorithm.</b> The standard algorithm's first partial product is ${a} × ${bo} = <b>${(a*bo).toLocaleString("en-US")}</b>. In the model, that is the whole <b>${bo}</b> row of sections. The second partial product, ${a} × ${bt} = <b>${(a*bt).toLocaleString("en-US")}</b>, is the <b>${bt}</b> row. The algorithm is the area model with the sections already added in rows.`, check:wc(cm(`Which sections make the algorithm's first partial product, ${a} × ${bo}?`, opts, opts.indexOf(right)),"rows")});
+    p.traps=(p.traps||[]).concat(["model"]);
+  }catch(e){} return p; };
+SKILLS.multiply.gen=safeGen(genMultiply);
+
+// ---- story problems: structures and relationships instead of keywords ----
+const _genWordExprBase=genWordExpr;
+genWordExpr=function(level, focus){
+  const N=pick(NAMES), [one,many]=pick(ITEMS); const her = ["Sara","Maya","Priya","Nora","Amara"].includes(N) ? "her" : "him";
+  const a=ri(2,9), b=ri(2,9), c=ri(2,9); const F=pick(NAMES.filter(x=>x!==N));
+  const STRUCT={groups:"equal groups", compare:"comparison", partwhole:"part–whole", change:"change (start, change, result)"};
+  const W=[
+    {s:"groups", q:`${N} bought ${a} red ${many} and ${b} blue ${many}. Each ${one} cost $${c}. How much money did ${N} spend?`, e:`(${a} + ${b}) × ${c}`, v:(a+b)*c, d:[[`${a} + ${b} × ${c}`,"grouping"],[`(${a} × ${b}) + ${c}`,"operation"],[`(${a} + ${b}) + ${c}`,"operation"]], rel:`the total number of ${many} (${a} + ${b}) is a count of equal groups, each worth $${c}`},
+    {s:"change", q:`${N} had ${a} boxes with ${b} ${many} in each. A friend gave ${her} ${c} more ${many}. How many ${many} does ${N} have in all?`, e:`${a} × ${b} + ${c}`, v:a*b+c, d:[[`${a} × (${b} + ${c})`,"grouping"],[`${a} + ${b} × ${c}`,"order"],[`(${a} + ${b}) × ${c}`,"operation"]], rel:`start with ${a} groups of ${b}, then a change of +${c}`},
+    {s:"change", q:`${N} has ${a*b+c} ${many} and gives ${b} ${many} to each of ${a} friends. How many ${many} are left?`, e:`${a*b+c} − (${a} × ${b})`, v:c, d:[[`(${a*b+c} − ${a}) × ${b}`,"grouping"],[`${a*b+c} − ${a} + ${b}`,"operation"],[`${a*b+c} ÷ (${a} × ${b})`,"operation"]], rel:`start with ${a*b+c}, take away ${a} groups of ${b}`},
+    {s:"groups", q:`${a*b} students split into ${b} equal teams. Then ${c} more students join each team. How many students are on each team now?`, e:`${a*b} ÷ ${b} + ${c}`, v:a+c, d:[[`${a*b} ÷ (${b} + ${c})`,"grouping"],[`(${a*b} + ${c}) ÷ ${b}`,"grouping"],[`${a*b} − ${b} + ${c}`,"operation"]], rel:`${a*b} shared into ${b} equal groups, then each group changes by +${c}`},
+    // surface words that do NOT predict the operation
+    {s:"compare", q:`${N} has ${a*b+c} ${many}. That is ${c} more than ${F} has. How many ${many} does ${F} have?`, e:`${a*b+c} − ${c}`, v:a*b, d:[[`${a*b+c} + ${c}`,"keyword"],[`${a*b+c} × ${c}`,"operation"],[`${c} − ${a*b+c}`,"order"]], rel:`"${c} more than" compares two amounts; the smaller one is unknown, so subtract`},
+    {s:"groups", q:`${a*b} ${many} are shared equally among ${a} ${a===1?"bag":"bags"}. Each bag gets some ${many}. How many ${many} are in each bag?`, e:`${a*b} ÷ ${a}`, v:b, d:[[`${a*b} × ${a}`,"keyword"],[`${a*b} − ${a}`,"operation"],[`${a*b} + ${a}`,"operation"]], rel:`"each" here asks for the size of one equal group, so divide`},
+    {s:"compare", q:`${F} read ${a} books. ${N} read ${b} times as many books as ${F}. How many books did ${N} read?`, e:`${a} × ${b}`, v:a*b, d:[[`${a} + ${b}`,"keyword"],[`${a} − ${b}`,"operation"],[`${b} − ${a}`,"operation"]], rel:`"times as many" compares by multiplying`},
+    {s:"partwhole", q:`A class has ${a*b+c} students. ${a*b} of them are in the gym; the rest are in the library. How many are in the library?`, e:`${a*b+c} − ${a*b}`, v:c, d:[[`${a*b+c} + ${a*b}`,"keyword"],[`${a*b+c} ÷ ${a*b}`,"operation"],[`${a*b} − ${a*b+c}`,"order"]], rel:`whole ${a*b+c}, known part ${a*b}, unknown part`},
+  ];
+  const T=pick(W);
+  const o=buildOptions(T.e, T.d.map(([text,tag])=>({text,tag})));
+  const p={skill:"expressions", level, prompt:`Write and evaluate an expression to answer the question.<br><span class="big-words">${T.q}</span>`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:T.e, show:null, meta:{variant:"word", value:T.v, structure:T.s}};
+  const so=shuffle(Object.keys(STRUCT)); const sOpts=so.map(k=>STRUCT[k]);
+  p.steps=[
+    {t:`<b>What is the relationship?</b> Before choosing an operation, ask: what do we know, what is unknown, and how are they related? Here: ${T.rel}.`, check:wc(cm(`What kind of problem is this?`, sOpts, so.indexOf(T.s)),"structure")},
+    {t:`Match the structure to an equation. Equal groups → multiply or divide. Comparison → "more than" and "times as many" tell you how two amounts relate (the bigger or the smaller may be the unknown). Part–whole → parts add to the whole. Change → start, change, result.`},
+    {t:`Write the expression that matches the story.`, check:cm(`Which expression matches?`, p.options, p.answer)},
+    {t:`Evaluate it with the order of operations.`, check:ci(`${T.e} = ?`, T.v)},
+    {t:`Answer: <b>${T.v}</b>. The expression is <b>${T.e}</b>.`, check:finalCheck(p)}
+  ];
+  p.hints=[{t:`Do not pick the operation from a word like "more" or "each". First say what is known, what is unknown, and how they are related.`},
+    {t:`This one is ${/^[aeiou]/i.test(STRUCT[T.s])?"an":"a"} <b>${STRUCT[T.s]}</b> problem: ${T.rel}.`},
+    {t:`Write the equation for that relationship: the shape is <b>${T.e.replace(/\d[\d,]*/g,"▢")}</b> (a box for each number). Put the part that happens first in parentheses. Then work it out with the order of operations; the value is ${T.v}.`}];
+  return p;
+};
+// re-register expressions through the same dispatcher (genExpressions picks a variant; make sure "word" reaches the new generator)
+if(typeof genExpressions==="function") SKILLS.expressions.gen=safeGen(genExpressions);
+
+// ---- Unit 5 foundations (5.NF.1, 5.NF.2, 5.NF.4a): simplify, mixed ↔ improper, estimate with benchmarks, compare ----
+const gcd=(a,b)=>b?gcd(b,a%b):a;
+const frText=(n,d)=>`${n}/${d}`; const mixedText=(w,n,d)=> n? (w?`${w} ${n}/${d}`:`${n}/${d}`) : String(w);
+function parseFraction(str){ // "3/4", "1 3/4", "7/4", "2" → {w,n,d} or null
+  const s=String(str).trim().replace(/\s+/g," "); let m=s.match(/^(\d+)\s+(\d+)\s*\/\s*(\d+)$/); if(m) return {w:+m[1], n:+m[2], d:+m[3]}; m=s.match(/^(\d+)\s*\/\s*(\d+)$/); if(m) return {w:0, n:+m[1], d:+m[2]}; m=s.match(/^(\d+)$/); if(m) return {w:+m[1], n:0, d:1}; return null; }
+const frValue=f=>f && f.d>0 ? f.w + f.n/f.d : NaN;
+const finalText=p=>({q:`Now you finish it. Type the answer.`, type:"input", text:true, validate:p.validate, display:p.display});
+const ordName=d=>({2:"halves",3:"thirds",4:"fourths",5:"fifths",6:"sixths",8:"eighths",10:"tenths",12:"twelfths"})[d]||(d+"ths");
+const frEqual=(a,b)=>a&&b&&Math.abs(frValue(a)-frValue(b))<1e-9;
+function fracSVG(fracs){ // fractions as points on a number line from 0 to at least 2, extended to hold every value shown; unit and half-unit landmarks
+  const maxV=Math.max(2, Math.ceil(Math.max(...fracs.map(f=>frValue(f)||0)))); if(!Number.isFinite(maxV)) return "";
+  const W=560, H=90, x0=40, x1=W-40; const X=v=>x0+(v/maxV)*(x1-x0); let svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;display:block;margin:8px auto" role="img" aria-label="fractions on a number line from 0 to ${maxV}">`;
+  svg+=`<line x1="${x0}" y1="50" x2="${x1}" y2="50" stroke="#1B2A41" stroke-width="2"/>`; for(let v=0; v<=maxV; v+=0.5){ const whole=Number.isInteger(v); svg+=`<line x1="${X(v)}" y1="${whole?40:45}" x2="${X(v)}" y2="${whole?60:55}" stroke="#1B2A41" stroke-width="${whole?2:1.5}"/>${(whole||maxV<=4)?`<text x="${X(v)}" y="76" font-size="12" text-anchor="middle" fill="#5F6B7A">${whole?v:(Math.floor(v)?Math.floor(v)+" ":"")+"1/2"}</text>`:""}`; }
+  fracs.forEach((f,i)=>{ const v=frValue(f); svg+=`<circle cx="${X(v)}" cy="50" r="7" fill="${i?"#2F9E6B":"#B45309"}"/><text x="${X(v)}" y="${i?24:34}" font-size="13" text-anchor="middle" font-weight="700" fill="${i?"#2F9E6B":"#B45309"}">${mixedText(f.w,f.n,f.d)}</text>`; });
+  return `<div class="chart">${svg}</div>`;
+}
+function genFractions(level, focus){
+  const f=focus&&focus.tag; let variant = focus&&focus.variant ? focus.variant : pick(level<=2 ? ["simplify","mixed"] : ["simplify","mixed","estimate","compare"]);
+  const dens=[2,3,4,5,6,8,10,12];
+  if(variant==="simplify"){
+    let n,d,g; do{ const base=pick(dens.filter(x=>x<=8)); const k=ri(2, level<=2?3:6); d=base*k; n=ri(1,base-1)*k; if(f==="not-simplest") n=ri(1,base-1)*k; g=gcd(n,d); }while(!(g>1 && n<d && d<=60));
+    if(focus&&focus.fixed){ n=+focus.fixed.n; d=+focus.fixed.d; g=gcd(n,d); }
+    const sn=n/g, sd=d/g; const disp=frText(sn,sd);
+    const validate=str=>{ const fr=parseFraction(str); return !!fr && fr.w===0 && fr.n===sn && fr.d===sd; };
+    const p={skill:"fractions", level, prompt:`Write the fraction in <b>simplest form</b>.<br><span class="big-num">${frText(n,d)}</span>`, type:"input", text:true, validate, answer:sn/sd, display:disp, show:null, meta:{variant, n, d, sn, sd, g}};
+    p.traps=["common-factor","not-simplest"];
+    const factors=[]; for(let k=2;k<=Math.min(n,d);k++) if(n%k===0&&d%k===0) factors.push(k);
+    p.steps=[{t:`<b>Simplest form</b> means the numerator and denominator share no common factor except 1. Look for a number that divides <b>both</b> ${n} and ${d}. Common factors here: ${factors.join(", ")}.`, check:wc({q:`Name a number (other than 1) that divides both ${n} and ${d}.`, type:"input", text:true, validate:str=>factors.includes(+String(str).trim()), display:String(g)},"common-factor")},
+      {t:`Divide the top and the bottom by the <b>same</b> number. The biggest common factor is <b>${g}</b>: ${n} ÷ ${g} = ${sn} and ${d} ÷ ${g} = ${sd}.`, check:wc(ci(`${n} ÷ ${g} = ?`, sn),"fact")},
+      {t:`${frText(sn,sd)} names the same amount as ${frText(n,d)}: same point on the number line, fewer, bigger pieces.${fracSVG([{w:0,n,d},{w:0,n:sn,d:sd}])} Check: do ${sn} and ${sd} share any factor besides 1? ${gcd(sn,sd)===1?"No, so it is simplest.":""}`, check:wc(finalText(p),"not-simplest")}];
+    p.hints=[{t:`Find a number that divides evenly into both the top and the bottom. Try 2, then 3, then 5. (Simplest form: no common factor left but 1.)`},{t:`Both ${n} and ${d} can be divided by ${factors[0]}. Divide both by it. If the new fraction still has a common factor, do it again.`},{t:`Keep dividing top and bottom by the same number until nothing but 1 divides both. The biggest shortcut is dividing both by ${g} at once.`}];
+    return p;
+  }
+  if(variant==="mixed"){
+    let d,w,n; do{ d=pick([2,3,4,5,6,8]); w=ri(1, level<=2?3:6); n=ri(1,d-1); }while(gcd(n,d)!==1); const impN=w*d+n; /* the fractional part is always in simplest form, so there is one conventional mixed number */ const toMixed = focus&&focus.dir ? focus.dir==="toMixed" : Math.random()<0.5;
+    const prompt = toMixed ? `Write as a <b>mixed number</b>.<br><span class="big-num">${frText(impN,d)}</span>` : `Write as an <b>improper fraction</b>.<br><span class="big-num">${mixedText(w,n,d)}</span>`;
+    const disp = toMixed ? mixedText(w,n,d) : frText(impN,d);
+    // Any mathematically equivalent answer in the requested form is accepted: a mixed number with the same value (and the wholes separated), or an improper fraction with the same value.
+    const validate = toMixed ? (str=>{ const fr=parseFraction(str); return !!fr && fr.w>0 && fr.n>0 && fr.n<fr.d && frEqual(fr,{w,n,d}); }) : (str=>{ const fr=parseFraction(str); return !!fr && fr.w===0 && fr.n>0 && frEqual(fr,{w:0,n:impN,d}); });
+    const p={skill:"fractions", level, prompt, type:"input", text:true, validate, answer:impN/d, display:disp, show:null, meta:{variant, dir:toMixed?"toMixed":"toImproper", w, n, d, impN}};
+    p.traps=["wholes","remainder"];
+    p.steps = toMixed ? [
+      {t:`${frText(impN,d)} means ${impN} pieces, each <b>1/${d}</b> of a whole. It takes <b>${d}</b> pieces to make one whole. How many wholes fit in ${impN} pieces? ${impN} ÷ ${d} = ${w} with ${n} left over.`, check:wc(ci(`How many whole groups of ${d} are in ${impN}?`, w),"wholes")},
+      {t:`The ${n} leftover piece${n===1?" is":"s are"} still ${ordName(d)}: <b>${n}/${d}</b>.`, check:wc(ci(`How many pieces are left over after ${w} wholes?`, n),"remainder")},
+      {t:`So ${frText(impN,d)} = <b>${mixedText(w,n,d)}</b>.${fracSVG([{w:0,n:impN,d}])}`, check:finalText(p)}]
+    : [
+      {t:`${mixedText(w,n,d)} is ${w} whole${w===1?"":"s"} and ${n}/${d} more. Each whole is <b>${d}/${d}</b>, so ${w} whole${w===1?" is":"s are"} ${w} × ${d} = <b>${w*d}</b> ${ordName(d)}.`, check:wc(ci(`${w} × ${d} = ?`, w*d),"wholes")},
+      {t:`Add the extra ${n} piece${n===1?"":"s"}: ${w*d} + ${n} = <b>${impN}</b> ${ordName(d)}.`, check:wc(ci(`${w*d} + ${n} = ?`, impN),"remainder")},
+      {t:`So ${mixedText(w,n,d)} = <b>${frText(impN,d)}</b>. The denominator stays ${d}: the piece size did not change.${fracSVG([{w,n,d}])}`, check:finalText(p)}];
+    p.hints = toMixed ? [{t:`How many pieces make one whole? ${d}. So ask: how many groups of ${d} fit into ${impN}, and how many pieces are left?`},{t:`${impN} ÷ ${d}: the whole-number part of the answer is the wholes; the remainder is the numerator; the denominator stays ${d}.`},{t:`Type it as: <b>wholes</b>, a space, then <b>numerator/denominator</b> (for a different problem, ${d===5?"7/3 would be typed 2 1/3":"7/5 would be typed 1 2/5"}).`}]
+      : [{t:`Each whole is ${d} pieces of size 1/${d}. Turn the ${w} whole${w===1?"":"s"} into pieces first.`},{t:`${w} whole${w===1?"":"s"} × ${d} pieces each = ${w*d} pieces. Then add the ${n} extra piece${n===1?"":"s"}.`},{t:`Write the total pieces over ${d}. Type it as <b>numerator/denominator</b> (for a different problem, ${d===5?"2 1/3 would be typed 7/3":"1 2/5 would be typed 7/5"}).`}];
+    return p;
+  }
+  if(variant==="estimate"){
+    const bench=f=>{ const v=frValue(f); return v<0.25?0:v<0.75?0.5:1; }; const benchName=b=>b===0?"0":b===0.5?"1/2":"1";
+    const nearest=v=>[0.5,1,1.5,2].reduce((best,x)=>Math.abs(x-v)<Math.abs(best-v)?x:best,0.5);
+    let A,B,sum,target,g2=0; do{ const d1=pick(dens), d2=pick(dens.filter(x=>x!==d1)); A={w:0,n:ri(1,d1-1),d:d1}; B={w:0,n:ri(1,d2-1),d:d2}; sum=frValue(A)+frValue(B); target=nearest(sum); }while(g2++<160 && (nearest(bench(A)+bench(B))!==target || bench(A)+bench(B)<0.5 || Math.abs(sum*4-Math.round(sum*4))<1e-9 && Math.round(sum*4)%2===1)); // benchmark route and exact sum agree; the benchmark sum is a choice; no exact midpoints (0.75, 1.25, 1.75) where two choices tie
+    const tName=t=>t===0.5?"1/2":t===1.5?"1 1/2":String(t);
+    const options=["1/2","1","1 1/2","2"]; const answer=options.indexOf(tName(target));
+    const p={skill:"fractions", level, prompt:`<b>Estimate.</b> Is the sum closest to 1/2, 1, 1 1/2, or 2?<br><span class="big-num">${frText(A.n,A.d)} + ${frText(B.n,B.d)}</span>`, type:"mc", options, optionTags:options.map((o,i)=>i===answer?"correct":"benchmark"), answer, display:tName(target), show:null, meta:{variant, A, B, sum}};
+    p.traps=["benchmark"];
+    p.steps=[{t:`<b>Benchmarks.</b> Compare each fraction with 0, 1/2, and 1. ${frText(A.n,A.d)}: is ${A.n} close to 0, to half of ${A.d} (${A.d/2}), or to ${A.d}? It is close to <b>${benchName(bench(A))}</b>.${fracSVG([A])}`, check:wc(cm(`${frText(A.n,A.d)} is closest to…`, ["0","1/2","1"], [0,0.5,1].indexOf(bench(A))),"benchmark")},
+      {t:`${frText(B.n,B.d)}: ${B.n} out of ${B.d} is close to <b>${benchName(bench(B))}</b>.${fracSVG([B])}`, check:wc(cm(`${frText(B.n,B.d)} is closest to…`, ["0","1/2","1"], [0,0.5,1].indexOf(bench(B))),"benchmark")},
+      {t:`Add the benchmarks: about ${benchName(bench(A))} + ${benchName(bench(B))} = about <b>${tName(target)}</b>. (The exact sum is ${sum.toFixed(2)}, which agrees.)`, check:finalCheck(p)}];
+    p.hints=[{t:`You do not need the exact sum. Ask about each fraction: is it near 0, near 1/2, or near 1? Half of the denominator is the "1/2" mark.`},{t:`${frText(A.n,A.d)} is near ${benchName(bench(A))}; ${frText(B.n,B.d)} is near ${benchName(bench(B))}.`},{t:`Add those two benchmarks. Pick the choice closest to that.`}];
+    return p;
+  }
+  // compare: which is greater (unlike denominators), reasoning with benchmarks or a common denominator
+  let A,B,gc=0; do{ const d1=pick(dens), d2=pick(dens); A={w:0,n:ri(1,d1-1),d:d1}; B={w:0,n:ri(1,d2-1),d:d2}; }while(gc++<200 && (frEqual(A,B)||A.d===B.d||(A.d*B.d/gcd(A.d,B.d))>24)); // a common denominator of 24 at most: 40ths and 60ths are past what a fifth grader should juggle here
+  const gt=frValue(A)>frValue(B); const options=[frText(A.n,A.d), frText(B.n,B.d)]; const answer=gt?0:1;
+  const L=A.d*B.d/gcd(A.d,B.d);
+  const p={skill:"fractions", level, prompt:`Which fraction is <b>greater</b>?<br><span class="big-num">${frText(A.n,A.d)} &nbsp;or&nbsp; ${frText(B.n,B.d)}</span>`, type:"mc", options, optionTags:[gt?"correct":"bigger-denominator", gt?"bigger-denominator":"correct"], answer, display:options[answer], show:null, meta:{variant, A, B}};
+  p.traps=["common-denominator","magnitude"];
+  p.steps=[{t:`Different denominators mean different piece sizes, so you cannot compare the numerators directly. Give both the <b>same denominator</b>: ${A.d} and ${B.d} both go into <b>${L}</b>.`, check:wc(ci(`What is a common denominator for ${A.d} and ${B.d}?`, L, String(L)),"common-denominator")},
+    {t:`${frText(A.n,A.d)} = ${frText(A.n*L/A.d, L)} and ${frText(B.n,B.d)} = ${frText(B.n*L/B.d, L)}. Same-size pieces now: compare ${A.n*L/A.d} and ${B.n*L/B.d}.`, check:wc(ci(`${frText(A.n,A.d)} = how many ${L}ths?`, A.n*L/A.d),"magnitude")},
+    {t:`<b>${options[answer]}</b> is greater.${fracSVG([A,B])} On the number line it sits farther right.`, check:finalCheck(p)}];
+  p.hints=[{t:`Bigger denominator means smaller pieces. You cannot compare the tops until the pieces are the same size (or use benchmarks: is each fraction more or less than 1/2?).`},{t:`A common denominator for ${A.d} and ${B.d} is ${L}. Rewrite both fractions in ${L}ths.`},{t:`Now compare the numerators: the bigger count of ${L}ths is the greater fraction.`}];
+  return p;
+}
+function diagnoseFractions(prob, yours){
+  const m=prob.meta; const fr=parseFraction(yours); let tag="other";
+  if(m.variant==="simplify" && fr){ if(frEqual(fr,{w:0,n:m.n,d:m.d}) && !(fr.n===m.sn&&fr.d===m.sd)) tag="not-simplest"; else if(fr.d===m.d || fr.n===m.n) tag="one-side"; }
+  if(m.variant==="mixed" && fr){ if(m.dir==="toMixed"){ if(fr.w!==m.w && fr.n===m.n) tag="wholes"; else if(fr.w===m.w) tag="remainder"; } else { if(fr.d!==m.d) tag="denominator"; else if(fr.n===m.w*m.d) tag="remainder"; else if(fr.n===m.w+m.n) tag="wholes"; } }
+  return {tag, note: tag==="not-simplest" ? "That equals the fraction, but it can still be simplified: the top and bottom share another factor." : tag==="one-side" ? "Divide the top AND the bottom by the same number; changing only one changes the amount."
+    : tag==="wholes" ? "Count the wholes again: how many groups of the denominator fit?" : tag==="remainder" ? "The leftover pieces are the new numerator; the denominator stays the same." : tag==="denominator" ? "Converting never changes the size of the pieces, so the denominator stays the same." : ""};
+}
+
+// ---- registration ----
+Object.assign(SKILLS, {
+  decmul:{name:"Multiply decimals", gen:safeGen(genDecMul), blurb:"3.4 × 6 → 18 + 2.4 = 20.4 (area model, distributive)", std:"5.NBT.7", lessons:["U4L1","U4L2","U4L3","U4L4","U4L5","U4L6","U4L7","U4L8"]},
+  decdiv:{name:"Divide decimals", gen:safeGen(genDecDiv), blurb:"4.8 ÷ 0.6 → 8 groups; 4.8 ÷ 6 → 0.8 each", std:"5.NBT.7", lessons:["U4L9","U4L10","U4L11"]},
+  fractions:{name:"Fractions: simplify, mixed numbers, estimate", gen:safeGen(genFractions), blurb:"6/8 → 3/4; 7/4 → 1 3/4; 3/8 + 5/6 ≈ 1", std:"5.NF.1 5.NF.2 5.NF.4a", lessons:["U5L1","U5L2","U5L3","U5L4"]}
+});
+SKILL_ORDER.push("decmul","decdiv","fractions");
+Object.assign(NOTES, {"point":"The digits are right; the decimal point is in the wrong place. Estimate first: about how big should the answer be?", "whole-only":"Only the whole-number part was multiplied. The decimal part is a section too.", "sections":"One section of the model is missing.", "groups":"That multiplied instead of counting how many groups fit.", "unit":"The unit count was right, but it was not written back as a decimal.", "not-simplest":"Equal, but not yet in simplest form.", "one-side":"Only one of the numerator or denominator was divided.", "structure":"The operation did not match the relationship in the story.", "keyword":"That followed a word like \"more\" or \"each\" instead of the relationship between the amounts.", "benchmark":"Compare each fraction to 0, 1/2, and 1 first.", "common-denominator":"Different denominators mean different piece sizes; make them the same before comparing.", "model":"The model's rows are the algorithm's partial products."});
+const _diagnose3=diagnose;
+diagnose=function(prob, yours){
+  if(prob.skill==="decmul" && prob.type==="input") return diagnoseDecMul(prob, parseAnswer(yours));
+  if(prob.skill==="decdiv" && prob.type==="input") return diagnoseDecDiv(prob, parseAnswer(yours));
+  if(prob.skill==="fractions" && prob.type==="input") return diagnoseFractions(prob, yours);
+  return _diagnose3(prob, yours);
+};
+const _focusFor3=focusFor;
+focusFor=function(prob, tag){ const f=_focusFor3(prob, tag); const m=prob.meta||{}; if(["decmul","decdiv","fractions"].includes(prob.skill)){ f.variant=m.variant; if(m.kind) f.kind=m.kind; if(m.dir) f.dir=m.dir; } if(prob.skill==="addsub" && m.variant) f.variant=m.variant; return f; };
+const _whyFor3=whyFor;
+whyFor=function(p){ const m=p.meta||{}; let out=null;
+  if(p.skill==="decmul" && m.a){ const q=`Why does the product have ${plural(m.places,"decimal place")}${m.places?"":" (none)"}?`;
+    const right = m.kind==="whole" ? `${fmt(m.a)} has ${plural(decPlaces(m.a),"decimal place")} and ${fmt(m.b)} is a whole number, so the product has ${plural(m.places,"decimal place")}: ${placeWord(decPlaces(m.a))} times ones are still ${placeWord(decPlaces(m.a))}.` : `${placeWord(decPlaces(m.a))} times ${placeWord(decPlaces(m.b))} make ${placeWord(m.places)}, so the product has ${plural(m.places,"decimal place")}.`;
+    const wrong=[`Multiplying always adds one decimal place.`, `The product has as many decimal places as the bigger factor.`, `You count the digits, not the decimal places.`];
+    const o=buildOptions(right, wrong.map(text=>({text, tag:"why-wrong"}))); out={q, options:o.options, answer:o.answer, display:right}; }
+  else if(p.skill==="decdiv" && m.N){ const less=dV(m.d)<1000;
+    const q = m.variant==="measuring" ? `Why is ${fmt(m.N)} ÷ ${fmt(m.d)} ${less?"bigger":"smaller"} than ${fmt(m.N)}?` : `Why is the answer written in ${placeWord(m.unitPlaces)}?`;
+    const right = m.variant==="measuring" ? (less?`${fmt(m.d)} is less than 1, so more than ${fmt(m.N)} groups of it fit into ${fmt(m.N)}.`:`${fmt(m.d)} is more than 1, so fewer than ${fmt(m.N)} groups fit.`) : `${fmt(m.N)} was renamed as ${m.Nu} ${placeWord(m.unitPlaces)}; sharing those gives a count of ${placeWord(m.unitPlaces)}, which is written as a decimal.`;
+    const wrong = m.variant==="measuring" ? [`Dividing always makes a number smaller.`, `Dividing by a decimal moves the decimal point left.`, `The answer is bigger because ${fmt(m.N)} is bigger than ${fmt(m.d)}.`] : [`You always move the decimal point one place when dividing.`, `The answer is in ones because the divisor is a whole number.`, `Decimals in the dividend disappear when you divide.`];
+    const o=buildOptions(right, wrong.map(text=>({text, tag:"why-wrong"}))); out={q, options:o.options, answer:o.answer, display:right}; }
+  else if(p.skill==="fractions" && m.variant==="simplify"){ const q=`Why is ${frText(m.sn,m.sd)} equal to ${frText(m.n,m.d)}?`; const right=`Dividing the numerator and the denominator by the same number (${m.g}) keeps the same amount: fewer pieces, but each piece is ${m.g} times as big.`; const wrong=[`Subtracting the same number from the top and bottom keeps the amount the same.`, `A smaller denominator always makes a smaller fraction.`, `They are not really equal; simplest form is just a rounding.`]; const o=buildOptions(right, wrong.map(text=>({text, tag:"why-wrong"}))); out={q, options:o.options, answer:o.answer, display:right}; }
+  if(out) return out; return _whyFor3(p); };
+// rewire safeGen wrappers so the new whyFor is used (safeGen calls whyFor at generation time, by name, so nothing else to do)
+
+// ---- lesson links: the method named by the lesson controls the generator ----
+(function(){
+  const setL=(id, skills, focus)=>{ const l=LESSONS.find(x=>x.id===id); if(l){ l.skills=skills; if(focus) l.focus=focus; } };
+  setL("U3L1", ["addsub"], {addsub:{op:"+", variant:"chart"}}); setL("U3L2", ["addsub"], {addsub:{op:"+", variant:"numberline"}}); setL("U3L3", ["addsub"], {addsub:{op:"+"}});
+  setL("U3L4", ["addsub"], {addsub:{op:"−", variant:"chart"}}); setL("U3L5", ["addsub"], {addsub:{op:"−", variant:"numberline"}}); setL("U3L6", ["addsub"], {addsub:{op:"−"}}); setL("U3L7", ["addsub"]);
+  setL("U4L1", ["decmul"], {decmul:{kind:"whole", variant:"area"}}); setL("U4L2", ["decmul"], {decmul:{kind:"whole", variant:"area"}}); setL("U4L3", ["decmul"], {decmul:{kind:"whole", variant:"distributive"}}); setL("U4L4", ["decmul"], {decmul:{kind:"whole"}});
+  setL("U4L5", ["decmul"], {decmul:{kind:"decimal", variant:"area"}}); setL("U4L6", ["decmul"], {decmul:{kind:"decimal", variant:"area"}}); setL("U4L7", ["decmul"], {decmul:{kind:"decimal", variant:"distributive"}}); setL("U4L8", ["decmul"], {decmul:{kind:"decimal"}});
+  setL("U4L9", ["decdiv"], {decdiv:{variant:"measuring"}}); setL("U4L10", ["decdiv"], {decdiv:{variant:"dealing"}}); setL("U4L11", ["decdiv"]); setL("U4L12", ["decmul","decdiv"]);
+  setL("U5L1", ["fractions"], {fractions:{variant:"simplify"}}); setL("U5L2", ["fractions"], {fractions:{variant:"simplify"}}); setL("U5L3", ["fractions"], {fractions:{variant:"estimate"}}); setL("U5L4", ["fractions"], {fractions:{variant:"mixed"}});
+})();
+// lesson-scoped generators: when "Practice this week" passes a lesson focus, ordinary generators receive it (next() already does this)
+
 const NOT_YET_COVERED = (()=>{ const missing=UNITS.filter(u=>!LESSONS.some(L=>L.unit===u.unit && L.skills.length)); const partial=UNITS.filter(u=>LESSONS.some(L=>L.unit===u.unit && L.skills.length) && LESSONS.some(L=>L.unit===u.unit && !L.skills.length && L.type!=="MT"));
   return "Built from the MCS 2026-27 Grade 5 Claims & Pacing Guide (Swun Math). Units not yet in the app: "+missing.map(u=>`Unit ${u.unit} ${u.name} (${u.start.slice(5).replace("-","/")}–${u.end.slice(5).replace("-","/")})`).join("; ")+"."+(partial.length?" Units partly covered: "+partial.map(u=>"Unit "+u.unit).join(", ")+".":"")+" Lesson types: C = concept lesson, P = practice lesson, MT = unit review (labels as used in the guide; meanings inferred). Optional lessons are italicized in the guide and cannot be told apart in this copy."; })();
 const NOTES2={
@@ -1884,7 +2297,7 @@ const _diagnose=diagnose;
 diagnose=function(prob, yours){
   const m=prob.meta||{};
   if(prob.type==="input"){
-    if(prob.skill==="orderops"){ const v=parseAnswer(yours); let tag="other"; if(near(v,m.ltr) && !near(m.ltr,m.value)) tag="left-to-right"; else if(m.hasGroup && near(v,m.noParen) && !near(m.noParen,m.value)) tag="parens"; else if(!m.hasGroup) tag="left-to-right"; return {tag, note:NOTES[tag]||""}; }
+    if(prob.skill==="orderops"){ const v=parseAnswer(yours); let tag="other"; if(near(v,m.ltr) && !near(m.ltr,m.value)) tag="left-to-right"; else if(m.hasGroup && near(v,m.noParen) && !near(m.noParen,m.value)) tag="parens"; return {tag, note: tag==="other" ? "That is not what any one rule gives. Let's check which operation comes first, then the arithmetic." : (NOTES[tag]||"")}; } // an unmatched answer stays unclassified; a specific tag is only a hypothesis from a matching pattern
     if(prob.skill==="multiply"){ return diagnoseMultiply(prob, parseAnswer(yours)); } // only a recognized error pattern gets a name; anything else stays neutral
     if(prob.skill==="primes"){ const got=parseFactorization(yours); let tag="other"; if(got && !got.every(isPrime)) tag="not-prime"; else if(got) tag="wrong-product"; return {tag, note:NOTES[tag]||""}; }
   }
@@ -1934,6 +2347,7 @@ function calendarClassAt(){ // where the district pacing calendar says the class
 const effectiveClassAt=()=>(S && lessonById(S.classPin)) ? S.classPin : calendarClassAt();
 const blankProfile=name=>({name, levels:Object.fromEntries(SKILL_ORDER.map(s=>[s,1])), hist:Object.fromEntries(SKILL_ORDER.map(s=>[s,[]])),
   correct:0, attempted:0, best:0, run:0, guided:0, persist:0, shown:0, logTrimmed:0, scratch:(typeof window!=="undefined" && window.innerWidth>=700), today:{d:todayStr(), c:0, a:0}, log:[], created:Date.now(), classPin:null,
+  coach:{},                        // per-skill coaching level 0–2 (2 = coach line + example offered; 1 = coach line; 0 = none). New skills start at 2; two clean successes fade one level; a fresh miss brings one back.
   weak:{},                         // weakness profile, keyed "skill:component" → {state:"weak"|"review"|"ok", wins, misses, lvl, last, due, stage, recovered}
   support:{multiply:3}, supportWins:{multiply:0}}); // workspace supports (3 = all of them, 0 = bare page) and clean wins toward fading the next one
 function normalize(p){ // fill in anything missing (older saves, imports)
@@ -1947,6 +2361,10 @@ function normalize(p){ // fill in anything missing (older saves, imports)
   out.scratch = ("scratch" in p) ? !!p.scratch : b.scratch;
   if(out.today.d!==todayStr()) out.today={d:todayStr(), c:0, a:0};
   out.weak = (p.weak && typeof p.weak==="object" && !Array.isArray(p.weak)) ? {...p.weak} : {};
+  out.coach = (p.coach && typeof p.coach==="object" && !Array.isArray(p.coach)) ? {...p.coach} : {}; for(const k of Object.keys(out.coach)){ out.coach[k]=Math.min(2,Math.max(0,+out.coach[k]||0)); }
+  if(!p.coach){ for(const k of SKILL_ORDER){ const ind=out.log.filter(e=>e.sk===k && e.ok && (e.independent===1 || (e.independent===undefined && (e.stage?e.stage==="fresh":!e.retry) && !e.hints))).length; out.coach[k] = ind>=2 ? 0 : ind===1 ? 1 : 2; } } // existing profiles: what she has already shown on her own decides how much coaching she starts with
+  out.checkins = (p.checkins && typeof p.checkins==="object" && !Array.isArray(p.checkins)) ? {...p.checkins} : {}; // delayed check-ins for skills she has shown independently: {sk:{due, n}}
+  for(const k of Object.keys(out.checkins)){ const c=out.checkins[k]; const skk=k.split("|")[0]; if(!c||typeof c!=="object"||!SKILLS[skk]){ delete out.checkins[k]; continue; } c.due=+c.due||0; c.n=+c.n||0; if(!k.includes("|")){ out.checkins[`${skk}|`]=c; delete out.checkins[k]; } } // v9.8 keyed check-ins by skill only; those become context-free targets
   for(const k of Object.keys(out.weak)){ const e=out.weak[k]; if(!e||typeof e!=="object"||!k.includes(":")){ delete out.weak[k]; continue; }
     e.state=["weak","review","ok"].includes(e.state)?e.state:"weak"; for(const f of ["wins","misses","lvl","last","due","stage","recovered","served"]) e[f]=Math.max(0,+e[f]||0); e.lvl=Math.min(MAX_LEVEL,Math.max(1,e.lvl||1));
     if(e.ctx && typeof e.ctx==="object" && !k.includes("|")){ // v9.2 kept the context on the entry; from v9.3 it is part of the key
@@ -1988,10 +2406,16 @@ const DAY=864e5, REVIEW_GAPS=[3*DAY, 7*DAY];
 function ctxOf(p){
   const m=(p&&p.meta)||{}; const sk=p&&p.skill; const c={};
   if(sk==="shift"||sk==="addsub"){ if(m.op) c.op=m.op; }
-  else if(sk==="powers"||sk==="orderops"||sk==="expressions"||sk==="placevalue"||sk==="divide"){ if(m.variant) c.variant=m.variant; } // the question form is part of what was missed
+  else if(sk==="powers"||sk==="orderops"||sk==="expressions"||sk==="placevalue"||sk==="divide"||sk==="decmul"||sk==="decdiv"||sk==="fractions"){ if(m.variant) c.variant=m.variant; if(sk==="decmul"&&m.kind) c.kind=m.kind; } // the question form is part of what was missed
   else if(sk==="rounding"){ if(m.p!==undefined){ c.p=String(m.p); c.dec=m.p<0?"y":"n"; } c.which=m.which?"y":"n"; }
+  if((sk==="addsub"||sk==="multiply") && m.variant) c.variant=m.variant; // number line / chart / columns, and area / distributive / algorithm, are different tasks
+  if(sk==="fractions" && m.dir) c.dir=m.dir;
   return c;
 }
+// Components a problem actually assesses: its declared traps plus every component named on a check (walkthrough steps and sub-steps).
+function problemComps(p){ const out=new Set(Array.isArray(p.traps)?p.traps:[]); const walk=steps=>{ for(const st of steps||[]){ if(st.check && st.check.comp && typeof st.check.comp==="string") out.add(st.check.comp); if(Array.isArray(st.sub)) walk(st.sub); } }; walk(p.steps); return out; }
+// Step-level components: a weakness named after one of these can only be cleared by a problem that assesses it. Other tags (from graded answers) fall back to hasTrap().
+const STEP_COMPS={ addsub:new Set(["jump","chart"]), multiply:new Set(["fact","regroup","tens-zero","rows","add-partials","model"]), decmul:new Set(["partition","sections","point","fact"]), decdiv:new Set(["point","unit","groups","fact"]), fractions:new Set(["common-factor","not-simplest","wholes","remainder","benchmark","common-denominator","magnitude"]), expressions:new Set(["structure"]) }; // per skill: which components are assessed by named steps (other tags come from graded answers and use hasTrap)
 // Does this problem actually contain the trap a named (non-multiplication) component refers to? A rounding problem where nothing rounds
 // up cannot prove "chop" is fixed; an addition with no regrouping cannot prove "carry" is fixed. Unknown tags: any problem of the skill.
 function hasTrap(p, comp){
@@ -2013,7 +2437,8 @@ const ctxMatches=(wantKey, haveKey)=>{ const have=Object.fromEntries(String(have
 const weakKey=(sk,comp,ctx)=>{ const ck=ctxKey(ctx); return `${sk}:${comp||"*"}${ck?"|"+ck:""}`; };
 function parseWeakKey(key){ const [head,ck=""]=key.split("|"); const [sk,comp]=head.split(":"); const ctx={}; if(ck) for(const kv of ck.split(",")){ const [k,v]=kv.split("="); ctx[k]=v; } return {sk, comp, ctx}; }
 // The focus a generator needs to produce a problem in this context (the same fields focusFor() uses for follow-ups).
-function focusFromCtx(sk, ctx){ const f={}; if(!ctx) return f; if(ctx.op) f.op=ctx.op; if(ctx.variant) f.variant=ctx.variant; if(sk==="rounding"){ if(ctx.p!==undefined) f.p=+ctx.p; else if(ctx.dec==="y") f.p=pick([-1,-2]); else if(ctx.dec==="n") f.p=pick([0,2,3,4,5]); if(ctx.which!==undefined) f.which=ctx.which==="y"; } return f; }
+const checkinCtx=p=>{ const c={...ctxOf(p)}; delete c.p; delete c.dec; return c; }; // check-ins are keyed by task form (operation, representation, kind, direction), not by the exact rounding place
+function focusFromCtx(sk, ctx){ const f={}; if(!ctx) return f; if(ctx.op) f.op=ctx.op; if(ctx.variant) f.variant=ctx.variant; if(ctx.kind) f.kind=ctx.kind; if(ctx.dir) f.dir=ctx.dir; if(sk==="rounding"){ if(ctx.p!==undefined) f.p=+ctx.p; else if(ctx.dec==="y") f.p=pick([-1,-2]); else if(ctx.dec==="n") f.p=pick([0,2,3,4,5]); if(ctx.which!==undefined) f.which=ctx.which==="y"; } return f; }
 const compName=(sk,comp)=> comp==="why" ? "explaining the reason" : comp==="alignment" ? "lining up the decimal points" : (sk==="multiply" && COMP_NAMES[comp]) ? COMP_NAMES[comp] : (comp && comp!=="*" && comp!=="other" ? comp.replace(/-/g," ") : (SKILLS[sk]?SKILLS[sk].name.toLowerCase():"the whole skill"));
 const ctxLabel=(sk,ctx)=>{ if(!ctx) return ""; const parts=[]; if(ctx.op) parts.push(ctx.op==="×"?"multiplying":ctx.op==="÷"?"dividing":ctx.op==="+"?"adding":(ctx.op==="−"||ctx.op==="-")?"subtracting":ctx.op); if(ctx.variant) parts.push(ctx.variant==="repeated"?"repeated × 10":ctx.variant==="threefactor"?"three factors":ctx.variant); if(sk==="rounding"){ if(ctx.p!==undefined && typeof placeSing==="function") parts.push(`nearest ${placeSing(+ctx.p)}`); else if(ctx.dec==="y") parts.push("decimal places"); else if(ctx.dec==="n") parts.push("whole-number places"); if(ctx.which==="y") parts.push("which-number form"); } return parts.join(", "); };
 const weakLabel=key=>{ const {sk,comp,ctx}=parseWeakKey(key); const k=ctxLabel(sk,ctx); return compName(sk,comp)+(k?` (${k})`:""); };
@@ -2023,7 +2448,10 @@ const compsOfMiss=(sk,tag)=>{ const t=(!tag||tag==="other"||tag==="correct")?"*"
 // the context matches (a key without context, e.g. migrated from before v9, accepts any context); and the level is at least the miss level.
 function eligible(key, p){
   if(!p) return false; const {sk,comp,ctx}=parseWeakKey(key); const e=S.weak[key]; if(!e || p.skill!==sk) return false;
-  if(sk==="multiply" && comp!=="*"){ if(!Array.isArray(p.traps) || !p.traps.includes(comp)) return false; }
+  if(comp==="why"){ if(!hasTrap(p,"why")) return false; } // an explanation weakness needs a problem that asks for the reason, whatever the skill
+  else if(sk==="multiply" && comp!=="*"){ if(!Array.isArray(p.traps) || !p.traps.includes(comp)) return false; }
+  else if(comp!=="*" && STEP_COMPS[sk] && STEP_COMPS[sk].has(comp)){ if(!problemComps(p).has(comp) || !hasTrap(p, comp)) return false; } // a step-level component must be assessed by the problem
+  else if(p.type==="mc" && Array.isArray(p.optionTags) && comp!=="*" && comp!=="other"){ if(!p.optionTags.includes(comp)) return false; } // a multiple-choice trap counts only when that wrong answer was on offer
   else if(!hasTrap(p, comp)) return false;
   const pc=ctxOf(p); for(const k in ctx){ if(ctx[k]!=="" && pc[k]!==undefined && String(pc[k])!==String(ctx[k])) return false; }
   if((+p.level||1) < (e.lvl||1)) return false;
@@ -2041,22 +2469,21 @@ function noteComp(sk, comp, ok, o){
     const key=weakKey(sk,comp,o.ctx); let e=W[key]; const was=e?e.state:"none";
     if(!e) e=W[key]={state:"weak", wins:0, misses:0, lvl:o.lvl||1, last:t, due:0, stage:0, recovered:0};
     // A repeat miss never lowers the bar: the level stays the highest level she has missed this at.
-    e.state="weak"; e.wins=0; e.misses++; e.lvl=Math.min(MAX_LEVEL, Math.max(1, e.lvl||1, +o.lvl||1)); e.last=t;
+    e.state="weak"; e.wins=0; e.misses++; if(!o.harder) e.lvl=Math.min(MAX_LEVEL, Math.max(1, e.lvl||1, +o.lvl||1)); e.last=t; // a miss on the app's own "notch harder" challenge keeps the bar where she missed it
     return was==="none" ? "opened" : (was==="ok"||was==="review") ? "reopened" : "";
   }
   const key=o.key; const e=W[key]; if(!e || !o.independent) return "";
-  if(o.q && e.lastQ===o.q) return ""; // the same problem again (a worksheet problem typed twice) is not new evidence
-  if(o.q) e.lastQ=o.q;
+  if(o.q){ e.recentQ=Array.isArray(e.recentQ)?e.recentQ:(e.lastQ?[e.lastQ]:[]); if(e.recentQ.includes(o.q)) return ""; e.recentQ.push(o.q); while(e.recentQ.length>8) e.recentQ.shift(); delete e.lastQ; } // a problem already used anywhere in this weakness's recovery is not new evidence, at any stage
   if(e.state==="weak"){ e.wins++; e.last=t; if(e.wins>=2){ e.state="review"; e.stage=1; e.due=t+REVIEW_GAPS[0]; return "review"; } return "win"; }
   if(e.state==="review"){ if(e.due>t) return ""; e.stage++; e.last=t; if(e.stage>=3){ e.state="ok"; e.recovered=t; e.due=0; return "recovered"; } e.due=t+REVIEW_GAPS[1]; return "stage2"; }
   return "";
 }
 // What "Focus on where I missed" should serve next: a review that has come due, else the open weakness served least recently. null → nothing.
-function recoveryTarget(){
+function recoveryTarget(o){
   const W=S.weak, now=Date.now(); const okKey=k=>SKILLS[parseWeakKey(k).sk];
   const open=Object.keys(W).filter(k=>W[k].state==="weak" && okKey(k)).sort((a,b)=>(W[a].served||0)-(W[b].served||0) || (W[b].misses-W[b].wins)-(W[a].misses-W[a].wins));
   const due=Object.keys(W).filter(k=>W[k].state==="review" && W[k].due<=now && okKey(k)).sort((a,b)=>W[a].due-W[b].due);
-  const key=due[0]||open[0]; if(!key) return null;
+  const key=(o&&o.openFirst) ? (open[0]||due[0]) : (due[0]||open[0]); if(!key) return null; /* openFirst: the planned sitting's "weakest spot" slot wants an open weakness even when a review is also due (the review has its own slot) */
   const {sk,comp,ctx}=parseWeakKey(key); const e=W[key];
   // The cycle: targeted problem at the level she missed → (help if needed) → a fresh independent attempt → a harder variation → review later.
   const harder = e.state==="weak" ? e.wins>=1 : true;
@@ -2069,7 +2496,7 @@ function recoveryTarget(){
 // Generate a problem for the target and make sure it really is eligible evidence for it; otherwise try again. Selection and grading
 // share eligible(), so what Focus serves is exactly what can count. If the generator cannot hit it in 12 tries, the miss level is used as is.
 function genForTarget(t){
-  let p=null; for(let i=0;i<12;i++){ p=SKILLS[t.sk].gen(t.level, t.focus); if(eligible(t.key,p)) return p; }
+  let p=null; for(let i=0;i<40;i++){ p=SKILLS[t.sk].gen(t.level, t.focus); if(eligible(t.key,p)) return p; }
   for(let i=0;i<12;i++){ p=SKILLS[t.sk].gen(S.weak[t.key].lvl, t.focus); if(eligible(t.key,p)) return p; }
   p.notEligible=true; return p;
 }
@@ -2147,11 +2574,45 @@ let stepRes=[];  // per-step outcome for the walkthrough ("ok" | "revealed")
 let revealed=0, passed=0, expanded=0, missEntry=null;
 let whyState=null, okEntry=null;
 let lastPraise=[];   // recovery / independence messages for the current right answer: [{t, big}]
-let sessionN=0, stopOfferedAt=-1, sessionDone=false, sessionMissRun=0, breakOfferedAt=-1; // fresh problems answered since the app opened; the last count at which the stopping point was offered; she tapped "Done for today"
+let sessionN=0, stopOfferedAt=-1, sessionDone=false, sessionMissRun=0, breakOfferedAt=-1;
+let todayPlan=null, todayIdx=0, todayExtra=0, todaySid=0; /* todaySid: this sitting's id; every fresh problem served in it is tagged, so the summary counts the sitting's own problems and nothing else */ // "Start today": the planned slots for this sitting, and how many extra problems were added to end on a win
+// The plan: a due check-in or review if there is one, this week's lesson (twice), the weakest open spot, then mixed practice. About six problems, and it ends on a win.
+function buildTodayPlan(){ const plan=[]; const now=Date.now(); const W=S.weak||{}; const okKey=k=>SKILLS[parseWeakKey(k).sk];
+  const dueCheck=Object.keys(S.checkins||{}).some(k=>SKILLS[k.split("|")[0]] && S.checkins[k].due<=now); const dueReview=Object.keys(W).some(k=>W[k].state==="review" && W[k].due<=now && okKey(k)); const openWeak=Object.keys(W).some(k=>W[k].state==="weak" && okKey(k)); /* asked separately: a due review must not crowd out an open weakness */
+  if(dueCheck || dueReview) plan.push("review");
+  if(Object.keys(weekWeights()).length){ plan.push("week"); plan.push("week"); } else plan.push("mix");
+  if(openWeak) plan.push("focus");
+  plan.push("mix"); while(plan.length<5) plan.push("mix"); if(plan.length>6) plan.length=6; return plan; }
+const todayLabel=k=>({review:"a check-in on something you have shown before", week:"this week's lesson", focus:"your weakest spot", mix:"mixed practice"})[k]||k;
+function todaySummaryHTML(){ const done=S.log.filter(e=>e.today===todaySid && isFresh(e) && !(e.placement && !e.ok)); const n=done.length; const right=done.filter(e=>e.ok).length, ind=done.filter(e=>classifyEntry(e)==="independent").length; const last=done[done.length-1]; const endedSolo=!!(last && classifyEntry(last)==="independent"); const t=recoveryTarget(); /* the sitting's own primary problems, by session id; a missed quick check is not scored */
+  return `<div class="stop" role="status"><b>That is today.</b> ${n} problem${n===1?"":"s"}: ${right} right, ${ind} on your own.${endedSolo?"":" The last ones took some help, and that is fine: next time starts fresh."} ${t?(()=>{ const nm=t.why.split(" · ")[0], skn=SKILLS[t.sk].name.toLowerCase(); return `Next time: ${esc(nm.toLowerCase().startsWith(skn)?nm:`${skn}, ${nm}`)}.`; })():"Nothing on the watch list right now."}<div class="actions" style="margin-top:8px"><button class="btn primary" id="stopnow">Done for today</button><button class="btn quiet" id="onemore">One more anyway</button></div></div>`; } // fresh problems answered since the app opened; the last count at which the stopping point was offered; she tapped "Done for today"
 let ws=null;         // multiplication workspace state for the current problem: {vals:{cellKey:digit}, sel:cellKey}
+let preVal="", preSel=-1; // her response to the "show your step" component check on the current problem
+// The one component each representation exists to teach. A problem in that representation asks for this step on the task itself,
+// so the step is observed, not inferred from a walkthrough she never opened.
+const REP_COMP={ "addsub:numberline":"jump", "addsub:chart":"chart", "decmul:area":"partition", "decmul:distributive":"partition", "decdiv:measuring":"groups", "decdiv:dealing":"unit",
+  "fractions:simplify":"common-factor", "fractions:mixed":"wholes", "fractions:estimate":"benchmark", "fractions:compare":"common-denominator", "expressions:word":"structure", "multiply:area":"model" };
+function stepFor(p, comp){ const walk=steps=>{ for(const st of steps||[]){ if(st.check && st.check.comp===comp) return st; if(Array.isArray(st.sub)){ const f=walk(st.sub); if(f) return f; } } return null; }; return walk(p.steps); }
+// Attach the component check: for a Focus target that names a step-level component, and for any problem served in a representation variant.
+function attachPre(p, comp){ if(!p || p.ws || !comp) return; const st=stepFor(p, comp); if(!st || !st.check) return; p.pre={comp, check:st.check, note:st.t}; }
+function preHTML(){ if(!cur.pre || phase!=="q") return ""; const c=cur.pre.check; const nm=compName(cur.skill,cur.pre.comp);
+  return `<div class="substep pre" id="pre"><div class="cq"><b>Show your step</b> (${esc(nm)}): ${c.q}</div>${c.type==="mc" ? optsHTML("preopts", c.options||[], preSel, c.answer, false, "opt copt") : `<label class="vh" for="preans">Your answer for this step</label><input class="ans small${isTextTarget(c)?" text":""}" id="preans" ${ansAttrs(c)} autocomplete="off" placeholder="this step first" value="${esc(preVal)}">`}</div>`; }
+function gradePre(){ if(!cur.pre) return null; const c=cur.pre.check; if(c.type==="mc"){ if(preSel<0) return {missing:true}; return {ok:preSel===c.answer, yours:String((c.options||[])[preSel])}; } const inp=app.querySelector("#preans"); const v=inp?inp.value:preVal; preVal=v; if(!String(v).trim()) return {missing:true}; const iss=issueFor(c,v); if(iss) return {missing:true, issue:iss}; return {ok:!!checkAccepts(c,v), yours:String(v).trim()}; }
 const SUPPORT_NAMES={3:"the pre-written tens-row zero and the opening coach line", 2:"the column labels", 1:"the carry boxes"}; // what each support level adds on top of the one below it
 function resetSession(){ sessionN=0; stopOfferedAt=-1; sessionDone=false; sessionMissRun=0; breakOfferedAt=-1; } // a new learner starts a fresh sitting
-const coachOn=()=>!!(cur && cur.ws && (S.support.multiply||0)>=3 && cur.hints && cur.hints[0]); // the coach line on the workspace shows hint 1 for free
+const coachLevel=sk=>{ const c=S.coach||{}; const lv = c[sk]===undefined ? 2 : c[sk]; const everRight=S.log.some(e=>e.sk===sk && e.ok && ["independent","supported"].includes(classifyEntry(e))); /* the same classification as the rest of the app: a hinted, studied, walkthrough, follow-up, copied, or paper entry is not "getting one right" */ return Math.min(lv, everRight?1:2); }; // full coaching (line + example) only until her first right answer on the skill; after that the coach is a one-line nudge at most
+const wsSup=()=> (cur && cur.placement && !cur.toolsOn) ? 0 : (S.support.multiply||0); /* the supports actually on screen: a quick placement check runs on the bare page unless she asks for a tool back */
+const coachOn=()=>!!(cur && cur.hints && cur.hints[0] && !cur.placement && (cur.ws ? wsSup()>=3 : coachLevel(cur.skill)>=1)); // the coach line shows hint 1 for free; on the workspace it is tied to the supports
+// "Show me one first": a completed example of a similar problem, before she tries hers. Looking is recorded as studied (help), never as independent.
+let exampleOpen=false;
+const exampleBtn=()=> cur.hw&&cur.fixed ? "" : `<button class="btn quiet" id="showexample" title="See a similar problem worked out, step by step, before you try this one">${exampleOpen?"Hide the example":cur.studied?"See the example again":"Show me one first"}</button>`;
+const exampleSig=p=>{ const m=p.meta||{}; return JSON.stringify([p.skill, p.type, ctxKey(ctxOf(p)), m.kind||"", m.dir||"", m.variant||"", m.op||"", m.which===undefined?"":!!m.which, p.ws?1:0]); }; // everything that defines the concept; only the numbers may differ
+function buildExample(){ if(cur.example) return cur.example; let ex=null; const want=exampleSig(cur); const f={...focusFromCtx(cur.skill, ctxOf(cur))}; const m=cur.meta||{}; if(m.variant) f.variant=m.variant; if(m.kind) f.kind=m.kind; if(m.dir) f.dir=m.dir; if(m.op) f.op=m.op; if(m.which!==undefined) f.which=!!m.which;
+  for(let i=0;i<40;i++){ const c=SKILLS[cur.skill].gen(cur.level, f); if(plain(c.prompt)!==plain(cur.prompt) && exampleSig(c)===want){ ex=c; break; } } if(!ex) return null;
+  const steps=expandAll(ex.steps||[]).map(st=>({t:st.t, ans: st.check ? (st.check.type==="mc" ? String((st.check.options||[])[st.check.answer]) : String(st.check.display)) : null}));
+  cur.example={prompt:plain(ex.prompt), display:ex.display, steps}; return cur.example; }
+function exampleHTML(){ if(!exampleOpen) return ""; const ex=buildExample(); if(!ex) return `<p class="muted">No matching example is available for this exact kind of problem.</p>`;
+  return `<div class="hints" id="example" aria-live="polite"><div class="step"><span class="n">Example.</span><b>${esc(ex.prompt)}</b> Here is one like yours, all the way through. Then try yours.</div>${ex.steps.map((st,i)=>`<div class="step"><span class="n">${i+1}.</span>${st.t}${st.ans!==null?` <b class="good">→ ${esc(st.ans)}</b>`:""}</div>`).join("")}<div class="step"><span class="n">Answer.</span><b>${esc(ex.display)}</b>. Now yours: same steps, your numbers.</div></div>`; }
 function prevNeededHelp(sk){ const a=S.log.filter(e=>e.sk===sk); const p=a[a.length-2]; return !!p && (!p.ok || +p.hints>0); } // the attempt before the one just logged
 let scratchStrokes=[]; let penSeen=false; // scratch paper for the current problem; once a pencil is used, finger touches are ignored (palm rejection) // the "say why" question after a right answer: {sel, done, ok}; okEntry is the log entry it annotates
 function expandAll(steps){ const out=[]; for(const s of steps){ if(Array.isArray(s.sub)&&s.sub.length){ out.push(...expandAll(s.sub)); const c={...s, expanded:true}; if(c.tAfter) c.t=c.tAfter; out.push(c); } else out.push(s); } return out; }
@@ -2219,7 +2680,7 @@ function home(){
       ${prevL?`<div class="week-prev muted">Spiral review: ${lessonLine(prevL, prevL.unit!==curL.unit)}</div>`:""}
       ${unit&&unit.assess?`<div class="week-prev muted">Next assessment: Unit ${esc(unit.unit)} Assessment: ${esc(unit.assess)}</div>`:""}
       ${lessonSkills(curL).length?"":(Object.keys(weekWeights()).length?`<p class="muted week-note">The app doesn't have this lesson yet. "Practice this week" uses the lessons just before it: ${[...new Set([ci-1,ci-2].filter(i=>i>=0).flatMap(i=>lessonSkills(L[i])))].map(k=>esc(SKILLS[k].name)).join(", ")}.</p>`:`<p class="muted week-note"><b>Nothing in the app yet for this lesson or the two before it.</b> The button below gives mixed review of everything the app does have; it is not this week's topic.</p>`)}
-      ${/number line/i.test(curL.name)&&lessonSkills(curL).length?`<p class="muted week-note">This lesson uses the <b>number-line strategy</b>. The app practices the same problems by place value; the number-line picture is not in the app yet.</p>`:""}
+      ${/number line/i.test(curL.name)&&lessonSkills(curL).length&&!(curL.focus&&Object.values(curL.focus).some(f=>f&&f.variant==="numberline"))?`<p class="muted week-note">This lesson uses the <b>number-line strategy</b>. The app practices the same problems by place value; the number-line picture is not in the app yet.</p>`:""}
       <div class="actions" style="margin-top:12px"><button class="btn primary" data-skill="week" id="week">${Object.keys(weekWeights()).length?"Practice this week":"Mixed review instead"}</button>${nextL?`<button class="btn quiet small" id="moved" title="Advance to ${esc(lessonShort(nextL))}">Class moved on →</button>`:""}</div>
       <p class="muted week-foot">${S.classPin?"Lesson position was pinned on the grown-ups page; choose “Follow the calendar” there to go back to the district pacing estimate.":"Lesson position is estimated from the district pacing calendar; use the grown-ups page to pin the exact lesson from the homework header."}</p>
     </div>` : "";
@@ -2236,7 +2697,10 @@ function home(){
   app.innerHTML=`
     <div class="topbar"><h1 style="margin:0">Hi, ${esc(S.name)}.</h1><button class="btn quiet small" id="switch">Not ${esc(S.name)}?</button></div>${warnHTML()}
     <p class="muted" style="margin:6px 0 16px">Pick something to practice. It gets harder as you get better, and if you miss one, we slow down and walk through it.</p>
-    ${doneLine}${weekHTML}
+    ${doneLine}<div class="card" style="margin-top:0;border-color:var(--ink)"><div class="week-head"><h2 style="margin:0">Start today</h2><span class="std" title="The app plans it">Planned for you</span></div>
+      <p class="muted" style="font-size:14px;margin:6px 0 10px">About six problems, chosen for you: ${buildTodayPlan().map(todayLabel).filter((v,i,a)=>a.indexOf(v)===i).join(", ")}. It tries to end on one you get right on your own: after the plan, a couple more if needed.</p>
+      <div class="actions" style="margin-top:0"><button class="btn primary mix" data-skill="today" style="margin-top:0">Start today</button></div></div>
+    ${weekHTML}
     <div class="card hw">
       <div class="week-head"><h2 style="margin:0">Homework practice</h2><span class="std" title="Problem shapes from the worksheet, not from your level">Worksheet shapes</span></div>
       <p class="muted" style="font-size:14px;margin:6px 0 10px">Tonight's page, at tonight's size. These use the worksheet's problem shapes no matter what the dots say, and they never move a level up or down.</p>
@@ -2298,14 +2762,15 @@ function parseHomework(text){
     return {skill:"shift", focus:{fixed:{num:{w:num.w,d:num.d},op,factor:Math.pow(10,e)}}, level:3, label:`${fmt(num)} ${op} ${Math.pow(10,e).toLocaleString("en-US")}`}; }
   // multiplication: "148 × 19", "23 x 72", "222*43"
   m=t.match(new RegExp("^"+NUM+"\\s*[x×*·]\\s*"+NUM+"$"));
-  if(m){ const A=numOf(m[1]), B=numOf(m[2]); if(!A||!B) return {err:"I could not read those numbers."}; if(A.d||B.d) return {err:"Multiplying decimals is Unit 4; the app does not have it yet."};
+  if(m){ const A=numOf(m[1]), B=numOf(m[2]); if(!A||!B) return {err:"I could not read those numbers."}; if(A.d||B.d){ if(A.d.length+B.d.length>3) return {err:"Decimal products up to thousandths, please (like 2.5 × 1.2)."}; const [X,Y]= B.d&&!A.d ? [B,A] : [A,B]; return {skill:"decmul", focus:{fixed:{a:{w:X.w,d:X.d}, b:{w:Y.w,d:Y.d}}}, level:Y.d?4:2, label:`${fmt(A)} × ${fmt(B)}`}; }
     let a=A.w, b=B.w; if(String(b).length>String(a).length) [a,b]=[b,a]; if(a<2||b<2) return {err:"Both factors should be 2 or more."};
     if(String(a).length>4) return {err:"Up to a 4-digit number times a 2-digit number, please."}; if(String(b).length>2) return {err:"The standard-algorithm walkthrough handles a 1- or 2-digit multiplier (two partial products)."};
     if(b>=10 && b%10===0) return {err:`${a} × ${b}: a multiplier ending in 0 is a powers-of-ten pattern (${a} × ${b/10}, then × 10). Type ${a} × ${b/10} for the algorithm, or use "Multiply and divide by 10" for the pattern.`};
     return {skill:"multiply", focus:{fixed:{a,b},variant:"algorithm"}, level:shapeLevel([String(a).length,String(b).length]), label:`${a.toLocaleString("en-US")} × ${b}`}; }
   // division: "3,660 ÷ 30", "1728 / 12"
   m=t.match(new RegExp("^"+NUM+"\\s*[÷/]\\s*"+NUM+"$"));
-  if(m){ const A=numOf(m[1]), B=numOf(m[2]); if(!A||!B) return {err:"I could not read those numbers."}; if(A.d||B.d) return {err:"Dividing decimals is Unit 4; the app does not have it yet."};
+  if(m){ const A=numOf(m[1]), B=numOf(m[2]); if(!A||!B) return {err:"I could not read those numbers."}; if(A.d||B.d){ const NV=toThousandths({w:A.w,d:A.d}), dv=toThousandths({w:B.w,d:B.d}); if(dv===0) return {err:"Cannot divide by 0."}; if((NV*1000)%dv!==0 || (NV*1000/dv)%10!==0) return {err:`${fmt(A)} ÷ ${fmt(B)} does not come out evenly to hundredths; the app's decimal division works with even answers.`}; if(B.d && (NV*1000/dv)%1000!==0) return {err:`${fmt(A)} ÷ ${fmt(B)} = ${fmt(D(NV*1000/dv))}: a part of a group is left over. The app's measuring-up strategy counts whole groups (like 4.8 ÷ 0.6); for a decimal answer, divide by a whole number (like 4.8 ÷ 6).`};
+    return {skill:"decdiv", focus:{fixed:{N:{w:A.w,d:A.d}, d:{w:B.w,d:B.d}}, variant:B.d?"measuring":"dealing"}, level:3, label:`${fmt(A)} ÷ ${fmt(B)}`}; }
     const N=A.w, d=B.w; if(d<2) return {err:"The divisor should be 2 or more."}; if(N%d!==0) return {err:`${N.toLocaleString("en-US")} ÷ ${d} has a remainder (${N%d}). The app's place-value strategy handles division that comes out even.`};
     if(N>99999) return {err:"Dividends up to 99,999, please."}; const q=N/d; if(q<2) return {err:"The quotient should be 2 or more."};
     return {skill:"divide", focus:{fixed:{d,q},variant:"placevalue"}, level:3, label:`${N.toLocaleString("en-US")} ÷ ${d}`}; }
@@ -2358,19 +2823,20 @@ function missWeights(){
   return {w, tag};
 }
 function pickSkill(){
-  if(mode==="week"){ const w=weekWeights(), keys=Object.keys(w); if(keys.length) return drawWeighted(keys, keys.map(k=>w[k])); }
-  else if(mode==="miss"){ const tg=recoveryTarget(); if(tg) return tg.sk; } // nothing open or due → plain mix; a component in review is left alone until its check-in
+  const slot = mode==="today" && todayPlan ? (todayPlan[todayIdx]||"mix") : null; const eff = slot==="week" ? "week" : slot==="focus" ? "miss" : slot ? "mix" : mode;
+  if(eff==="week"){ const w=weekWeights(), keys=Object.keys(w); if(keys.length) return drawWeighted(keys, keys.map(k=>w[k])); }
+  else if(eff==="miss"){ const tg=recoveryTarget(slot==="focus"?{openFirst:true}:undefined); if(tg) return tg.sk; } // nothing open or due → plain mix; a component in review is left alone until its check-in
   else if(mode==="hw:check") return (pendingHW && pendingHW.skill) || "multiply";
   else if(hwMode()) return hwMode().skill;
-  else if(mode!=="mix") return mode;
+  else if(eff!=="mix" && eff!=="week" && eff!=="miss") return eff;
   return drawWeighted(SKILL_ORDER, SKILL_ORDER.map(k=>(MAX_LEVEL+1-S.levels[k])*2+1)); // mix (and week with nothing to draw from)
 }
 function resetProblemState(){ // everything that must not leak from one problem into the next
   phase="q"; stepIdx=0; selected=-1; lastAnswer=""; hintIdx=0; lastChange=0; inlineErr=""; if(breakOfferedAt===-2) breakOfferedAt=-1; // the per-walkthrough "keep going" applies to that walkthrough only
-  sc=null; stepRes=[]; revealed=0; passed=0; expanded=0; missEntry=null; whyState=null; okEntry=null; scratchStrokes=[]; ws=null; lastPraise=[];
+  sc=null; stepRes=[]; revealed=0; passed=0; expanded=0; missEntry=null; whyState=null; okEntry=null; scratchStrokes=[]; ws=null; lastPraise=[]; exampleOpen=false; preVal=""; preSel=-1;
 }
 let pendingHW=null; // the parsed problem waiting to be served by next() in "hw:check" mode
-function start(m){ mode=m; if(m==="hw:check"){ pendingHW=null; hwEntry(); return; } next(); }
+function start(m){ mode=m; if(m==="hw:check"){ pendingHW=null; hwEntry(); return; } if(m==="today"){ todayPlan=buildTodayPlan(); todayIdx=0; todayExtra=0; todaySid=Date.now(); } next(); }
 // "Check my homework": type the problem from the page, then answer it like any other problem; a miss walks through that exact problem.
 function hwEntry(prefill, err){
   mode="hw:check"; cur=null; pendingHW=null;
@@ -2383,7 +2849,7 @@ function hwEntry(prefill, err){
       <input class="ans text" id="hwq" type="text" inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="like 148 × 19" value="${esc(prefill||"")}">
       <div class="inline-err" id="hwerr" role="status" aria-live="polite">${esc(err||"")}</div>
       <div class="actions"><button class="btn primary" id="hwgo">Set it up</button></div>
-      <p class="muted" style="font-size:14px;margin:14px 0 0">Shapes the app knows: <b>148 × 19</b> (standard algorithm), <b>3,660 ÷ 30</b> (place value strategy), <b>8 × 10^5 × 6</b> or <b>47 × 10^6</b> (powers of ten), <b>4.5 × 1,000</b> or <b>2.99 ÷ 10^3</b> (moving the decimal point), <b>round 2.98 to the nearest tenth</b>, <b>3.45 + 2.7</b> or <b>12.5 − 3.75</b> (adding and subtracting decimals), <b>2 + 3 × 4</b> or <b>12 ÷ (8 − 4) × 2</b> (order of operations). Use x or × for times, ÷ or / for divide, ^ for the exponent.</p>
+      <p class="muted" style="font-size:14px;margin:14px 0 0">Shapes the app knows: <b>148 × 19</b> (standard algorithm), <b>3,660 ÷ 30</b> (place value strategy), <b>8 × 10^5 × 6</b> or <b>47 × 10^6</b> (powers of ten), <b>4.5 × 1,000</b> or <b>2.99 ÷ 10^3</b> (moving the decimal point), <b>round 2.98 to the nearest tenth</b>, <b>3.45 + 2.7</b> or <b>12.5 − 3.75</b> (adding and subtracting decimals), <b>3.4 × 6</b>, <b>2.5 × 1.2</b> or <b>4.8 ÷ 0.6</b> (multiplying and dividing decimals), <b>2 + 3 × 4</b> or <b>12 ÷ (8 − 4) × 2</b> (order of operations). Use x or × for times, ÷ or / for divide, ^ for the exponent.</p>
     </div>`;
   const q=id=>app.querySelector("#"+id); const inp=q("hwq");
   q("back").onclick=home;
@@ -2392,18 +2858,28 @@ function hwEntry(prefill, err){
   inp.focus({preventScroll:true});
 }
 function next(){ // a fresh problem: new help chain
-  const sk=pickSkill();
+  let sk=pickSkill();
   stage="fresh"; chain=0;
   // Week mode: the current lesson may ask for a particular flavour of a skill (e.g. area-model multiplication). Skill mode passes nothing.
   let focus;
-  if(mode==="week"){ const l=lessonById(effectiveClassAt()); if(l && l.focus && typeof l.focus==="object" && l.focus[sk]) focus=l.focus[sk]; }
-  let target=null;
-  if(mode==="miss"){ target=recoveryTarget(); if(target && target.sk===sk){ focus=target.focus; S.weak[target.key].served=Date.now(); } else target=null; } // the recovery cycle; with nothing open or due this is an ordinary mix problem
+  const slot = mode==="today" && todayPlan ? (todayPlan[todayIdx]||"mix") : null; const eff = slot==="week" ? "week" : slot==="focus" ? "miss" : slot==="review" ? "review" : slot ? "mix" : mode;
+  if(eff==="week"){ const l=lessonById(effectiveClassAt()); if(l && l.focus && typeof l.focus==="object" && l.focus[sk]) focus=l.focus[sk]; }
+  let target=null, checkinSk=null;
+  if(eff==="review"){ const t=recoveryTarget(); if(t && t.state==="review"){ target=t; sk=t.sk; focus=t.focus; S.weak[t.key].served=Date.now(); } else { const due=Object.keys(S.checkins||{}).filter(k=>SKILLS[k.split("|")[0]] && S.checkins[k].due<=Date.now()).sort((a,b)=>S.checkins[a].due-S.checkins[b].due)[0]; if(due){ checkinSk=due; sk=due.split("|")[0]; } } }
+  else if(eff==="miss"){ target=recoveryTarget(slot==="focus"?{openFirst:true}:undefined); if(target && target.sk===sk){ focus=target.focus; S.weak[target.key].served=Date.now(); } else target=null; } // the recovery cycle; with nothing open or due this is an ordinary mix problem
+  else if(mode==="week"||mode==="mix"){ // a small, visible review allocation in ordinary sessions (the planned session handles this through its own "review" slot): every third fresh problem, a due review or a due check-in takes the slot
+    if(sessionN%3===2){ const t=recoveryTarget(); if(t && t.state==="review"){ target=t; sk=t.sk; focus=t.focus; S.weak[t.key].served=Date.now(); }
+      else { const due=Object.keys(S.checkins||{}).filter(k=>SKILLS[k.split("|")[0]] && S.checkins[k].due<=Date.now()).sort((a,b)=>S.checkins[a].due-S.checkins[b].due)[0]; if(due){ checkinSk=due; sk=due.split("|")[0]; } } } }
   const hw=hwMode();
   if(mode==="hw:check"){ if(!pendingHW){ hwEntry(); return; } cur=SKILLS[pendingHW.skill].gen(pendingHW.level, pendingHW.focus); cur.hw=true; cur.fixed=true; cur.hwLabel=pendingHW.label; pendingHW=null; }
   else if(hw){ const shape=pick(hw.shapes); cur=SKILLS[sk].gen(shapeLevel(shape), {shape, variant:hw.variant}); cur.hw=true; }
-  else if(target){ cur=genForTarget(target); cur.focusKey=target.key; cur.focusWhy=target.why; cur.harder=target.harder&&target.state==="weak"; }
+  else if(target){ cur=genForTarget(target); if(cur.notEligible){ cur.focusWhy=`could not build a problem for ${target.why.split(" · ")[0]}; this one is ordinary practice`; } else { cur.focusKey=target.key; cur.focusWhy=target.why; cur.harder=target.harder&&target.state==="weak"; if(STEP_COMPS[target.sk] && STEP_COMPS[target.sk].has(target.comp)) attachPre(cur, target.comp); } }
+  else if(checkinSk){ const ck=S.checkins[checkinSk]; const cf=focusFromCtx(sk, ck.ctx||{}); let g=0; do{ cur=SKILLS[sk].gen(S.levels[sk], Object.keys(cf).length?cf:undefined); }while(g++<20 && ck.ctx && ctxKey(checkinCtx(cur))!==ctxKey(ck.ctx)); cur.checkin=checkinSk; } // the same kind of problem she showed, with new numbers
   else cur = focus!==undefined ? SKILLS[sk].gen(S.levels[sk], focus) : SKILLS[sk].gen(S.levels[sk]);
+  if(!cur.pre){ const rc=REP_COMP[`${cur.skill}:${cur.meta&&cur.meta.variant}`]; if(rc) attachPre(cur, rc); } // a representation lesson always asks for its own step
+  // Quick placement check: a skill she has never tried starts with one level-3 problem, no coach. Right on her own → she starts at level 3. Wrong → level 1 as usual, and the miss does not count against her.
+  if(!cur.hw && !cur.focusKey && !cur.checkin && S.levels[sk]===1 && !S.log.some(e=>e.sk===sk) && cur.level===1 && !cur.fixed){ const trial=SKILLS[sk].gen(3, focus); if(trial && trial.skill===sk){ cur=trial; cur.placement=true; if(!cur.pre){ const rc=REP_COMP[`${cur.skill}:${cur.meta&&cur.meta.variant}`]; if(rc) attachPre(cur, rc); } } }
+  if(mode==="today" && todayPlan){ cur.todaySlot=todayPlan[todayIdx]||"extra"; todayIdx++; if(todayIdx>todayPlan.length) todayExtra++; }
   resetProblemState(); render();
 }
 function followup(){ // "Try one like it": same skill, same level as the one she missed, aimed at the same mistake
@@ -2457,13 +2933,13 @@ function wsSpec(p){
 // boxes mirror it, right-aligned. This gives hardware and on-screen keyboards normal cursor, selection, paste, and correction behavior.
 // Enter moves to the next row; Enter on the last row checks. A carry box is the one-digit exception: tap it and type one digit, then the
 // selection returns to the row. ws.rows holds the typed strings; ws.vals (per cell) is derived from them so grading is unchanged.
-function wsInit(){ if(ws) return; const sp=wsSpec(cur); const rowKeys=sp.two?["r0","r1","t"]:["t"]; ws={rows:{}, carries:{}, vals:{}, sel:rowKeys[0], rowKeys, locked:{}, marks:null}; if(S.support.multiply>=3 && sp.two){ ws.locked["r1-0"]=true; } wsSync(); }
+function wsInit(){ if(ws) return; const sp=wsSpec(cur); const rowKeys=sp.two?["r0","r1","t"]:["t"]; ws={rows:{}, carries:{}, vals:{}, sel:rowKeys[0], rowKeys, locked:{}, marks:null}; if(wsSup()>=3 && sp.two){ ws.locked["r1-0"]=true; } wsSync(); }
 function wsSync(){ const sp=wsSpec(cur); ws.vals={}; for(const k of ws.rowKeys){ let str=ws.rows[k]||""; if(k==="r1" && ws.locked["r1-0"]) str+="0"; const digs=str.split("").reverse(); digs.forEach((ch,p)=>{ if(p<sp.cols) ws.vals[`${k}-${p}`]=ch; }); } for(const k in ws.carries){ if(ws.carries[k]!=="") ws.vals[k]=ws.carries[k]; } }
 function wsRowLabel(k, sp){ return ({r0:"ones row (top partial product)",r1:"tens row",t:sp.two?"total (bottom row)":"answer"})[k]||"answer"; }
-function wsRowPrompt(k, sp){ if(k==="r1" && ws.locked["r1-0"]) return "The 0 at the end is already written. Type the rest of the tens row."; if(k==="r1") return "Type the whole tens row, ending in 0."; return `Type the whole ${wsRowLabel(k,sp)}`; }
+function wsRowPrompt(k, sp){ if(k==="r1" && ws.locked["r1-0"]) return "The 0 at the end is already written. Type the rest of the tens row."; if(k==="r1") return "Type the second partial product (the tens row)."; return `Type the whole ${wsRowLabel(k,sp)}`; } // no cue about the 0 unless it is already written for her
 function wsActiveRow(){ return wsIsRow(ws.sel)?ws.sel:(wsIsRow(ws.retRow)?ws.retRow:ws.rowKeys[0]); }
 function wsHTML(readonly, marks){
-  const sp=wsSpec(cur); const sup=S.support.multiply; const cellW = window.innerWidth>=700 ? 54 : 46;
+  const sp=wsSpec(cur); const sup=wsSup(); const cellW = window.innerWidth>=700 ? 54 : 46;
   const cellsRow=(key, cls, locked)=>{ let h=""; for(let p=sp.cols-1;p>=0;p--){ const k=`${key}-${p}`; const v=ws.vals[k]||""; const lk=!!ws.locked[k]; const m=marks&&marks[k]; const role=key==="t"?"answer":key.startsWith("c")?"carry":"partial product"; h+=`<button type="button" class="cell ${cls||""}${(k===ws.sel||key===ws.sel)&&!readonly?" sel":""}${lk?" locked":""}${m?" "+m:""}" data-k="${k}" ${readonly||lk?"disabled":""} aria-label="${role} ${WHOLE_PLACES[p]||""} place, ${v?"digit "+esc(v):"empty"}">${esc(v)}</button>`; } return h; };
   let g=`<div class="ws-grid" style="grid-template-columns:30px repeat(${sp.cols},${cellW}px)">`;
   if(sup>=2){ g+=`<div></div>`; for(let p=sp.cols-1;p>=0;p--) g+=`<div class="lbl">${WHOLE_PLACES[p]||""}</div>`; }
@@ -2510,10 +2986,9 @@ function wsFocusEntry(cellKey){ const entry=app.querySelector("#wsentry"); if(!e
 // steps; a cell whose mini-ladder is used up is passed over. Returns null when every box is filled and matches.
 function wsHintCursor(){ const sp=wsSpec(cur); const plan=cur.hintPlan||[]; const used=cur.hintUsed||{};
   const done=c=>(used[c.key]||0)>=c.hints.length; const val=k=>ws.vals[k];
-  const empty=plan.find(c=>!done(c) && (c.key==="t-plan" ? !(val("t-0")!==undefined&&val("t-0")!=="") : (!ws.locked[c.key] && (val(c.key)===undefined||val(c.key)===""))));
-  if(empty) return empty;
-  const wrong=plan.find(c=>!done(c) && c.key!=="t-plan" && !ws.locked[c.key] && sp.exp[c.key]!==undefined && val(c.key)!==sp.exp[c.key]);
-  return wrong||null; }
+  // One pass in solution order: the first cell that is either empty or filled but not matching. An earlier wrong digit comes before a later blank row.
+  const issue=plan.find(c=>{ if(done(c)) return false; if(c.key==="t-plan") return !(val("t-0")!==undefined&&val("t-0")!==""); if(ws.locked[c.key]) return false; const v=val(c.key); if(v===undefined||v==="") return true; return sp.exp[c.key]!==undefined && v!==sp.exp[c.key]; });
+  return issue||null; }
 function wsNextHint(){ cur.hintUsed=cur.hintUsed||{}; cur.hintLog=cur.hintLog||[];
   if(!coachOn() && !cur.hintUsed.overview && cur.hints[0]){ cur.hintUsed.overview=1; cur.hintLog.push({t:cur.hints[0].t}); return; } // without the coach line, the overview is the first hint
   const c=wsHintCursor();
@@ -2528,7 +3003,7 @@ function bindWS(){
       else if(e.key==="Backspace"&&!entry.value&&ws.rowKeys.indexOf(wsActiveRow())>0){ e.preventDefault(); e.stopPropagation(); wsPrevRow(); wsPaint(); wsFocusEntry(); } };
   }
   app.querySelectorAll(".pad .btn").forEach(b=>b.onclick=()=>{ const d=b.dataset.d; if(d==="bs") wsBack(); else if(d==="nx"){ if(wsNextRow()) submit(); else wsPaint(); } else if(d==="clr") wsClearRow(); else wsType(d); });
-  const tb=app.querySelector("#toolsback"); if(tb) tb.onclick=()=>{ S.support.multiply=Math.min(3,(S.support.multiply||0)+1); S.supportWins.multiply=0; const keep=ws?{rows:{...ws.rows},carries:{...ws.carries}}:null; ws=null; wsInit(); if(keep){ ws.rows=keep.rows; ws.carries=keep.carries; if(ws.locked["r1-0"] && /0$/.test(ws.rows.r1||"")) ws.rows.r1=ws.rows.r1.slice(0,-1); wsSync(); } save(); render(); }; // her call; a right answer with it on counts as supported
+  const tb=app.querySelector("#toolsback"); if(tb) tb.onclick=()=>{ if(cur.placement){ cur.toolsOn=true; } else { S.support.multiply=Math.min(3,(S.support.multiply||0)+1); S.supportWins.multiply=0; } /* on a quick check the tools come back for this problem only; the answer then counts as supported, and nothing is lost */ const keep=ws?{rows:{...ws.rows},carries:{...ws.carries}}:null; ws=null; wsInit(); if(keep){ ws.rows=keep.rows; ws.carries=keep.carries; if(ws.locked["r1-0"] && /0$/.test(ws.rows.r1||"")) ws.rows.r1=ws.rows.r1.slice(0,-1); wsSync(); } save(); render(); }; // her call; a right answer with it on counts as supported
   wsPaint();
 }
 // The first wrong cell in the order the algorithm works: row r0, then r1, then the total; within a row, the lowest place. A wrong carry box
@@ -2571,8 +3046,10 @@ function gradeWS(){
     else if(rows.t!==herSum){ for(let p=0;p<sp.cols;p++){ const k=`t-${p}`; if(!digitOK(k)) note(k,"add-partials"); } } // her rows were wrong AND she added them wrong
     else { for(let p=0;p<sp.cols;p++){ const k=`t-${p}`; if(!digitOK(k)) marks[k]="bad"; } } } // wrong total, but it is the right sum of her own rows: downstream of the row mistake
   if(gaps["r1-0"] && !wrong.includes("r1-0")){ marks["r1-0"]="bad"; note("r1-0","tens-zero"); } // the tens row was read as if the 0 were there; it was not
-  for(const k in sp.carries){ if(V[k]!==undefined && V[k]!=="" && V[k]!==sp.carries[k]) note(k,"regroup"); }
-  for(const k in V){ if(k.startsWith("c") && V[k]!=="" && sp.carries[k]===undefined && V[k]!=="0") note(k,"regroup"); } // a carry written where nothing regroups
+  // Carry boxes are her notes, not the answer: a wrong one is flagged and counted as a regroup slip (so the weakness opens) but never fails a right product; it does withhold regroup evidence.
+  const carrySlips=[]; for(const k in sp.carries){ if(V[k]!==undefined && V[k]!=="" && V[k]!==sp.carries[k]){ marks[k]="bad"; carrySlips.push(k); } }
+  for(const k in V){ if(k.startsWith("c") && V[k]!=="" && sp.carries[k]===undefined && V[k]!=="0"){ marks[k]="bad"; carrySlips.push(k); } }
+  if(carrySlips.length){ tally.regroup=tally.regroup||{ok:0,miss:0}; tally.regroup.miss+=carrySlips.length; if(!comps.includes("regroup")) comps.push("regroup"); }
   const ok = wrong.length===0 && rows.t===sp.a*sp.b && (!sp.two || (rows.r0===sp.a*sp.ones && rows.r1===sp.a*sp.tens*10));
   const PRI=["rows","tens-zero","regroup","fact","add-partials"]; const cnt={}; comps.forEach(c=>cnt[c]=(cnt[c]||0)+1);
   const main = Object.keys(cnt).sort((x,y)=>cnt[y]-cnt[x] || PRI.indexOf(x)-PRI.indexOf(y))[0] || (ok?"":"fact");
@@ -2581,7 +3058,7 @@ function gradeWS(){
   const wrongText = wrong.map(k=>{ const [row,p]=k.split("-"); const nm=row==="t"?"answer":row==="r0"?"ones row":row==="r1"?"tens row":row.startsWith("c")?"carry":row; return p===undefined?`${nm} missing`:`${nm}, ${WHOLE_PLACES[+p]||""}`; }).join("; ");
   ws.marks=marks;
   // What a right answer here actually demonstrates. The pre-written tens-row 0 (support level 3) is the app's work, not hers.
-  const evidence = new Set(trapsOf(cur)); if(ws.locked["r1-0"]) evidence.delete("tens-zero");
+  const evidence = new Set(trapsOf(cur)); if(ws.locked["r1-0"]) evidence.delete("tens-zero"); if(carrySlips.length) evidence.delete("regroup");
   return {ok, comps:[...new Set(comps)], compsTally:tally, main, product:rows.t, yours, wrongText, marks, evidence:[...evidence]};
 }
 
@@ -2589,7 +3066,7 @@ function render(){
   const sk=cur.skill; const lvl = stage==="followup" ? cur.level : S.levels[sk]; // a follow-up stays at the level of the problem she missed
   const top=`
     <div class="topbar"><button class="btn quiet" id="back">Home</button>
-      <div class="row"><button class="btn quiet small" id="scratchtoggle" aria-pressed="${S.scratch?"true":"false"}" title="Scratch paper for working it out with the pencil">${S.scratch?"Hide scratch paper":"Scratch paper"}</button><span class="pill">${SKILLS[sk].name}</span>${mode==="week"?`<span class="pill week">${Object.keys(weekWeights()).length?"This week":"Mixed review"}</span>`:""}${mode==="miss"?`<span class="pill week" title="Chosen from your weakness profile, not the calendar">${cur.focusWhy?`Focus: ${esc(cur.focusWhy)}`:"Where I missed"}</span>`:""}${cur.hw?`<span class="pill week" title="${cur.fixed?"A problem typed from the page":"Worksheet shapes"}; does not change levels">${cur.fixed?"From the page":"Homework"}</span>`:""}${stage==="followup"?`<span class="pill">One like it</span>`:""}${cur.hw?"":dots(lvl)}</div></div>${warnHTML()}`;
+      <div class="row"><button class="btn quiet small" id="scratchtoggle" aria-pressed="${S.scratch?"true":"false"}" title="Scratch paper for working it out with the pencil">${S.scratch?"Hide scratch paper":"Scratch paper"}</button><span class="pill">${SKILLS[sk].name}</span>${mode==="week"?`<span class="pill week">${Object.keys(weekWeights()).length?"This week":"Mixed review"}</span>`:""}${mode==="today"&&todayPlan?`<span class="pill week" title="${esc(todayLabel(cur.todaySlot))}">Today ${Math.min(todayIdx,todayPlan.length)} of ${todayPlan.length}${cur.todaySlot&&cur.todaySlot!=="extra"?` · ${esc(todayLabel(cur.todaySlot))}`:" · one more"}</span>`:""}${mode==="miss"?`<span class="pill week" title="Chosen from your weakness profile, not the calendar">${cur.focusWhy?`Focus: ${esc(cur.focusWhy)}`:"Where I missed"}</span>`:""}${mode!=="miss"&&cur.focusKey?`<span class="pill week" title="A review that came due">Review: ${esc(cur.focusWhy||"")}</span>`:""}${cur.checkin?`<span class="pill week" title="A skill you have shown before; checking it still holds after a break">Check-in</span>`:""}${cur.hw?`<span class="pill week" title="${cur.fixed?"A problem typed from the page":"Worksheet shapes"}; does not change levels">${cur.fixed?"From the page":"Homework"}</span>`:""}${stage==="followup"?`<span class="pill">One like it</span>`:""}${cur.hw?"":dots(lvl)}</div></div>${warnHTML()}`;
   let body=`<p class="prompt">${cur.prompt}</p>`; let right="";
   const showChart = cur.show ? chartHTML(cur.show, null, cur.minCols) : "";
   const m=cur.mistake;
@@ -2597,6 +3074,9 @@ function render(){
   const downHTML = lastChange<0 ? `<small>That is two misses close together, so this skill drops a level for now. You will earn it back.</small>` : "";
   if(phase==="q"||phase==="ok"||phase==="reveal"){
     body+=showChart;
+    if(phase==="q" && cur.placement) body+=`<div class="hints"><div class="step"><span class="n">Quick check.</span>You have not tried this kind yet. Try this one on your own first: if you get it, you skip ahead. New to it? Tap <b>${cur.ws?"Bring a tool back":"Show me one first"}</b> and nothing is lost.</div></div>`;
+    else if(phase==="q" && !cur.ws && coachOn()) body+=`<div class="hints"><div class="step"><span class="n">Coach.</span>${cur.hints[0].t}${coachLevel(cur.skill)>=2?` <span class="muted">New to this? <b>Show me one first</b> below walks through one like it.</span>`:""}</div></div>`;
+    body+=preHTML();
     if(cur.ws){ wsInit(); body+=wsHTML(phase!=="q", phase==="q"?null:(ws.marks||{})); if(phase==="q") body+=`<div class="inline-err" id="ierr" role="status" aria-live="polite">${esc(inlineErr)}</div>`; }
     else if(cur.type==="input"){
       body+=`<label class="vh" for="ans">Your answer</label><input class="ans${isTextTarget(cur)?" text":""}" id="ans" ${ansAttrs(cur)} autocomplete="off" placeholder="${isTextTarget(cur)?"Type your answer (like 2 × 2 × 3)":"Type your answer"}" ${phase!=="q"?"disabled":""} value="${phase!=="q"?esc(cur.display):esc(lastAnswer)}">`;
@@ -2604,29 +3084,33 @@ function render(){
     } else body+=optsHTML("opts", cur.options, selected, cur.answer, phase!=="q", "opt");
     if(phase==="q"){
       const hOff=coachOn()?1:0; // when the coach line already shows hint 1, the button hands out hint 2 onward
-      if(cur.hintPlan){ // workspace: hints follow her work, one cell at a time
+      if(cur.hintPlan && cur.ws && ws){ // workspace: hints follow her work, one cell at a time (only when this problem really has a live workspace)
         const log=cur.hintLog||[]; const total=(cur.hintTotal||cur.hints.length)-hOff; const more = !log.some(h=>h.done);
         body+=`<div class="hints" id="hints" aria-live="polite">${log.map((h,i)=>`<div class="step"><span class="n">Hint ${i+1+hOff} of ${total+hOff}.</span>${h.t}</div>`).join("")}</div>
-          <div class="actions"><button class="btn primary" id="check">Check</button><button class="btn quiet" id="showhint" ${more?"":"disabled"}>${log.length===0?(hOff?"Hint for the next box":"Hint"):more?"Hint for the next box":"No more hints"}</button></div>`; }
+          <div class="actions"><button class="btn primary" id="check">Check</button><button class="btn quiet" id="showhint" ${more?"":"disabled"}>${log.length===0?(hOff?"Hint for the next box":"Hint"):more?"Hint for the next box":"No more hints"}</button>${exampleBtn()}</div>${exampleHTML()}`; }
       else { const hAvail=cur.hints.length-hOff;
       body+=`<div class="hints" id="hints" aria-live="polite">${cur.hints.slice(hOff,hOff+hintIdx).map((h,i)=>`<div class="step"><span class="n">Hint ${i+1+hOff}${cur.hints.length>4?` of ${cur.hints.length}`:""}.</span>${h.t}${chartsHTML(h)}</div>`).join("")}</div>
-        <div class="actions"><button class="btn primary" id="check">Check</button><button class="btn quiet" id="showhint" ${hintIdx>=hAvail?"disabled":""}>${hintIdx===0?(hOff?"Next hint":"Hint"):hintIdx<hAvail?"Another hint":"No more hints"}</button></div>`; }
+        <div class="actions"><button class="btn primary" id="check">Check</button><button class="btn quiet" id="showhint" ${hintIdx>=hAvail?"disabled":""}>${hintIdx===0?(hOff?"Next hint":"Hint"):hintIdx<hAvail?"Another hint":"No more hints"}</button>${exampleBtn()}</div>${exampleHTML()}`; }
     }
     if(phase==="ok"){
       const independent = okEntry ? !!okEntry.independent : (stage==="fresh" && hintIdx===0);
       let msg;
-      if(independent) msg=pick(["Correct.","Yes.","Nailed it.","That's right."])+(S.run>=3?`<small>${S.run} in a row.</small>`:"")+(lastChange>0?`<span class="lvl">Level up! ${SKILLS[sk].name} is now level ${lvl}${lvl===MAX_LEVEL?", the top":""}.</span>`:"")+(cur.hw?`<small>Homework practice: the dots stay put; this counts on the grown-ups page.</small>`:"");
+      if(independent) msg=pick(["Correct.","Yes.","Nailed it.","That's right."])+(S.run>=3?`<small>${S.run} in a row.</small>`:"")+(lastChange>0 && !cur.placement?`<span class="lvl">Level up! ${SKILLS[sk].name} is now level ${lvl}${lvl===MAX_LEVEL?", the top":""}.</span>`:"")+(cur.hw?`<small>Homework practice: the dots stay put; this counts on the grown-ups page.</small>`:"");
+      else if(stage==="fresh" && hintIdx===0 && cur.studied) msg=`Right.<small>You studied an example first, so this counts as help. Level-ups and clearing a weakness come from problems done without the example.</small>`;
       else if(stage==="fresh" && hintIdx===0 && cur.ws) msg=`Right.<small>The supports were on for this one, so it counts as a supported success: it fades the supports, and level-ups come once they are mostly off.</small>`;
       else if(stage==="fresh") msg=`You got it with a hint.<small>Level-ups come from problems you do on your own, so the next one is fresh, no hints needed yet.</small>`;
       else msg=`You worked through it. Persistence counts.<small>Here comes a fresh one.${S.persist>=2?` That is ${S.persist} tough ones finished in a row.`:""}</small>`;
       body+=`<div class="banner ok" role="status" aria-live="polite"><span class="mark" aria-hidden="true">✓</span><div>${msg}</div></div>`;
+      if(cur.pre && okEntry && okEntry.pre) body+=`<div class="substep ${okEntry.pre.ok?"ok":"bad"}"><div class="cq">Your step (${esc(compName(cur.skill,cur.pre.comp))}): ${cur.pre.check.q}</div><div class="res"><span aria-hidden="true">${okEntry.pre.ok?"✓":"•"}</span> ${okEntry.pre.ok?`You showed it: <b>${esc(okEntry.pre.ans)}</b>.`:`The answer was right, but this step was not: it is <b>${esc(okEntry.pre.ans)}</b>. That step goes on the watch list.`}</div></div>`;
       if(lastPraise.length) body+=`<div class="praise" role="status">${lastPraise.map(p=>`<div class="${p.big?"big":""}">${p.t}</div>`).join("")}</div>`;
       if(whyState && cur.why){ const w=cur.why;
         if(!whyState.done) body+=`<div class="substep why"><div class="cq">${w.q}</div>${optsHTML("wopts", w.options, whyState.sel, w.answer, false, "opt copt")}<div class="actions" style="margin-top:10px"><button class="btn primary" id="wcheck">Check</button></div></div>`;
         else body+=`<div class="substep why ${whyState.ok?"ok":"bad"}"><div class="cq">${w.q}</div>${optsHTML("wopts", w.options, whyState.sel, w.answer, true, "opt copt")}<div class="res">${whyState.ok?`<span aria-hidden="true">✓</span> That is the reason.`:`<span aria-hidden="true">•</span> The reason: ${w.display}`}</div></div>`; }
       // A short session should feel complete: after five fresh problems, offer to stop on an independent success (or after seven, on any right answer).
-      const stopHere = (!whyState || whyState.done) && stopOfferedAt!==sessionN && ((sessionN>=5 && independent) || sessionN>=7);
-      if(stopHere) body+=`<div class="stop" role="status"><b>Good stopping point.</b>${sessionN} problems this sitting${independent?", and this one you did on your own":""}. ${S.today.c} right today. Stop here, or do one more?<div class="actions" style="margin-top:8px"><button class="btn primary" id="stopnow">Done for today</button><button class="btn quiet" id="onemore">One more</button></div></div>`;
+      const planDone = mode==="today" && todayPlan && todayIdx>=todayPlan.length && (independent || todayExtra>=2); // the planned session tries to end on an independent win; after two extra problems it ends on any right answer, and the summary says so
+      const stopHere = (!whyState || whyState.done) && stopOfferedAt!==sessionN && (planDone || (mode!=="today" && ((sessionN>=5 && independent) || sessionN>=7)));
+      if(stopHere && mode==="today") body+=todaySummaryHTML();
+      else if(stopHere) body+=`<div class="stop" role="status"><b>Good stopping point.</b>${sessionN} problems this sitting${independent?", and this one you did on your own":""}. ${S.today.c} right today. Stop here, or do one more?<div class="actions" style="margin-top:8px"><button class="btn primary" id="stopnow">Done for today</button><button class="btn quiet" id="onemore">One more</button></div></div>`;
       else if(!whyState || whyState.done) body+=`<div class="actions"><button class="btn primary" id="next">Next</button></div>`;
     }
     if(phase==="reveal"){ // full solution shown; she copies the answer in before Next appears
@@ -2734,7 +3218,8 @@ function bind(){
     q("check").onclick=submit;
     const inp=q("ans"); if(inp) inp.addEventListener("input",()=>{ lastAnswer=inp.value; });
     app.querySelectorAll("#opts .opt").forEach(b=>b.onclick=()=>setSel("opts",+b.dataset.i));
-    q("showhint").onclick=()=>{ if(cur.hintPlan){ wsNextHint(); hintIdx=(cur.hintLog||[]).filter(h=>!h.done).length; inlineErr=""; render(); const hs=app.querySelectorAll("#hints .step"); if(hs.length) hs[hs.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); return; }
+    app.querySelectorAll("#preopts .opt").forEach(b=>b.onclick=()=>setSel("preopts",+b.dataset.i)); const pi=q("preans"); if(pi) pi.addEventListener("input",()=>{ preVal=pi.value; });
+    q("showhint").onclick=()=>{ if(cur.hintPlan && cur.ws && ws){ wsNextHint(); hintIdx=(cur.hintLog||[]).filter(h=>!h.done).length; inlineErr=""; render(); const hs=app.querySelectorAll("#hints .step"); if(hs.length) hs[hs.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); return; }
       if(hintIdx<cur.hints.length-(coachOn()?1:0)){ hintIdx++; inlineErr=""; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const hs=app.querySelectorAll("#hints .step"); if(hs.length) hs[hs.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); } };
   }
   if(q("cstep")){
@@ -2743,10 +3228,11 @@ function bind(){
     app.querySelectorAll("#copts .opt").forEach(b=>b.onclick=()=>setSel("copts",+b.dataset.i));
   }
   if(q("next")) q("next").onclick=next;
+  if(q("showexample")) q("showexample").onclick=()=>{ exampleOpen=!exampleOpen; if(exampleOpen) cur.studied=true; inlineErr=""; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const ex=app.querySelector("#example"); if(ex) ex.scrollIntoView({behavior:"smooth",block:"nearest"}); };
   if(q("stopnow")) q("stopnow").onclick=()=>{ stopOfferedAt=sessionN; sessionDone=true; home(); };
   if(q("breaknow")) q("breaknow").onclick=()=>{ breakOfferedAt=sessionMissRun; sessionDone=true; save(); home(); };
   if(q("keepgoing")) q("keepgoing").onclick=()=>{ breakOfferedAt = sessionMissRun>=3 ? sessionMissRun : -2; render(); };
-  if(q("onemore")) q("onemore").onclick=()=>{ stopOfferedAt=sessionN; next(); };
+  if(q("onemore")) q("onemore").onclick=()=>{ stopOfferedAt=sessionN; if(mode==="today"&&todayPlan){ todayExtra=-99; } next(); }; // "one more anyway" turns off the today summary for this sitting
   if(cur.ws && phase==="q") bindWS();
   if(q("wcheck")){ q("wcheck").onclick=checkWhy; app.querySelectorAll("#wopts .opt").forEach(b=>b.onclick=()=>setSel("wopts",+b.dataset.i)); }
   if(q("step")) q("step").onclick=()=>{ stepIdx++; initStepCheck(); render(); const st=app.querySelectorAll("#wt .step"); if(st.length) st[st.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); };
@@ -2754,7 +3240,7 @@ function bind(){
   focusFirst();
 }
 function setSel(groupId, i, focusIt){ // select an MC option without re-rendering
-  if(groupId==="opts") selected=i; else if(groupId==="wopts"){ if(whyState) whyState.sel=i; } else if(sc) sc.sel=i;
+  if(groupId==="opts") selected=i; else if(groupId==="wopts"){ if(whyState) whyState.sel=i; } else if(groupId==="preopts") preSel=i; else if(sc) sc.sel=i;
   app.querySelectorAll("#"+groupId+" .opt").forEach(x=>{ const on=+x.dataset.i===i; x.classList.toggle("sel",on); x.setAttribute("aria-checked",on); if(on&&focusIt) x.focus({preventScroll:true}); });
 }
 function activeGroup(){ // the MC radiogroup the keyboard should drive right now, if any
@@ -2807,6 +3293,7 @@ function diag(yours){ try{ return (typeof diagnose==="function" && diagnose(cur,
 function submit(){
   let ok, yours, raw, wsGrade=null;
   let twoPoints=false;
+  let preRes=null; if(cur.pre){ preRes=gradePre(); if(preRes.missing){ inlineErr=preRes.issue||`First, show your step: ${plain(cur.pre.check.q)}`; render(); const f=app.querySelector("#preans")||app.querySelector("#preopts .opt"); if(f) f.focus(); return; } }
   if(cur.ws){ const g=gradeWS(); if(g.err){ cur.unfinished=(cur.unfinished||0)+1; inlineErr=g.err; render(); return; } wsGrade=g; ok=g.ok; yours=g.yours; raw=g.product; } // an incomplete grid is sent back, not graded: unfinished is not the same as wrong
   else if(cur.type==="input"){ const inp=app.querySelector("#ans"); const v=inp.value; lastAnswer=v; if(!v.trim()){ inp.focus(); return; }
     twoPoints = !!(cur.meta && cur.meta.open) && (v.match(/\./g)||[]).length>1; // "0.05.0" on a write-a-decimal problem: a real mistake, walk it through
@@ -2814,37 +3301,53 @@ function submit(){
     ok=twoPoints ? false : !!checkInput(cur,v); yours=v.trim(); raw=v; }
   else { if(selected<0){ inlineErr=""; const f=app.querySelector("#opts .opt"); if(f) f.focus(); return; } ok=(selected===cur.answer); yours=cur.options[selected]; raw=selected; }
   inlineErr="";
-  const sk=cur.skill; S=normalize(S); S.attempted++; S.today.a++;
+  const sk=cur.skill; S=normalize(S); if(!(cur.placement && !ok)){ S.attempted++; S.today.a++; } /* a missed quick check is not scored: it is not in the accuracy counts */
   if(stage==="fresh"){ sessionN++; sessionMissRun = ok ? 0 : sessionMissRun+1; }
   // Only independent attempts (fresh, no hints) move levels, up or down. Hints, follow-ups, walkthroughs never do.
   // In the multiplication workspace, "independent" also means the heavy supports are off (support level 1 or 0): with carry boxes and
   // column labels still on, a right answer is a supported success, which fades the supports but does not move the level.
-  const supported = !!cur.ws && (S.support.multiply||0)>=2;
-  const independent = stage==="fresh" && hintIdx===0 && !supported;
+  const supported = (!!cur.ws && wsSup()>=2) || (!cur.ws && !cur.placement && coachLevel(sk)>=2 && !!(cur.hints&&cur.hints[0])); // tools on, or full coaching (line + example offer) on screen; a level-1 coach line is only a nudge
+  const stepWrong = !!(cur.pre && preRes && !preRes.ok); // the required step was wrong: the calculation may be right, but the attempt did not show the skill cleanly
+  const independent = stage==="fresh" && hintIdx===0 && !supported && !cur.studied && !stepWrong; // a worked example seen first is help, like a hint
   const entry={t:Date.now(), sk, lvl:cur.level, q:plain(cur.prompt), yours:String(yours), ans:cur.display, ok:ok?1:0, stage, hints:hintIdx, independent:(ok&&independent)?1:0, tag: cur.mistake ? cur.mistake.tag : (cur.focusTag||"")};
-  if(cur.hw) entry.hw=1; if(cur.fixed) entry.page=1; entry.hintsOf=(cur.hintTotal||(cur.hints||[]).length)-(coachOn()?1:0); if(cur.ws){ entry.ws=1; entry.support=S.support.multiply; } if(supported) entry.supported=1; if(mode==="miss"&&cur.focusKey) entry.focus=cur.focusKey; const eck=ctxKey(ctxOf(cur)); if(eck) entry.ctx=eck;
-  if(wsGrade){ entry.rows=wsGrade.yours; if(!ok) entry.wrong=wsGrade.wrongText; if(wsGrade.comps) entry.comps=wsGrade.compsTally; if(cur.unfinished) entry.unfinished=cur.unfinished; }
+  if(cur.hw) entry.hw=1; if(cur.fixed) entry.page=1; if(cur.studied) entry.studied=1; if(mode==="today" && todayPlan && stage==="fresh"){ entry.today=todaySid; if(cur.todaySlot) entry.todaySlot=cur.todaySlot; } /* a primary problem of this planned sitting; a follow-up or walkthrough is help attached to the miss, not another problem */ entry.hintsOf=(cur.hintTotal||(cur.hints||[]).length)-(coachOn()?1:0); if(cur.ws){ entry.ws=1; entry.support=wsSup(); } if(supported) entry.supported=1; if(mode==="miss"&&cur.focusKey) entry.focus=cur.focusKey; const eck=ctxKey(ctxOf(cur)); if(eck) entry.ctx=eck;
+  if(cur.pre && preRes){ entry.pre={comp:cur.pre.comp, ok:preRes.ok?1:0, yours:preRes.yours, ans:String(cur.pre.check.display), q:plain(cur.pre.check.q||"")}; cur.comps=cur.comps||{}; cur.comps[cur.pre.comp]={ok:preRes.ok?1:0, miss:preRes.ok?0:1}; entry.comps=cur.comps; if(!preRes.ok){ noteComp(sk, cur.pre.comp, false, {lvl:cur.level, ctx:ctxOf(cur)}); cur.preMiss=true; } }
+  if(wsGrade){ entry.rows=wsGrade.yours; if(!ok) entry.wrong=wsGrade.wrongText; if(wsGrade.comps) entry.comps=wsGrade.compsTally; if(cur.unfinished) entry.unfinished=cur.unfinished;
+    const cues=[]; if(ws&&ws.locked["r1-0"]) cues.push("zero written in"); if(coachOn()) cues.push("coach line"); if(wsSup()>=2) cues.push("column labels"); if(wsSup()>=1) cues.push("carry boxes"); if(cues.length) entry.cues=cues.join(", "); } // the assistance that was actually visible, not just whether Hint was tapped
   lastChange=0; lastPraise=[];
   // Homework practice is level-neutral: the shape was chosen from the worksheet, not earned, so it moves nothing up or down.
   // Focus problems are chosen by the recovery system, often a notch above her ordinary level, so like homework they are level-neutral: they move the weakness state, never the dots.
-  if(independent && !cur.hw && !cur.focusKey){ const res=applyResult(S.hist[sk], S.levels[sk], ok); S.levels[sk]=res.level; S.hist[sk]=res.hist; lastChange=res.change; }
+  if(independent && !cur.hw && !cur.focusKey && !cur.checkin && !cur.placement){ const res=applyResult(S.hist[sk], S.levels[sk], ok); S.levels[sk]=res.level; S.hist[sk]=res.hist; lastChange=res.change; }
+  // Coach fading (every non-workspace skill): two distinct clean successes while the coach is on fade it one level; a fresh miss brings it back one level.
+  if(!cur.ws && stage==="fresh" && !cur.placement){ S.coach=S.coach||{}; S.coachWins=S.coachWins||{}; const lv=coachLevel(sk);
+    if(ok && hintIdx===0 && !cur.studied && lv>0){ const qtext=plain(cur.prompt); S.coachRecent=Array.isArray(S.coachRecent)?S.coachRecent:[]; if(!S.coachRecent.includes(qtext)){ S.coachRecent.push(qtext); while(S.coachRecent.length>12) S.coachRecent.shift(); S.coachWins[sk]=(S.coachWins[sk]||0)+1; if(S.coachWins[sk]>=2){ S.coach[sk]=lv-1; S.coachWins[sk]=0; lastPraise.push({big:true, t: lv-1===0 ? `The coach line is off for ${SKILLS[sk].name.toLowerCase()}: you have this one.` : `Two right with the coach on: from here ${SKILLS[sk].name.toLowerCase()} gets a one-line reminder only, and your right answers count as your own.`}); } } }
+    else if(!ok){ const shownBefore=S.log.some(e=>e.sk===sk && e.ok && e.independent); S.coach[sk]=Math.min(shownBefore?1:2, lv+1); S.coachWins[sk]=0; } }
+  // Quick placement check: right on her own → start at level 3; wrong → level 1 and no penalty.
+  if(cur.placement){ if(ok && independent){ S.levels[sk]=3; S.hist[sk]=[1]; lastChange=+2; S.coach=S.coach||{}; S.coach[sk]=0; if(cur.ws){ S.support.multiply=0; S.supportWins.multiply=0; } lastPraise.push({big:true, t:`You already have ${SKILLS[sk].name.toLowerCase()}. Starting you at level 3${cur.ws?", on the bare page, since that is how you just did it":""}.`}); } else if(!ok){ lastPraise.push({t:`No problem: that was a quick check. It is not scored, and your level stays where it is. We start ${SKILLS[sk].name.toLowerCase()} from the beginning, and the app will work on it with you.`}); } entry.placement=1; }
   // Fading supports (multiplication workspace): two clean successes in a row at this support level remove the next support; a fresh miss brings one back.
-  if(cur.ws && stage==="fresh"){ const sp=S.support, sw=S.supportWins;
-    const qtext=plain(cur.prompt); const distinct = qtext!==S.supportLastQ; // the same worksheet problem again is not new evidence for taking a tool away
-    if(ok && hintIdx===0 && distinct){ S.supportLastQ=qtext; sw.multiply=(sw.multiply||0)+1;
-      const twoRow = cur.meta && cur.meta.b>=10; const lastOne = sp.multiply===1; // the carry boxes come off only after a two-row (two-digit multiplier) success
-      if(sw.multiply>=2 && sp.multiply>0 && (!lastOne || twoRow)){ sp.multiply--; sw.multiply=0; lastPraise.push({big:true, t:`You have not needed ${SUPPORT_NAMES[sp.multiply+1]} lately, so next time it comes off. The page is getting closer to the real worksheet.`}); }
-      else if(sw.multiply>=2 && lastOne && !twoRow) lastPraise.push({t:`Two clean ones. The carry boxes come off after a two-row problem like this at the next level.`}); }
+  if(cur.ws && stage==="fresh" && !cur.placement){ const sp=S.support, sw=S.supportWins;
+    const qtext=plain(cur.prompt); S.supportRecent=Array.isArray(S.supportRecent)?S.supportRecent:[]; const distinct = !S.supportRecent.includes(qtext); // a problem seen in the last several is not new evidence for taking a tool away (alternating two memorized ones included)
+    if(ok && hintIdx===0 && distinct){ S.supportRecent.push(qtext); while(S.supportRecent.length>8) S.supportRecent.shift(); sw.multiply=(sw.multiply||0)+1;
+      // each tool comes off only after successes that exercised what it is for: the written-in 0 and labels need a two-row problem; the carry boxes need regrouping in a two-row problem
+      const regroups = !!(cur.meta && cur.meta.regroup); const need = sp.multiply===1 ? regroups : true; // the coach line and labels fade on any two distinct clean successes; the carry boxes only after problems that actually regroup
+      if(sw.multiply>=2 && sp.multiply>0 && need){ sp.multiply--; sw.multiply=0; lastPraise.push({big:true, t:`You have not needed ${SUPPORT_NAMES[sp.multiply+1]} lately, so next time it comes off. The page is getting closer to the real worksheet.`}); }
+      else if(sw.multiply>=2 && !need) lastPraise.push({t:`Two clean ones. The carry boxes come off after a problem that regroups, so the app can see you do not need them.`}); }
     else if(!ok){ if(sp.multiply<3){ sp.multiply++; } sw.multiply=0; } }
   if(ok){
     S.correct++; S.today.c++; S.run++; S.best=Math.max(S.best,S.run);
     if(!independent){ if(supported){ S.supportedOk=(S.supportedOk||0)+1; } else { S.guided++; S.persist++; } } // a supported success is its own category, not a guided completion
     okEntry=pushLog(entry); phase="ok";
     if(cur.why && cur.why.options && cur.why.options.length>1) whyState={sel:-1, done:false, ok:null};
+    // Delayed check-ins: a skill she has shown independently gets one fresh problem after a gap (7 days, then 14), so "ready" can rest on retention, not only on recent accuracy.
+    if(independent && !cur.hw){ S.checkins=S.checkins||{};
+      const ctxNow=checkinCtx(cur), ckKey=`${sk}|${ctxKey(ctxNow)}`; const targetName=`${SKILLS[sk].name.toLowerCase()}${ctxLabel(sk,ctxNow)?` (${ctxLabel(sk,ctxNow)})`:""}`;
+      if(cur.checkin){ const prev=S.checkins[cur.checkin]||{}; entry.delayed=1; entry.delayedTarget=targetName; const keepCtx=(prev.ctx && Object.keys(prev.ctx).length) ? prev.ctx : ctxNow; const newKey=`${sk}|${ctxKey(keepCtx)}`; if(newKey!==cur.checkin) delete S.checkins[cur.checkin]; S.checkins[newKey]={due:Date.now()+14*DAY, n:(prev.n||0)+1, ctx:keepCtx}; /* a v9.8 context-free check-in takes the form of the problem it was just held up on, and is rekeyed to it */ lastPraise.push({big:true, t:`Still solid after a break: ${targetName} held up on a fresh problem.`}); }
+      else if(!S.checkins[ckKey] && !Object.keys(S.weak).some(k=>k.startsWith(sk+":") && S.weak[k].state!=="ok")){ const recent=S.log.filter(e=>e.sk===sk && !e.hw && !e.focus && classifyEntry(e)==="independent" && ctxMatches(ctxKey(ctxNow), e.ctx||"")); const distinct=new Set(recent.map(e=>e.q)); if(distinct.size>=4) S.checkins[ckKey]={due:Date.now()+7*DAY, n:0, ctx:ctxNow}; } }
     // Clean wins for every component this problem exercised; recovery praise for the ones that moved.
     if(independent){ const before=Object.keys(S.weak).filter(k=>S.weak[k].state!=="ok");
-      const demonstrated = wsGrade ? wsGrade.evidence : trapsOf(cur); entry.proved=demonstrated.join(",");
-      const keys = evidenceKeys(cur).filter(k=>{ const {comp}=parseWeakKey(k); if(comp==="why") return false; return sk!=="multiply" || comp==="*" || demonstrated.includes(comp); }); // "why" is credited only by the reasoning question itself // same rule Focus used to pick the problem; multiplication also needs the step to have been hers
+      // What she actually showed: the workspace grades every cell; otherwise only the component she answered on the task counts. A right final answer proves the whole-skill key (*) and nothing hidden.
+      const demonstrated = wsGrade ? wsGrade.evidence : (cur.pre && preRes && preRes.ok ? [cur.pre.comp] : []); entry.proved=["*"].concat(demonstrated).join(",");
+      const keys = evidenceKeys(cur).filter(k=>{ const {comp}=parseWeakKey(k); if(comp==="why") return false; if(comp==="*") return true; if(sk==="multiply" || (STEP_COMPS[sk]&&STEP_COMPS[sk].has(comp))) return demonstrated.includes(comp); return true; }); // step-level components need observed evidence; graded-answer tags (chop, alignment…) stay as before
       for(const key of keys){ const comp=parseWeakKey(key).comp; const tr=noteComp(sk, comp, true, {independent:true, key, q:plain(cur.prompt)}); const nm=weakLabel(key);
         if(tr==="win") lastPraise.push({t:`You handled ${nm} on your own. One more clean one and it comes off the watch list.`});
         else if(tr==="review") lastPraise.push({big:true, t:`Two in a row on ${nm}, no help. It moves to review: the app will check it again in a few days.`});
@@ -2852,11 +3355,12 @@ function submit(){
         else if(tr==="recovered") lastPraise.push({big:true, t:`${ucfirst(nm)}: recovered. It stayed solid across review, so it is off the list.`}); }
       if(!lastPraise.length && before.length===0 && hintIdx===0 && prevNeededHelp(sk)) lastPraise.push({t:`No hints, no walkthrough this time. That one was all yours.`}); }
     if(supported && ok) lastPraise.push({t:`Right, with the supports on. Keep it up and they start coming off.`});
+    if(wsGrade && wsGrade.comps && wsGrade.comps.includes("regroup") && ok){ noteComp(sk, "regroup", false, {lvl:cur.level, ctx:ctxOf(cur)}); lastPraise.push({t:`The product is right. A carry box has the wrong number in it, so regrouping stays on the watch list.`}); }
   } else {
-    S.run=0;
+    S.run=0; if(cur.checkin && S.checkins){ delete S.checkins[cur.checkin]; entry.delayedMiss=1; } // a missed check-in: the weakness machinery takes over from here
     const d=twoPoints ? {tag:"two-points", note:NOTES["two-points"]} : wsGrade ? {tag:COMP_TO_TAG[wsGrade.main]||wsGrade.main, note:NOTES[COMP_TO_TAG[wsGrade.main]]||""} : diag(raw); cur.mistake=d; entry.tag=d.tag;
     // The miss opens (or re-opens) the components it points at: the workspace names them per cell; a single answer box is read from its mistake tag.
-    for(const comp of (wsGrade && wsGrade.comps && wsGrade.comps.length) ? wsGrade.comps : compsOfMiss(sk, d.tag)) noteComp(sk, comp, false, {lvl:cur.level, ctx:ctxOf(cur)});
+    for(const comp of (wsGrade && wsGrade.comps && wsGrade.comps.length) ? wsGrade.comps : compsOfMiss(sk, d.tag)) noteComp(sk, comp, false, {lvl:cur.placement?1:cur.level, ctx:ctxOf(cur), harder:!!cur.harder});
     if(twoPoints && !cur.twoPointsStep && cur.meta && cur.meta.x){ cur.twoPointsStep=true; const x=cur.meta.x, k=(x.d||"").length; const xx=padTo(x,Math.min(3,k+1));
       cur.steps.unshift({t:`First, ${fmt(x)} and ${fmt(xx)} are the <b>same number</b>: a zero on the end of a decimal adds nothing. Compare them in the chart.`, charts:[x,xx], check:cm(`${fmt(xx)} is … ${fmt(x)}`, ["greater than","less than","equal to"], 2)}); }
     if(stage==="fresh") chain=1; else chain++;
@@ -2957,7 +3461,7 @@ const indep=e=>e.independent!==undefined?e.independent:((isFresh(e)&&!e.hints)?1
 //   copied       the answer was shown and typed in
 //   guided       everything else that ended right (hints, follow-up, walkthrough completion)
 //   miss         everything else that ended wrong
-function classifyEntry(e){ if(e.shown) return "copied"; const supported=!!e.supported || (!!e.ws && +e.support>=2); const fresh=isFresh(e), noHint=!(+e.hints>0);
+function classifyEntry(e){ if(e.placement && !e.ok) return "placement-miss"; /* a missed quick check on a brand-new skill: recorded, walked through, never scored */ if(e.transfer) return e.ok?"paper":"paper-miss"; if(e.shown) return "copied"; if(e.studied) return e.ok?"guided":"miss"; if(e.pre && !e.pre.ok) return e.ok?"guided":"miss"; /* a right answer with the required step wrong is a completion with a gap, not independent work */ /* studied a worked example first: a completion with help, reported separately as "studied" */ const supported=!!e.supported || (!!e.ws && +e.support>=2); const fresh=isFresh(e), noHint=!(+e.hints>0);
   if(fresh && noHint && !supported && !e.guided) return e.ok?"independent":"indep-miss";
   if(e.ok && supported && fresh && noHint && !e.guided) return "supported";
   return e.ok?"guided":"miss"; }
@@ -3010,9 +3514,10 @@ function validateBackup(text){ // returns {ok:true, db, summary} or {ok:false, e
 // The parent summary: three tiers built from the weakness profile and the log, each line with a real example from her work.
 function tiersHTML(log){
   const str=v=>v==null?"":String(v); const q=e=>esc(str(e.q))||"(question not recorded)";
-  const exMiss=e=> e.whyMiss && e.ok ? `<span class="ex">${fmtDate(e.t)}: ${q(e)} → ${esc(str(e.ans))} (right). Reason picked: <span class="bad">${esc(str(e.whyPick))||"—"}</span>; the reason: <span class="good">${esc(str(e.whyRight))||"—"}</span></span>` : `<span class="ex">${fmtDate(e.t)}: ${q(e)} · answered <span class="bad">${esc(str(e.yours))||"—"}</span>, correct <span class="good">${esc(str(e.ans))||"—"}</span>${e.wrong?` · ${esc(str(e.wrong))}`:""}</span>`;
+  const exMiss=e=> e.pre && !e.pre.ok && e.ok ? `<span class="ex">${fmtDate(e.t)}: ${q(e)} → ${esc(str(e.ans))} (right), but the step "${esc(str(e.pre.q||compName(e.sk,e.pre.comp)))}" was answered <span class="bad">${esc(str(e.pre.yours))||"—"}</span>; it is <span class="good">${esc(str(e.pre.ans))}</span></span>` : e.whyMiss && e.ok ? `<span class="ex">${fmtDate(e.t)}: ${q(e)} → ${esc(str(e.ans))} (right). Reason picked: <span class="bad">${esc(str(e.whyPick))||"—"}</span>; the reason: <span class="good">${esc(str(e.whyRight))||"—"}</span></span>` : `<span class="ex">${fmtDate(e.t)}: ${q(e)} · answered <span class="bad">${esc(str(e.yours))||"—"}</span>, correct <span class="good">${esc(str(e.ans))||"—"}</span>${e.wrong?` · ${esc(str(e.wrong))}`:""}</span>`;
   const exOk=e=>`<span class="ex">${fmtDate(e.t)}: ${q(e)} → ${esc(str(e.ans))}${e.support!==undefined?` (supports ${e.support} of 3)`:""}</span>`;
-  const hits=(sk,comp,ctx)=>{ const ck=ctxKey(ctx||{}); if(comp==="why") return log.filter(e=>e.sk===sk && e.whyMiss && (!ck || (e.ctx && ctxMatches(ck, e.ctx)))); return log.filter(e=>e.sk===sk && !e.ok && (comp==="*" || (e.comps&&e.comps[comp]) || TAG_TO_COMP[e.tag]===comp || e.tag===comp) && (!ck || (e.ctx && ctxMatches(ck, e.ctx)))); }; // an example must be the same kind of problem as the weakness
+  const hits=(sk,comp,ctx)=>{ const ck=ctxKey(ctx||{}); const ctxOk=e=>!ck || (e.ctx && ctxMatches(ck, e.ctx)); if(comp==="why") return log.filter(e=>e.sk===sk && e.whyMiss && ctxOk(e));
+    return log.filter(e=>e.sk===sk && ctxOk(e) && ( (e.pre && e.pre.comp===comp && !e.pre.ok) || (e.comps && e.comps[comp] && e.comps[comp].miss>0) || (!e.ok && (comp==="*" || TAG_TO_COMP[e.tag]===comp || e.tag===comp)) )); }; // a cited example must show THAT step going wrong // an example must be the same kind of problem as the weakness
   const wsum=weakSummary(); const help=[], next=[], ready=[];
   for(const w of wsum.weak.sort((a,b)=>(b.misses-b.wins)-(a.misses-a.wins))){ const h=hits(w.sk,w.comp,w.ctx); const last=h[h.length-1];
     const kind=ctxLabel(w.sk,w.ctx); help.push(`<li><b>${esc(SKILLS[w.sk].name)}</b>: ${esc(w.name)}, level ${w.lvl}. Missed ${w.misses} time${w.misses===1?"":"s"}${w.wins?`, ${w.wins} of 2 clean wins so far`:""}${w.migrated?" · from before v9":""}. Clears with two independent wins at level ${w.lvl} or higher${kind?` on ${esc(kind)}`:""}.${last?exMiss(last):""}</li>`); }
@@ -3032,6 +3537,26 @@ function tiersHTML(log){
   if(S.support && S.support.multiply<3) ready.push(`<li><b>Multiplication page</b>: working with ${S.support.multiply===0?"no supports, the bare page":`${S.support.multiply} of 3 supports`} (${[S.support.multiply>=1?"carry boxes":"",S.support.multiply>=2?"column labels":""].filter(Boolean).join(", ")||"none"}).</li>`);
   const empty=t=>`<li class="muted">${t}</li>`;
   return `<div class="card">
+    <h2 style="margin-top:0">Kinds of evidence</h2>
+    ${(()=>{ const cls=classifyEntry; const ind=log.filter(e=>cls(e)==="independent"); const distinct=new Set(ind.map(e=>String(e.sk)+"|"+String(e.q))).size; const sup=log.filter(e=>cls(e)==="supported").length; const studied=log.filter(e=>e.studied&&e.ok).length; const whyOk=log.filter(e=>e.why===1&&!e.whyMiss).length, whyAll=log.filter(e=>e.why!==undefined).length; const delayed=log.filter(e=>e.delayed).length, delayedMiss=log.filter(e=>e.delayedMiss).length; const dueSoon=Object.keys(S.checkins||{}).length;
+      const row=(k,v)=>`<tr><td>${k}</td><td>${v}</td></tr>`;
+      return `<div style="overflow-x:auto"><table class="report"><tr><th>Evidence</th><th>What the app has seen</th></tr>
+        ${row("Independent calculation", distinct?`${distinct} different problem${distinct===1?"":"s"} right without hints, examples, or answer cues`:"none yet")}
+        ${row("Supported completion", sup?`${sup} right with tools on (labels, carry boxes, or the written-in 0)`:"none")}
+        ${row("Studied first", studied?`${studied} right after looking at a worked example`:"none")}
+        ${row("Explanation", whyAll?`recognized the correct reason on ${whyOk} of ${whyAll} "say why" questions`:"not asked yet")}
+        ${row("Delayed check", delayed||delayedMiss?`${delayed} fresh problem${delayed===1?"":"s"} right after a gap of a week or more${delayedMiss?`; ${delayedMiss} missed`:""}`:(dueSoon?`not yet: ${dueSoon} check-in${dueSoon===1?"":"s"} scheduled`:"not checked yet"))}
+        ${(()=>{ const t=log.filter(e=>e.transfer); const ok=t.filter(e=>e.ok).length, solo=t.filter(e=>e.ok&&!e.helped).length, forms=t.filter(e=>e.ok&&e.changedForm).length; return row("Transfer to paper", t.length?`${ok} of ${t.length} worksheet problem${t.length===1?"":"s"} right (${solo} without adult help, ${forms} in a different form), scored by a grown-up: ${t.slice(-3).map(e=>`${esc(str(e.q||"paper"))} ${e.ok?"✓":"✗"}`).join(", ")}`:"not checked yet: record a paper problem below"); })()}
+      </table></div><p class="muted" style="font-size:13px;margin:8px 0 14px">Recognizing a reason on a multiple-choice question is a weaker signal than explaining it herself; a delayed check is stronger than recent accuracy. Item counts and gaps (two wins, then 3 and 7 days) are the app's working defaults, not proven thresholds.</p>`; })()}
+    <div class="card" style="margin-top:0">
+      <h3 style="margin:0 0 6px">Record a paper check</h3>
+      <p class="muted" style="font-size:14px;margin:0 0 8px">One worksheet problem she has not seen in the app, in the form her class uses. Score it yourself; note whether an adult helped. This is the strongest evidence the app can hold, and it is kept separate from app scoring.</p>
+      <div class="row"><select class="sel" id="paperSk">${SKILL_ORDER.map(k=>`<option value="${k}">${esc(SKILLS[k].name)}</option>`).join("")}</select>
+        <input class="ans small text" id="paperQ" type="text" placeholder="the problem, like 148 × 19 or 3.45 + 2.7" style="flex:1 1 220px;font-size:16px;padding:8px 10px">
+        <label class="row" style="gap:6px"><input type="radio" name="paperOk" value="1" checked> right</label><label class="row" style="gap:6px"><input type="radio" name="paperOk" value="0"> wrong</label>
+        <label class="row" style="gap:6px"><input type="checkbox" id="paperHelp"> an adult helped</label><label class="row" style="gap:6px"><input type="checkbox" id="paperForm"> a different form than the app (story, picture, table)</label>
+        <button class="btn" id="paperSave">Record</button><span class="muted" id="paperMsg" style="font-size:13px" role="status" aria-live="polite"></span></div>
+    </div>
     <h2 style="margin-top:0">What to do next</h2>
     <p class="muted" style="font-size:14px;margin:0 0 6px">Built from what she actually missed (down to the step, for multiplication), not from which pages she has done. "Focus on where I missed" on the home screen works this list from the top.</p>
     <div class="tiers">
@@ -3056,7 +3581,7 @@ function grownups(){
   const weekAgo=Date.now()-7*864e5; const week=log.filter(e=>Number.isFinite(e.t)&&e.t>=weekAgo&&!e.guided);
   const days=new Set(week.map(e=>new Date(e.t).toDateString())).size;
   const skillName=k=>SKILLS[k]?SKILLS[k].name:esc(str(k)||"?");
-  const missMeta=e=>`${Number.isFinite(e.t)?fmtDate(e.t):"unknown time"} · ${skillName(e.sk)}${e.lvl!=null?` · level ${esc(str(e.lvl))}`:""} · ${e.stage?esc(str(e.stage)):(e.retry?"retry":"fresh")}${e.page?" · from the page":e.hw?" · homework":""}${e.shown?" · answer shown":""}${+e.hints>0?" · "+(+e.hints)+" hint"+(+e.hints>1?"s":"")+(e.hintsOf?" of "+e.hintsOf:""):""}${typeof e.tag==="string"&&e.tag?` · <span class="tag">${esc(e.tag)}</span>`:""}${e.revealed!==undefined?` · walkthrough: ${+e.passed||0} step${+e.passed===1?"":"s"} right, ${+e.revealed||0} shown`:""}${e.comps&&typeof e.comps==="object"?(()=>{ const m=Object.keys(e.comps).filter(c=>e.comps[c]&&e.comps[c].miss); return m.length?` · missed: ${m.map(c=>esc(compName(e.sk,c))).join(", ")}`:""; })():""}${e.support!==undefined?` · supports ${esc(str(e.support))} of 3`:""}${e.unfinished?` · sent back ${+e.unfinished} time${+e.unfinished===1?"":"s"} for empty boxes before this`:""}${e.proved?` · proved: ${esc(str(e.proved)).replace(/,/g,", ")}`:""}`;
+  const missMeta=e=>`${Number.isFinite(e.t)?fmtDate(e.t):"unknown time"} · ${skillName(e.sk)}${e.lvl!=null?` · level ${esc(str(e.lvl))}`:""} · ${e.stage?esc(str(e.stage)):(e.retry?"retry":"fresh")}${e.page?" · from the page":e.hw?" · homework":""}${e.shown?" · answer shown":""}${+e.hints>0?" · "+(+e.hints)+" hint"+(+e.hints>1?"s":"")+(e.hintsOf?" of "+e.hintsOf:""):""}${typeof e.tag==="string"&&e.tag?` · <span class="tag">${esc(e.tag)}</span>`:""}${e.revealed!==undefined?` · walkthrough: ${+e.passed||0} step${+e.passed===1?"":"s"} right, ${+e.revealed||0} shown`:""}${e.comps&&typeof e.comps==="object"?(()=>{ const m=Object.keys(e.comps).filter(c=>e.comps[c]&&e.comps[c].miss); return m.length?` · missed: ${m.map(c=>esc(compName(e.sk,c))).join(", ")}`:""; })():""}${e.support!==undefined?` · supports ${esc(str(e.support))} of 3`:""}${e.cues?` · visible: ${esc(str(e.cues))}`:""}${e.pre?` · step (${esc(compName(e.sk,e.pre.comp))}): ${e.pre.ok?"shown ✓":`answered ${esc(str(e.pre.yours))}, is ${esc(str(e.pre.ans))}`}`:""}${e.unfinished?` · sent back ${+e.unfinished} time${+e.unfinished===1?"":"s"} for empty boxes before this`:""}${e.proved?` · proved: ${esc(str(e.proved)).replace(/,/g,", ")}`:""}`;
   const exportText=JSON.stringify(DB); const nPlayers=Object.keys(DB.profiles).length;
   // Class position: the district calendar's estimate, or a lesson pinned here from the homework header
   const L=lessonList(), classId=effectiveClassAt(), calId=calendarClassAt();
@@ -3096,7 +3621,7 @@ function grownups(){
     <div class="topbar"><button class="btn quiet" id="back">Home</button><h1 style="margin:0">${esc(S.name)}'s progress</h1><span class="muted build">Build ${esc(BUILD)}</span></div>${warnHTML()}
     <p class="muted" style="margin:6px 0 0">${(()=>{ const cls=e=>classifyEntry(e); const wk=log.filter(e=>Number.isFinite(e.t)&&e.t>=weekAgo); const wi=wk.filter(e=>["independent","indep-miss"].includes(cls(e))); const wiR=wi.filter(e=>cls(e)==="independent").length; const wHelp=wk.filter(e=>["supported","guided"].includes(cls(e))).length; const wCopied=wk.filter(e=>cls(e)==="copied").length;
       const c={}; for(const e of log){ const k=cls(e); c[k]=(c[k]||0)+1; } let lastCopied=-1; log.forEach((e,i)=>{ if(cls(e)==="copied") lastCopied=i; }); const sinceCopied=log.slice(lastCopied+1).filter(e=>cls(e)==="guided").length;
-      return `Last 7 days: ${wk.length} problems on ${days} day${days===1?"":"s"}: independent ${wi.length?`${wiR} right of ${wi.length} (${Math.round(100*wiR/wi.length)}%)`:"none yet"}, ${wHelp} finished with help${wCopied?`, ${wCopied} with the answer shown`:""}. All time: independent ${c.independent||0} right of ${(c.independent||0)+(c["indep-miss"]||0)}; supported (tools on) ${c.supported||0}; guided ${c.guided||0}; copied (answer shown) ${c.copied||0}. Guided completions since the answer was last shown: ${sinceCopied}.`; })()}${(()=>{ const w=log.filter(e=>e.why!==undefined); return w.length?` "Say why" questions: ${w.filter(e=>e.why).length} of ${w.length} right.`:""; })()}</p>
+      return `Last 7 days: ${wk.length} problems on ${days} day${days===1?"":"s"}: independent ${wi.length?`${wiR} right of ${wi.length} (${Math.round(100*wiR/wi.length)}%)`:"none yet"}, ${wHelp} finished with help${wCopied?`, ${wCopied} with the answer shown`:""}. All time: independent ${c.independent||0} right of ${(c.independent||0)+(c["indep-miss"]||0)}; supported (tools on) ${c.supported||0}; guided ${c.guided||0}; copied (answer shown) ${c.copied||0}${c["placement-miss"]?`; quick checks on new skills missed (not scored) ${c["placement-miss"]}`:""}. Guided completions since the answer was last shown: ${sinceCopied}.`; })()}${(()=>{ const w=log.filter(e=>e.why!==undefined); return w.length?` "Say why" questions: ${w.filter(e=>e.why).length} of ${w.length} right.`:""; })()}</p>
     ${tiersHTML(log)}
     ${classHTML}
     <div class="card">
@@ -3145,6 +3670,10 @@ function grownups(){
   const q=id=>app.querySelector("#"+id);
   q("back").onclick=home; q("back").focus({preventScroll:true});
   const setClassMode=()=>{ const m=q("classmode"); if(m) m.innerHTML=classModeHTML(); };
+  if(q("paperSave")) q("paperSave").onclick=()=>{ const sk=q("paperSk").value; const qtxt=String(q("paperQ").value||"").trim(); const okv=(app.querySelector("input[name=paperOk]:checked")||{}).value==="1"; const helped=q("paperHelp").checked; const changedForm=q("paperForm").checked;
+    if(!SKILLS[sk]) return; pushLog({t:Date.now(), sk, q: qtxt?`paper: ${qtxt}`:"paper problem", yours:"", ans:"", ok:okv?1:0, stage:"paper", hints:0, independent:0, transfer:1, parentScored:1, helped:helped?1:0, changedForm:changedForm?1:0, lvl:S.levels[sk]});
+    if(!okv){ noteComp(sk, "*", false, {lvl:S.levels[sk]}); } // a paper miss opens the skill for Focus, like any miss
+    save(); grownups(); const msg=app.querySelector("#paperMsg"); if(msg) msg.textContent="Recorded."; };
   if(q("saveclass")) q("saveclass").onclick=()=>{ const id=q("classat").value; const l=lessonById(id);
     if(!l){ q("classsaved").textContent="Pick a lesson from the list."; return; }
     S.classPin=l.id; const okSave=save(); q("classsaved").textContent=okSave?`Pinned: ${lessonShort(l)}.`:"Pinned for now, but this device refused to save it."; setClassMode(); };
