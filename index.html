@@ -1348,7 +1348,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.7.1 · September 20, 2026";
+const BUILD="v9.7.2 · September 20, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -1590,13 +1590,14 @@ function genDivide(level, focus){
   let variant = level>=3 && Math.random()<0.4 ? "area" : "placevalue";
   if(focus && focus.variant) variant=focus.variant;
   let d, q;
-  const cap = level>=5 ? 99999 : 9999; // the dividend size the walkthrough pictures can show; level 5 is the "larger numbers" level
+  const cap = 9999; // 5.NBT.6: whole-number quotients with dividends up to four digits and divisors up to two digits, at every level
   const draw=()=>{
     if(level===1){ d=ri(2,9); q=ri(11,99); }
     else if(level===2){ d=ri(2,9)*10; q=ri(11,199); }
     else if(level===3){ d=ri(11,25); q=ri(11,99); }
     else if(level===4){ d=ri(11,49); q=ri(21,199); }
-    else { d=ri(12,99); q=ri(101,499); }
+    else { d=ri(12,99); const qmax=Math.min(499, Math.floor(cap/d)); q=ri(101,qmax); // level 5: two-digit divisor, three-digit quotient, still under 9,999
+      if(Math.random()<0.4){ const h=ri(1,Math.floor(qmax/100)); const z=h*100+ri(1,9); if(z>=101 && z<=qmax) q=z; } } // an internal zero in the quotient (like 305) makes the decomposition less obvious
     if(focus && focus.d && level!==1) d=focus.d; };
   // Redraw within the SAME level until the dividend fits; never quietly hand back an easier level.
   let g=0; do{ draw(); }while(g++<80 && d*q>cap);
@@ -1723,7 +1724,7 @@ const LESSONS=[
   {"id": "U7L3", "unit": 7, "lesson": 3, "name": "Reason about Multiplying Fractions", "std": "5.NF.5a", "type": "C", "skills": []},
   {"id": "U7L4", "unit": 7, "lesson": 4, "name": "Reason about Multiplying Fractions", "std": "5.NF.5a", "type": "P", "skills": []},
   {"id": "U7L5", "unit": 7, "lesson": 5, "name": "Reason about Multiplying Fractions by One", "std": "5.NF.5b", "type": "C", "skills": []},
-  {"id": "U7L6", "unit": 7, "lesson": 6, "name": "Reason about Multiplying Fractions by One", "std": "4.NF.5b", "type": "P", "skills": []},
+  {"id": "U7L6", "unit": 7, "lesson": 6, "name": "Reason about Multiplying Fractions by One", "std": "5.NF.5b", "stdNote": "the supplied pacing guide prints 4.NF.5b; the grade-five standard for this concept is 5.NF.5b", "type": "P", "skills": []},
   {"id": "U7L7", "unit": 7, "lesson": 7, "name": "Reason about Multiplying a Fraction by a Fraction", "std": "5.NF.4b", "type": "C", "skills": []},
   {"id": "U7L8", "unit": 7, "lesson": 8, "name": "Multiply Fractions Using an Area Model", "std": "5.NF.4b", "type": "C", "skills": []},
   {"id": "U7L9", "unit": 7, "lesson": 9, "name": "Multiply Fractions Using an Area Model", "std": "5.NF.4b", "type": "P", "skills": []},
@@ -1882,7 +1883,7 @@ function normalize(p){ // fill in anything missing (older saves, imports)
     .map(e=>{ const o={...e}; if("sk" in o) o.sk=String(o.sk); if("ok" in o) o.ok=o.ok?1:0; return o; });
   const out={...b, ...p, levels:{...b.levels, ...(p.levels||{})}, hist:{...b.hist, ...(p.hist||{})}, today:{...b.today, ...(p.today||{})}, log};
   for(const k of SKILL_ORDER){ out.levels[k]=Math.min(MAX_LEVEL, Math.max(1, +out.levels[k]||1)); if(!Array.isArray(out.hist[k])) out.hist[k]=[]; }
-  for(const k of ["correct","attempted","best","run","guided","persist","shown","logTrimmed"]) out[k]=Math.max(0, +out[k]||0);
+  for(const k of ["correct","attempted","best","run","guided","persist","shown","logTrimmed","supportedOk"]) out[k]=Math.max(0, +out[k]||0);
   out.scratch = ("scratch" in p) ? !!p.scratch : b.scratch;
   if(out.today.d!==todayStr()) out.today={d:todayStr(), c:0, a:0};
   out.weak = (p.weak && typeof p.weak==="object" && !Array.isArray(p.weak)) ? {...p.weak} : {};
@@ -2147,7 +2148,7 @@ function home(){
   // "This week in class": the lesson the district calendar (or a grown-up's pin) puts the class on, plus the one before it for spiral review
   const L=lessonList(), ci=lessonIdx(effectiveClassAt()), curL=ci>=0?L[ci]:null, prevL=ci>0?L[ci-1]:null, nextL=(ci>=0&&ci<L.length-1)?L[ci+1]:null;
   const unit=curL?unitById(curL.unit):null;
-  const lessonLine=(l,withUnit)=>[withUnit?`Unit ${esc(l.unit)}`:"", `Lesson ${esc(l.lesson)}`, esc(l.name), l.std?esc(l.std):"", l.type?esc(typeLabel(l.type)):""].filter(Boolean).join(" · ");
+  const lessonLine=(l,withUnit)=>[withUnit?`Unit ${esc(l.unit)}`:"", `Lesson ${esc(l.lesson)}`, esc(l.name), l.std?esc(l.std)+(l.stdNote?` <span class="muted" title="${esc(l.stdNote)}">(guide prints 4.NF.5b)</span>`:""):"", l.type?esc(typeLabel(l.type)):""].filter(Boolean).join(" · ");
   const weekHTML = curL ? `
     <div class="card week">
       <div class="week-head"><h2 style="margin:0">This week in class</h2>${S.classPin?`<span class="std" title="Set on the grown-ups page">Pinned</span>`:`<span class="std" title="Estimated from the district pacing calendar">Calendar</span>`}</div>
@@ -2702,7 +2703,7 @@ function submit(){
     else if(!ok){ if(sp.multiply<3){ sp.multiply++; } sw.multiply=0; } }
   if(ok){
     S.correct++; S.today.c++; S.run++; S.best=Math.max(S.best,S.run);
-    if(!independent){ S.guided++; S.persist++; }
+    if(!independent){ if(supported){ S.supportedOk=(S.supportedOk||0)+1; } else { S.guided++; S.persist++; } } // a supported success is its own category, not a guided completion
     okEntry=pushLog(entry); phase="ok";
     if(cur.why && cur.why.options && cur.why.options.length>1) whyState={sel:-1, done:false, ok:null};
     // Clean wins for every component this problem exercised; recovery praise for the ones that moved.
@@ -2911,7 +2912,7 @@ function grownups(){
   // Class position: the district calendar's estimate, or a lesson pinned here from the homework header
   const L=lessonList(), classId=effectiveClassAt(), calId=calendarClassAt();
   const byUnit=[]; for(const l of L){ if(!l) continue; let g=byUnit.find(x=>x.unit===l.unit); if(!g){ g={unit:l.unit, ls:[]}; byUnit.push(g); } g.ls.push(l); }
-  const optLabel=l=>`${lessonShort(l)} · ${l.name}${l.std?` · ${l.std}`:""}${l.type?` · ${l.type}`:""}${l.inferred?" (inferred)":""}${lessonSkills(l).length?"":" · not in the app yet"}`;
+  const optLabel=l=>`${lessonShort(l)} · ${l.name}${l.std?` · ${l.std}${l.stdNote?" (guide prints 4.NF.5b)":""}`:""}${l.type?` · ${l.type}`:""}${l.inferred?" (inferred)":""}${lessonSkills(l).length?"":" · not in the app yet"}`;
   const lessonOpts=byUnit.map(g=>`<optgroup label="${esc(unitTitle(g.unit))}">${g.ls.map(l=>`<option value="${esc(l.id)}" ${l.id===classId?"selected":""}>${esc(optLabel(l))}</option>`).join("")}</optgroup>`).join("");
   const classModeHTML=()=>S.classPin
     ? `<b>Pinned by you:</b> ${esc(lessonShortById(S.classPin))}. The district calendar puts the class at ${calId?esc(lessonShortById(calId)):"—"} today.`
@@ -2944,7 +2945,9 @@ function grownups(){
   const notYet = typeof NOT_YET_COVERED==="string" && NOT_YET_COVERED.trim() ? NOT_YET_COVERED : `Covered: 5.NBT.2, 5.NBT.3a, 5.NBT.3b, 5.NBT.4, and the add/subtract part of 5.NBT.7. Not yet covered from the grade-five "major" clusters: 5.NBT.1 as a stated relationship (10× / 1/10 between places), 5.NBT.5–6 (multi-digit multiplication and division), multiplying and dividing decimals (rest of 5.NBT.7), all of fractions (5.NF.1–7), and volume (5.MD.3–5). Also not covered: 5.OA, 5.MD.1–2, 5.G. Matching this to the SWUN unit and lesson sequence needs the classroom unit materials; the framework itself does not mention SWUN.`;
   app.innerHTML=`
     <div class="topbar"><button class="btn quiet" id="back">Home</button><h1 style="margin:0">${esc(S.name)}'s progress</h1><span class="muted build">Build ${esc(BUILD)}</span></div>${warnHTML()}
-    <p class="muted" style="margin:6px 0 0">Last 7 days: ${week.length} problems on ${days} day${days===1?"":"s"}, ${week.length?Math.round(100*week.filter(e=>e.ok).length/week.length)+"% right":"no data yet"}. All time: ${S.correct} of ${S.attempted}. ${(()=>{ const c={}; for(const e of log){ const k=classifyEntry(e); c[k]=(c[k]||0)+1; } return `Independent: ${c.independent||0} right of ${(c.independent||0)+(c["indep-miss"]||0)}. Supported (tools on): ${c.supported||0}. Guided: ${c.guided||0}. Copied (answer shown): ${c.copied||0}.`; })()} Guided completions since the answer was last shown: ${S.persist}.${(()=>{ const w=log.filter(e=>e.why!==undefined); return w.length?` "Say why" questions: ${w.filter(e=>e.why).length} of ${w.length} right.`:""; })()}</p>
+    <p class="muted" style="margin:6px 0 0">${(()=>{ const cls=e=>classifyEntry(e); const wk=log.filter(e=>Number.isFinite(e.t)&&e.t>=weekAgo); const wi=wk.filter(e=>["independent","indep-miss"].includes(cls(e))); const wiR=wi.filter(e=>cls(e)==="independent").length; const wHelp=wk.filter(e=>["supported","guided"].includes(cls(e))).length; const wCopied=wk.filter(e=>cls(e)==="copied").length;
+      const c={}; for(const e of log){ const k=cls(e); c[k]=(c[k]||0)+1; } let lastCopied=-1; log.forEach((e,i)=>{ if(cls(e)==="copied") lastCopied=i; }); const sinceCopied=log.slice(lastCopied+1).filter(e=>cls(e)==="guided").length;
+      return `Last 7 days: ${wk.length} problems on ${days} day${days===1?"":"s"}: independent ${wi.length?`${wiR} right of ${wi.length} (${Math.round(100*wiR/wi.length)}%)`:"none yet"}, ${wHelp} finished with help${wCopied?`, ${wCopied} with the answer shown`:""}. All time: independent ${c.independent||0} right of ${(c.independent||0)+(c["indep-miss"]||0)}; supported (tools on) ${c.supported||0}; guided ${c.guided||0}; copied (answer shown) ${c.copied||0}. Guided completions since the answer was last shown: ${sinceCopied}.`; })()}${(()=>{ const w=log.filter(e=>e.why!==undefined); return w.length?` "Say why" questions: ${w.filter(e=>e.why).length} of ${w.length} right.`:""; })()}</p>
     ${tiersHTML(log)}
     ${classHTML}
     <div class="card">
