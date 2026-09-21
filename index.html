@@ -135,7 +135,11 @@ pre.stack .cr{color:#B45309;font-weight:600}
 .ws-wrap{text-align:center;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .ws .cell{width:46px;height:52px;border:2px solid var(--line);border-radius:9px;background:#fff;font-size:26px;font-weight:800;text-align:center;line-height:48px;padding:0;color:var(--ink);cursor:pointer;font-family:Menlo,Consolas,"Courier New",monospace}
 .ws .cell.sel{border-color:var(--ink);background:#FFFDF0}
-.ws .cell.caret{box-shadow:inset 0 0 0 3px var(--hi)}
+.ws-entry-wrap{max-width:420px;margin:10px auto 0;text-align:left}
+.ws-entry-label{display:block;font-size:14px;font-weight:800;color:var(--ink);margin:0 0 5px}
+.ws-entry{display:block;width:100%;box-sizing:border-box;border:3px solid var(--ink);border-radius:11px;background:#fff;padding:10px 12px;font:800 26px/1.1 Menlo,Consolas,"Courier New",monospace;color:var(--ink);letter-spacing:.08em;text-align:right}
+.ws-entry:focus{outline:4px solid var(--hi);outline-offset:2px}
+.ws-entry:disabled{border-color:var(--line);background:#F0F3F7;color:var(--graphite)}
 .ws-howto{font-size:14px;color:var(--graphite);text-align:center;margin:8px 0 0}
 #wsrowlbl{font-weight:700;color:var(--ink);margin-top:10px}
 .pad .btn.small-txt{font-family:inherit;font-size:15px}
@@ -738,10 +742,13 @@ function genComparePair(level, focus){
   }
   steps.push({t:`Write the symbol. The open side faces the greater number.${a.d.length!==b.d.length && sym!=="=" ? " Notice: the longer number was "+((cmpV(a,b)<0 && a.d.length>b.d.length) || (cmpV(a,b)>0 && b.d.length>a.d.length) ? "the lesser one. More digits does not mean greater." : "greater this time, but only because of its digits, not its length.") : ""}`, check:finalCheck(p)});
   p.steps=steps;
+  const diffPlace=(()=>{ const A=padTo(a,k), B=padTo(b,k); const sa=String(A.w)+A.d, sb=String(B.w)+B.d; const L=Math.max(sa.length,sb.length); const pa=sa.padStart(L,"0"), pb=sb.padStart(L,"0"); let i=0; while(i<L && pa[i]===pb[i]) i++; if(i>=L) return null; const wl=String(Math.max(A.w,B.w)).length; return {name: i<wl ? WHOLE_PLACES[wl-1-i] : DEC_PLACES[i-wl], da:pa[i], db:pb[i]}; })();
   p.hints=[
     {t:`Line up the decimal points. A longer decimal is not automatically greater.`},
     {t:`Add zeros on the end so both numbers have <b>${k}</b> decimal digits. Then compare place by place, starting from the left.`},
-    {...steps[0], check:undefined}
+    {...steps[0], check:undefined},
+    diffPlace ? {t:`Start at the left. The first place where the digits are different is the <b>${diffPlace.name}</b>: ${diffPlace.da} on the left, ${diffPlace.db} on the right. The bigger digit there decides.`} : {t:`After the zeros are added, every digit matches. Two decimals that match in every place are equal.`},
+    {t: diffPlace ? `${diffPlace.da} is ${+diffPlace.da>+diffPlace.db?"more":"less"} than ${diffPlace.db}, so the left number is ${+diffPlace.da>+diffPlace.db?"greater":"less"}: the symbol is <b>${symH}</b>.` : `They are equal: the symbol is <b>=</b>.`}
   ];
   return p;
 }
@@ -772,7 +779,9 @@ function genOrder(level, focus){
   p.hints=[
     {t:`Give every number the same number of decimal digits first.`},
     {t:`Add zeros on the end until each has <b>${k}</b> decimal digits. Zeros on the end change nothing.`},
-    {...p.steps[0], check:undefined}
+    {...p.steps[0], check:undefined},
+    {t:`Compare the whole-number parts first. If two are tied, look at the tenths, then the hundredths, one place at a time from the left.`},
+    {t:`The ${desc?"greatest":"least"} one goes first: <b>${fmt(sorted[0])}</b>. Now find the ${desc?"greatest":"least"} of the ones that are left.`}
   ];
   return p;
 }
@@ -900,11 +909,17 @@ function genAddSub(level, focus){
   const rp=padTo(result,k);
   steps.push({t:`Bring the decimal point <b>straight down</b>.${rp.d!==result.d?` (${fmt(rp)} and ${fmt(result)} are the same number.)`:""}${stackHTML(nums,ops,k,result)}`, check:finalCheck(p)});
   p.steps=steps;
+  // Hints go past the setup: each column gets a question (what to add or subtract, and whether to regroup) and then the worked step.
+  const colSteps=steps.slice(1, steps.length-1); const colHints=[];
+  colSteps.forEach(st=>{ const plain_=st.t.replace(/<[^>]+>/g,""); const nameM=plain_.match(/^([A-Za-z ]+):/); if(!nameM){ colHints.push({...st, check:undefined}); return; } const nm=nameM[1]; // only real column steps get a question first
+    if(op==="+"){ const q=plain_.match(/^[^:]+:\s*([^=]+)=/); colHints.push({t:`<b>${nm}</b>: add ${q?q[1].trim():"the digits in this column"} = ? If it is 10 or more, write only the last digit and regroup the rest to the next column.`}); }
+    else colHints.push({t:`<b>${nm}</b>: is the top digit big enough to take the bottom one away? If not, regroup 1 from the next place to the left (it becomes 10 more here).`});
+    colHints.push({...st, check:undefined}); });
   p.hints=[
     {t:`Line up the decimal points, not the ends of the numbers.`},
     {t:`Add zeros on the end so every number has <b>${plural(k,"decimal digit")}</b>. Then it works exactly like whole numbers.`},
     {...steps[0], check:undefined}
-  ];
+  ].concat(colHints).concat([{t:`Bring the decimal point straight down into the answer, under the other decimal points.`}]);
   return p;
 }
 
@@ -1352,7 +1367,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.7.3 · September 20, 2026";
+const BUILD="v9.7.6 · September 20, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -1395,6 +1410,8 @@ function mulRowSteps(a,b,d,shift,doneRows){
     } else { steps.push({t:`${sum} is less than 10, so it fits in the ${place(j)} place. Nothing to regroup.${pic()}`, check:wc(ci(`What digit goes in the ${place(j)} place?`, sum),"regroup")}); written.push(String(sum)); carry=0; }
   });
   const value=a*d*(shift?10:1);
+  // record the place each step works on (the tens-row 0 first, then each digit of a from the right), so a walkthrough can skip columns she already had right
+  (()=>{ let j=0; steps.forEach((st,i)=>{ const m=(st.t||"").match(/<b>(Ones|Tens|Hundreds|Thousands|Ten thousands)<\/b>:/); if(m){ j=WHOLE_PLACES.indexOf(m[1].toLowerCase())-shift; } st.place = (shift && i===0) ? 0 : j+shift; }); })();
   const readBack=written.map((x,j)=>`${WHOLE_PLACES[j]}${j===written.length-1&&x.length>1?" and up":""}: <b>${x}</b>`).join(", ");
   return {steps, value, readBack, row:rowStr()};
 }
@@ -1402,13 +1419,14 @@ function mulRowSteps(a,b,d,shift,doneRows){
 function addColSteps(a,b,x,y){
   const X=String(x), Y=String(y); const n=Math.max(X.length,Y.length); const dx=X.padStart(n,"0").split("").map(Number).reverse(), dy=Y.padStart(n,"0").split("").map(Number).reverse();
   const steps=[]; const written=[]; let carry=0; const pic=()=>stackMul(a,b,[x,y],written.slice().reverse().join("")||" ");
-  for(let j=0;j<n;j++){ const last=j===n-1, cin=carry, sum=dx[j]+dy[j]+cin, name=WHOLE_PLACES[j];
+  for(let j=0;j<n;j++){ const last=j===n-1, cin=carry, sum=dx[j]+dy[j]+cin, name=WHOLE_PLACES[j]; const startLen=steps.length;
     const parts=[dx[j],dy[j]].concat(cin?[cin]:[]);
     const intro = j===0 ? `Add the two partial products the way you add any two numbers: line up the ones, then add one column at a time from the right. ` : "";
     steps.push({t:`${intro}<b>${cap(name)}</b> column: ${dx[j]} + ${dy[j]}${cin?` + the regrouped ${cin}`:""}.${pic()}`, check:wc(ci(`${parts.join(" + ")} = ?`, sum),"add-partials")});
     if(last){ steps.push({t:`Last column, so write the whole <b>${sum}</b>.${pic()}`, check:wc(ci(`What do you write in the ${name} place and up?`, sum),"add-partials")}); written.push(String(sum)); }
     else if(sum>=10){ steps.push({t:`${sum} is 10 or more: write the ones digit of it in the ${name} column and regroup 1 to the ${WHOLE_PLACES[j+1]} column.${pic()}`, check:wc(ci(`What digit do you write in the ${name} place?`, sum%10),"add-partials")}); written.push(String(sum%10)); carry=1; }
     else { steps.push({t:`${sum} fits in the ${name} column. Nothing to regroup.${pic()}`, check:wc(ci(`What digit goes in the ${name} place?`, sum),"add-partials")}); written.push(String(sum)); carry=0; }
+    for(let q=startLen;q<steps.length;q++) steps[q].place=j;
   }
   const readBack=written.map((w,j)=>`${WHOLE_PLACES[j]}${j===written.length-1&&w.length>1?" and up":""}: <b>${w}</b>`).join(", ");
   return {steps, readBack, total:parseInt(written.slice().reverse().join(""),10)};
@@ -1454,8 +1472,8 @@ function genMultiply(level, focus){
       steps.push({t:`Add the partial products: ${parts.map(x=>(x*b).toLocaleString("en-US")).join(" + ")}.${stackMul(a,b,parts.map(x=>x*b))}`, check:wc(finalCheck(p),"add-partials")}); }
     p.traps=["fact"].concat(variant==="distributive"?["add-partials"]:[]);
   } else if(b<10){
-    steps.push({t:`Line up the factors, ${a} above ${b}. Multiply ${b} by each digit of ${a}, starting with the ones place.${stackMul(a,b)}`});
-    const r=mulRowSteps(a,b,b,0,[]); steps.push(...r.steps);
+    steps.push({t:`Line up the factors, ${a} above ${b}. Multiply ${b} by each digit of ${a}, starting with the ones place.${stackMul(a,b)}`, row:"setup"});
+    const r=mulRowSteps(a,b,b,0,[]); steps.push(...r.steps.map(st=>({...st, row:"t"})));
     steps.push({t:`Read the product from the digits you wrote (${r.readBack}).${stackMul(a,b)}`, check:wc(finalCheck(p),"rows")});
   } else if(variant==="area"){
     const at=a-(a%10), ao=a%10, bt=b-(b%10), bo=b%10;
@@ -1475,31 +1493,36 @@ function genMultiply(level, focus){
   } else {
     const ones=b%10, tens=Math.floor(b/10);
     const r0=mulRowSteps(a,b,ones,0,[]), r1=mulRowSteps(a,b,tens,1,[r0.row]);
-    steps.push({t:`Line up the two factors one above the other.${stackMul(a,b)}`});
-    steps.push({t:`Step 1: multiply ${a} by the <b>ones digit</b>, ${ones}. This is the first partial product.${stackMul(a,b,[""])}`, check:wc(ci(`${a} × ${ones} = ?`, a*ones),"rows"), sub:r0.steps, tAfter:`Step 1, finished: read the first partial product from the digits you wrote (${r0.readBack}).`});
-    steps.push({t:`Step 2: multiply ${a} by the <b>tens digit</b>, ${tens}. That is really ${a} × ${tens*10}, so write a <b>0</b> in the ones place first, then multiply.${stackMul(a,b,[r0.row,""])}`, check:wc(ci(`${a} × ${tens*10} = ? (the second partial product, with its 0)`, a*tens*10), v=>near(parseAnswer(v),a*tens)?"tens-zero":"rows"), sub:r1.steps, tAfter:`Step 2, finished: read the second partial product from the digits you wrote (${r1.readBack}).`});
+    steps.push({t:`Line up the two factors one above the other.${stackMul(a,b)}`, row:"setup"});
+    steps.push({t:`Step 1: multiply ${a} by the <b>ones digit</b>, ${ones}. This is the first partial product.${stackMul(a,b,[""])}`, row:"r0", check:wc(ci(`${a} × ${ones} = ?`, a*ones),"rows"), sub:r0.steps, tAfter:`Step 1, finished: read the first partial product from the digits you wrote (${r0.readBack}).`});
+    steps.push({t:`Step 2: multiply ${a} by the <b>tens digit</b>, ${tens}. That is really ${a} × ${tens*10}, so write a <b>0</b> in the ones place first, then multiply.${stackMul(a,b,[r0.row,""])}`, check:wc(ci(`${a} × ${tens*10} = ? (the second partial product, with its 0)`, a*tens*10), v=>near(parseAnswer(v),a*tens)?"tens-zero":"rows"), row:"r1", sub:r1.steps, tAfter:`Step 2, finished: read the second partial product from the digits you wrote (${r1.readBack}).`});
     const ad=addColSteps(a,b,a*ones,a*tens*10);
-    steps.push({t:`Step 3: add the two partial products.${stackMul(a,b,[a*ones,a*tens*10])}`, check:wc(finalCheck(p),"add-partials"), sub:ad.steps, tAfter:`Step 3, finished: read the total from the digits you wrote (${ad.readBack}).`});
+    steps.push({t:`Step 3: add the two partial products.${stackMul(a,b,[a*ones,a*tens*10])}`, row:"t", check:wc(finalCheck(p),"add-partials"), sub:ad.steps, tAfter:`Step 3, finished: read the total from the digits you wrote (${ad.readBack}).`});
   }
   p.steps=steps;
   // Hints are written for a kid who finds math hard, working alone: plain words first, the SWUN word in parentheses, and by hint 3 the whole
   // row worked out in words so she can finish without a grown-up. They never give the final answer.
-  const rowWords=(digit, shift)=>{ // the row for a × digit, place by place, as a sentence
-    const digs=String(a).split("").map(Number).reverse(); let carry=0; const parts=[]; const names=["ones","tens","hundreds","thousands","ten thousands"];
-    digs.forEach((g,j)=>{ const prod=g*digit, sum=prod+carry, last=j===digs.length-1; const nm=names[j+shift]||"next";
-      if(last) parts.push(`${nm}: ${digit} × ${g}${carry?` + ${carry} carried`:""} = ${sum}, and since it is the last digit you write the whole ${sum}`);
-      else if(sum>=10) parts.push(`${nm}: ${digit} × ${g}${carry?` + ${carry} carried`:""} = ${sum}, write the <b>${sum%10}</b> and carry the <b>${Math.floor(sum/10)}</b>`);
-      else parts.push(`${nm}: ${digit} × ${g}${carry?` + ${carry} carried`:""} = ${sum}, write the <b>${sum}</b>, nothing to carry`);
-      carry = last ? 0 : Math.floor(sum/10); });
-    return parts.join(". ")+"."; };
-  if(b<10) p.hints=[
-    {t:`Go one digit at a time, starting on the <b>right</b> (the ones place). Multiply ${b} by that digit. If the answer is 10 or more, write only its last digit and carry the other digit to the next column: a small number above the next digit. (SWUN calls carrying <b>regrouping</b>.)`},
-    {t:`Here is the first column done for you. Ones: ${b} × ${a%10} = ${b*(a%10)}. ${b*(a%10)>=10?`That is 10 or more, so write the <b>${(b*(a%10))%10}</b> in the ones place and carry the <b>${Math.floor(b*(a%10)/10)}</b> to the tens.`:`That is less than 10, so write the <b>${b*(a%10)}</b> in the ones place and carry nothing.`} Now do the tens digit the same way, and remember to add anything you carried.`},
-    {t:`The whole thing in words, so you can check each column as you go: ${rowWords(b,0)} The digits you wrote, read left to right, are the answer.`}];
-  else { const ones=b%10, tens=Math.floor(b/10); p.hints=[
-    {t:`This kind has <b>two rows</b>, then you add them. Row 1: multiply ${a} by the ones digit of ${b}, which is ${ones}. Row 2: first write a <b>0</b> in the ones place (because this row is really ${a} × ${tens*10}), then multiply ${a} by ${tens}. Add row 1 and row 2 to get the answer. (SWUN calls the rows <b>partial products</b>.)`},
-    {t:`Row 1, in words: ${rowWords(ones,0)} Then row 2 starts with a 0 in the ones place, and you multiply ${a} by ${tens} the same way, one digit at a time, starting from the right.`},
-    {t:`Row 2, in words: write the 0, then ${rowWords(tens,1)} Now add row 1 and row 2 like any two numbers: line up the ones, add each column from the right, and carry when a column makes 10 or more. That total is the answer.`}]; }
+  // Hints, one small step at a time, in the order the algorithm goes (ones column first). Each column gets up to three: which fact to do;
+  // the fact's answer; which digit to write and what to carry. She asks for the next one only when stuck. Plain words first, SWUN word after.
+  const names=["ones","tens","hundreds","thousands","ten thousands"];
+  const colPlan=(digit, shift, rowKey, rowName)=>{ const digs=String(a).split("").map(Number).reverse(); let carry=0; const out=[];
+    digs.forEach((g,j)=>{ const nm=names[j+shift]||"next"; const prod=g*digit, sum=prod+carry, last=j===digs.length-1, cin=carry; const hs=[];
+      hs.push(`${rowName}<b>${ucfirst(nm)} column</b>: the fact to do is <b>${digit} × ${g}</b>${cin?`, then add the <b>${cin}</b> you carried`:""}. Try it on the scratch paper first.`);
+      hs.push(`${digit} × ${g} = <b>${prod}</b>${cin?`, plus the carried ${cin} makes <b>${sum}</b>`:""}. ${last?"This is the last digit, so the whole number gets written.":sum>=10?"That is 10 or more, so only one digit fits here. Which digit do you write, and what do you carry? (SWUN: regroup.)":"That is less than 10, so it fits in one box. Nothing to carry."}`);
+      if(!last && sum>=10) hs.push(`Write the <b>${sum%10}</b> in the ${nm} box and carry the <b>${Math.floor(sum/10)}</b>: a small ${Math.floor(sum/10)} above the next digit of ${a}. Add it in on the next column.`);
+      else if(last) hs.push(`Write <b>${sum}</b> here, starting in the ${nm} box and going left.`);
+      out.push({key:`${rowKey}-${j+shift}`, hints:hs}); carry = last ? 0 : Math.floor(sum/10); });
+    return out; };
+  const addPlan=(x,y)=>{ const X=String(x), Y=String(y), n=Math.max(X.length,Y.length); const dx=X.padStart(n,"0").split("").map(Number).reverse(), dy=Y.padStart(n,"0").split("").map(Number).reverse(); let carry=0; const out=[];
+    for(let jj=0;jj<n;jj++){ const cin=carry, sum=dx[jj]+dy[jj]+cin, nm=names[jj]||"next", last=jj===n-1; const hs=[`<b>${ucfirst(nm)} column</b> of the total: add ${dx[jj]} + ${dy[jj]}${cin?` + the ${cin} you carried`:""}.`];
+      hs.push(last?`${[dx[jj],dy[jj]].concat(cin?[cin]:[]).join(" + ")} = <b>${sum}</b>. Last column, so write the whole ${sum}.`:sum>=10?`${[dx[jj],dy[jj]].concat(cin?[cin]:[]).join(" + ")} = <b>${sum}</b>. Write the <b>${sum%10}</b> and carry 1 to the ${names[jj+1]} column.`:`${[dx[jj],dy[jj]].concat(cin?[cin]:[]).join(" + ")} = <b>${sum}</b>. Write it; nothing to carry.`);
+      out.push({key:`t-${jj}`, hints:hs}); carry = last?0:(sum>=10?1:0); } return out; };
+  if(b<10){ p.hints=[{t:`Go one digit at a time, starting on the <b>right</b> (the ones place). Multiply ${b} by that digit. If the answer is 10 or more, write only its last digit and carry the other digit to the next column. (SWUN calls carrying <b>regrouping</b>.)`}];
+    p.hintPlan=colPlan(b,0,"t",""); }
+  else { const ones=b%10, tens=Math.floor(b/10); p.hints=[{t:`This kind has <b>two rows</b>, then you add them. Row 1: ${a} × the ones digit, ${ones}. Row 2: a <b>0</b> first (it is really ${a} × ${tens*10}), then ${a} × ${tens}. Add the rows. (SWUN calls the rows <b>partial products</b>.)`}];
+    p.hintPlan=colPlan(ones,0,"r0","Row 1, ").concat([{key:"r1-0", hints:[`Row 2 starts with a <b>0</b> in the ones box, because this row is ${a} × ${tens*10}.`]}]).concat(colPlan(tens,1,"r1","Row 2, ")).concat([{key:"t-plan", hints:[`Now add row 1 and row 2 like any two numbers: line up the ones, add each column from the right, and carry when a column makes 10 or more.`]}]).concat(addPlan(a*ones, a*tens*10)); }
+  p.hints = p.hints.concat(p.hintPlan.flatMap(c=>c.hints.map(t=>({t, key:c.key})))); // the full ladder in order, for anything that reads hints as a list; the workspace serves them by cell
+  p.hintTotal = p.hints.length;
   return p;
 }
 // Wrong values a learner gets for a × d when regrouped digits are lost: every regroup dropped, one regroup dropped, or no regrouping at all (each product written whole).
@@ -1620,7 +1643,8 @@ function genDivide(level, focus){
       if(Math.random()<0.4){ const h=ri(1,Math.floor(qmax/100)); const z=h*100+ri(1,9); if(z>=101 && z<=qmax) q=z; } } // an internal zero in the quotient (like 305) makes the decomposition less obvious
     if(focus && focus.d && level!==1) d=focus.d; };
   // Redraw within the SAME level until the dividend fits; never quietly hand back an easier level.
-  let g=0; do{ draw(); }while(g++<80 && d*q>cap);
+  const needParts = f==="missing-part"||f==="place"; // a follow-up for a dropped partial quotient must have at least two of them
+  let g=0; do{ draw(); }while(g++<120 && (d*q>cap || (needParts && String(q).replace(/0/g,"").length<2)));
   if(d*q>cap){ q=Math.max(11, Math.floor(cap/d)); } // a fixed divisor from a follow-up can force it: shrink the quotient, keep the level
   if(focus && focus.fixed){ d=+focus.fixed.d; q=+focus.fixed.q; }
   const N=d*q;
@@ -1640,15 +1664,22 @@ function genDivide(level, focus){
   }
   p.steps=steps;
   // Plain-English hints for a kid working alone: what the strategy is in ordinary words, the SWUN name in parentheses, then the pieces worked out.
-  const nm=N.toLocaleString("en-US"); const firstQ=parts[0].qpart, firstPiece=parts[0].piece.toLocaleString("en-US");
+  const nm=N.toLocaleString("en-US"); const firstQ=parts[0].qpart; const unit=Math.pow(10,String(firstQ).length-1); const unitName=unit===100?"hundreds":unit===10?"tens":"ones";
+  const fitK=firstQ/unit; // the multiple that fits; the ladder stops BEFORE it so the last step (and the pick) is hers
+  const ladder=(()=>{ const out=[]; for(let k=1;k<fitK && k<=9;k++){ const v=d*unit*k; out.push(`${d} × ${(unit*k).toLocaleString("en-US")} = ${v.toLocaleString("en-US")}`); } return out.length ? out.join(", ")+", … keep counting up" : `start with ${d} × ${unit.toLocaleString("en-US")} and keep counting up`; })();
+  const restCount=parts.length-1;
   p.hints = variant==="area" ? [
-    {t:`Think of a rectangle. One side is <b>${d}</b> and the whole area inside is <b>${nm}</b>. You are looking for the other side. Build the rectangle in easy chunks: pick a round number for part of the missing side, multiply it by ${d}, and subtract that from ${nm}. Keep going until nothing is left. Add up the chunks of the side: that is the answer. (SWUN calls this the <b>area model</b>.)`},
-    {t:`First chunk: try <b>${firstQ}</b> for part of the side. ${d} × ${firstQ} = ${firstPiece}. Take that away: ${nm} − ${firstPiece} = ${(N-parts[0].piece).toLocaleString("en-US")} left to fill.${parts.length>1?` Now pick the next chunk for what is left.`:` Nothing is left, so the side is ${firstQ}.`}`},
-    {t:`All the chunks of the side: ${parts.map(x=>`<b>${x.qpart}</b> (because ${d} × ${x.qpart} = ${x.piece.toLocaleString("en-US")})`).join(", then ")}. Add the chunks together for the answer.`}]
+    {t:`Think of a rectangle. One side is <b>${d}</b> and the whole area inside is <b>${nm}</b>. You are looking for the other side. Build it in chunks: pick a round number for part of the missing side, multiply it by ${d}, and take that away from ${nm}. (SWUN calls this the <b>area model</b>.)`},
+    {t:`Find the first chunk by counting up in ${unitName}: ${ladder}. Which one is the biggest that still fits inside ${nm} without going over?`},
+    {t:`That round number is your first chunk of the side. Multiply it by ${d} and take that area away from ${nm}. Write down what is left.`},
+    {t:`${restCount?`What is left is smaller. Do the same thing with it: count up by ${restCount>1?"tens of "+d+", then ones of "+d:"ones of "+d} until you find the biggest that fits, and take it away too.`:`If nothing is left, the rectangle is finished.`}`},
+    {t:`When nothing is left, add the chunks of the side together. That sum is the answer.`}]
   : [
     {t:`Break ${nm} into friendly pieces that ${d} divides evenly, biggest piece first: some hundreds, then some tens, then some ones. Divide each piece by ${d}, then add those small answers together. (SWUN calls this the <b>place value strategy</b>, and the small answers <b>partial quotients</b>.)`},
-    {t:`Start with the biggest piece. Ask: how many ${firstQ>=100?"hundreds":firstQ>=10?"tens":"ones"} of ${d} fit into ${nm}? Try ${d} × ${firstQ} = ${firstPiece}. So the first piece is <b>${firstPiece}</b>, and ${firstPiece} ÷ ${d} = <b>${firstQ}</b>. ${parts.length>1?`What is left after you take ${firstPiece} away from ${nm}? Do the same with that.`:`Nothing is left, so that is the whole answer.`}`},
-    {t:`All the pieces: ${parts.map(x=>`${x.piece.toLocaleString("en-US")} ÷ ${d} = <b>${x.qpart}</b>`).join("; ")}. Check that the pieces add back up to ${nm}. Then add the small answers together: that sum is the quotient.`}];
+    {t:`Find the biggest piece by counting up in ${unitName}: ${ladder}. Which is the biggest that still fits inside ${nm} without going over?`},
+    {t:`That product is your first piece, and the number you multiplied ${d} by is your first small answer. Write both down.`},
+    {t:`Take your first piece away from ${nm}. ${restCount?`What is left is your next piece: divide it by ${d} the same way, counting up by ${restCount>1?"tens of "+d+", then ones of "+d:"ones of "+d}.`:`If nothing is left, your first small answer is the whole answer.`}`},
+    {t:`Check that your pieces add back up to ${nm}. Then add the small answers together. That sum is the quotient.`}];
   return p;
 }
 Object.assign(SKILLS, {
@@ -1974,6 +2005,7 @@ function hasTrap(p, comp){
     if(comp==="parens"||comp==="no-parens") return m.variant==="evaluate" ? !!m.hasGroup && m.noParen!==m.value : true;
     if(comp==="placement") return m.variant==="place"; if(comp==="other-expr") return m.variant==="which"; }
   if(sk==="rounding" && comp==="whole"){ return m.which ? true : (m.R!==undefined && m.C!==undefined ? m.R!==m.C : true); }
+  if(sk==="divide" && (comp==="missing-part"||comp==="place")) return Array.isArray(m.parts) && m.parts.length>=2; // one partial quotient cannot be left out if there is only one
   return true;
 }
 const ctxKey=ctx=>Object.keys(ctx||{}).filter(k=>ctx[k]!==undefined&&ctx[k]!=="").sort().map(k=>`${k}=${ctx[k]}`).join(",");
@@ -2119,6 +2151,7 @@ let sessionN=0, stopOfferedAt=-1, sessionDone=false, sessionMissRun=0, breakOffe
 let ws=null;         // multiplication workspace state for the current problem: {vals:{cellKey:digit}, sel:cellKey}
 const SUPPORT_NAMES={3:"the pre-written tens-row zero and the opening coach line", 2:"the column labels", 1:"the carry boxes"}; // what each support level adds on top of the one below it
 function resetSession(){ sessionN=0; stopOfferedAt=-1; sessionDone=false; sessionMissRun=0; breakOfferedAt=-1; } // a new learner starts a fresh sitting
+const coachOn=()=>!!(cur && cur.ws && (S.support.multiply||0)>=3 && cur.hints && cur.hints[0]); // the coach line on the workspace shows hint 1 for free
 function prevNeededHelp(sk){ const a=S.log.filter(e=>e.sk===sk); const p=a[a.length-2]; return !!p && (!p.ok || +p.hints>0); } // the attempt before the one just logged
 let scratchStrokes=[]; let penSeen=false; // scratch paper for the current problem; once a pencil is used, finger touches are ignored (palm rejection) // the "say why" question after a right answer: {sel, done, ok}; okEntry is the log entry it annotates
 function expandAll(steps){ const out=[]; for(const s of steps){ if(Array.isArray(s.sub)&&s.sub.length){ out.push(...expandAll(s.sub)); const c={...s, expanded:true}; if(c.tAfter) c.t=c.tAfter; out.push(c); } else out.push(s); } return out; }
@@ -2420,15 +2453,18 @@ function wsSpec(p){
   const order=[]; rowsDef.forEach(r=>{ for(let p=0;p<cols;p++) order.push(`${r.key}-${p}`); }); if(two) for(let p=0;p<cols;p++) order.push(`t-${p}`);
   return {a,b,ones,tens,two,cols,rowsDef,exp,carries,cin,carryRows,carryCols,order};
 }
-// Entry model: each row is typed like a calculator. Tap a row (or just start typing), type 1-2-6, and the digits slide into place right-aligned.
-// Backspace erases the last digit. Enter / Tab / the → key move to the next row; Enter on the last row checks. A carry box is a one-digit
-// exception: tap it, type the digit, and the selection returns to the row. ws.rows holds what she typed per row; ws.vals (per cell) is derived
-// from it so grading is unchanged. The pre-written tens-row 0 (support 3) is a fixed suffix of the tens row.
+// Entry model: every worksheet row has one ordinary text field. Type 1-2-6 and the answer stays "126" in the field while the worksheet
+// boxes mirror it, right-aligned. This gives hardware and on-screen keyboards normal cursor, selection, paste, and correction behavior.
+// Enter moves to the next row; Enter on the last row checks. A carry box is the one-digit exception: tap it and type one digit, then the
+// selection returns to the row. ws.rows holds the typed strings; ws.vals (per cell) is derived from them so grading is unchanged.
 function wsInit(){ if(ws) return; const sp=wsSpec(cur); const rowKeys=sp.two?["r0","r1","t"]:["t"]; ws={rows:{}, carries:{}, vals:{}, sel:rowKeys[0], rowKeys, locked:{}, marks:null}; if(S.support.multiply>=3 && sp.two){ ws.locked["r1-0"]=true; } wsSync(); }
 function wsSync(){ const sp=wsSpec(cur); ws.vals={}; for(const k of ws.rowKeys){ let str=ws.rows[k]||""; if(k==="r1" && ws.locked["r1-0"]) str+="0"; const digs=str.split("").reverse(); digs.forEach((ch,p)=>{ if(p<sp.cols) ws.vals[`${k}-${p}`]=ch; }); } for(const k in ws.carries){ if(ws.carries[k]!=="") ws.vals[k]=ws.carries[k]; } }
+function wsRowLabel(k, sp){ return ({r0:"ones row (top partial product)",r1:"tens row",t:sp.two?"total (bottom row)":"answer"})[k]||"answer"; }
+function wsRowPrompt(k, sp){ if(k==="r1" && ws.locked["r1-0"]) return "The 0 at the end is already written. Type the rest of the tens row."; if(k==="r1") return "Type the whole tens row, ending in 0."; return `Type the whole ${wsRowLabel(k,sp)}`; }
+function wsActiveRow(){ return wsIsRow(ws.sel)?ws.sel:(wsIsRow(ws.retRow)?ws.retRow:ws.rowKeys[0]); }
 function wsHTML(readonly, marks){
   const sp=wsSpec(cur); const sup=S.support.multiply; const cellW = window.innerWidth>=700 ? 54 : 46;
-  const cellsRow=(key, cls, locked)=>{ let h=""; for(let p=sp.cols-1;p>=0;p--){ const k=`${key}-${p}`; const v=ws.vals[k]||""; const lk=!!ws.locked[k]; const m=marks&&marks[k]; h+=`<button type="button" class="cell ${cls||""}${(k===ws.sel||key===ws.sel)&&!readonly?" sel":""}${lk?" locked":""}${m?" "+m:""}" data-k="${k}" ${readonly||lk?"disabled":""} aria-label="${key==="t"?"answer":key.startsWith("c")?"carry":"partial product"} ${WHOLE_PLACES[p]||""} place">${esc(v)}</button>`; } return h; };
+  const cellsRow=(key, cls, locked)=>{ let h=""; for(let p=sp.cols-1;p>=0;p--){ const k=`${key}-${p}`; const v=ws.vals[k]||""; const lk=!!ws.locked[k]; const m=marks&&marks[k]; const role=key==="t"?"answer":key.startsWith("c")?"carry":"partial product"; h+=`<button type="button" class="cell ${cls||""}${(k===ws.sel||key===ws.sel)&&!readonly?" sel":""}${lk?" locked":""}${m?" "+m:""}" data-k="${k}" ${readonly||lk?"disabled":""} aria-label="${role} ${WHOLE_PLACES[p]||""} place, ${v?"digit "+esc(v):"empty"}">${esc(v)}</button>`; } return h; };
   let g=`<div class="ws-grid" style="grid-template-columns:30px repeat(${sp.cols},${cellW}px)">`;
   if(sup>=2){ g+=`<div></div>`; for(let p=sp.cols-1;p>=0;p--) g+=`<div class="lbl">${WHOLE_PLACES[p]||""}</div>`; }
   if(sup>=1){ for(const cr of sp.carryRows){ const allowed=new Set(sp.carryCols(cr)); g+=`<div class="rowlbl">${sp.two?(cr==="c1"?"×tens":"×ones"):"carry"}</div>`;
@@ -2438,7 +2474,9 @@ function wsHTML(readonly, marks){
   if(sp.two){ g+=`<div class="op"></div>`+cellsRow("r0"); g+=`<div class="op">+</div>`+cellsRow("r1"); g+=`<div class="rule"></div>`; g+=`<div class="op"></div>`+cellsRow("t"); }
   else { g+=`<div class="op"></div>`+cellsRow("t"); }
   g+=`</div>`;
-  const pad = readonly ? "" : `<p class="ws-howto" id="wsrowlbl"></p><div class="pad" role="group" aria-label="Number pad">${[1,2,3,4,5,6,7,8,9,0].map(d=>`<button type="button" class="btn" data-d="${d}">${d}</button>`).join("")}<button type="button" class="btn" data-d="bs" aria-label="Erase the last digit">⌫</button><button type="button" class="btn small-txt" data-d="clr" aria-label="Clear this row" title="Clear this row">clear</button><button type="button" class="btn wide" data-d="nx" aria-label="Next row, or check on the last row">next row ↵</button></div><p class="ws-howto muted">Type each row like a calculator: the digits slide into place. <b>↵</b> moves to the next row; on the last row it checks. Tap a carry box to write a carry.</p>`;
+  const active=wsActiveRow(), carryMode=!wsIsRow(ws.sel), cap=wsRowCap(active), rowName=wsRowLabel(active,sp), lastRow=active===ws.rowKeys[ws.rowKeys.length-1];
+  const entry = readonly ? "" : `<div class="ws-entry-wrap"><label class="ws-entry-label" id="wsrowlbl" for="wsentry">${carryMode?"Carry box selected — type one digit":wsRowPrompt(active,sp)}</label><input class="ws-entry" id="wsentry" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="${cap}" aria-labelledby="wsrowlbl" ${carryMode?"disabled":""} value="${esc(ws.rows[active]||"")}" placeholder="${active==="r1"&&ws.locked["r1-0"]?"the digits before the 0":"Type the whole number"}"></div>`;
+  const pad = readonly ? "" : `${entry}<div class="pad" role="group" aria-label="Number pad">${[1,2,3,4,5,6,7,8,9,0].map(d=>`<button type="button" class="btn" data-d="${d}">${d}</button>`).join("")}<button type="button" class="btn" data-d="bs" aria-label="Erase the last digit">⌫</button><button type="button" class="btn small-txt" data-d="clr" aria-label="Clear this row" title="Clear this row">clear</button><button type="button" class="btn wide" id="wsnext" data-d="nx" aria-label="${lastRow?"Check this answer":"Move to the next row"}">${lastRow?"check answer ↵":"next row ↵"}</button></div><p class="ws-howto muted">Type the whole row normally — for example, type <b>126</b>, not one box at a time. <b>↵</b> moves to the next row; on the last row it checks. Tap a carry box only when you want to write a carry.</p>`;
   const supNames=[sup>=2?"column labels":"", sup>=1?"carry boxes":"", sup>=3&&sp.two?"tens-row 0 written in":"", sup>=3?"coach line":""].filter(Boolean);
   const supLine = readonly ? "" : `<p class="supports">${supNames.length?`Supports on: <b>${supNames.join(" · ")}</b> <span class="muted">(they come off as you get these right on your own)</span>`:`No supports: this is the bare page, like the worksheet.`}${sup<3?` <button type="button" class="btn quiet small" id="toolsback" title="Bring one support back for now; it fades again as you get these right">Bring a tool back</button>`:""}</p>`;
   const coach = (!readonly && sup>=3 && cur.hints && cur.hints[0]) ? `<div class="hints"><div class="step"><span class="n">Coach.</span>${cur.hints[0].t}</div></div>` : "";
@@ -2458,13 +2496,48 @@ function wsClearRow(){ if(wsIsRow(ws.sel)) ws.rows[ws.sel]=""; wsSync(); wsPaint
 function wsPaint(){ const sp=wsSpec(cur);
   app.querySelectorAll(".ws .cell[data-k]").forEach(el=>{ const k=el.dataset.k; el.textContent=ws.vals[k]||""; const row=k.split("-")[0]; const p=+k.split("-")[1];
     const selRow = wsIsRow(ws.sel) && row===ws.sel; el.classList.toggle("sel", selRow || k===ws.sel);
-    const capP = (row==="r1" && ws.locked["r1-0"]) ? 1 : 0; el.classList.toggle("caret", selRow && p===capP && !el.disabled); }); // the caret sits where the next digit lands
-  const rl=app.querySelector("#wsrowlbl"); if(rl) rl.textContent = wsIsRow(ws.sel) ? ({r0:"Typing the ones row (top row)",r1:"Typing the tens row (the row with the 0)",t:sp.two?"Typing the total (bottom row)":"Typing the answer"})[ws.sel] : "Typing a carry box: one digit, then back to the row"; }
+    const role=row==="t"?"answer":row.startsWith("c")?"carry":"partial product"; el.setAttribute("aria-label",`${role} ${WHOLE_PLACES[p]||""} place, ${el.textContent?"digit "+el.textContent:"empty"}`); });
+  const active=wsActiveRow(), carryMode=!wsIsRow(ws.sel), entry=app.querySelector("#wsentry"), rl=app.querySelector("#wsrowlbl");
+  if(rl) rl.textContent=carryMode?"Carry box selected — type one digit":wsRowPrompt(active,sp);
+  if(entry){ const want=ws.rows[active]||""; entry.disabled=carryMode; entry.maxLength=wsRowCap(active); if(entry.value!==want) entry.value=want; }
+  const nx=app.querySelector("#wsnext"); if(nx){ const last=active===ws.rowKeys[ws.rowKeys.length-1]; nx.textContent=last?"check answer ↵":"next row ↵"; nx.setAttribute("aria-label",last?"Check this answer":"Move to the next row"); }
+}
+function wsFocusEntry(cellKey){ const entry=app.querySelector("#wsentry"); if(!entry||entry.disabled) return; entry.focus({preventScroll:true}); const row=wsActiveRow(), str=ws.rows[row]||"";
+  if(cellKey){ const p=+cellKey.split("-")[1], shift=(row==="r1"&&ws.locked["r1-0"])?1:0, i=str.length-1-(p-shift); if(i>=0&&i<str.length){ entry.setSelectionRange(i,i+1); return; } }
+  entry.setSelectionRange(str.length,str.length);
+}
+// Which cell the next hint should be about: the first empty box in algorithm order; if none is empty, the first box that does not match the
+// steps; a cell whose mini-ladder is used up is passed over. Returns null when every box is filled and matches.
+function wsHintCursor(){ const sp=wsSpec(cur); const plan=cur.hintPlan||[]; const used=cur.hintUsed||{};
+  const done=c=>(used[c.key]||0)>=c.hints.length; const val=k=>ws.vals[k];
+  const empty=plan.find(c=>!done(c) && (c.key==="t-plan" ? !(val("t-0")!==undefined&&val("t-0")!=="") : (!ws.locked[c.key] && (val(c.key)===undefined||val(c.key)===""))));
+  if(empty) return empty;
+  const wrong=plan.find(c=>!done(c) && c.key!=="t-plan" && !ws.locked[c.key] && sp.exp[c.key]!==undefined && val(c.key)!==sp.exp[c.key]);
+  return wrong||null; }
+function wsNextHint(){ cur.hintUsed=cur.hintUsed||{}; cur.hintLog=cur.hintLog||[];
+  if(!coachOn() && !cur.hintUsed.overview && cur.hints[0]){ cur.hintUsed.overview=1; cur.hintLog.push({t:cur.hints[0].t}); return; } // without the coach line, the overview is the first hint
+  const c=wsHintCursor();
+  if(!c){ if(!cur.hintLog.some(h=>h.done)) cur.hintLog.push({t:`Every box is filled in and matches the steps. Press <b>Check</b>.`, done:true}); return; }
+  const idx=cur.hintUsed[c.key]||0; cur.hintLog.push({t:c.hints[idx], key:c.key}); cur.hintUsed[c.key]=idx+1; }
 function bindWS(){
-  app.querySelectorAll(".ws .cell[data-k]:not([disabled])").forEach(el=>el.onclick=()=>{ const k=el.dataset.k; const row=k.split("-")[0]; if(wsIsRow(row)){ ws.sel=row; } else { ws.retRow=wsIsRow(ws.sel)?ws.sel:ws.rowKeys[0]; ws.sel=k; } wsPaint(); });
+  app.querySelectorAll(".ws .cell[data-k]:not([disabled])").forEach(el=>el.onclick=()=>{ const k=el.dataset.k; const row=k.split("-")[0]; if(wsIsRow(row)){ ws.sel=row; wsPaint(); wsFocusEntry(k); } else { ws.retRow=wsActiveRow(); ws.sel=k; wsPaint(); } });
+  const entry=app.querySelector("#wsentry"); if(entry){ entry.oninput=()=>{ const row=wsActiveRow(), cap=wsRowCap(row); let clean=entry.value.replace(/\D/g,""); if(row==="r1" && ws.locked["r1-0"] && clean.length===cap+1 && /0$/.test(clean)) clean=clean.slice(0,-1); /* she typed the 0 that is already there: fine, drop it quietly */ clean=clean.slice(0,cap); if(entry.value!==clean) entry.value=clean; ws.rows[row]=clean; wsSync(); wsPaint(); };
+    entry.onkeydown=e=>{ if(e.altKey||e.ctrlKey||e.metaKey) return; if(e.key==="Enter"||e.key==="ArrowDown"||(e.key==="Tab"&&!e.shiftKey)){ e.preventDefault(); e.stopPropagation(); if(wsNextRow()){ if(e.key==="Enter") submit(); else app.querySelector("#check").focus(); } else { wsPaint(); wsFocusEntry(); } }
+      else if(e.key==="ArrowUp"||(e.key==="Tab"&&e.shiftKey)){ e.preventDefault(); e.stopPropagation(); wsPrevRow(); wsPaint(); wsFocusEntry(); }
+      else if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); wsClearRow(); wsFocusEntry(); }
+      else if(e.key==="Backspace"&&!entry.value&&ws.rowKeys.indexOf(wsActiveRow())>0){ e.preventDefault(); e.stopPropagation(); wsPrevRow(); wsPaint(); wsFocusEntry(); } };
+  }
   app.querySelectorAll(".pad .btn").forEach(b=>b.onclick=()=>{ const d=b.dataset.d; if(d==="bs") wsBack(); else if(d==="nx"){ if(wsNextRow()) submit(); else wsPaint(); } else if(d==="clr") wsClearRow(); else wsType(d); });
   const tb=app.querySelector("#toolsback"); if(tb) tb.onclick=()=>{ S.support.multiply=Math.min(3,(S.support.multiply||0)+1); S.supportWins.multiply=0; const keep=ws?{rows:{...ws.rows},carries:{...ws.carries}}:null; ws=null; wsInit(); if(keep){ ws.rows=keep.rows; ws.carries=keep.carries; if(ws.locked["r1-0"] && /0$/.test(ws.rows.r1||"")) ws.rows.r1=ws.rows.r1.slice(0,-1); wsSync(); } save(); render(); }; // her call; a right answer with it on counts as supported
   wsPaint();
+}
+// The first wrong cell in the order the algorithm works: row r0, then r1, then the total; within a row, the lowest place. A wrong carry box
+// c0-p / c1-p points at the column that produced it (place p−1 of row r0 / r1; for a one-digit multiplier, of the answer row).
+function wsFirstBad(marks, prob){
+  const two = prob.meta.b>=10; const order = two ? {r0:0,r1:1,t:2} : {t:0}; let best=null;
+  for(const k of Object.keys(marks)){ if(marks[k]!=="bad") continue; let [row,p]=k.split("-"); p=+p; if(row==="c0"){ row = two ? "r0" : "t"; p=Math.max(0,p-1); } else if(row==="c1"){ row="r1"; p=Math.max(0,p-1); } if(order[row]===undefined) continue;
+    const cand={row,place:p}; if(!best || order[row]<order[best.row] || (order[row]===order[best.row] && p<best.place)) best=cand; }
+  return best;
 }
 // Read the grid, grade it, and name the component behind every wrong cell.
 function gradeWS(){
@@ -2530,8 +2603,14 @@ function render(){
       if(phase==="q") body+=`<div class="inline-err" id="ierr" role="status" aria-live="polite">${esc(inlineErr)}</div>`;
     } else body+=optsHTML("opts", cur.options, selected, cur.answer, phase!=="q", "opt");
     if(phase==="q"){
-      body+=`<div class="hints" id="hints" aria-live="polite">${cur.hints.slice(0,hintIdx).map((h,i)=>`<div class="step"><span class="n">Hint ${i+1}.</span>${h.t}${chartsHTML(h)}</div>`).join("")}</div>
-        <div class="actions"><button class="btn primary" id="check">Check</button><button class="btn quiet" id="showhint" ${hintIdx>=cur.hints.length?"disabled":""}>${hintIdx===0?"Hint":hintIdx<cur.hints.length?"Another hint":"No more hints"}</button></div>`;
+      const hOff=coachOn()?1:0; // when the coach line already shows hint 1, the button hands out hint 2 onward
+      if(cur.hintPlan){ // workspace: hints follow her work, one cell at a time
+        const log=cur.hintLog||[]; const total=(cur.hintTotal||cur.hints.length)-hOff; const more = !log.some(h=>h.done);
+        body+=`<div class="hints" id="hints" aria-live="polite">${log.map((h,i)=>`<div class="step"><span class="n">Hint ${i+1+hOff} of ${total+hOff}.</span>${h.t}</div>`).join("")}</div>
+          <div class="actions"><button class="btn primary" id="check">Check</button><button class="btn quiet" id="showhint" ${more?"":"disabled"}>${log.length===0?(hOff?"Hint for the next box":"Hint"):more?"Hint for the next box":"No more hints"}</button></div>`; }
+      else { const hAvail=cur.hints.length-hOff;
+      body+=`<div class="hints" id="hints" aria-live="polite">${cur.hints.slice(hOff,hOff+hintIdx).map((h,i)=>`<div class="step"><span class="n">Hint ${i+1+hOff}${cur.hints.length>4?` of ${cur.hints.length}`:""}.</span>${h.t}${chartsHTML(h)}</div>`).join("")}</div>
+        <div class="actions"><button class="btn primary" id="check">Check</button><button class="btn quiet" id="showhint" ${hintIdx>=hAvail?"disabled":""}>${hintIdx===0?(hOff?"Next hint":"Hint"):hintIdx<hAvail?"Another hint":"No more hints"}</button></div>`; }
     }
     if(phase==="ok"){
       const independent = okEntry ? !!okEntry.independent : (stage==="fresh" && hintIdx===0);
@@ -2567,7 +2646,7 @@ function render(){
     if(cur.ws){ wsInit(); body+=`<div class="yours">Your work (red cells are the ones to look at)</div>`+wsHTML(true, ws.marks||{}); }
     else if(cur.type==="input") body+=`<div class="yours" id="yourslbl">Your answer</div><input class="ans" disabled aria-labelledby="yourslbl" value="${esc(lastAnswer)}">`;
     else body+=optsHTML("opts", cur.options, selected, -1, true, "opt");
-    const head = chain>=2 ? "Still not there. One more walk through, then another try." : "Not yet. Let's walk through it.";
+    const head = chain>=2 ? "Still not there. One more walk through, then another try." : (cur.skippedTo ? "Not yet. What you had right stays; we start at the first mistake." : "Not yet. Let's walk through it.");
     // A break is offered during sustained struggle, not only after success: three fresh misses in a row this sitting, or three shown answers inside one walkthrough.
     const struggling = (sessionMissRun>=3 && breakOfferedAt!==sessionMissRun) || (revealed>=3 && breakOfferedAt!==-2);
     const breakHTML = struggling ? `<div class="stop" role="status"><b>This one is hard today.</b>${sessionMissRun>=3?`${sessionMissRun} tough ones in a row. `:""}Brains learn more after a break than after a fourth try. Stop here and come back tomorrow, or keep going?<div class="actions" style="margin-top:8px"><button class="btn primary" id="breaknow">Take a break</button><button class="btn quiet" id="keepgoing">Keep going</button></div></div>` : "";
@@ -2627,7 +2706,8 @@ function stepHTML(s,i,dim,withCheck){
     const c=s.check;
     if(i<stepIdx){ // an earlier step: show how its check went
       const r=stepRes[i];
-      sub=`<div class="substep ${r==="ok"?"ok":"bad"}">${c.q}<div class="res"><span aria-hidden="true">${r==="ok"?"✓":"•"}</span> ${r==="ok"?`You got <b>${esc(c.display)}</b>.`:`It's <b>${esc(c.display)}</b>.`}</div></div>`;
+      if(r==="skipped") sub=`<div class="substep ok"><div class="res"><span aria-hidden="true">✓</span> Your grid already had this right, so we skip it.</div></div>`;
+      else sub=`<div class="substep ${r==="ok"?"ok":"bad"}">${c.q}<div class="res"><span aria-hidden="true">${r==="ok"?"✓":"•"}</span> ${r==="ok"?`You got <b>${esc(c.display)}</b>.`:`It's <b>${esc(c.display)}</b>.`}</div></div>`;
     } else if(sc){
       const open=scActive();
       sub=`<div class="substep ${sc.state==="ok"?"ok":sc.state==="revealed"?"bad":sc.state==="confirm"?"confirm":""}"><div class="cq">${c.q}</div>${checkCtlHTML(c)}
@@ -2643,7 +2723,7 @@ function checkCtlHTML(c){ // the entry control for a check, driven by sc. In con
   return `<label class="vh" for="cans">Your answer for this step</label><input class="ans small${isTextTarget(c)?" text":""}" id="cans" ${ansAttrs(c)} autocomplete="off" placeholder="${isTextTarget(c)?"Type your answer (like 2 × 2 × 3)":"Your answer"}" ${open?"":"disabled"} value="${esc(open?sc.val:c.display)}">`;
 }
 function focusFirst(){
-  const el = ["#ans:not([disabled])","#cans:not([disabled])","#check","#cstep","#wopts .opt","#step","#retry","#next"].map(s=>app.querySelector(s)).find(Boolean);
+  const el = ["#wsentry:not([disabled])","#ans:not([disabled])","#cans:not([disabled])","#check","#cstep","#wopts .opt","#step","#retry","#next"].map(s=>app.querySelector(s)).find(Boolean);
   if(el) el.focus({preventScroll:true});
 }
 function bind(){
@@ -2654,7 +2734,8 @@ function bind(){
     q("check").onclick=submit;
     const inp=q("ans"); if(inp) inp.addEventListener("input",()=>{ lastAnswer=inp.value; });
     app.querySelectorAll("#opts .opt").forEach(b=>b.onclick=()=>setSel("opts",+b.dataset.i));
-    q("showhint").onclick=()=>{ if(hintIdx<cur.hints.length){ hintIdx++; inlineErr=""; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const hs=app.querySelectorAll("#hints .step"); if(hs.length) hs[hs.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); } };
+    q("showhint").onclick=()=>{ if(cur.hintPlan){ wsNextHint(); hintIdx=(cur.hintLog||[]).filter(h=>!h.done).length; inlineErr=""; render(); const hs=app.querySelectorAll("#hints .step"); if(hs.length) hs[hs.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); return; }
+      if(hintIdx<cur.hints.length-(coachOn()?1:0)){ hintIdx++; inlineErr=""; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const hs=app.querySelectorAll("#hints .step"); if(hs.length) hs[hs.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); } };
   }
   if(q("cstep")){
     q("cstep").onclick=checkStep;
@@ -2685,7 +2766,7 @@ function activeGroup(){ // the MC radiogroup the keyboard should drive right now
 // Workspace keys. Returns true when the key was used. Also listened on the window, so it works no matter where focus went (a tapped canvas, a button, nowhere).
 function wsKey(e){
   if(!cur || !cur.ws || phase!=="q" || !ws) return false; const tg=e.target, tag=tg&&tg.tagName; if(tag==="INPUT"||tag==="TEXTAREA"||e.altKey||e.ctrlKey||e.metaKey) return false;
-  if(/^[0-9]$/.test(e.key)){ e.preventDefault(); wsType(e.key); return true; }
+  if(/^[0-9]$/.test(e.key)){ e.preventDefault(); const carry=!wsIsRow(ws.sel); wsType(e.key); if(carry) wsFocusEntry(); return true; }
   if(e.key==="Backspace"||e.key==="Delete"){ e.preventDefault(); wsBack(); return true; }
   if(e.key==="Enter"||(e.key==="Tab"&&!e.shiftKey)||e.key==="ArrowDown"){ e.preventDefault(); if(wsNextRow()){ if(e.key==="Enter") submit(); else wsPaint(); } else wsPaint(); return true; }
   if((e.key==="Tab"&&e.shiftKey)||e.key==="ArrowUp"){ e.preventDefault(); wsPrevRow(); wsPaint(); return true; }
@@ -2741,11 +2822,12 @@ function submit(){
   const supported = !!cur.ws && (S.support.multiply||0)>=2;
   const independent = stage==="fresh" && hintIdx===0 && !supported;
   const entry={t:Date.now(), sk, lvl:cur.level, q:plain(cur.prompt), yours:String(yours), ans:cur.display, ok:ok?1:0, stage, hints:hintIdx, independent:(ok&&independent)?1:0, tag: cur.mistake ? cur.mistake.tag : (cur.focusTag||"")};
-  if(cur.hw) entry.hw=1; if(cur.fixed) entry.page=1; if(cur.ws){ entry.ws=1; entry.support=S.support.multiply; } if(supported) entry.supported=1; if(mode==="miss"&&cur.focusKey) entry.focus=cur.focusKey; const eck=ctxKey(ctxOf(cur)); if(eck) entry.ctx=eck;
+  if(cur.hw) entry.hw=1; if(cur.fixed) entry.page=1; entry.hintsOf=(cur.hintTotal||(cur.hints||[]).length)-(coachOn()?1:0); if(cur.ws){ entry.ws=1; entry.support=S.support.multiply; } if(supported) entry.supported=1; if(mode==="miss"&&cur.focusKey) entry.focus=cur.focusKey; const eck=ctxKey(ctxOf(cur)); if(eck) entry.ctx=eck;
   if(wsGrade){ entry.rows=wsGrade.yours; if(!ok) entry.wrong=wsGrade.wrongText; if(wsGrade.comps) entry.comps=wsGrade.compsTally; if(cur.unfinished) entry.unfinished=cur.unfinished; }
   lastChange=0; lastPraise=[];
   // Homework practice is level-neutral: the shape was chosen from the worksheet, not earned, so it moves nothing up or down.
-  if(independent && !cur.hw){ const res=applyResult(S.hist[sk], S.levels[sk], ok); S.levels[sk]=res.level; S.hist[sk]=res.hist; lastChange=res.change; }
+  // Focus problems are chosen by the recovery system, often a notch above her ordinary level, so like homework they are level-neutral: they move the weakness state, never the dots.
+  if(independent && !cur.hw && !cur.focusKey){ const res=applyResult(S.hist[sk], S.levels[sk], ok); S.levels[sk]=res.level; S.hist[sk]=res.hist; lastChange=res.change; }
   // Fading supports (multiplication workspace): two clean successes in a row at this support level remove the next support; a fresh miss brings one back.
   if(cur.ws && stage==="fresh"){ const sp=S.support, sw=S.supportWins;
     const qtext=plain(cur.prompt); const distinct = qtext!==S.supportLastQ; // the same worksheet problem again is not new evidence for taking a tool away
@@ -2779,7 +2861,21 @@ function submit(){
       cur.steps.unshift({t:`First, ${fmt(x)} and ${fmt(xx)} are the <b>same number</b>: a zero on the end of a decimal adds nothing. Compare them in the chart.`, charts:[x,xx], check:cm(`${fmt(xx)} is … ${fmt(x)}`, ["greater than","less than","equal to"], 2)}); }
     if(stage==="fresh") chain=1; else chain++;
     missEntry=pushLog(entry);
-    if(chain<3){ phase="wt"; stepIdx=0; stepRes=[]; revealed=0; passed=0; initStepCheck(); }
+    if(chain<3){ phase="wt"; stepIdx=0; stepRes=[]; revealed=0; passed=0;
+      if(wsGrade && wsGrade.marks){ // adaptive start: open the sub-steps of the first wrong row and begin at the first wrong column; earlier work is shown as already right
+        const target=wsFirstBad(wsGrade.marks, cur); let start=-1;
+        if(target){ const rowOrder = cur.meta.b<10 ? ["t"] : ["r0","r1","t"];
+          for(let i=0;i<cur.steps.length;i++){ const st=cur.steps[i];
+            if(st.row==="setup"){ stepRes[i]="skipped"; continue; }
+            if(cur.meta.b<10){ if(st.place!==undefined && st.place<target.place){ stepRes[i]="skipped"; continue; } start=i; break; }
+            if(st.row && rowOrder.indexOf(st.row)<rowOrder.indexOf(target.row)){ stepRes[i]="skipped"; continue; }
+            if(st.row===target.row){ // open its column steps and skip the columns before the first wrong one
+              if(Array.isArray(st.sub) && st.sub.length && !st.expanded){ st.expanded=true; if(st.tAfter) st.t=st.tAfter; cur.steps.splice(i,0,...st.sub.map(x=>({...x}))); expanded++; }
+              let k=i; while(k<cur.steps.length && cur.steps[k]!==st && cur.steps[k].place!==undefined && cur.steps[k].place<target.place){ stepRes[k]="skipped"; k++; }
+              start=k; break; }
+            start=i; break; } }
+        if(start>0 && start<cur.steps.length){ stepIdx=start; cur.skippedTo=start; } else { stepRes.length=0; stepIdx=0; } }
+      initStepCheck(); }
     else { phase="reveal"; S.persist=0; cur.steps=expandAll(cur.steps); stepIdx=cur.steps.length-1; initStepCheck(); } // the whole solution, smallest steps included; the final check is re-used so she copies the answer in
   }
   save(); render();
@@ -2960,7 +3056,7 @@ function grownups(){
   const weekAgo=Date.now()-7*864e5; const week=log.filter(e=>Number.isFinite(e.t)&&e.t>=weekAgo&&!e.guided);
   const days=new Set(week.map(e=>new Date(e.t).toDateString())).size;
   const skillName=k=>SKILLS[k]?SKILLS[k].name:esc(str(k)||"?");
-  const missMeta=e=>`${Number.isFinite(e.t)?fmtDate(e.t):"unknown time"} · ${skillName(e.sk)}${e.lvl!=null?` · level ${esc(str(e.lvl))}`:""} · ${e.stage?esc(str(e.stage)):(e.retry?"retry":"fresh")}${e.page?" · from the page":e.hw?" · homework":""}${e.shown?" · answer shown":""}${+e.hints>0?" · "+(+e.hints)+" hint"+(+e.hints>1?"s":""):""}${typeof e.tag==="string"&&e.tag?` · <span class="tag">${esc(e.tag)}</span>`:""}${e.revealed!==undefined?` · walkthrough: ${+e.passed||0} step${+e.passed===1?"":"s"} right, ${+e.revealed||0} shown`:""}${e.comps&&typeof e.comps==="object"?(()=>{ const m=Object.keys(e.comps).filter(c=>e.comps[c]&&e.comps[c].miss); return m.length?` · missed: ${m.map(c=>esc(compName(e.sk,c))).join(", ")}`:""; })():""}${e.support!==undefined?` · supports ${esc(str(e.support))} of 3`:""}${e.unfinished?` · sent back ${+e.unfinished} time${+e.unfinished===1?"":"s"} for empty boxes before this`:""}${e.proved?` · proved: ${esc(str(e.proved)).replace(/,/g,", ")}`:""}`;
+  const missMeta=e=>`${Number.isFinite(e.t)?fmtDate(e.t):"unknown time"} · ${skillName(e.sk)}${e.lvl!=null?` · level ${esc(str(e.lvl))}`:""} · ${e.stage?esc(str(e.stage)):(e.retry?"retry":"fresh")}${e.page?" · from the page":e.hw?" · homework":""}${e.shown?" · answer shown":""}${+e.hints>0?" · "+(+e.hints)+" hint"+(+e.hints>1?"s":"")+(e.hintsOf?" of "+e.hintsOf:""):""}${typeof e.tag==="string"&&e.tag?` · <span class="tag">${esc(e.tag)}</span>`:""}${e.revealed!==undefined?` · walkthrough: ${+e.passed||0} step${+e.passed===1?"":"s"} right, ${+e.revealed||0} shown`:""}${e.comps&&typeof e.comps==="object"?(()=>{ const m=Object.keys(e.comps).filter(c=>e.comps[c]&&e.comps[c].miss); return m.length?` · missed: ${m.map(c=>esc(compName(e.sk,c))).join(", ")}`:""; })():""}${e.support!==undefined?` · supports ${esc(str(e.support))} of 3`:""}${e.unfinished?` · sent back ${+e.unfinished} time${+e.unfinished===1?"":"s"} for empty boxes before this`:""}${e.proved?` · proved: ${esc(str(e.proved)).replace(/,/g,", ")}`:""}`;
   const exportText=JSON.stringify(DB); const nPlayers=Object.keys(DB.profiles).length;
   // Class position: the district calendar's estimate, or a lesson pinned here from the homework header
   const L=lessonList(), classId=effectiveClassAt(), calId=calendarClassAt();
