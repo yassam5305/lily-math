@@ -1370,7 +1370,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.9.1 · September 21, 2026";
+const BUILD="v9.9.2 · September 21, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -1480,9 +1480,9 @@ function genMultiply(level, focus){
     const r=mulRowSteps(a,b,b,0,[]); steps.push(...r.steps.map(st=>({...st, row:"t"})));
     steps.push({t:`Read the product from the digits you wrote (${r.readBack}).${stackMul(a,b)}`, check:wc(finalCheck(p),"rows")});
   } else if(variant==="area"){
-    const at=a-(a%10), ao=a%10, bt=b-(b%10), bo=b%10;
-    const cells=[[at,bt],[at,bo],[ao,bt],[ao,bo]].filter(([x,y])=>x>0&&y>0);
-    steps.push({t:`Area model: break each factor by place value. ${a} = ${at}${ao?" + "+ao:""} and ${b} = ${bt}${bo?" + "+bo:""}. Draw a rectangle divided into ${cells.length} sections, one for each pair.`, check:ci(`How many sections does the area model have?`, cells.length)});
+    const pv=n=>String(n).split("").map((ch,i,arr)=>+ch*Math.pow(10,arr.length-1-i)).filter(x=>x>0); const pa=pv(a), pb=pv(b); // every place, as the worksheet draws it: 421 = 400 + 20 + 1
+    const cells=[]; for(const x of pa) for(const y of pb) cells.push([x,y]);
+    steps.push({t:`Area model: break each factor by place value. ${a} = ${pa.join(" + ")} and ${b} = ${pb.join(" + ")}. Draw a rectangle divided into ${cells.length} sections, one for each pair.`, check:ci(`How many sections does the area model have?`, cells.length)});
     cells.forEach(([x,y])=>steps.push({t:`Section: ${x} × ${y}.`, check:wc(ci(`${x} × ${y} = ?`, x*y, (x*y).toLocaleString("en-US")),"fact")}));
     steps.push({t:`Add all the sections: ${cells.map(([x,y])=>(x*y).toLocaleString("en-US")).join(" + ")}. That is why the algorithm's partial products work.${stackMul(a,b,cells.map(([x,y])=>x*y))}`, check:wc(finalCheck(p),"add-partials")});
   } else if(variant==="distributive"){
@@ -2093,7 +2093,7 @@ const _genMultiplyBase=genMultiply;
 genMultiply=function(level, focus){ const p=_genMultiplyBase(level, focus); const m=p.meta||{}; if(m.variant!=="area") return p;
   if(m.b<10){ // one-digit multiplier (levels 1–2): the area picture is drawn too, so an area lesson shows an area model at every level
     try{ const parts=String(m.a).split("").map((ch,i,arr)=>+ch*Math.pow(10,arr.length-1-i)).filter(x=>x>0); const fig=areaSVG(parts.map(v=>({label:String(v), size:v})), [{label:String(m.b), size:m.b}], (i,j)=>`${parts[i]} × ${m.b} = ${(parts[i]*m.b).toLocaleString("en-US")}`); p.steps[0].t += fig; p.traps=(p.traps||[]).concat(["model"]); }catch(e){} return p; }
-  try{ const a=m.a, b=m.b; const at=a-(a%10), ao=a%10, bt=b-(b%10), bo=b%10; const pa=[at,ao].filter(x=>x>0), pb=[bt,bo].filter(x=>x>0);
+  try{ const a=m.a, b=m.b; const bt=b-(b%10), bo=b%10; const pv=n=>String(n).split("").map((ch,i,arr)=>+ch*Math.pow(10,arr.length-1-i)).filter(x=>x>0); const pa=pv(a), pb=pv(b); // same place-value split as the steps
     const fig=areaSVG(pa.map(v=>({label:String(v), size:v})), pb.map(v=>({label:String(v), size:v})), (i,j)=>`${pa[i]} × ${pb[j]} = ${(pa[i]*pb[j]).toLocaleString("en-US")}`); // drawn to scale
     p.steps[0].t += fig;
     const onesRow=pa.map(x=>x*bo), tensRow=pa.map(x=>x*bt); const rowSum=(r)=>r.reduce((s,x)=>s+x,0);
@@ -2731,6 +2731,13 @@ const hwId=m=>typeof m==="string"&&m.startsWith("hw:")?m.slice(3):null;
 // "Check my homework": read a problem typed from the page. Returns {skill, focus, level, label} or {err}.
 function parseHomework(text){
   let t=String(text||"").trim().toLowerCase().replace(/\s+/g," ").replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g,m=>"^"+[...m].map(ch=>"⁰¹²³⁴⁵⁶⁷⁸⁹".indexOf(ch)).join("")).replace(/=\s*[\d,.\s?_]*$/,"").trim(); // "= ?", "= ____", or an answer she already wrote after the equals sign are all dropped
+  // Worksheet phrasing, typed as printed: "4. What is 16 × 24?", "find the product of 421 and 17", "16 times 24 using the area model". Strip the words, keep the problem; a method word is kept as a hint.
+  let method=null; const mm=t.match(/\b(area model|area|model|algorithm|standard algorithm|partial products|distributive)\b/); if(mm){ method = /area|model/.test(mm[1]) ? "area" : /distributive|partial/.test(mm[1]) ? "distributive" : "algorithm"; t=t.replace(/\b(?:using|use|with|by|show|and|an|the|draw)\b\s*/g," ").replace(/\b(?:area model|area|standard algorithm|algorithm|partial products|distributive(?: property)?|model)\b/g," ").replace(/\s+/g," ").trim(); }
+  t=t.replace(/^(?:#|q|question\s*|number\s*)?\d{1,2}\s*[.):]\s+(?=\S)/,"").replace(/^(?:[a-z]\s*[.)]\s+)(?=\S)/,""); // "4. ", "4) ", "#4 ", "b) " item numbers, only when followed by a space (so 4.5 stays a decimal)
+  t=t.replace(/^(?:what is|what's|whats|find|solve|compute|calculate|evaluate|simplify|work out|figure out|multiply|divide|add|subtract|round off)\s+(?:the\s+)?(?:product of|sum of|difference of|difference between|quotient of|value of)?\s*/,"");
+  const wordPair=t.match(/^(?:the\s+)?(product|sum|difference|quotient)\s+(?:of|between)\s+(\S+)\s+and\s+(\S+)$/); if(wordPair){ const op={product:"×",sum:"+",difference:"−",quotient:"÷"}[wordPair[1]]; t=`${wordPair[2]} ${op} ${wordPair[3]}`; }
+  else { const andPair=t.match(/^(\S+)\s+and\s+(\S+)$/); if(andPair && /^[\d,.]+$/.test(andPair[1]) && /^[\d,.]+$/.test(andPair[2])) t=`${andPair[1]} × ${andPair[2]}`; } // "multiply 16 and 24" after the verb was stripped
+  t=t.replace(/\s*(?:times|multiplied by|multiply by)\s*/g," × ").replace(/\s*(?:divided by|divide by|over)\s*/g," ÷ ").replace(/\s+plus\s+/g," + ").replace(/\s+(?:minus|take away|less)\s+/g," − ").replace(/[⨯✕✖]/g,"×").replace(/[∙•]/g,"·").replace(/\s*[?!]+\s*$/,"").replace(/\s+\.$/,"").replace(/([a-z\d])\.$/,"$1").replace(/^([\d,.]+)\s+by\s+([\d,.]+)$/,"$1 × $2").replace(/\s+/g," ").trim();
   if(!t) return {err:"Type the problem first."};
   // Commas must sit between groups of three digits, the same rule the answer fields apply: "1,2 × 3" is not "12 × 3".
   for(const n of t.match(/\d[\d,]*(?:\.\d+)?/g)||[]){ if(n.includes(",") && !/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(n)) return {err:`${n}: commas go between groups of three digits, like 1,234 or 72,585.`}; }
@@ -2753,7 +2760,7 @@ function parseHomework(text){
   // "7 × 10 × 10 × 10 × 10" → repeated factors of ten. Needs at least two: a single "7 × 10" is a multiplication (70), handled below.
   m=t.match(new RegExp("^"+NUM+"((?:\\s*[x×*·]\\s*10){2,})$"));
   if(m){ const num=numOf(m[1]); const e=(m[2].match(/10/g)||[]).length; if(!num||num.d) return {err:"Repeated × 10 works with a whole number in front."}; return {skill:"powers", focus:{fixed:{num:{w:num.w,d:""},e,variant:"repeated"}}, level:2, label:`${fmt(num)}${" × 10".repeat(e)}`}; }
-  // shift: "4.5 × 1,000", "2.99 ÷ 10^3", "365 / 100"
+  // shift: "4.5 × 1,000", "36.5 ÷ 10^2", "365 / 100"
   m=t.match(new RegExp("^"+NUM+"\\s*([x×*·÷/])\\s*(10\\^\\d+|1(?:,?0)+|10|100|1000|1,000|10000|10,000)$"));
   if(m){ const num=numOf(m[1]); const e=isPow(m[3]); const op=/[÷/]/.test(m[2])?"÷":"×"; if(!num||e===null) return {err:"I could not read that."};
     if(e>3) return {err:"Powers of ten up to 1,000 for moving the decimal point, please."}; if(num.d.length>3) return {err:"The app works up to thousandths (3 decimal places)."};
@@ -2766,7 +2773,8 @@ function parseHomework(text){
     let a=A.w, b=B.w; if(String(b).length>String(a).length) [a,b]=[b,a]; if(a<2||b<2) return {err:"Both factors should be 2 or more."};
     if(String(a).length>4) return {err:"Up to a 4-digit number times a 2-digit number, please."}; if(String(b).length>2) return {err:"The standard-algorithm walkthrough handles a 1- or 2-digit multiplier (two partial products)."};
     if(b>=10 && b%10===0) return {err:`${a} × ${b}: a multiplier ending in 0 is a powers-of-ten pattern (${a} × ${b/10}, then × 10). Type ${a} × ${b/10} for the algorithm, or use "Multiply and divide by 10" for the pattern.`};
-    return {skill:"multiply", focus:{fixed:{a,b},variant:"algorithm"}, level:shapeLevel([String(a).length,String(b).length]), label:`${a.toLocaleString("en-US")} × ${b}`}; }
+    const variant = method==="area" ? "area" : method==="distributive" ? "distributive" : "algorithm"; // the worksheet's method word decides the walkthrough: area model, distributive, or the standard algorithm
+    return {skill:"multiply", focus:{fixed:{a,b},variant}, level:shapeLevel([String(a).length,String(b).length]), label:`${a.toLocaleString("en-US")} × ${b}${variant!=="algorithm"?` (${variant==="area"?"area model":"distributive"})`:""}`}; }
   // division: "3,660 ÷ 30", "1728 / 12"
   m=t.match(new RegExp("^"+NUM+"\\s*[÷/]\\s*"+NUM+"$"));
   if(m){ const A=numOf(m[1]), B=numOf(m[2]); if(!A||!B) return {err:"I could not read those numbers."}; if(A.d||B.d){ const NV=toThousandths({w:A.w,d:A.d}), dv=toThousandths({w:B.w,d:B.d}); if(dv===0) return {err:"Cannot divide by 0."}; if((NV*1000)%dv!==0 || (NV*1000/dv)%10!==0) return {err:`${fmt(A)} ÷ ${fmt(B)} does not come out evenly to hundredths; the app's decimal division works with even answers.`}; if(B.d && (NV*1000/dv)%1000!==0) return {err:`${fmt(A)} ÷ ${fmt(B)} = ${fmt(D(NV*1000/dv))}: a part of a group is left over. The app's measuring-up strategy counts whole groups (like 4.8 ÷ 0.6); for a decimal answer, divide by a whole number (like 4.8 ÷ 6).`};
@@ -2795,7 +2803,7 @@ function parseHomework(text){
     if((oo.match(/[+−×÷]/g)||[]).length>6) return {err:"Up to 6 operations in one expression, please."};
     if(!validTokens(tokens)) return {err:"Somewhere in that expression a step does not come out a whole number (a fraction, a negative, or dividing by 0). The app's order of operations stays with whole numbers."};
     return {skill:"orderops", focus:{fixed:{tokens}, variant:"evaluate"}, level:hasGroup(tokens)?2:1, label:tokStr(tokens)}; }
-  return {err:"I did not recognize that. Try shapes like 148 × 19, 3,660 ÷ 30, 3.45 + 2.7, 8 × 10^5 × 6, 4.5 × 1,000, 2 + 3 × 4, or round 2.98 to the nearest tenth."};
+  return {err:"I did not recognize that. Type just the numbers and the sign, like 16 × 24. Shapes the app knows: 148 × 19, 3,660 ÷ 30, 3.45 + 2.7, 8 × 10^5 × 6, 4.5 × 1,000, 2 + 3 × 4, or round 2.98 to the nearest tenth."};
 }
 const hwMode=()=>HW_MODES[hwId(mode)]||null;
 const MUL_SHAPE_BY_LEVEL={1:"2-digit × 1-digit",2:"3-digit × 1-digit",3:"2-digit × 2-digit",4:"3-digit × 2-digit",5:"3-digit × 2-digit with larger numbers"};
@@ -2844,12 +2852,12 @@ function hwEntry(prefill, err){
     <div class="topbar"><button class="btn quiet" id="back">Home</button><div class="row"><span class="pill week">Homework</span></div></div>${warnHTML()}
     <div class="card">
       <h2 style="margin-top:0">Check a problem from the page</h2>
-      <p class="muted" style="margin:0 0 10px">Type the problem exactly as it appears on the worksheet. You will answer it here, and if it is not right, the app walks through <b>that</b> problem step by step. Nothing here changes your levels.</p>
+      <p class="muted" style="margin:0 0 10px">Type the problem from the worksheet, like <b>16 × 24</b>. Extra words are fine ("What is 16 × 24?", "4. 421 x 17", "16 times 24 area model"). You will answer it here, and if it is not right, the app walks through <b>that</b> problem step by step. Nothing here changes your levels.</p>
       <label class="vh" for="hwq">The problem</label>
       <input class="ans text" id="hwq" type="text" inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="like 148 × 19" value="${esc(prefill||"")}">
       <div class="inline-err" id="hwerr" role="status" aria-live="polite">${esc(err||"")}</div>
       <div class="actions"><button class="btn primary" id="hwgo">Set it up</button></div>
-      <p class="muted" style="font-size:14px;margin:14px 0 0">Shapes the app knows: <b>148 × 19</b> (standard algorithm), <b>3,660 ÷ 30</b> (place value strategy), <b>8 × 10^5 × 6</b> or <b>47 × 10^6</b> (powers of ten), <b>4.5 × 1,000</b> or <b>2.99 ÷ 10^3</b> (moving the decimal point), <b>round 2.98 to the nearest tenth</b>, <b>3.45 + 2.7</b> or <b>12.5 − 3.75</b> (adding and subtracting decimals), <b>3.4 × 6</b>, <b>2.5 × 1.2</b> or <b>4.8 ÷ 0.6</b> (multiplying and dividing decimals), <b>2 + 3 × 4</b> or <b>12 ÷ (8 − 4) × 2</b> (order of operations). Use x or × for times, ÷ or / for divide, ^ for the exponent.</p>
+      <p class="muted" style="font-size:14px;margin:14px 0 0">Shapes the app knows: <b>148 × 19</b> (standard algorithm), <b>3,660 ÷ 30</b> (place value strategy), <b>8 × 10^5 × 6</b> or <b>47 × 10^6</b> (powers of ten), <b>4.5 × 1,000</b> or <b>36.5 ÷ 10^2</b> (moving the decimal point), <b>round 2.98 to the nearest tenth</b>, <b>3.45 + 2.7</b> or <b>12.5 − 3.75</b> (adding and subtracting decimals), <b>3.4 × 6</b>, <b>2.5 × 1.2</b> or <b>4.8 ÷ 0.6</b> (multiplying and dividing decimals), <b>2 + 3 × 4</b> or <b>12 ÷ (8 − 4) × 2</b> (order of operations). Use x or × for times, ÷ or / for divide, ^ for the exponent. Add <b>area model</b> after a multiplication to walk through it as an area model instead of the standard algorithm.</p>
     </div>`;
   const q=id=>app.querySelector("#"+id); const inp=q("hwq");
   q("back").onclick=home;
