@@ -124,6 +124,8 @@ pre.stack .carry{font-size:.6em;color:var(--hi-ink);vertical-align:top}
 pre.stack .cr{color:#B45309;font-weight:600}
 .build{font-size:12px;margin-left:auto;align-self:center;white-space:nowrap}
 .substep.why{border-style:solid;border-color:var(--ink);background:#fff}
+.substep .res.after{margin-top:6px;font-weight:400;color:var(--ink);opacity:.9}
+.opt.crossed{text-decoration:line-through;opacity:.45} /* a wrong pick already tried on this step */ /* what the step meant, shown only after she has answered it */
 .substep.pre{border:2px solid #E9D8B5;background:#FFFBEF;border-radius:12px;padding:10px 12px;margin:8px 0 12px}
 .substep.pre .cq{margin-bottom:6px}
 .scratch{margin-top:16px}
@@ -428,7 +430,7 @@ function genWords(level, focus){
     {t:`Split at the decimal point. Whole number part: <b>${w.toLocaleString("en-US")}</b>. Decimal part: <b>${d}</b>.`, chart:num},
     {t:`Whole number part in words: <b>${words(w)}</b>. The decimal point is read as <b>and</b>.`},
     {t:`Count the digits after the decimal point. Every digit counts, including a zero right after the decimal point.`, chart:num, hl, check:ci(`How many digits are after the decimal point?`, k)},
-    {t:`${k} digit${k>1?"s":""} after the decimal point means the last digit is in the <b>${DEC_PLACES[k-1]}</b> place.`, check:cm(`So the name at the end is…`, DEC_PLACES.slice(), k-1)},
+    {t:`The number of digits after the decimal point tells you the place of the <b>last</b> digit: 1 digit is tenths, 2 is hundredths, 3 is thousandths.`, check:Object.assign(cm(`So the name at the end is…`, DEC_PLACES.slice(), k-1),{visibleOk:true}), after:`${k} digit${k>1?"s":""} after the decimal point: the last digit is in the ${DEC_PLACES[k-1]} place.`},
     {t:`Read the decimal digits like a normal number: ${d} is <b>${words(di)}</b>.${d[0]==="0"?" The zero right after the decimal point is not read aloud, but it still counts as a digit, so the place name is "+DEC_PLACES[k-1]+".":""}`, check:finalCheck(p)}
   ];
   p.hints=[
@@ -475,7 +477,7 @@ function genExpanded(level, focus){
   const z=all.find(c=>c.digit==="0");
   const p={skill:"expanded", level, prompt:`Which is the expanded form of<br><span class="big-num">${fmt(num)}</span>`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:correct, show:num, meta:{num}};
   const valOf=c=> c.key[0]==="w" ? WHOLE_VALUE[+c.key[1]] : DEC_FRACTION[+c.key[1]-1];
-  const steps=[{t:`Find every digit that is <b>not</b> zero: ${nz.map(c=>"<b>"+c.digit+"</b>").join(", ")}. Expanded form writes the value of each one as an addend.`, chart:num, check:ci(`How many addends will the expanded form have?`, nz.length)}];
+  const steps=[{t:`Find every digit that is <b>not</b> zero. Expanded form writes the value of each one as an addend, so count them.`, chart:num, check:ci(`How many addends will the expanded form have?`, nz.length), after:`The nonzero digits: ${nz.map(c=>"<b>"+c.digit+"</b>").join(", ")}.`}];
   const allVals=[...WHOLE_VALUE.slice(0,4), ...DEC_FRACTION];
   nz.forEach((c,i)=>{ const val=valOf(c);
     const idx=allVals.indexOf(val); const cand=[val]; for(let dlt=1; cand.length<4 && dlt<7; dlt++){ if(allVals[idx-dlt]) cand.push(allVals[idx-dlt]); if(cand.length<4 && allVals[idx+dlt]) cand.push(allVals[idx+dlt]); }
@@ -577,9 +579,9 @@ function genPowers(level, focus){
   if(variant==="repeated"){
     steps.push({t:`Each <b>× 10</b> is one factor of ten. Count them.`, check:ci(`How many times is 10 a factor?`, e)});
     steps.push({t:`Write it with an exponent. Keep the <b>×</b> between ${fmt(num)} and the power of ten (it is a product, not a sum).`, check:Object.assign(ci(`Type ${fmt(num)} × 10 with the exponent, like ${fmt(num)} x 10^${e===2?3:2}.`, e, `${fmt(num)} × 10^${e}`), {text:true, validate:str=>{ const m=String(str).replace(/\s+/g,"").replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g,ch=>"^"+"⁰¹²³⁴⁵⁶⁷⁸⁹".indexOf(ch)).match(/^([\d,]+(?:\.\d+)?)[x×*·]10\^(\d+)$/i); return !!m && parseAnswer(m[1])===numValue(num) && +m[2]===e; }})});
-    steps.push({t:`The exponent is that count: ${fmt(num)} × 10${sup}. The power of 10 value is 10${sup} = <b>${pow.toLocaleString("en-US")}</b>.`, check:ci(`What is 10${sup} in standard form?`, pow, pow.toLocaleString("en-US"))});
-    steps.push({t:`Final product: ${fmt(num)} × ${pow.toLocaleString("en-US")} = <b>${fmt(ans)}</b>. The decimal point moves ${plural(e,"place")} right.`, check:ci(`What is the final product?`, numValue(ans), fmt(ans))});
-    steps.push({t:`So the exponent is <b>${e}</b>.`, check:finalCheck(p)});
+    steps.push({t:`The exponent is that count: ${fmt(num)} × 10${sup}. What is 10${sup} worth? (The exponent says how many zeros.)`, check:ci(`What is 10${sup} in standard form?`, pow, pow.toLocaleString("en-US")), after:`10${sup} = ${pow.toLocaleString("en-US")}: ${plural(e,"zero")}.`});
+    steps.push({t:`Multiply: ${fmt(num)} × ${pow.toLocaleString("en-US")}. The decimal point moves ${plural(e,"place")} right.`, check:ci(`What is the final product?`, numValue(ans), fmt(ans)), after:`${fmt(num)} × ${pow.toLocaleString("en-US")} = ${fmt(ans)}.`});
+    steps.push({t:`The question asked for the exponent: how many times 10 was a factor.`, check:finalCheck(p), after:`The exponent is ${e}.`});
   } else {
     if(variant==="threefactor"){ steps.push({t:`First multiply the factors without the power of 10: ${fmt(num)} × ${other}.`, check:ci(`${fmt(num)} × ${other} = ?`, prod.w, fmt(prod))});
       steps.push({t:`Rewrite the problem with that product. The power of 10 <b>keeps its exponent</b>: ${fmt(num)} × 10${sup} × ${other} becomes ${fmt(prod)} × 10<sup>?</sup>.`, check:ci(`What exponent stays on the 10? (${fmt(prod)} × 10 to the …)`, e)}); }
@@ -633,10 +635,10 @@ function roundingSteps(num, p, prob){
     ? `Change all digits to the <b>right</b> of the underlined digit to <b>zeros</b>. The ${run===1?"9 that regrouped is now 0":run+" nines that regrouped are now 0s"}, the ${placeName(p+run)} digit went up by one, and every digit further left stays the same.`
     : `Change all digits to the <b>right</b> of the underlined digit to <b>zeros</b>. All digits to the <b>left</b> stay the same.`});
   const ans=roundedNum(V,p);
-  let last=`Read the answer off the chart.`;
-  if(p<0 && /0$/.test(ans.d)) last+=` Zeros at the end of a decimal can be dropped, so <b>${fmt(ans)}</b> can also be written <b>${fmt(fromThousandths(R))}</b>. Both are correct.`;
-  if(R!==C) last+=` Dropping the extra digits without rounding would have given ${fmt(p<0?fixedFrom(C,-p):fromThousandths(C))}. That is not rounding; rounding can go up.`;
-  steps.push({t:last, chart:ans, hl:{[key]:"ul"}, minCols, check: prob ? finalCheck(prob) : undefined});
+  let last=`Read the answer off the chart.`; let lastAfter="";
+  if(p<0 && /0$/.test(ans.d)) lastAfter+=` Zeros at the end of a decimal can be dropped, so <b>${fmt(ans)}</b> can also be written <b>${fmt(fromThousandths(R))}</b>. Both are correct.`;
+  if(R!==C) lastAfter+=` Dropping the extra digits without rounding would have given ${fmt(p<0?fixedFrom(C,-p):fromThousandths(C))}. That is not rounding; rounding can go up.`;
+  steps.push({t:last, chart:ans, hl:{[key]:"ul"}, minCols, check: prob ? finalCheck(prob) : undefined, after: lastAfter.trim()||undefined});
   return {steps, R, C, ans, minCols, ul, dec};
 }
 
@@ -890,10 +892,10 @@ function genAddSub(level, focus){
     let carry=0;
     for(let j=0;j<width;j++){
       const col=digs.map(d=>d[j]); const sum=col.reduce((s,x)=>s+x,0)+carry;
-      let t=`<b>${colName(j,k)}</b>: ${col.join(" + ")}${carry?` + ${carry} (regrouped)`:""} = <b>${sum}</b>.`;
-      if(sum>=10) t+=` Only one digit fits in a place, so write the ${sum%10} and regroup <b>${Math.floor(sum/10)}</b> to the ${colName(j+1,k)}.`;
+      const expr=`${col.join(" + ")}${carry?` + ${carry} (regrouped)`:""}`;
+      const t=`<b>${colName(j,k)}</b>: ${expr}. If that is 10 or more, only one digit fits in a place: write the last digit and regroup the rest to the ${colName(j+1,k)}.`;
       const written=sum%10; const c=Math.floor(sum/10);
-      steps.push({t, check:ci(`What digit goes in the ${colName(j,k)} column?`, written)});
+      steps.push({t, colExpr:expr, check:ci(`What digit goes in the ${colName(j,k)} column?`, written), after: sum>=10 ? `${expr.replace(" (regrouped)","")} = ${sum}: write the ${sum%10}, regroup ${c} to the ${colName(j+1,k)}.` : `${expr.replace(" (regrouped)","")} = ${sum}, which fits in one place.`});
       carry=c;
     }
     if(carry) steps.push({t:`The last regrouped digit has no place to its right, so it becomes the leftmost digit: <b>${carry}</b>.`});
@@ -910,14 +912,14 @@ function genAddSub(level, focus){
     }
   }
   const rp=padTo(result,k);
-  steps.push({t:`Bring the decimal point <b>straight down</b>.${rp.d!==result.d?` (${fmt(rp)} and ${fmt(result)} are the same number.)`:""}${stackHTML(nums,ops,k,result)}`, check:finalCheck(p)});
+  steps.push({t:`Bring the decimal point <b>straight down</b>, under the other decimal points, and read the answer from the digits you wrote.${stackHTML(nums,ops,k)}`, check:finalCheck(p), after:`${rp.d!==result.d?`${fmt(rp)} and ${fmt(result)} are the same number: a zero on the end of a decimal adds nothing.`:""}${stackHTML(nums,ops,k,result)}`});
   p.steps=steps;
   // Hints go past the setup: each column gets a question (what to add or subtract, and whether to regroup) and then the worked step.
   const colSteps=steps.slice(1, steps.length-1); const colHints=[];
   colSteps.forEach(st=>{ const plain_=st.t.replace(/<[^>]+>/g,""); const nameM=plain_.match(/^([A-Za-z ]+):/); if(!nameM){ colHints.push({...st, check:undefined}); return; } const nm=nameM[1]; // only real column steps get a question first
-    if(op==="+"){ const q=plain_.match(/^[^:]+:\s*([^=]+)=/); colHints.push({t:`<b>${nm}</b>: add ${q?q[1].trim():"the digits in this column"} = ? If it is 10 or more, write only the last digit and regroup the rest to the next column.`}); }
+    if(op==="+"){ colHints.push({t:`<b>${nm}</b>: add ${st.colExpr||"the digits in this column"} = ? If it is 10 or more, write only the last digit and regroup the rest to the next column.`}); }
     else colHints.push({t:`<b>${nm}</b>: is the top digit big enough to take the bottom one away? If not, regroup 1 from the next place to the left (it becomes 10 more here).`});
-    colHints.push({...st, check:undefined}); });
+    colHints.push({...st, check:undefined, t: st.after ? `${st.t} ${st.after}` : st.t}); });
   p.hints=[
     {t:`Line up the decimal points, not the ends of the numbers.`},
     {t:`Add zeros on the end so every number has <b>${plural(k,"decimal digit")}</b>. Then it works exactly like whole numbers.`},
@@ -1196,10 +1198,10 @@ function genOrderOps(level, focus){
     if(st.piece===null){ steps.push({t:`${esc2(st.before)} → ${st.desc}`}); return; }
     const pieces=Array.from(new Set(allPieces(parseBack(st.before)))); const opts=shuffle(pieces).slice(0,4); if(!opts.includes(st.piece)) opts[0]=st.piece;
     const o=shuffle(opts);
-    steps.push({t:`<b>${esc2(st.before)}</b>. Which part is next? Remember: ${ruleName(st.rule)}.`, check: o.length>1 ? cm(`Do this part first:`, o.map(esc2), o.indexOf(st.piece)) : undefined});
+    steps.push({t:`<b>${esc2(st.before)}</b>. Which part is next? Remember: ${ruleName(st.rule)}.`, check: o.length>1 ? Object.assign(cm(`Do this part first:`, o.map(esc2), o.indexOf(st.piece)), {visibleOk:true}) : undefined}); /* visibleOk: the right part is of course visible inside the expression */
     steps.push({t:`${esc2(st.piece)}.`, check:ci(`${esc2(st.piece)} = ?`, st.value)});
   });
-  steps.push({t:`Everything is done: <b>${value}</b>.`, check:finalCheck(p)});
+  steps.push({t:`Everything is done. The value you just found is the whole expression's value.`, check:finalCheck(p)});
   p.steps=steps;
   p.hints=[{t:`Grouping symbols first, then × and ÷ left to right, then + and − left to right.`},{t:`${hasGroup(tokens)?"Do the part inside the parentheses first.":"There are no parentheses. Look for × or ÷ first, even if + or − comes earlier."}`},{t:`First step: ${esc2(trace[0].piece||trace[0].desc)}.`}];
   return p;
@@ -1313,7 +1315,7 @@ function genRelation(level, focus){
     {t:`Look at B without evaluating. B contains <b>(${base})</b>, which is all of A, and then does one more thing to it.`, check:cm(`What does B do to A?`, shuffle([`multiplies it by ${k}`,`adds ${m}`,`subtracts ${m}`,`multiplies it by 1`]), null)},
     {t:`Prove it by evaluating. A = ${base}.`, check:ci(`A = ?`, baseV)},
     {t:`B = ${K.B}.`, check:ci(`B = ?`, vB)},
-    {t:`${baseV} and ${vB}: ${K.txt}.`, check:finalCheck(p)}
+    {t:`A is ${baseV} and B is ${vB}. Say the relationship in words.`, check:finalCheck(p), after:`${K.txt}.`}
   ];
   const doWhat = K.B.startsWith(`${k} ×`) ? `multiplies it by ${k}` : K.B.endsWith(`+ ${m}`) ? `adds ${m}` : K.B.endsWith(`− ${m}`) ? `subtracts ${m}` : `multiplies it by 1`;
   p.steps[0].check.answer=p.steps[0].check.options.indexOf(doWhat); p.steps[0].check.display=doWhat;
@@ -1336,9 +1338,7 @@ function genWordExpr(level, focus){
   const p={skill:"expressions", level, prompt:`Write and evaluate an expression to answer the question.<br><span class="big-words">${T.q}</span>`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:T.e, show:null, meta:{variant:"word", value:T.v}};
   p.steps=[
     {t:`Read the sentence. What happens first in the story? That part goes in parentheses (or gets done first).`},
-    {t:`Write the expression that matches the story.`, check:cm(`Which expression matches?`, p.options, p.answer)},
-    {t:`Evaluate it with the order of operations.`, check:ci(`${T.e} = ?`, T.v)},
-    {t:`Answer: <b>${T.v}</b>. The expression is <b>${T.e}</b>.`, check:finalCheck(p)}
+    {t:`Write the expression that matches the story, then work it out with the order of operations.`, check:finalCheck(p), after:`${T.e} = ${T.v}. That answers the question.`}
   ];
   p.hints=[{t:`What happens first in the story? Group that.`},{t:`"Each" usually means multiply. "In all" means add. "Left" means subtract. "Split equally" means divide.`},{t:`The value of the right expression is ${T.v}.`}];
   return p;
@@ -1358,19 +1358,19 @@ function genPrimes(level, focus){
   const steps=[{t:`Make a factor tree. Find a factor pair for <b>${n}</b>. Circle a factor when it is prime; keep factoring anything that is not.`}];
   let m=n; const circled=[];
   while(!isPrime(m)){ const sp=fs.find(q=>m%q===0); const rest=m/sp;
-    steps.push({t:`<b>${m}</b> = ${sp} × ?  (${sp} is prime, so circle it.)`, check:ci(`${m} = ${sp} × ?`, rest)});
+    steps.push({t:`Split <b>${m}</b>: its smallest prime factor is ${sp}, so circle ${sp}. What goes with it?`, check:ci(`${m} = ${sp} × ?`, rest), after:`${m} = ${sp} × ${rest}.`});
     circled.push(sp); m=rest;
-    if(isPrime(m)) steps.push({t:`<b>${m}</b> is prime too, so circle it. Every branch ends in a circle.`, check:cm(`Is ${m} prime?`, ["Yes, its only factors are 1 and itself","No, it has other factors"], 0)});
-    else steps.push({t:`<b>${m}</b> is not prime. Keep factoring.`, check:cm(`Is ${m} prime?`, ["Yes","No, keep factoring"], 1)});
+    if(isPrime(m)) steps.push({t:`Look at <b>${m}</b>. Does anything besides 1 and ${m} divide it?`, check:cm(`Is ${m} prime?`, ["Yes, its only factors are 1 and itself","No, it has other factors"], 0), after:`${m} is prime, so circle it. Every branch ends in a circle.`});
+    else steps.push({t:`Look at <b>${m}</b>. Does anything besides 1 and ${m} divide it?`, check:cm(`Is ${m} prime?`, ["Yes","No, keep factoring"], 1), after:`${m} is not prime: keep factoring it.`});
   }
-  steps.push({t:`Rewrite the circled primes as a multiplication expression, smallest first: <b>${answer}</b>. Check: they multiply back to ${n}.`, check:Object.assign(ci(`Type the prime factorization of ${n} (like 2 × 2 × 3, you can type x for ×).`, n, answer), {text:true, validate})});
+  steps.push({t:`Rewrite the circled primes as a multiplication expression, smallest first. Check: they should multiply back to ${n}.`, after:`${answer} = ${n}.`, check:Object.assign(ci(`Type the prime factorization of ${n} (like 2 × 2 × 3, you can type x for ×).`, n, answer), {text:true, validate})});
   p.steps=steps;
   p.hints=[{t:`Start with any factor pair. Circle the primes. Keep splitting the rest.`},{t: n%2===0 ? `${n} is even, so 2 is a factor: ${n} = 2 × ${n/2}.` : `${n} is odd. Try 3, 5, or 7: ${n} = ${fs[0]} × ${n/fs[0]}.`},{t:`Prime factors of ${n}: there are ${fs.length} of them, and the smallest is ${fs[0]}.`}];
   return p;
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.9.2 · September 21, 2026";
+const BUILD="v9.10.1 · September 21, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -1405,12 +1405,13 @@ function mulRowSteps(a,b,d,shift,doneRows){
     const fact={t:`<b>${cap(place(j))}</b>: multiply ${d} × ${g}${cin?`, then add the <b>+${cin}</b> written above it`:""}.${pic()}`, check:wc(ci(cin?`${d} × ${g} + ${cin} = ?`:`${d} × ${g} = ?`, sum), cin?"regroup":"fact")};
     if(cin){ fact.sub=[{t:`First just the fact: ${d} × ${g}.${pic()}`, check:wc(ci(`${d} × ${g} = ?`, prodD),"fact")},{t:`Now add the <b>+${cin}</b> that was regrouped into the ${place(j)} place.${pic()}`, check:wc(ci(`${prodD} + ${cin} = ?`, sum),"regroup")}]; fact.tAfter=`So ${d} × ${g} + ${cin}: put those two steps together.`; }
     steps.push(fact);
-    if(last){ steps.push({t:`This is the last digit of ${a}, so there is nowhere left to regroup. Write the whole <b>${sum}</b> here, starting in the ${place(j)} place.${pic()}`, check:wc(ci(`What do you write in the ${place(j)} place and up?`, sum),"regroup")}); written.push(String(sum)); carry=0; }
+    if(last){ steps.push({t:`This is the last digit of ${a}, so there is nowhere left to regroup. Write the whole number you just got here, starting in the ${place(j)} place.${pic()}`, check:wc(ci(`What do you write in the ${place(j)} place and up?`, sum),"regroup")}); written.push(String(sum)); carry=0; }
     else if(sum>=10){
       steps.push({t:`${sum} is 10 or more, so only one digit fits in the ${place(j)} place. Write that digit here and regroup the other to the ${place(j+1)} place.${pic()}`, check:wc(ci(`What digit do you write in the ${place(j)} place?`, sum%10),"regroup")}); written.push(String(sum%10));
-      const c=Math.floor(sum/10); carryAt[j+1]=c; carry=c; // written before the picture so the +digit shows above its column
-      steps.push({t:`The other digit of ${sum} is regrouped into the ${place(j+1)} place. Write it small as <b>+${c}</b> above the next digit of ${a} to the left, the <b>${digs[j+1]}</b>${shift?` (it lands in the ${place(j+1)} place because this row already starts one place over)`:""}.${pic()}`, check:wc(ci(`What do you regroup to the ${place(j+1)} place?`, c),"regroup")});
-    } else { steps.push({t:`${sum} is less than 10, so it fits in the ${place(j)} place. Nothing to regroup.${pic()}`, check:wc(ci(`What digit goes in the ${place(j)} place?`, sum),"regroup")}); written.push(String(sum)); carry=0; }
+      const c=Math.floor(sum/10);
+      steps.push({t:`The other digit of ${sum} is regrouped into the ${place(j+1)} place. Write it small, with a +, above the next digit of ${a} to the left, the <b>${digs[j+1]}</b>${shift?` (it lands in the ${place(j+1)} place because this row already starts one place over)`:""}.${pic()}`, check:wc(ci(`What do you regroup to the ${place(j+1)} place?`, c),"regroup"), after:`+${c} goes above the ${place(j+1)} column: it is added to that column's product.`});
+      carryAt[j+1]=c; carry=c; // set after this card's picture, so the +digit appears above its column from the next step on
+    } else { steps.push({t:`That product is less than 10, so the whole thing fits in the ${place(j)} place. Nothing to regroup.${pic()}`, check:wc(ci(`What digit goes in the ${place(j)} place?`, sum),"regroup")}); written.push(String(sum)); carry=0; }
   });
   const value=a*d*(shift?10:1);
   // record the place each step works on (the tens-row 0 first, then each digit of a from the right), so a walkthrough can skip columns she already had right
@@ -1426,9 +1427,9 @@ function addColSteps(a,b,x,y){
     const parts=[dx[j],dy[j]].concat(cin?[cin]:[]);
     const intro = j===0 ? `Add the two partial products the way you add any two numbers: line up the ones, then add one column at a time from the right. ` : "";
     steps.push({t:`${intro}<b>${cap(name)}</b> column: ${dx[j]} + ${dy[j]}${cin?` + the regrouped ${cin}`:""}.${pic()}`, check:wc(ci(`${parts.join(" + ")} = ?`, sum),"add-partials")});
-    if(last){ steps.push({t:`Last column, so write the whole <b>${sum}</b>.${pic()}`, check:wc(ci(`What do you write in the ${name} place and up?`, sum),"add-partials")}); written.push(String(sum)); }
+    if(last){ steps.push({t:`Last column, so write the whole number you just got.${pic()}`, check:wc(ci(`What do you write in the ${name} place and up?`, sum),"add-partials")}); written.push(String(sum)); }
     else if(sum>=10){ steps.push({t:`${sum} is 10 or more: write the ones digit of it in the ${name} column and regroup 1 to the ${WHOLE_PLACES[j+1]} column.${pic()}`, check:wc(ci(`What digit do you write in the ${name} place?`, sum%10),"add-partials")}); written.push(String(sum%10)); carry=1; }
-    else { steps.push({t:`${sum} fits in the ${name} column. Nothing to regroup.${pic()}`, check:wc(ci(`What digit goes in the ${name} place?`, sum),"add-partials")}); written.push(String(sum)); carry=0; }
+    else { steps.push({t:`That sum is less than 10, so it fits in the ${name} column. Nothing to regroup.${pic()}`, check:wc(ci(`What digit goes in the ${name} place?`, sum),"add-partials")}); written.push(String(sum)); carry=0; }
     for(let q=startLen;q<steps.length;q++) steps[q].place=j;
   }
   const readBack=written.map((w,j)=>`${WHOLE_PLACES[j]}${j===written.length-1&&w.length>1?" and up":""}: <b>${w}</b>`).join(", ");
@@ -1467,13 +1468,13 @@ function genMultiply(level, focus){
   const steps=[];
   if(b<10 && (variant==="area"||variant==="distributive")){ // U2 L6/L7 with a one-digit multiplier: decompose the big factor by place value
     p.ws=false; const parts=String(a).split("").map((ch,i,arr)=>+ch*Math.pow(10,arr.length-1-i)).filter(x=>x>0);
-    if(variant==="area"){ steps.push({t:`Area model: break ${a} by place value: ${parts.join(" + ")}. Draw a rectangle ${b} tall, divided into ${parts.length} section${parts.length===1?"":"s"}, one for each part.`, check:ci(`How many sections does the area model have?`, parts.length)});
+    if(variant==="area"){ steps.push({t:`Area model: break ${a} by place value: ${parts.join(" + ")}. Draw a rectangle ${b} tall, with one section for each part.`, check:ci(`How many sections does the area model have?`, parts.length), after:`One section per part of ${a}: ${parts.map(x=>`${x} × ${b}`).join(", ")}.`});
       parts.forEach(x=>steps.push({t:`Section: ${x} × ${b}.`, check:wc(ci(`${x} × ${b} = ?`, x*b, (x*b).toLocaleString("en-US")),"fact")}));
-      steps.push({t:`Add the sections: ${parts.map(x=>(x*b).toLocaleString("en-US")).join(" + ")}.${stackMul(a,b,parts.map(x=>x*b))}`, check:wc(finalCheck(p),"add-partials")}); }
-    else { steps.push({t:`Break ${a} into ${parts.join(" + ")}. Then ${a} × ${b} = ${parts.map(x=>`(${x} × ${b})`).join(" + ")}. That is the distributive property.`, check:cm(`Which shows the distributive property for ${a} × ${b}?`, shuffle([parts.map(x=>`(${x} × ${b})`).join(" + "), parts.map(x=>`(${x} × ${b})`).join(" × "), `(${parts.join(" × ")}) + ${b}`]), null)});
+      steps.push(parts.length>1 ? {t:`Add the sections: ${parts.map(x=>(x*b).toLocaleString("en-US")).join(" + ")}.${stackMul(a,b,parts.map(x=>x*b))}`, check:wc(finalCheck(p),"add-partials")} : {t:`One section, so its area is the whole product.`, check:wc(finalCheck(p),"add-partials")}); }
+    else { steps.push({t:`Break ${a} into ${parts.join(" + ")}. Multiply each part by ${b}, then add the results. That is the distributive property.`, check:cm(`Which shows the distributive property for ${a} × ${b}?`, shuffle([parts.map(x=>`(${x} × ${b})`).join(" + "), parts.map(x=>`(${x} × ${b})`).join(" × "), `(${parts.join(" × ")}) + ${b}`]), null), after:`${a} × ${b} = ${parts.map(x=>`(${x} × ${b})`).join(" + ")}.`});
       steps[0].check.answer=steps[0].check.options.indexOf(parts.map(x=>`(${x} × ${b})`).join(" + ")); steps[0].check.display=steps[0].check.options[steps[0].check.answer];
       parts.forEach(x=>steps.push({t:`${x} × ${b}.`, check:wc(ci(`${x} × ${b} = ?`, x*b, (x*b).toLocaleString("en-US")),"fact")}));
-      steps.push({t:`Add the partial products: ${parts.map(x=>(x*b).toLocaleString("en-US")).join(" + ")}.${stackMul(a,b,parts.map(x=>x*b))}`, check:wc(finalCheck(p),"add-partials")}); }
+      steps.push(parts.length>1 ? {t:`Add the partial products: ${parts.map(x=>(x*b).toLocaleString("en-US")).join(" + ")}.${stackMul(a,b,parts.map(x=>x*b))}`, check:wc(finalCheck(p),"add-partials")} : {t:`One partial product, so that is the whole product.`, check:wc(finalCheck(p),"add-partials")}); }
     p.traps=["fact"].concat(variant==="distributive"?["add-partials"]:[]);
   } else if(b<10){
     steps.push({t:`Line up the factors, ${a} above ${b}. Multiply ${b} by each digit of ${a}, starting with the ones place.${stackMul(a,b)}`, row:"setup"});
@@ -1482,12 +1483,12 @@ function genMultiply(level, focus){
   } else if(variant==="area"){
     const pv=n=>String(n).split("").map((ch,i,arr)=>+ch*Math.pow(10,arr.length-1-i)).filter(x=>x>0); const pa=pv(a), pb=pv(b); // every place, as the worksheet draws it: 421 = 400 + 20 + 1
     const cells=[]; for(const x of pa) for(const y of pb) cells.push([x,y]);
-    steps.push({t:`Area model: break each factor by place value. ${a} = ${pa.join(" + ")} and ${b} = ${pb.join(" + ")}. Draw a rectangle divided into ${cells.length} sections, one for each pair.`, check:ci(`How many sections does the area model have?`, cells.length)});
+    steps.push({t:`Area model: break each factor by place value. ${a} = ${pa.join(" + ")} and ${b} = ${pb.join(" + ")}. Draw a rectangle with one section for each pair of parts.`, check:ci(`How many sections does the area model have?`, cells.length), after:`${pa.length} parts across and ${pb.length} down make ${cells.length} sections: ${cells.map(([x,y])=>`${x} × ${y}`).join(", ")}.`});
     cells.forEach(([x,y])=>steps.push({t:`Section: ${x} × ${y}.`, check:wc(ci(`${x} × ${y} = ?`, x*y, (x*y).toLocaleString("en-US")),"fact")}));
     steps.push({t:`Add all the sections: ${cells.map(([x,y])=>(x*y).toLocaleString("en-US")).join(" + ")}. That is why the algorithm's partial products work.${stackMul(a,b,cells.map(([x,y])=>x*y))}`, check:wc(finalCheck(p),"add-partials")});
   } else if(variant==="distributive"){
     const tens=Math.floor(b/10)*10, ones=b%10;
-    steps.push({t:`Break ${b} into ${tens} + ${ones}. Then ${a} × ${b} = (${a} × ${tens}) + (${a} × ${ones}). That is the distributive property.`, check:wc(cm(`Which shows the distributive property for ${a} × ${b}?`, shuffle([`(${a} × ${tens}) + (${a} × ${ones})`,`(${a} × ${tens}) × (${a} × ${ones})`,`(${a} + ${tens}) × (${a} + ${ones})`]), null),"rows")});
+    steps.push({t:`Break ${b} into ${tens} + ${ones}. Multiply ${a} by each part, then add the two results. That is the distributive property.`, check:wc(cm(`Which shows the distributive property for ${a} × ${b}?`, shuffle([`(${a} × ${tens}) + (${a} × ${ones})`,`(${a} × ${tens}) × (${a} × ${ones})`,`(${a} + ${tens}) × (${a} + ${ones})`]), null),"rows"), after:`${a} × ${b} = (${a} × ${tens}) + (${a} × ${ones}).`});
     steps[0].check.answer=steps[0].check.options.indexOf(`(${a} × ${tens}) + (${a} × ${ones})`); steps[0].check.display=steps[0].check.options[steps[0].check.answer];
     const r1=mulRowSteps(a,b,tens/10,1,[]), r0=mulRowSteps(a,b,ones,0,[]);
     steps.push({t:`${a} × ${tens}: multiply ${a} × ${tens/10}, then add a zero.`, check:wc(ci(`${a} × ${tens} = ?`, a*tens), v=>near(parseAnswer(v),a*tens/10)?"tens-zero":"rows"), sub:r1.steps, tAfter:`Read that row from the digits you wrote (${r1.readBack}).`});
@@ -1525,14 +1526,15 @@ function genMultiply(level, focus){
     const partsA=String(a).split("").map((ch,i,arr)=>+ch*Math.pow(10,arr.length-1-i)).filter(x=>x>0); const partsB = b<10 ? [b] : [Math.floor(b/10)*10, b%10].filter(x=>x>0);
     const pieces=[]; partsA.forEach(x=>partsB.forEach(y=>pieces.push([x,y])));
     const modelName = variant==="area" ? "area model" : "distributive property";
-    p.hints=[{t: variant==="area" ? `Draw a rectangle. Split one side into the place-value parts of ${a} (${partsA.join(" + ")})${b<10?"":` and the other side into the parts of ${b} (${partsB.join(" + ")})`}. Every section is a small multiplication; the whole area is the answer. (SWUN calls this the <b>${modelName}</b>.)`
-                                     : `Break the numbers apart by place value: ${a} = ${partsA.join(" + ")}${b<10?"":`, ${b} = ${partsB.join(" + ")}`}. Multiply every part of one by every part of the other, then add. (SWUN calls this the <b>${modelName}</b>.)`}];
+    p.hints=[{t: variant==="area" ? `Draw a rectangle. Split one side into the place-value parts of ${a}: ${partsA.join(" + ")}${b<10?"":`. Split the other side into the parts of ${b}: ${partsB.join(" + ")}`}. (SWUN: the <b>${modelName}</b>.)`
+                                     : `Break the numbers apart by place value: ${a} = ${partsA.join(" + ")}${b<10?"":`, ${b} = ${partsB.join(" + ")}`}. (SWUN: the <b>${modelName}</b>.)`},
+             {t: variant==="area" ? `Every section of the rectangle is one small multiplication. Find each section's area, then add all the sections: that total is the answer.` : `Multiply every part of one number by every part of the other. Then add all those small products.`}];
     pieces.forEach(([x,y],k)=>{ p.hints.push({t:`Section ${k+1}: <b>${x} × ${y}</b>. Multiply the front digits, then put back the zeros from both numbers.`}); p.hints.push({t:`${x} × ${y} = <b>${(x*y).toLocaleString("en-US")}</b>. Write it in that section.`}); });
     if(pieces.length>1) p.hints.push({t:`Add all the sections together: ${pieces.map(([x,y])=>(x*y).toLocaleString("en-US")).join(" + ")}. That total is the product.`}); else p.hints.pop(); // one section: its product is the answer, so the last hint stops before stating it
     p.hintPlan=null; p.hintTotal=p.hints.length; }
-  else if(b<10){ p.hints=[{t:`Go one digit at a time, starting on the <b>right</b> (the ones place). Multiply ${b} by that digit. If the answer is 10 or more, write only its last digit and carry the other digit to the next column. (SWUN calls carrying <b>regrouping</b>.)`}];
+  else if(b<10){ p.hints=[{t:`Start on the <b>right</b>, in the ones place: ${b} × ${a%10}. If that is 10 or more, write only its last digit and carry the rest to the next column. (SWUN calls carrying <b>regrouping</b>.)`}];
     p.hintPlan=colPlan(b,0,"t",""); }
-  else { const ones=b%10, tens=Math.floor(b/10); p.hints=[{t:`This kind has <b>two rows</b>, then you add them. Row 1: ${a} × the ones digit, ${ones}. Row 2: a <b>0</b> first (it is really ${a} × ${tens*10}), then ${a} × ${tens}. Add the rows. (SWUN calls the rows <b>partial products</b>.)`}];
+  else { const ones=b%10, tens=Math.floor(b/10); p.hints=[{t:`<b>Two rows</b>, then add them. Row 1 is ${a} × ${ones}, the ones digit. Start in the ones column: ${ones} × ${a%10}. (SWUN calls the rows <b>partial products</b>.)`}];
     p.hintPlan=colPlan(ones,0,"r0","Row 1, ").concat([{key:"r1-0", hints:[`Row 2 starts with a <b>0</b> in the ones box, because this row is ${a} × ${tens*10}.`]}]).concat(colPlan(tens,1,"r1","Row 2, ")).concat([{key:"t-plan", hints:[`Now add row 1 and row 2 like any two numbers: line up the ones, add each column from the right, and carry when a column makes 10 or more.`]}]).concat(addPlan(a*ones, a*tens*10)); }
   if(p.hintPlan){ p.hints = p.hints.concat(p.hintPlan.flatMap(c=>c.hints.map(t=>({t, key:c.key})))); p.hintTotal = p.hints.length; } // the full ladder in order, for anything that reads hints as a list; the workspace serves them by cell
   return p;
@@ -1590,7 +1592,7 @@ function genPlaceValue(level, focus){
     p.steps=[
       {t:`Find the ${c.digit} in the chart and name its place.`, chart:num, hl:{[c.key]:"ul"}, check:cm(`Which place is the ${c.digit} in?`, shuffle([c.place, ...shuffle([...WHOLE_PLACES.slice(0,4),...DEC_PLACES].filter(x=>x!==c.place)).slice(0,3)]), null)},
       {t:`A digit's value is the digit × the value of its place. The ${c.place} place is worth ${pos>=0?WHOLE_VALUE[pos]:DEC_FRACTION[-pos-1]}.`, check:ci(`${c.digit} × ${pos>=0?WHOLE_VALUE[pos]:DEC_FRACTION[-pos-1]} = ?`, val, fmt(valNum))},
-      {t:`So the ${c.digit} is worth <b>${fmt(valNum)}</b>.`, check:finalCheck(p)}
+      {t:`So what is the ${c.digit} worth?`, check:finalCheck(p), after:`The ${c.digit} in the ${c.place} place is worth ${fmt(valNum)}.`}
     ];
     p.steps[0].check.answer=p.steps[0].check.options.indexOf(c.place); p.steps[0].check.display=c.place;
     p.hints=[{t:`Name the place first, then multiply the digit by that place's value.`},{t:`The ${c.digit} is in the <b>${c.place}</b> place.`, chart:num, hl:{[c.key]:"ul"}},{t:`${c.digit} × ${pos>=0?WHOLE_VALUE[pos]:DEC_FRACTION[-pos-1]}.`}];
@@ -1616,8 +1618,8 @@ function genPlaceValue(level, focus){
     const p={skill:"placevalue", level, prompt:`Which number has a <b>${digit}</b> that is worth <b>${factor.toLocaleString("en-US")} times</b> as much as the ${digit} in<br><span class="big-num">${fmt(base)}</span>`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:fmt(target), show:base, meta:{variant, digit, lo, hi}};
     p.steps=[
       {t:`The ${digit} in ${fmt(base)} is in the <b>${small}</b> place.`, chart:base, hl:{[lo>=0?"w"+lo:"d"+(-lo)]:"ul"}, check:ci(`How many places to the left must the ${digit} move to be worth ${factor.toLocaleString("en-US")} times as much?`, gap)},
-      {t:`Each place to the <b>left</b> is worth <b>10 times</b> as much. ${gap===1?"One place left: 10 times.":gap+" places left: "+factor.toLocaleString("en-US")+" times."} That puts the ${digit} in the <b>${big}</b> place.`, chart:target, hl:{[hi>=0?"w"+hi:"d"+(-hi)]:"ul"}},
-      {t:`So the number is <b>${fmt(target)}</b>.`, check:finalCheck(p)}
+      {t:`Each place to the <b>left</b> is worth <b>10 times</b> as much. ${gap===1?"One place left: 10 times.":gap+" places left: "+factor.toLocaleString("en-US")+" times."} That puts the ${digit} in the <b>${big}</b> place.`, chart:base, hl:{[lo>=0?"w"+lo:"d"+(-lo)]:"ul"}},
+      {t:`Write the number with the ${digit} in the ${big} place (and zeros to hold the other places).`, check:finalCheck(p), after:`The number is ${fmt(target)}.`, chart:target, hl:{[hi>=0?"w"+hi:"d"+(-hi)]:"ul"}}
     ];
     p.hints=[{t:`Moving a digit one place to the left multiplies what it is worth by ten; one place to the right divides it by ten.`},{t:`${factor.toLocaleString("en-US")} times means ${gap} place${gap>1?"s":""} to the left.`},{t:`From the ${small} place, ${gap} left is the ${big} place.`, chart:target}];
     return p;
@@ -1633,13 +1635,30 @@ function genPlaceValue(level, focus){
   p.steps=[
     {t:`Find both ${digit}s in the chart.`, chart:num, hl:{[kLo]:"ul",[kHi]:"ul"}, check:ci(`How many places apart are they?`, gap)},
     {t:`Each place to the <b>left</b> is worth <b>10 times</b> as much; each place to the <b>right</b> is worth <b>1/10</b> as much. The ${from} place is to the ${askBig?"left":"right"} of the ${to} place.`, check:cm(`Going from the ${to} place to the ${from} place, the value becomes…`, ["10 times as much each place","1/10 as much each place"], askBig?0:1)},
-    {t:`${gap} step${gap>1?"s":""} ${askBig?"left":"right"}: ${askBig ? Array(gap).fill("10").join(" × ")+" = "+factor.toLocaleString("en-US")+" times" : "1/"+factor.toLocaleString("en-US")+" of"}.`, check:finalCheck(p)}
+    {t:`${gap} step${gap>1?"s":""} ${askBig?"left":"right"}. ${askBig ? `Multiply by 10 for each step: ${Array(gap).fill("10").join(" × ")}.` : `Divide by 10 for each step: one tenth${gap>1?", of one tenth".repeat(gap-1):""}.`}`, check:finalCheck(p), after:`${askBig ? Array(gap).fill("10").join(" × ")+" = "+factor.toLocaleString("en-US")+" times" : "1/"+factor.toLocaleString("en-US")+" of"}.`}
   ];
-  p.hints=[{t:`Every place to the <b>left</b> is worth ten of the place beside it; every place to the <b>right</b> is worth a tenth of it. Find both digits on the chart and count the places between them.`},{t:`The two ${digit}s are ${gap} place${gap>1?"s":""} apart.`, chart:num, hl:{[kLo]:"ul",[kHi]:"ul"}},{t:`The ${from} place is to the ${askBig?"left":"right"}, so its ${digit} is worth ${askBig?"more":"less"}.`}];
+  p.hints=[{t:`Find both ${digit}s on the chart and count the places between them.`},{t:`Every place to the <b>left</b> is worth ten of the place beside it; every place to the <b>right</b> is worth a tenth of it. The two ${digit}s are ${gap} place${gap>1?"s":""} apart.`, chart:num, hl:{[kLo]:"ul",[kHi]:"ul"}},{t:`The ${from} place is to the ${askBig?"left":"right"}, so its ${digit} is worth ${askBig?"more":"less"}.`}];
   return p;
 }
 
 // ---- Division (5.NBT.6): place value strategy (partial quotients by place) and area model ----
+// Division area model, built progressively: a rectangle with the divisor as its height and the dividend as its area. Found chunks of the
+// missing side are labeled with their area; what is still unknown stays blank ("?"). Widths are proportional to the chunk lengths, with a
+// minimum so a thin chunk (like 7 next to 70) stays readable; the picture says so when that happens.
+function divAreaSVG(d, N, found, o){ // found: [{q, piece}] chunks known so far; o.remaining: area not yet placed; o.total: the finished side length (final card)
+  const L$=v=>v.toLocaleString("en-US"); const q=N/d; const W=560, left=64, top=30, H=120, minW=64;
+  const parts=found.map(f=>({w:f.q, label:`${d} × ${L$(f.q)}`, sub:`= ${L$(f.piece)}`, known:true})); const rem=o&&o.remaining!==undefined?o.remaining:(N-found.reduce((s,f)=>s+f.piece,0));
+  if(rem>0) parts.push({w:rem/d, label:`?`, sub:`area ${L$(rem)}`, known:false});
+  const avail=W-left-24; let widths=parts.map(p=>Math.max(1e-9,p.w)); const tot=widths.reduce((a,b)=>a+b,0); widths=widths.map(w=>w/tot*avail); let squeezed=false;
+  for(let k=0;k<4;k++){ const small=widths.map((w,i)=>w<minW&&parts.length>1?i:-1).filter(i=>i>=0); if(!small.length) break; squeezed=true; const need=small.reduce((s,i)=>s+(minW-widths[i]),0); const bigTot=widths.reduce((s,w,i)=>small.includes(i)?s:s+w,0); widths=widths.map((w,i)=>small.includes(i)?minW:w-need*(w/bigTot)); }
+  let svg=`<svg viewBox="0 0 ${W} ${H+20}" width="100%" style="max-width:${W}px;display:block;margin:8px auto" role="img" aria-label="area model for ${L$(N)} ÷ ${d}">`;
+  svg+=`<text x="${left-8}" y="${top+H/2+5}" font-size="15" font-weight="700" text-anchor="end" fill="#1B2A41">${d}</text>`;
+  let x=left; parts.forEach((p,i)=>{ const w=widths[i]; svg+=`<rect x="${x}" y="${top}" width="${w}" height="${H}" fill="${p.known?"#FFF8D6":"#F3F4F6"}" stroke="#1B2A41" stroke-width="2"${p.known?"":' stroke-dasharray="6 4"'}/>`;
+    svg+=`<text x="${x+w/2}" y="${top+H/2-4}" font-size="14" font-weight="700" text-anchor="middle" fill="${p.known?"#1B2A41":"#6B7280"}">${p.label}</text><text x="${x+w/2}" y="${top+H/2+16}" font-size="13" text-anchor="middle" fill="${p.known?"#1B2A41":"#6B7280"}">${p.sub}</text>`;
+    svg+=`<text x="${x+w/2}" y="${top-10}" font-size="14" font-weight="700" text-anchor="middle" fill="${p.known?"#B45309":"#6B7280"}">${p.known?L$(p.w):"?"}</text>`; x+=w; });
+  svg+=`<text x="${left+avail/2}" y="${top+H+16}" font-size="13" text-anchor="middle" fill="#1B2A41">${o&&o.total!==undefined?`whole side: ${found.map(f=>L$(f.q)).join(" + ")} = <tspan font-weight="700">${L$(o.total)}</tspan>; area ${L$(N)} = ${d} × ${L$(o.total)}`:`total area ${L$(N)}; the side across the top is what you are finding`}</text>`;
+  svg+=`</svg>`; return `<div class="chart">${svg}${squeezed?`<div class="muted" style="font-size:12px;text-align:center">Sections are not drawn to scale.</div>`:""}</div>`;
+}
 function genDivide(level, focus){
   const f=focus&&focus.tag;
   let variant = level>=3 && Math.random()<0.4 ? "area" : "placevalue";
@@ -1664,34 +1683,67 @@ function genDivide(level, focus){
   const parts=qd.map((dg,i)=>({qpart:dg*Math.pow(10,L-1-i), piece:dg*Math.pow(10,L-1-i)*d})).filter(x=>x.qpart>0);
   const p={skill:"divide", level, prompt:`<span class="big-num">${N.toLocaleString("en-US")} ÷ ${d} = ?</span>`, type:"input", answer:q, display:q.toLocaleString("en-US"), show:null, meta:{N,d,q,variant,parts}};
   const steps=[];
-  if(variant==="placevalue"){
-    steps.push({t:`Place value strategy: <b>decompose the dividend</b> into place-value parts that each divide by ${d} with no remainder: ${N.toLocaleString("en-US")} = ${parts.map(x=>"<b>"+x.piece.toLocaleString("en-US")+"</b>").join(" + ")}.`, check:ci(`Check the parts: ${parts.map(x=>x.piece.toLocaleString("en-US")).join(" + ")} = ?`, N, N.toLocaleString("en-US"))});
-    parts.forEach(x=>steps.push({t:`Divide each part by ${d}. ${x.piece.toLocaleString("en-US")} ÷ ${d}: think ${x.piece/Math.pow(10,String(x.qpart).length-1)/d} × ${Math.pow(10,String(x.qpart).length-1).toLocaleString("en-US")}.`, check:ci(`${x.piece.toLocaleString("en-US")} ÷ ${d} = ?`, x.qpart)}));
-    steps.push({t:`Add the partial quotients: ${parts.map(x=>x.qpart).join(" + ")}.`, check:finalCheck(p)});
-  } else {
-    steps.push({t:`Area model: draw a rectangle with a width of <b>${d}</b>. Its total area is the dividend, <b>${N.toLocaleString("en-US")}</b>. The length is the quotient we want.`});
-    let remaining=N;
-    parts.forEach((x,i)=>{ steps.push({t:`Section ${i+1}: what length with width ${d} has an area close to ${remaining.toLocaleString("en-US")}? Try a length of <b>${x.qpart}</b>: ${d} × ${x.qpart} = ${x.piece.toLocaleString("en-US")}. Area remaining: ${remaining.toLocaleString("en-US")} − ${x.piece.toLocaleString("en-US")} = ${(remaining-x.piece).toLocaleString("en-US")}.`, check:ci(`${d} × ${x.qpart} = ?`, x.piece, x.piece.toLocaleString("en-US"))}); remaining-=x.piece; });
-    steps.push({t:`There is no remainder. The total length is the sum of the partial quotients: ${parts.map(x=>x.qpart).join(" + ")}.`, check:finalCheck(p)});
-  }
+  // v9.10 coaching: Lily produces every chunk. The card asks; the result is explained only after she answers (step.after).
+  // Sequence: orient → bound (tens / hundreds / thousands) → fact (how many d's fit in the front of the number) → scale it → take it away → next chunk → combine → name the method.
+  const L$=n=>n.toLocaleString("en-US"); const area = variant==="area";
+  const unitOf=x=>Math.pow(10,String(x.qpart).length-1); const unitWord=u=>u>=1000?"thousands":u===100?"hundreds":u===10?"tens":"ones";
+  const firstUnit=unitOf(parts[0]);
+  const sizeOpts=["tens","hundreds","thousands"]; const sizeAns=sizeOpts.indexOf(unitWord(firstUnit))<0?0:sizeOpts.indexOf(unitWord(firstUnit));
+  const one=(k,word)=> k===1 ? word.replace(/s$/,"") : word; const grp=k=> k===1 ? "group" : "groups"; // "1 hundred", "7 tens"; "1 group", "7 groups"
+  const fig=(found,o)=> area ? divAreaSVG(d, N, found, o) : ""; const foundSoFar=[];
+  const orientT = area ? `<b>Area model.</b> A rectangle has one side <b>${d}</b> and area <b>${L$(N)}</b>. The other side is how many ${d}s make ${L$(N)}: the <b>quotient</b>.`
+                      : `You are finding how many groups of <b>${d}</b> make <b>${L$(N)}</b>. (${L$(N)} is the <b>dividend</b>, ${d} the <b>divisor</b>.)`;
+  const bounds=[[10,d*10],[100,d*100],[1000,d*1000]]; const lo=bounds.filter(b=>b[1]<=N).pop(), hi=bounds.find(b=>b[1]>N);
+  steps.push({t:`${orientT} First, how big is the answer? ${d} × 10 = ${L$(d*10)}, ${d} × 100 = ${L$(d*100)}, ${d} × 1,000 = ${L$(d*1000)}.${fig([],{remaining:N})}`,
+    check:cm(`Is the answer in the tens, the hundreds, or the thousands?`, sizeOpts, sizeAns),
+    cues:[`Which two of those products surround ${L$(N)}: one smaller than it, one bigger?`, lo&&hi?`${L$(lo[1])} < ${L$(N)} < ${L$(hi[1])}: so the answer is more than ${L$(lo[0])} groups but fewer than ${L$(hi[0])}.`:`${L$(N)} is smaller than ${L$(d*100)}, so the answer is fewer than 100 groups.`],
+    after:`${L$(N)} sits between ${L$(d*firstUnit)} and ${L$(d*firstUnit*10)}, so the answer has ${unitWord(firstUnit)} in it but no ${unitWord(firstUnit*10)}. Build it one chunk at a time, biggest chunk first.`});
+  let remaining=N;
+  parts.forEach((x,i)=>{ const unit=unitOf(x); const k=x.qpart/unit; const front=Math.floor(remaining/unit); const isLast=i===parts.length-1; const chunkNo=i+1;
+    // a place with no chunk (305: no tens) is called out, so the zero in the quotient is not a surprise
+    const prevUnit = i===0 ? null : unitOf(parts[i-1]); const skipped = prevUnit!==null && prevUnit/unit>10 ? unitWord(prevUnit/10) : "";
+    const skipNote = skipped ? `No ${skipped} chunk: what is left, ${L$(remaining)}, is less than ${d} × ${L$(unit*10)} = ${L$(d*unit*10)}, so the ${skipped} digit of the answer is 0. ` : "";
+    if(unit>=10){
+      const frontWord = unit===1000 ? "thousands" : unit===100 ? "hundreds" : "tens";
+      const countBy=Array.from({length:Math.min(k,4)},(_,j)=>L$(d*(j+1))).join(", ");
+      steps.push({t:`${skipNote}${area?`Chunk ${chunkNo} of the side, in ${frontWord}.`:`Chunk ${chunkNo}: ${frontWord} of groups.`} Cover the smaller places for now and look at the ${frontWord} in ${L$(remaining)}: <b>${L$(front)}</b> ${frontWord} (that is ${L$(front*unit)}). Count up by ${d}s.${fig(foundSoFar.slice(),{remaining})}`,
+        check:ci(`What is the biggest number of ${d}s that fits in ${L$(front)} without going over?`, k),
+        cues:[`Count by ${d}s and stop before you pass ${L$(front)}: ${countBy}${k>4?", …":""}.`, `${d} × ${k+1} = ${L$(d*(k+1))} is past ${L$(front)}. How many ${d}s did you count before that?`],
+        after:`${d} × ${k} = ${L$(d*k)}${d*k<front?` (${d} × ${k+1} = ${L$(d*(k+1))} would go over)`:""}. That fact is the key to this chunk.`});
+      const chunkFound=foundSoFar.concat([{q:x.qpart, piece:x.piece}]);
+      steps.push({t:`Scale it up: those were ${frontWord}, so you have ${k} ${one(k,frontWord)} of groups, not ${k} ${grp(k)}. How many groups is that?${area?` (That is the length of this chunk of the side.)`:""}`,
+        check:ci(`${k} ${one(k,frontWord)} of groups = how many groups?`, x.qpart, L$(x.qpart)),
+        cues:[`${k} ${one(k,frontWord)}: what number is that? (1 ten is 10, 1 hundred is 100.)`, `${k} ${one(k,frontWord)} is ${k} with ${unit===10?"a zero":unit===100?"two zeros":"three zeros"} after it.`],
+        after:`<b>${L$(x.qpart)}</b> is your ${i===0?"first":"next"} small answer (a <b>partial quotient</b>). ${d} × ${L$(x.qpart)} = ${L$(x.piece)} (${d} × ${k} with ${unit===10?"a zero":unit===100?"two zeros":"three zeros"} on the end)${x.piece===remaining?`, which uses up all ${L$(remaining)}.`:`: it uses up ${L$(x.piece)} of the ${L$(remaining)}.`}${fig(chunkFound,{remaining:remaining-x.piece})}`});
+      if(!isLast) steps.push({t:`Take that chunk away to see what is still left to share.`, check:ci(`${L$(remaining)} − ${L$(x.piece)} = ?`, remaining-x.piece, L$(remaining-x.piece)),
+        cues:[`Subtract one place at a time, biggest place first: what is left after the ${unitWord(unit)} are taken away?`, `${L$(remaining)} − ${L$(x.piece)}: line up the places and subtract one column at a time, starting on the right.`],
+        after:`${L$(remaining-x.piece)} is left. It is smaller than ${d} × ${L$(unit)}, so the next chunk is smaller.`});
+      foundSoFar.push({q:x.qpart, piece:x.piece});
+    } else {
+      const countBy=Array.from({length:Math.min(k,4)},(_,j)=>L$(d*(j+1))).join(", ");
+      steps.push({t:`${skipNote}${area?`The last chunk of the side: a piece with area ${L$(remaining)} and width ${d}.`:`The last chunk: ${L$(remaining)} is left.`} Count by ${d}s.${fig(foundSoFar.slice(),{remaining})}`,
+        check:ci(`How many ${d}s make ${L$(remaining)}?`, k),
+        cues:[`Count by ${d}s until you reach ${L$(remaining)} exactly: ${countBy}${k>4?", …":""}.`, `${d} × ${k-1} = ${L$(d*(k-1))} is not enough and ${d} × ${k+1} = ${L$(d*(k+1))} is too much.`],
+        after:`${d} × ${k} = ${L$(remaining)}, nothing left over. <b>${k}</b> is your last partial quotient.${fig(foundSoFar.concat([{q:x.qpart, piece:x.piece}]),{remaining:0})}`});
+      foundSoFar.push({q:x.qpart, piece:x.piece});
+    }
+    remaining-=x.piece;
+  });
+  const qparts=parts.map(x=>L$(x.qpart));
+  const allFound=parts.map(x=>({q:x.qpart, piece:x.piece}));
+  if(parts.length>1) steps.push({t:`${area?"The whole side is all the chunks together.":"Add the small answers together."} You found ${qparts.length>2?qparts.slice(0,-1).join(", ")+",":qparts[0]} and ${qparts[qparts.length-1]}.`, check:finalCheck(p),
+    cues:[`Add the partial quotients you found, biggest first: ${qparts.join(" + ")}.`, `${qparts.join(" + ")}: add the ${unitWord(firstUnit)} first, then the rest.`],
+    after:`You split ${L$(N)} into ${parts.map(x=>L$(x.piece)).join(" + ")}, easier amounts that ${d} divides evenly. The small answers, ${qparts.length>2?qparts.slice(0,-1).join(", ")+",":qparts[0]} and ${qparts[qparts.length-1]}, are <b>partial quotients</b>; adding them gives the quotient. (SWUN calls this the <b>${area?"area model":"place value strategy"}</b>.)${fig(allFound,{remaining:0,total:q})}`});
+  else steps.push({t:`Nothing is left over, so that one chunk is the whole answer.`, check:finalCheck(p), cues:[`The one partial quotient you found is the answer.`, `How many groups of ${d} did the one chunk make?`], after:`One partial quotient covered all of ${L$(N)}: ${d} × ${qparts[0]} = ${L$(N)}. (SWUN calls this the <b>${area?"area model":"place value strategy"}</b>.)${fig(allFound,{remaining:0,total:q})}`});
   p.steps=steps;
-  // Plain-English hints for a kid working alone: what the strategy is in ordinary words, the SWUN name in parentheses, then the pieces worked out.
-  const nm=N.toLocaleString("en-US"); const firstQ=parts[0].qpart; const unit=Math.pow(10,String(firstQ).length-1); const unitName=unit===100?"hundreds":unit===10?"tens":"ones";
-  const fitK=firstQ/unit; // the multiple that fits; the ladder stops BEFORE it so the last step (and the pick) is hers
-  const ladder=(()=>{ const out=[]; for(let k=1;k<fitK && k<=9;k++){ const v=d*unit*k; out.push(`${d} × ${(unit*k).toLocaleString("en-US")} = ${v.toLocaleString("en-US")}`); } return out.length ? out.join(", ")+", … keep counting up" : `start with ${d} × ${unit.toLocaleString("en-US")} and keep counting up`; })();
-  const restCount=parts.length-1;
-  p.hints = variant==="area" ? [
-    {t:`Think of a rectangle. One side is <b>${d}</b> and the whole area inside is <b>${nm}</b>. You are looking for the other side. Build it in chunks: pick a round number for part of the missing side, multiply it by ${d}, and take that away from ${nm}. (SWUN calls this the <b>area model</b>.)`},
-    {t:`Find the first chunk by counting up in ${unitName}: ${ladder}. Which one is the biggest that still fits inside ${nm} without going over?`},
-    {t:`That round number is your first chunk of the side. Multiply it by ${d} and take that area away from ${nm}. Write down what is left.`},
-    {t:`${restCount?`What is left is smaller. Do the same thing with it: count up by ${restCount>1?"tens of "+d+", then ones of "+d:"ones of "+d} until you find the biggest that fits, and take it away too.`:`If nothing is left, the rectangle is finished.`}`},
-    {t:`When nothing is left, add the chunks of the side together. That sum is the answer.`}]
-  : [
-    {t:`Break ${nm} into friendly pieces that ${d} divides evenly, biggest piece first: some hundreds, then some tens, then some ones. Divide each piece by ${d}, then add those small answers together. (SWUN calls this the <b>place value strategy</b>, and the small answers <b>partial quotients</b>.)`},
-    {t:`Find the biggest piece by counting up in ${unitName}: ${ladder}. Which is the biggest that still fits inside ${nm} without going over?`},
-    {t:`That product is your first piece, and the number you multiplied ${d} by is your first small answer. Write both down.`},
-    {t:`Take your first piece away from ${nm}. ${restCount?`What is left is your next piece: divide it by ${d} the same way, counting up by ${restCount>1?"tens of "+d+", then ones of "+d:"ones of "+d}.`:`If nothing is left, your first small answer is the whole answer.`}`},
-    {t:`Check that your pieces add back up to ${nm}. Then add the small answers together. That sum is the quotient.`}];
+  // Hints, one action per card: meaning → size → the key fact → scale it → the rest. The formal words ride along after the plain action.
+  const nm=L$(N); const firstQ=parts[0].qpart; const unit=firstUnit; const unitName=unitWord(unit); const front0=Math.floor(N/unit);
+  p.hints = [
+    {t: area ? `Picture a rectangle: one side is <b>${d}</b>, the area inside is <b>${nm}</b>. Find the other side: how many ${d}s make ${nm}?` : `You are finding how many groups of <b>${d}</b> make <b>${nm}</b>. (SWUN: ${nm} is the dividend, ${d} the divisor.)`},
+    {t:`How big is the answer? ${d} × 10 = ${L$(d*10)} and ${d} × 100 = ${L$(d*100)}. Is ${nm} closer to tens of ${d}s or hundreds of ${d}s?`},
+    {t:`Look at the ${unitName} in ${nm}: ${L$(front0)}. Count up by ${d}s. What is the biggest number of ${d}s that fits in ${L$(front0)} without going over?`},
+    {t:`Those were ${unitName}, so that many ${unitName} of groups is your first small answer. Multiply ${d} by it, and take that product away from ${nm}.`},
+    {t:`${parts.length>1?`Do the same with what is left, counting by ${d}s. Then add the small answers together.`:`If nothing is left, that one small answer is the whole answer.`} (SWUN calls the small answers <b>partial quotients</b>.)`}];
   return p;
 }
 Object.assign(SKILLS, {
@@ -1885,13 +1937,13 @@ const placeWord=k=>k===0?"ones":k===1?"tenths":k===2?"hundredths":"thousandths";
 const unitCount=(n,k)=>`${n} ${n===1?placeWord(k).replace(/s$/,""):placeWord(k)}`; // "1 tenth", "28 tenths"
 
 // ---- small pictures: a number line with jumps, a partitioned rectangle ----
-function nlSVG(startV, jumps, endV){ // jumps: [{dv, label}], values in thousandths; direction from sign of dv
+function nlSVG(startV, jumps, endV, labelUpTo){ // jumps: [{dv, label}], values in thousandths; direction from sign of dv. labelUpTo: label landing points 0..n only (later ones show "?"), so a picture never hands over the number the step asks for
   const pts=[startV]; let v=startV; for(const j of jumps){ v+=j.dv; pts.push(v); }
   const lo=Math.min(...pts), hi=Math.max(...pts); const span=Math.max(hi-lo, 1); const W=560, H=110, x0=40, x1=W-40;
   const X=val=>x0+(val-lo)/span*(x1-x0);
   let svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;display:block;margin:8px auto" role="img" aria-label="number line with jumps">`;
   svg+=`<line x1="${x0-20}" y1="78" x2="${x1+20}" y2="78" stroke="#1B2A41" stroke-width="2"/>`;
-  pts.forEach((pv,i)=>{ const x=X(pv); svg+=`<line x1="${x}" y1="70" x2="${x}" y2="86" stroke="#1B2A41" stroke-width="2"/><text x="${x}" y="102" font-size="13" text-anchor="middle" fill="#1B2A41" font-weight="700">${fmtV(pv)}</text>`; });
+  pts.forEach((pv,i)=>{ const x=X(pv); const lbl = (labelUpTo===undefined || i<=labelUpTo) ? fmtV(pv) : "?"; svg+=`<line x1="${x}" y1="70" x2="${x}" y2="86" stroke="#1B2A41" stroke-width="2"/><text x="${x}" y="102" font-size="13" text-anchor="middle" fill="#1B2A41" font-weight="700">${lbl}</text>`; });
   let cur=startV; jumps.forEach((j,i)=>{ const a=X(cur), b=X(cur+j.dv); const mid=(a+b)/2; const h=28+ (i%2)*10; const dir=j.dv>=0?1:-1;
     svg+=`<path d="M ${a} 74 Q ${mid} ${74-h*1.6} ${b} 74" fill="none" stroke="#B45309" stroke-width="2.5"/><polygon points="${b},74 ${b-6*dir},66 ${b-9*dir},76" fill="#B45309"/><text x="${mid}" y="${74-h}" font-size="13" text-anchor="middle" fill="#B45309" font-weight="700">${j.label}</text>`; cur+=j.dv; });
   svg+=`</svg>`; return `<div class="chart">${svg}</div>`;
@@ -1963,22 +2015,34 @@ function genDecMul(level, focus){
   const fig=areaSVG(pa.map(v=>({label:fmtV(v), size:v})), pb.map(v=>({label:fmtV(v), size:v})), (i,j)=>`${fmtV(pa[i])} × ${fmtV(pb[j])}`); // drawn to scale
   const steps=[];
   const smallA = dV(A)<1000, smallB = kind==="decimal" && dV(B)<1000;
-  const estText = estIsExact ? `${smallA&&smallB?`Both factors are less than 1, so the answer is <b>smaller than either of them</b>, less than ${fmtV(Math.min(dV(A),dV(B)))}.`:`One factor is less than 1, so the answer is <b>less than ${fmt(bound===dV(A)?A:B)}</b>.`}` : smallA && smallB ? `Both factors are less than 1, so the answer is <b>smaller than either of them</b>: ${fmt(A)} is about ${fmtV(estA)} and ${fmt(B)} is about ${fmtV(estB)}, so about ${fmtV(est)}.` : smallB ? `${fmt(B)} is less than 1, so the answer is <b>less than ${fmt(A)}</b> (multiplying by a number under 1 makes it smaller). ${fmt(B)} is about ${fmtV(estB)}, so the answer is about ${fmtV(est)}.` : smallA ? `${fmt(A)} is less than 1, so the answer is <b>less than ${fmt(B)}</b>. ${fmt(A)} is about ${fmtV(estA)}, so about ${fmtV(est)}.` : `${fmt(A)} is about ${fmtV(estA)}${kind==="decimal"?` and ${fmt(B)} is about ${fmtV(estB)}`:""}, so the answer should be near ${fmtV(estA)} × ${fmtV(estB)} = <b>${fmtV(est)}</b>.`;
+  // v9.10: the card sets up the estimate; Lily multiplies the benchmarks herself. The result of each step is explained only after she answers (step.after).
+  const biggerF = dV(A)>=dV(B) ? A : B;
+  const estSetup = estIsExact ? `${smallA&&smallB?`Both factors are less than 1, so the answer is <b>smaller than either of them</b>, less than ${fmtV(Math.min(dV(A),dV(B)))}.`:(smallA||smallB)?`One factor is less than 1, so the answer is <b>less than ${fmt(bound===dV(A)?A:B)}</b>.`:`Neither factor is less than 1, so the answer is <b>more than ${fmt(biggerF)}</b>.`}`
+    : smallA && smallB ? `Both factors are less than 1, so the answer is <b>smaller than either of them</b>. ${fmt(A)} is about ${fmtV(estA)} and ${fmt(B)} is about ${fmtV(estB)}: multiply those two in your head.`
+    : smallB ? `${fmt(B)} is less than 1, so the answer is <b>less than ${fmt(A)}</b>. ${fmt(B)} is about ${fmtV(estB)}: think ${fmtV(estA)} × ${fmtV(estB)}.`
+    : smallA ? `${fmt(A)} is less than 1, so the answer is <b>less than ${fmt(B)}</b>. ${fmt(A)} is about ${fmtV(estA)}: think ${fmtV(estA)} × ${fmtV(estB)}.`
+    : `${fmt(A)} is about ${fmtV(estA)}${kind==="decimal"?` and ${fmt(B)} is about ${fmtV(estB)}`:""}. Multiply the easy numbers in your head: ${fmtV(estA)} × ${fmtV(estB)}.`;
   // When the benchmark product happens to equal the exact answer, the check asks about direction instead of size, so the estimate never hands over the answer.
   const bigger = dV(A)>=dV(B) ? A : B;
-  steps.push({t:`<b>Estimate first.</b> ${estText} Keep that in mind for the decimal point at the end.`,
-    check: estIsExact ? wc(cm(`Will the answer be more or less than ${fmt(bigger)}?`, ["More","Less"], (smallA||smallB)?1:0),"point") : wc(cm(`About how big should ${fmt(A)} × ${fmt(B)} be?`, shuffle([...new Set([fmtV(est), fmtV(est*10), fmtV(Math.max(1,Math.round(est/10)))])]), null),"point")});
+  steps.push({t:`<b>Estimate first.</b> ${estSetup}`,
+    check: estIsExact ? wc(cm(`Will the answer be more or less than ${fmt(bigger)}?`, ["More","Less"], (smallA||smallB)?1:0),"point") : wc(cm(`About how big should ${fmt(A)} × ${fmt(B)} be?`, shuffle([...new Set([fmtV(est), fmtV(est*10), fmtV(Math.max(1,Math.round(est/10)))])]), null),"point"),
+    after: estIsExact ? `Keep that in mind for the decimal point at the end.` : `${fmtV(estA)} × ${fmtV(estB)} = ${fmtV(est)}, so the real answer should be near ${fmtV(est)}. Keep that in mind for the decimal point at the end.`});
   if(!estIsExact){ steps[0].check.answer=steps[0].check.options.indexOf(fmtV(est)); steps[0].check.display=steps[0].check.options[steps[0].check.answer]; }
   steps.push({t: variant==="area" ? `<b>Area model.</b> Break each number into its place-value parts: ${fmt(A)} = ${partsLabel(pa)}${pb.length>1?` and ${fmt(B)} = ${partsLabel(pb)}`:""}. Each section of the rectangle is one small product.${fig}`
-                                    : `<b>Distributive property.</b> Break the numbers into place-value parts: ${fmt(A)} = ${partsLabel(pa)}${pb.length>1?`, ${fmt(B)} = ${partsLabel(pb)}`:""}. Then ${fmt(A)} × ${fmt(B)} = ${sections.map(s=>`(${fmtV(s.x)} × ${fmtV(s.y)})`).join(" + ")}.`,
-    check:wc(ci(`How many small products (sections) are there?`, sections.length),"partition")});
-  sections.forEach(s=>{ const xd=decPlaces(D(s.x)), yd=decPlaces(D(s.y)); const unitNote = (xd||yd) ? ` Think in ${placeWord(xd+yd)}: ${fmtV(s.x)} × ${fmtV(s.y)} is ${(s.x/Math.pow(10,3-xd))*(s.y/Math.pow(10,3-yd))} ${placeWord(xd+yd)}, which is ${fmtV(s.v)}.` : "";
-    steps.push({t:`Section <b>${fmtV(s.x)} × ${fmtV(s.y)}</b>.${unitNote}`, check:wc(ci(`${fmtV(s.x)} × ${fmtV(s.y)} = ?`, s.v/1000, fmtV(s.v)),"fact")}); });
+                                    : `<b>Distributive property.</b> Break the numbers into place-value parts: ${fmt(A)} = ${partsLabel(pa)}${pb.length>1?`, ${fmt(B)} = ${partsLabel(pb)}`:""}. Multiply every part of one number by every part of the other.`,
+    check:wc(ci(`How many small products (sections) will there be?`, sections.length),"partition"),
+    after:`${fmt(A)} × ${fmt(B)} = ${sections.map(s=>`(${fmtV(s.x)} × ${fmtV(s.y)})`).join(" + ")}.`});
+  sections.forEach(s=>{ const xd=decPlaces(D(s.x)), yd=decPlaces(D(s.y)); const dx=s.x/Math.pow(10,3-xd), dy=s.y/Math.pow(10,3-yd); const digitsProd=dx*dy;
+    const unitSetup = (xd||yd) ? ` Think of the digits first, ${dx} × ${dy}, then remember what those units are: ${placeWord(xd+yd)}.` : "";
+    const unitAfter = (xd||yd) ? `${dx} × ${dy} = ${digitsProd}, and those are ${placeWord(xd+yd)}: ${digitsProd} ${placeWord(xd+yd)} is ${fmtV(s.v)}.` : `${fmtV(s.x)} × ${fmtV(s.y)} = ${fmtV(s.v)}: no decimal parts in this section.`;
+    steps.push({t:`Section <b>${fmtV(s.x)} × ${fmtV(s.y)}</b>.${unitSetup}`, check:wc(ci(`${fmtV(s.x)} × ${fmtV(s.y)} = ?`, s.v/1000, fmtV(s.v)),"fact"), after:unitAfter}); });
   if(sections.length>1) steps.push({t:`Add the sections: ${sections.map(s=>fmtV(s.v)).join(" + ")}. Line up the decimal points when you add.`, check:wc(ci(`${sections.map(s=>fmtV(s.v)).join(" + ")} = ?`, V/1000, fmt(ans)),"sections")});
-  steps.push({t:`<b>Check the decimal point</b> against the estimate: ${fmt(ans)} ${smallA||smallB?`is smaller than ${smallA&&smallB?"both factors":smallB?fmt(A):fmt(B)}, as it should be`:`is near ${fmtV(est)}`}, so it makes sense.${p.meta.places?` (${fmt(A)} has ${plural(decPlaces(A),"decimal place")}${kind==="decimal"?` and ${fmt(B)} has ${plural(decPlaces(B),"decimal place")}`:""}; the product has ${plural(p.meta.places,"decimal place")} before any end zeros are dropped.)`:""}`, check:wc(finalCheck(p),"point")});
+  const sizeWords = smallA||smallB ? `smaller than ${smallA&&smallB?"both factors":smallB?fmt(A):fmt(B)}` : estIsExact ? `more than ${fmt(biggerF)}` : `near ${fmtV(est)}`; // never the exact answer
+  steps.push({t:`<b>Check the decimal point</b> against your estimate: the answer should be ${sizeWords}. Type the final answer.`, check:wc(finalCheck(p),"point"),
+    after:`${fmt(ans)} is ${sizeWords}, as it should be, so it makes sense.${p.meta.places?` (${fmt(A)} has ${plural(decPlaces(A),"decimal place")}${kind==="decimal"?` and ${fmt(B)} has ${plural(decPlaces(B),"decimal place")}`:""}; the product has ${plural(p.meta.places,"decimal place")} before any end zeros are dropped.)`:""}`});
   p.steps=steps;
   p.hints=[
-    {t:`Estimate first. ${estText} That tells you where the decimal point belongs at the end.`},
+    {t:`Estimate first. ${estSetup} The real answer should be near that.`},
     {t:`Break the numbers into place-value parts and multiply every part: ${fmt(A)} is ${partsLabel(pa)}${pb.length>1?`, ${fmt(B)} is ${partsLabel(pb)}`:""}. (SWUN: the <b>${model}</b>.)`},
     ...sections.flatMap((s,i)=>{ const xd=decPlaces(D(s.x)), yd=decPlaces(D(s.y)); const digitsProd=(s.x/Math.pow(10,3-xd))*(s.y/Math.pow(10,3-yd)); return [
       {t:`Section ${i+1}: <b>${fmtV(s.x)} × ${fmtV(s.y)}</b>. Multiply the digits first: ${s.x/Math.pow(10,3-xd)} × ${s.y/Math.pow(10,3-yd)} = ?`},
@@ -2014,30 +2078,37 @@ function genDecDiv(level, focus){
   const Nn=D(N), dn=D(d), qn=D(q);
   const unitPlaces=Math.max(decPlaces(Nn), decPlaces(dn)); const unit=Math.pow(10,3-unitPlaces); const Nu=N/unit, du=d/unit; // both as counts of the same unit
   const uName=placeWord(unitPlaces);
-  const est = variant==="dealing" ? Math.round(N/d)*1000 : Math.round(N/d)*1000;
-  const p={skill:"decdiv", level, prompt:`<span class="big-num">${fmt(Nn)} ÷ ${fmt(dn)} = ?</span>`, type:"input", answer:q/1000, display:fmt(qn), show:null, meta:{N:Nn, d:dn, q:qn, variant, V:q, unitPlaces, Nu, du}};
+  // Estimate with a compatible number: the multiple of the divisor nearest the dividend (never the dividend itself when that would give the exact answer).
+  const dW = d/1000; // dealing divisors are whole numbers
+  const compat=(()=>{ if(variant!=="dealing" || !Number.isInteger(dW) || dW<1) return null; const Nv=N/1000; let lo=Math.floor(Nv/dW)*dW, hi=lo+dW; if(Math.abs(lo-Nv)<1e-9){ lo=Nv-dW; hi=Nv+dW; } const c = (Nv-lo)<=(hi-Nv) ? lo : hi; if(c<=0) return {c:hi, dir:"less"}; return {c, dir: c>Nv ? "less" : "more"}; })(); // dir: the real share is a little less/more than c ÷ d
+  const est = compat ? Math.round(compat.c/dW*1000) : Math.round(N/d)*1000;
+  const p={skill:"decdiv", level, prompt:`<span class="big-num">${fmt(Nn)} ÷ ${fmt(dn)} = ?</span>`, type:"input", answer:q/1000, display:fmt(qn), show:null, meta:{N:Nn, d:dn, q:qn, variant, V:q, unitPlaces, Nu, du, est}};
   p.traps=["point","unit"]; if(variant==="measuring") p.traps.push("groups");
   const steps=[];
   if(variant==="dealing"){
     const shareLess = N<d; // each share is less than 1 when there is less than one whole per group
     const estOpts=shuffle([...new Set([shareLess?"less than 1":"about "+fmtV(est), shareLess?"about "+fmtV(Math.max(1000,Math.round(N/d/1000)*1000||1000)):"about "+fmtV(est*10), shareLess?"more than "+fmt(Nn):"about "+fmtV(Math.max(100,Math.round(est/10)))])]);
-    steps.push({t:`<b>Dealing strategy</b> (sharing equally): ${fmt(Nn)} shared into ${fmt(dn)} equal groups. Estimate first: ${shareLess?`${fmt(Nn)} is less than ${fmt(dn)}, so each share is <b>less than 1</b>.`:`${fmt(Nn)} is about ${fmtV(Math.round(N/1000)*1000)}, and ${fmtV(Math.round(N/1000)*1000)} ÷ ${fmt(dn)} is about ${fmtV(est)}.`}`, check:wc(cm(`About how big is each share?`, estOpts, estOpts.indexOf(shareLess?"less than 1":"about "+fmtV(est))),"point")});
+    const cTxt = compat ? fmtV(compat.c*1000) : fmt(Nn);
+    steps.push({t:`<b>Dealing strategy</b> (sharing equally): ${fmt(Nn)} shared into ${fmt(dn)} equal groups. Estimate first: ${shareLess?`${fmt(Nn)} is less than ${fmt(dn)}: is there even one whole for each group?`:`${fmt(Nn)} is close to <b>${cTxt}</b>, and ${cTxt} ÷ ${fmt(dn)} is an easy one to do in your head.`}`,
+      check:Object.assign(wc(cm(`About how big is each share?`, estOpts, estOpts.indexOf(shareLess?"less than 1":"about "+fmtV(est))),"point"),{visibleOk:shareLess}),
+      after: shareLess ? `No: less than one whole each, so each share is less than 1. Keep that in mind for the decimal point.` : `${cTxt} ÷ ${fmt(dn)} = ${fmtV(est)}, and ${fmt(Nn)} is a little ${compat&&compat.dir==="less"?"less":"more"} than ${cTxt}, so each share is a little ${compat&&compat.dir==="less"?"less":"more"} than ${fmtV(est)}.`});
     steps[0].check.display=steps[0].check.options[steps[0].check.answer];
-    steps.push({t:`Rename ${fmt(Nn)} as a count of ${uName}: <b>${unitCount(Nu,unitPlaces)}</b>. Now it is whole-number sharing.`, check:wc(ci(`${fmt(Nn)} is how many ${uName}?`, Nu),"unit")});
-    steps.push({t:`Deal ${unitCount(Nu,unitPlaces)} into ${dn.w} equal groups: ${Nu} ÷ ${dn.w} = <b>${unitCount(Nu/dn.w,unitPlaces)}</b> in each group.`, check:wc(ci(`${Nu} ÷ ${dn.w} = ?`, Nu/dn.w),"fact")});
-    steps.push({t:`${unitCount(Nu/dn.w,unitPlaces)} written as a decimal is <b>${fmt(qn)}</b>. Check it against the estimate${shareLess?" (less than 1)":` of about ${fmtV(est)}`}.`, check:wc(finalCheck(p),"point")});
-    p.hints=[{t:`Sharing: ${fmt(Nn)} split into ${fmt(dn)} equal groups. About how big is each share? ${shareLess?`There is less than one whole per group, so each share is less than 1.`:`Round ${fmt(Nn)} to a whole number and divide in your head.`} (SWUN: the <b>dealing strategy</b>.)`},
-      {t:`Rename the decimal as a count of ${uName}: ${fmt(Nn)} is ${unitCount(Nu,unitPlaces)}. Now deal those ${uName} out like whole numbers.`},
-      {t:`${Nu} ÷ ${dn.w} = ? Each group gets that many ${uName}. Write that count as a decimal, and check it against your estimate.`}];
+    steps.push({t:`Rename ${fmt(Nn)} as a count of <b>${uName}</b>. Then it is whole-number sharing.`, check:wc(ci(`${fmt(Nn)} is how many ${uName}?`, Nu),"unit"), after:`${fmt(Nn)} = ${unitCount(Nu,unitPlaces)}.`});
+    steps.push({t:`Deal ${unitCount(Nu,unitPlaces)} into ${dn.w} equal groups.`, check:wc(ci(`${Nu} ÷ ${dn.w} = ?`, Nu/dn.w),"fact"), after:`Each group gets ${unitCount(Nu/dn.w,unitPlaces)}.`});
+    steps.push({t:`Write ${unitCount(Nu/dn.w,unitPlaces)} as a decimal, and check it against your estimate${shareLess?" (less than 1)":` (a little ${compat&&compat.dir==="less"?"less":"more"} than ${fmtV(est)})`}.`, check:wc(finalCheck(p),"point"), after:`${unitCount(Nu/dn.w,unitPlaces)} is ${fmt(qn)}, which fits the estimate.`});
+    p.hints=[{t:`Sharing: ${fmt(Nn)} split into ${fmt(dn)} equal groups. ${shareLess?`There is less than one whole per group, so each share is less than 1.`:`Estimate first: ${fmt(Nn)} is close to ${cTxt}, and ${cTxt} ÷ ${fmt(dn)} is easy. Each share is about that.`} (SWUN: the <b>dealing strategy</b>.)`},
+      {t:`Rename the decimal as a count of ${uName} so you can share whole numbers. Then deal those ${uName} out equally.`},
+      {t:`${unitCount(Nu,unitPlaces)} ÷ ${dn.w} = ? Each group gets that many ${uName}. Write that count as a decimal, and check it against your estimate.`}];
   } else {
     const jumps=Array.from({length:q/1000},()=>({dv:d, label:`+${fmt(dn)}`}));
-    steps.push({t:`<b>Measuring up</b> (how many groups): how many times does ${fmt(dn)} fit into ${fmt(Nn)}? Estimate: ${fmt(dn)} is ${d<1000?"less than 1":"about "+fmtV(Math.round(d/1000)*1000)}, so the answer is ${d<1000?"<b>more</b> than "+fmt(Nn):"about "+fmtV(est)}.`, check:wc(cm(`Will the answer be more or less than ${fmt(Nn)}?`, ["More", "Less", "The same"], d<1000?0:1),"groups")});
-    steps.push({t:`Make both numbers counts of the same unit, ${uName}: ${fmt(Nn)} = <b>${unitCount(Nu,unitPlaces)}</b> and ${fmt(dn)} = <b>${unitCount(du,unitPlaces)}</b>.`, check:wc(ci(`${fmt(dn)} is how many ${uName}?`, du),"unit")});
-    steps.push({t:`Now it is whole numbers: how many ${du}s in ${Nu}? ${Nu} ÷ ${du} = <b>${Nu/du}</b>.${q/1000<=12?nlSVG(0, jumps, N):""}`, check:wc(ci(`${Nu} ÷ ${du} = ?`, Nu/du),"fact")});
-    steps.push({t:`So ${fmt(dn)} fits into ${fmt(Nn)} exactly <b>${fmt(qn)}</b> times. Groups are counted, so the answer is a whole number even though we divided decimals.`, check:wc(finalCheck(p),"point")});
-    p.hints=[{t:`This asks how many ${fmt(dn)}s make ${fmt(Nn)}. Count up by ${fmt(dn)} on a number line, or think: about how many? ${d<1000?`Dividing by a number less than 1 gives more groups than ${fmt(Nn)}.`:""} (SWUN: <b>measuring up</b>.)`},
-      {t:`Give both numbers the same unit, ${uName}: ${fmt(Nn)} is ${unitCount(Nu,unitPlaces)}, ${fmt(dn)} is ${unitCount(du,unitPlaces)}. Now it is a whole-number question: how many ${du}s in ${Nu}?`},
-      {t:`${Nu} ÷ ${du} = ? That count is the answer. Counting groups gives a whole number.`}];
+    steps.push({t:`<b>Measuring up</b> (how many groups): how many times does ${fmt(dn)} fit into ${fmt(Nn)}? Think about size first: ${fmt(dn)} is ${d<1000?"less than 1":"about "+fmtV(Math.round(d/1000)*1000)}.`, check:wc(cm(`Will the answer be more or less than ${fmt(Nn)}?`, ["More", "Less", "The same"], d<1000?0:1),"groups"),
+      after: d<1000 ? `Each group is smaller than 1, so more than ${fmt(Nn)} of them fit.` : `Each group is bigger than 1, so fewer than ${fmt(Nn)} of them fit: about ${fmt(Nn)} ÷ ${fmtV(Math.round(d/1000)*1000)}.`});
+    steps.push({t:`Make both numbers counts of the same unit, <b>${uName}</b>. ${fmt(Nn)} is ${unitCount(Nu,unitPlaces)}.`, check:wc(ci(`${fmt(dn)} is how many ${uName}?`, du),"unit"), after:`Now both are counts of ${uName}: ${Nu} and ${du}.`});
+    steps.push({t:`Now it is whole numbers: how many ${du}s in ${Nu}?${q/1000<=12?nlSVG(0, jumps, N):""}`, check:wc(ci(`${Nu} ÷ ${du} = ?`, Nu/du),"fact"), after:`${du} × ${Nu/du} = ${Nu}: ${Nu/du} groups.`});
+    steps.push({t:`So how many times does ${fmt(dn)} fit into ${fmt(Nn)}? Groups are counted, so the answer is a whole number even though we divided decimals.`, check:wc(finalCheck(p),"point")});
+    p.hints=[{t:`How many ${fmt(dn)}s make ${fmt(Nn)}? ${d<1000?`Each group is less than 1, so more than ${fmt(Nn)} groups fit.`:`Count up by ${fmt(dn)} on a number line, or estimate how many.`} (SWUN: <b>measuring up</b>.)`},
+      {t:`Give both numbers the same unit, ${uName}. Then it is a whole-number question: how many of the small count fit in the big count?`},
+      {t:`${fmt(Nn)} is ${unitCount(Nu,unitPlaces)} and ${fmt(dn)} is ${unitCount(du,unitPlaces)}. ${Nu} ÷ ${du} = ? That count is the answer.`}];
   }
   p.steps=steps;
   return p;
@@ -2057,9 +2128,9 @@ function nlSteps(p){ // replaces the column steps with number-line jumps when th
   const {nums,op}=p.meta; if(nums.length!==2) return null; const A=dV(nums[0]), B=dV(nums[1]); const sign = op==="+" ? 1 : -1;
   const parts=decParts(nums[1]).sort((x,y)=>y-x); // biggest jump first: whole, then tenths, then hundredths
   const jumps=parts.map(v=>({dv:sign*v, label:`${op==="+"?"+":"−"}${fmtV(v)}`}));
-  const steps=[{t:`<b>Number-line strategy.</b> Start at <b>${fmt(nums[0])}</b>. ${op==="+"?"Jump forward":"Jump back"} by the parts of ${fmt(nums[1])}: ${parts.map(v=>fmtV(v)).join(", then ")}. Big jump first, then the smaller ones.${nlSVG(A, jumps)}`, check:ci(`How many jumps will you make?`, jumps.length)}];
-  let cur=A; jumps.forEach((j,i)=>{ const nxt=cur+j.dv; steps.push({t:`Jump ${i+1}: from ${fmtV(cur)}, ${op==="+"?"forward":"back"} <b>${fmtV(Math.abs(j.dv))}</b>.${nlSVG(A, jumps.slice(0,i+1))}`, check:wc(ci(`${fmtV(cur)} ${op} ${fmtV(Math.abs(j.dv))} = ?`, nxt/1000, fmtV(nxt)),"jump")}); cur=nxt; });
-  steps.push({t:`You landed on <b>${fmt(p.meta.result||D(cur))}</b>. The last landing point is the answer.`, check:finalCheck(p)});
+  const steps=[{t:`<b>Number-line strategy.</b> Start at <b>${fmt(nums[0])}</b>. ${op==="+"?"Jump forward":"Jump back"} by the parts of ${fmt(nums[1])}: ${parts.map(v=>fmtV(v)).join(", then ")}. Big jump first, then the smaller ones.${nlSVG(A, jumps, undefined, 0)}`, check:ci(`How many jumps will you make?`, jumps.length), after:`One jump for each part of ${fmt(nums[1])}.`}];
+  let cur=A; jumps.forEach((j,i)=>{ const nxt=cur+j.dv; steps.push({t:`Jump ${i+1}: from ${fmtV(cur)}, ${op==="+"?"forward":"back"} <b>${fmtV(Math.abs(j.dv))}</b>. Where do you land?${nlSVG(A, jumps.slice(0,i+1), undefined, i)}`, check:wc(ci(`${fmtV(cur)} ${op} ${fmtV(Math.abs(j.dv))} = ?`, nxt/1000, fmtV(nxt)),"jump"), after:`You landed on ${fmtV(nxt)}.`}); cur=nxt; });
+  steps.push({t:`The last landing point is the answer.${nlSVG(A, jumps, undefined, jumps.length-1)}`, check:finalCheck(p), after:`You landed on <b>${fmt(p.meta.result||D(cur))}</b>.`});
   return steps;
 }
 function chartSteps(p){ // U3 L1/L4: build both numbers on the place-value chart, then add or subtract place by place (same arithmetic as the column steps, with the chart in view)
@@ -2092,14 +2163,15 @@ SKILLS.shift.gen=safeGen(genShift);
 const _genMultiplyBase=genMultiply;
 genMultiply=function(level, focus){ const p=_genMultiplyBase(level, focus); const m=p.meta||{}; if(m.variant!=="area") return p;
   if(m.b<10){ // one-digit multiplier (levels 1–2): the area picture is drawn too, so an area lesson shows an area model at every level
-    try{ const parts=String(m.a).split("").map((ch,i,arr)=>+ch*Math.pow(10,arr.length-1-i)).filter(x=>x>0); const fig=areaSVG(parts.map(v=>({label:String(v), size:v})), [{label:String(m.b), size:m.b}], (i,j)=>`${parts[i]} × ${m.b} = ${(parts[i]*m.b).toLocaleString("en-US")}`); p.steps[0].t += fig; p.traps=(p.traps||[]).concat(["model"]); }catch(e){} return p; }
+    try{ const parts=String(m.a).split("").map((ch,i,arr)=>+ch*Math.pow(10,arr.length-1-i)).filter(x=>x>0); const fig=areaSVG(parts.map(v=>({label:String(v), size:v})), [{label:String(m.b), size:m.b}], (i,j)=>`${parts[i]} × ${m.b}`); /* the cells name their multiplication; the products are hers to find */ p.steps[0].t += fig; p.traps=(p.traps||[]).concat(["model"]); }catch(e){} return p; }
   try{ const a=m.a, b=m.b; const bt=b-(b%10), bo=b%10; const pv=n=>String(n).split("").map((ch,i,arr)=>+ch*Math.pow(10,arr.length-1-i)).filter(x=>x>0); const pa=pv(a), pb=pv(b); // same place-value split as the steps
-    const fig=areaSVG(pa.map(v=>({label:String(v), size:v})), pb.map(v=>({label:String(v), size:v})), (i,j)=>`${pa[i]} × ${pb[j]} = ${(pa[i]*pb[j]).toLocaleString("en-US")}`); // drawn to scale
+    const fig=areaSVG(pa.map(v=>({label:String(v), size:v})), pb.map(v=>({label:String(v), size:v})), (i,j)=>`${pa[i]} × ${pb[j]}`); // drawn to scale; the cells name their multiplication and the products are hers to find
     p.steps[0].t += fig;
     const onesRow=pa.map(x=>x*bo), tensRow=pa.map(x=>x*bt); const rowSum=(r)=>r.reduce((s,x)=>s+x,0);
-    const opts=shuffle([`${onesRow.join(" + ")} = ${rowSum(onesRow).toLocaleString("en-US")}`, `${tensRow.join(" + ")} = ${rowSum(tensRow).toLocaleString("en-US")}`, `${pa.map(x=>x*bo)[0]} + ${pa.map(x=>x*bt)[0]} = ${(pa[0]*bo+pa[0]*bt).toLocaleString("en-US")}`]);
-    const right=`${onesRow.join(" + ")} = ${rowSum(onesRow).toLocaleString("en-US")}`;
-    p.steps.splice(p.steps.length-1, 0, {t:`<b>Bridge to the algorithm.</b> The standard algorithm's first partial product is ${a} × ${bo} = <b>${(a*bo).toLocaleString("en-US")}</b>. In the model, that is the whole <b>${bo}</b> row of sections. The second partial product, ${a} × ${bt} = <b>${(a*bt).toLocaleString("en-US")}</b>, is the <b>${bt}</b> row. The algorithm is the area model with the sections already added in rows.`, check:wc(cm(`Which sections make the algorithm's first partial product, ${a} × ${bo}?`, opts, opts.indexOf(right)),"rows")});
+    const opts=shuffle([...new Set([`${onesRow.join(" + ")}`, `${tensRow.join(" + ")}`, `${pa.map(x=>x*bo)[0]} + ${pa.map(x=>x*bt)[0]}`])]);
+    const right=`${onesRow.join(" + ")}`;
+    p.steps.splice(p.steps.length-1, 0, {t:`<b>Bridge to the algorithm.</b> The standard algorithm's first partial product is ${a} × ${bo}. In the model, that is one whole <b>row</b> of sections: the <b>${bo}</b> row. The second partial product, ${a} × ${bt}, is the <b>${bt}</b> row.`, check:wc(cm(`Which sections add up to the first partial product, ${a} × ${bo}?`, opts, opts.indexOf(right)),"rows"),
+      after:`${onesRow.join(" + ")} = ${rowSum(onesRow).toLocaleString("en-US")} = ${a} × ${bo}, and ${tensRow.join(" + ")} = ${rowSum(tensRow).toLocaleString("en-US")} = ${a} × ${bt}. The algorithm is the area model with each row already added up.`});
     p.traps=(p.traps||[]).concat(["model"]);
   }catch(e){} return p; };
 SKILLS.multiply.gen=safeGen(genMultiply);
@@ -2126,11 +2198,9 @@ genWordExpr=function(level, focus){
   const p={skill:"expressions", level, prompt:`Write and evaluate an expression to answer the question.<br><span class="big-words">${T.q}</span>`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:T.e, show:null, meta:{variant:"word", value:T.v, structure:T.s}};
   const so=shuffle(Object.keys(STRUCT)); const sOpts=so.map(k=>STRUCT[k]);
   p.steps=[
-    {t:`<b>What is the relationship?</b> Before choosing an operation, ask: what do we know, what is unknown, and how are they related? Here: ${T.rel}.`, check:wc(cm(`What kind of problem is this?`, sOpts, so.indexOf(T.s)),"structure")},
+    {t:`<b>What is the relationship?</b> Before choosing an operation, ask: what do we know, what is unknown, and how are they related?`, check:wc(cm(`What kind of problem is this?`, sOpts, so.indexOf(T.s)),"structure"), after:`Here: ${T.rel}.`},
     {t:`Match the structure to an equation. Equal groups → multiply or divide. Comparison → "more than" and "times as many" tell you how two amounts relate (the bigger or the smaller may be the unknown). Part–whole → parts add to the whole. Change → start, change, result.`},
-    {t:`Write the expression that matches the story.`, check:cm(`Which expression matches?`, p.options, p.answer)},
-    {t:`Evaluate it with the order of operations.`, check:ci(`${T.e} = ?`, T.v)},
-    {t:`Answer: <b>${T.v}</b>. The expression is <b>${T.e}</b>.`, check:finalCheck(p)}
+    {t:`Write the expression that matches the story, then work it out with the order of operations.`, check:finalCheck(p), after:`${T.e} = ${T.v}. That answers the question.`}
   ];
   p.hints=[{t:`Do not pick the operation from a word like "more" or "each". First say what is known, what is unknown, and how they are related.`},
     {t:`This one is ${/^[aeiou]/i.test(STRUCT[T.s])?"an":"a"} <b>${STRUCT[T.s]}</b> problem: ${T.rel}.`},
@@ -2167,9 +2237,9 @@ function genFractions(level, focus){
     const p={skill:"fractions", level, prompt:`Write the fraction in <b>simplest form</b>.<br><span class="big-num">${frText(n,d)}</span>`, type:"input", text:true, validate, answer:sn/sd, display:disp, show:null, meta:{variant, n, d, sn, sd, g}};
     p.traps=["common-factor","not-simplest"];
     const factors=[]; for(let k=2;k<=Math.min(n,d);k++) if(n%k===0&&d%k===0) factors.push(k);
-    p.steps=[{t:`<b>Simplest form</b> means the numerator and denominator share no common factor except 1. Look for a number that divides <b>both</b> ${n} and ${d}. Common factors here: ${factors.join(", ")}.`, check:wc({q:`Name a number (other than 1) that divides both ${n} and ${d}.`, type:"input", text:true, validate:str=>factors.includes(+String(str).trim()), display:String(g)},"common-factor")},
-      {t:`Divide the top and the bottom by the <b>same</b> number. The biggest common factor is <b>${g}</b>: ${n} ÷ ${g} = ${sn} and ${d} ÷ ${g} = ${sd}.`, check:wc(ci(`${n} ÷ ${g} = ?`, sn),"fact")},
-      {t:`${frText(sn,sd)} names the same amount as ${frText(n,d)}: same point on the number line, fewer, bigger pieces.${fracSVG([{w:0,n,d},{w:0,n:sn,d:sd}])} Check: do ${sn} and ${sd} share any factor besides 1? ${gcd(sn,sd)===1?"No, so it is simplest.":""}`, check:wc(finalText(p),"not-simplest")}];
+    p.steps=[{t:`<b>Simplest form</b> means the numerator and denominator share no common factor except 1. Look for a number that divides <b>both</b> ${n} and ${d}: try 2, then 3, then 5.`, check:wc({q:`Name a number (other than 1) that divides both ${n} and ${d}.`, type:"input", text:true, validate:str=>factors.includes(+String(str).trim()), display:String(g)},"common-factor"), after:`Common factors of ${n} and ${d}: ${factors.join(", ")}. The biggest, ${g}, simplifies in one step.`},
+      {t:`Divide the top and the bottom by the <b>same</b> number, ${g}. Start with the top.`, check:wc(ci(`${n} ÷ ${g} = ?`, sn),"fact"), after:`And the bottom: ${d} ÷ ${g} = ${sd}.`},
+      {t:`Write the new fraction: the top and bottom you just found. Check: do they share any factor besides 1?`, check:wc(finalText(p),"not-simplest"), after:`${frText(sn,sd)} names the same amount as ${frText(n,d)}: same point on the number line, fewer, bigger pieces.${fracSVG([{w:0,n,d},{w:0,n:sn,d:sd}])}`}];
     p.hints=[{t:`Find a number that divides evenly into both the top and the bottom. Try 2, then 3, then 5. (Simplest form: no common factor left but 1.)`},{t:`Both ${n} and ${d} can be divided by ${factors[0]}. Divide both by it. If the new fraction still has a common factor, do it again.`},{t:`Keep dividing top and bottom by the same number until nothing but 1 divides both. The biggest shortcut is dividing both by ${g} at once.`}];
     return p;
   }
@@ -2182,13 +2252,13 @@ function genFractions(level, focus){
     const p={skill:"fractions", level, prompt, type:"input", text:true, validate, answer:impN/d, display:disp, show:null, meta:{variant, dir:toMixed?"toMixed":"toImproper", w, n, d, impN}};
     p.traps=["wholes","remainder"];
     p.steps = toMixed ? [
-      {t:`${frText(impN,d)} means ${impN} pieces, each <b>1/${d}</b> of a whole. It takes <b>${d}</b> pieces to make one whole. How many wholes fit in ${impN} pieces? ${impN} ÷ ${d} = ${w} with ${n} left over.`, check:wc(ci(`How many whole groups of ${d} are in ${impN}?`, w),"wholes")},
-      {t:`The ${n} leftover piece${n===1?" is":"s are"} still ${ordName(d)}: <b>${n}/${d}</b>.`, check:wc(ci(`How many pieces are left over after ${w} wholes?`, n),"remainder")},
-      {t:`So ${frText(impN,d)} = <b>${mixedText(w,n,d)}</b>.${fracSVG([{w:0,n:impN,d}])}`, check:finalText(p)}]
+      {t:`${frText(impN,d)} means ${impN} pieces, each <b>1/${d}</b> of a whole. It takes <b>${d}</b> pieces to make one whole. How many wholes fit in ${impN} pieces? Think ${impN} ÷ ${d}.`, check:wc(ci(`How many whole groups of ${d} are in ${impN}?`, w),"wholes"), after:`${w} whole${w===1?"":"s"} use${w===1?"s":""} ${w*d} of the ${impN} pieces.`},
+      {t:`The pieces left over are still ${ordName(d)}, so they stay over ${d}.`, check:wc(ci(`How many pieces are left over after ${w} wholes?`, n),"remainder"), after:`${impN} − ${w*d} = ${n}: the fraction part is ${n}/${d}.`},
+      {t:`Write the mixed number: the wholes, a space, then the leftover pieces over ${d}.${fracSVG([{w:0,n:impN,d}])}`, check:finalText(p), after:`${frText(impN,d)} = ${mixedText(w,n,d)}.`}]
     : [
-      {t:`${mixedText(w,n,d)} is ${w} whole${w===1?"":"s"} and ${n}/${d} more. Each whole is <b>${d}/${d}</b>, so ${w} whole${w===1?" is":"s are"} ${w} × ${d} = <b>${w*d}</b> ${ordName(d)}.`, check:wc(ci(`${w} × ${d} = ?`, w*d),"wholes")},
-      {t:`Add the extra ${n} piece${n===1?"":"s"}: ${w*d} + ${n} = <b>${impN}</b> ${ordName(d)}.`, check:wc(ci(`${w*d} + ${n} = ?`, impN),"remainder")},
-      {t:`So ${mixedText(w,n,d)} = <b>${frText(impN,d)}</b>. The denominator stays ${d}: the piece size did not change.${fracSVG([{w,n,d}])}`, check:finalText(p)}];
+      {t:`${mixedText(w,n,d)} is ${w} whole${w===1?"":"s"} and ${n}/${d} more. Each whole is <b>${d}/${d}</b>: ${d} pieces. How many pieces are in ${w} whole${w===1?"":"s"}?`, check:wc(ci(`${w} × ${d} = ?`, w*d),"wholes"), after:`${w} whole${w===1?" is":"s are"} ${w*d} ${ordName(d)}.`},
+      {t:`Now add the extra ${n} piece${n===1?"":"s"} from the fraction part.`, check:wc(ci(`${w*d} + ${n} = ?`, impN),"remainder"), after:`${impN} ${ordName(d)} in all.`},
+      {t:`Write the total pieces over ${d}. The denominator stays ${d}: the piece size did not change.${fracSVG([{w,n,d}])}`, check:finalText(p), after:`${mixedText(w,n,d)} = ${frText(impN,d)}.`}];
     p.hints = toMixed ? [{t:`How many pieces make one whole? ${d}. So ask: how many groups of ${d} fit into ${impN}, and how many pieces are left?`},{t:`${impN} ÷ ${d}: the whole-number part of the answer is the wholes; the remainder is the numerator; the denominator stays ${d}.`},{t:`Type it as: <b>wholes</b>, a space, then <b>numerator/denominator</b> (for a different problem, ${d===5?"7/3 would be typed 2 1/3":"7/5 would be typed 1 2/5"}).`}]
       : [{t:`Each whole is ${d} pieces of size 1/${d}. Turn the ${w} whole${w===1?"":"s"} into pieces first.`},{t:`${w} whole${w===1?"":"s"} × ${d} pieces each = ${w*d} pieces. Then add the ${n} extra piece${n===1?"":"s"}.`},{t:`Write the total pieces over ${d}. Type it as <b>numerator/denominator</b> (for a different problem, ${d===5?"2 1/3 would be typed 7/3":"1 2/5 would be typed 7/5"}).`}];
     return p;
@@ -2201,10 +2271,10 @@ function genFractions(level, focus){
     const options=["1/2","1","1 1/2","2"]; const answer=options.indexOf(tName(target));
     const p={skill:"fractions", level, prompt:`<b>Estimate.</b> Is the sum closest to 1/2, 1, 1 1/2, or 2?<br><span class="big-num">${frText(A.n,A.d)} + ${frText(B.n,B.d)}</span>`, type:"mc", options, optionTags:options.map((o,i)=>i===answer?"correct":"benchmark"), answer, display:tName(target), show:null, meta:{variant, A, B, sum}};
     p.traps=["benchmark"];
-    p.steps=[{t:`<b>Benchmarks.</b> Compare each fraction with 0, 1/2, and 1. ${frText(A.n,A.d)}: is ${A.n} close to 0, to half of ${A.d} (${A.d/2}), or to ${A.d}? It is close to <b>${benchName(bench(A))}</b>.${fracSVG([A])}`, check:wc(cm(`${frText(A.n,A.d)} is closest to…`, ["0","1/2","1"], [0,0.5,1].indexOf(bench(A))),"benchmark")},
-      {t:`${frText(B.n,B.d)}: ${B.n} out of ${B.d} is close to <b>${benchName(bench(B))}</b>.${fracSVG([B])}`, check:wc(cm(`${frText(B.n,B.d)} is closest to…`, ["0","1/2","1"], [0,0.5,1].indexOf(bench(B))),"benchmark")},
-      {t:`Add the benchmarks: about ${benchName(bench(A))} + ${benchName(bench(B))} = about <b>${tName(target)}</b>. (The exact sum is ${sum.toFixed(2)}, which agrees.)`, check:finalCheck(p)}];
-    p.hints=[{t:`You do not need the exact sum. Ask about each fraction: is it near 0, near 1/2, or near 1? Half of the denominator is the "1/2" mark.`},{t:`${frText(A.n,A.d)} is near ${benchName(bench(A))}; ${frText(B.n,B.d)} is near ${benchName(bench(B))}.`},{t:`Add those two benchmarks. Pick the choice closest to that.`}];
+    p.steps=[{t:`<b>Benchmarks.</b> Compare each fraction with 0, 1/2, and 1. ${frText(A.n,A.d)}: is ${A.n} close to 0, to half of ${A.d} (${A.d/2}), or to ${A.d}?${fracSVG([A])}`, check:Object.assign(wc(cm(`${frText(A.n,A.d)} is closest to…`, ["0","1/2","1"], [0,0.5,1].indexOf(bench(A))),"benchmark"),{visibleOk:true}), after:`${A.n} out of ${A.d} is close to ${benchName(bench(A))}.`},
+      {t:`${frText(B.n,B.d)}: is ${B.n} close to 0, to half of ${B.d} (${B.d/2}), or to ${B.d}?${fracSVG([B])}`, check:Object.assign(wc(cm(`${frText(B.n,B.d)} is closest to…`, ["0","1/2","1"], [0,0.5,1].indexOf(bench(B))),"benchmark"),{visibleOk:true}), after:`${B.n} out of ${B.d} is close to ${benchName(bench(B))}.`},
+      {t:`Add the two benchmarks you picked: about ${benchName(bench(A))} + ${benchName(bench(B))}. Pick the choice closest to that.`, check:Object.assign(finalCheck(p),{visibleOk:true}), after:`About ${tName(target)}. (The exact sum is ${sum.toFixed(2)}, which agrees.)`}];
+    p.hints=[{t:`You do not need the exact sum. Ask about each fraction: is it near 0, near 1/2, or near 1? Half of the denominator is the "1/2" mark.`},{t:`${frText(A.n,A.d)}: is ${A.n} closer to 0, to ${A.d/2}, or to ${A.d}? Do the same for ${frText(B.n,B.d)} with ${B.d/2} and ${B.d}.`},{t:`${frText(A.n,A.d)} is near ${benchName(bench(A))}; ${frText(B.n,B.d)} is near ${benchName(bench(B))}. Add those two benchmarks and pick the closest choice.`}];
     return p;
   }
   // compare: which is greater (unlike denominators), reasoning with benchmarks or a common denominator
@@ -2213,10 +2283,10 @@ function genFractions(level, focus){
   const L=A.d*B.d/gcd(A.d,B.d);
   const p={skill:"fractions", level, prompt:`Which fraction is <b>greater</b>?<br><span class="big-num">${frText(A.n,A.d)} &nbsp;or&nbsp; ${frText(B.n,B.d)}</span>`, type:"mc", options, optionTags:[gt?"correct":"bigger-denominator", gt?"bigger-denominator":"correct"], answer, display:options[answer], show:null, meta:{variant, A, B}};
   p.traps=["common-denominator","magnitude"];
-  p.steps=[{t:`Different denominators mean different piece sizes, so you cannot compare the numerators directly. Give both the <b>same denominator</b>: ${A.d} and ${B.d} both go into <b>${L}</b>.`, check:wc(ci(`What is a common denominator for ${A.d} and ${B.d}?`, L, String(L)),"common-denominator")},
-    {t:`${frText(A.n,A.d)} = ${frText(A.n*L/A.d, L)} and ${frText(B.n,B.d)} = ${frText(B.n*L/B.d, L)}. Same-size pieces now: compare ${A.n*L/A.d} and ${B.n*L/B.d}.`, check:wc(ci(`${frText(A.n,A.d)} = how many ${L}ths?`, A.n*L/A.d),"magnitude")},
-    {t:`<b>${options[answer]}</b> is greater.${fracSVG([A,B])} On the number line it sits farther right.`, check:finalCheck(p)}];
-  p.hints=[{t:`Bigger denominator means smaller pieces. You cannot compare the tops until the pieces are the same size (or use benchmarks: is each fraction more or less than 1/2?).`},{t:`A common denominator for ${A.d} and ${B.d} is ${L}. Rewrite both fractions in ${L}ths.`},{t:`Now compare the numerators: the bigger count of ${L}ths is the greater fraction.`}];
+  p.steps=[{t:`Different denominators mean different piece sizes, so you cannot compare the numerators directly. Give both the <b>same denominator</b>: count up by ${Math.max(A.d,B.d)}s until you hit a number ${Math.min(A.d,B.d)} also goes into.`, check:wc(ci(`What is a common denominator for ${A.d} and ${B.d}?`, L, String(L)),"common-denominator"), after:`${A.d} and ${B.d} both go into ${L}.`},
+    {t:`Rewrite ${frText(A.n,A.d)} in ${L}ths: ${A.d} × ${L/A.d} = ${L}, so multiply the top by ${L/A.d} too.`, check:wc(ci(`${frText(A.n,A.d)} = how many ${L}ths?`, A.n*L/A.d),"magnitude"), after:`${frText(A.n,A.d)} = ${frText(A.n*L/A.d, L)}. The same way, ${frText(B.n,B.d)} = ${frText(B.n*L/B.d, L)}.`},
+    {t:`Same-size pieces now: ${A.n*L/A.d} ${L}ths against ${B.n*L/B.d} ${L}ths. Which original fraction is greater?${fracSVG([A,B])}`, check:Object.assign(finalCheck(p),{visibleOk:true}), after:`${options[answer]} is greater: on the number line it sits farther right.`}];
+  p.hints=[{t:`Bigger denominator means smaller pieces. You cannot compare the tops until the pieces are the same size (or use benchmarks: is each fraction more or less than 1/2?).`},{t:`Find a common denominator: count up by ${Math.max(A.d,B.d)}s until ${Math.min(A.d,B.d)} also divides it. Rewrite both fractions with that denominator.`},{t:`Now compare the numerators: the bigger count of ${L}ths is the greater fraction.`}];
   return p;
 }
 function diagnoseFractions(prob, yours){
@@ -2498,6 +2568,7 @@ function recoveryTarget(o){
 function genForTarget(t){
   let p=null; for(let i=0;i<40;i++){ p=SKILLS[t.sk].gen(t.level, t.focus); if(eligible(t.key,p)) return p; }
   for(let i=0;i<12;i++){ p=SKILLS[t.sk].gen(S.weak[t.key].lvl, t.focus); if(eligible(t.key,p)) return p; }
+  for(let L=Math.min(MAX_LEVEL,t.level+1); L<=MAX_LEVEL; L++){ for(let i=0;i<12;i++){ p=SKILLS[t.sk].gen(L, t.focus); if(eligible(t.key,p)) return p; } } /* some components only exist at higher levels (a quick check at level 3 can open one at level 1): climb until the problem can carry it */
   p.notEligible=true; return p;
 }
 function weakSummary(){ const W=S.weak; const out={weak:[],review:[],ok:[]}; for(const k in W){ const e=W[k]; const {sk,comp,ctx}=parseWeakKey(k); if(!SKILLS[sk]) continue; out[e.state].push({key:k, sk, comp, ctx, name:weakLabel(k), ...e}); } return out; }
@@ -2556,10 +2627,10 @@ function chartsHTML(s){ // a step or hint may carry one chart or several
   return s.chart ? chartHTML(s.chart, s.hl, s.minCols) : "";
 }
 function dots(level){ return `<div class="dots" role="img" aria-label="level ${level} of ${MAX_LEVEL}">${Array.from({length:MAX_LEVEL},(_,i)=>i+1).map(i=>`<span class="dot ${i<=level?(level===MAX_LEVEL?"max":"on"):""}"></span>`).join("")}</div>`; }
-const optsHTML=(id, options, sel, answer, done, cls, mark)=>{ // MC radiogroup. done => show right/wrong and disable. mark => this option shows as right while still enabled
-  const longOpts=options.some(o=>String(o).length>34);
-  return `<div class="opts ${longOpts?"long":""}" id="${id}" role="radiogroup" aria-label="Answer choices">${options.map((o,i)=>{ let c=cls; if(done){ if(i===answer) c+=" right"; else if(i===sel) c+=" wrong"; } else { if(i===sel) c+=" sel"; if(mark!==undefined&&mark>=0&&i===mark) c+=" right"; }
-    return `<button type="button" class="${c}" role="radio" aria-checked="${i===sel}" data-i="${i}" ${done?"disabled":""}><b aria-hidden="true">${"abcd"[i]}.</b>&nbsp; ${esc(o)}</button>`; }).join("")}</div>`; };
+const optsHTML=(id, options, sel, answer, done, cls, mark, crossed)=>{ // MC radiogroup. done => show right/wrong and disable. mark => this option shows as right while still enabled. crossed => wrong picks already tried, shown crossed off and disabled
+  const longOpts=options.some(o=>String(o).length>34); const x=Array.isArray(crossed)?crossed:[];
+  return `<div class="opts ${longOpts?"long":""}" id="${id}" role="radiogroup" aria-label="Answer choices">${options.map((o,i)=>{ let c=cls; const off=!done && x.includes(i); if(done){ if(i===answer) c+=" right"; else if(i===sel) c+=" wrong"; } else { if(i===sel) c+=" sel"; if(mark!==undefined&&mark>=0&&i===mark) c+=" right"; if(off) c+=" crossed"; }
+    return `<button type="button" class="${c}" role="radio" aria-checked="${i===sel}" data-i="${i}" ${done||off?"disabled":""}><b aria-hidden="true">${"abcd"[i]}.</b>&nbsp; ${esc(o)}</button>`; }).join("")}</div>`; };
 
 // ===== Screens =====
 let mode=null;   // skill key or "mix"
@@ -2609,10 +2680,10 @@ const exampleBtn=()=> cur.hw&&cur.fixed ? "" : `<button class="btn quiet" id="sh
 const exampleSig=p=>{ const m=p.meta||{}; return JSON.stringify([p.skill, p.type, ctxKey(ctxOf(p)), m.kind||"", m.dir||"", m.variant||"", m.op||"", m.which===undefined?"":!!m.which, p.ws?1:0]); }; // everything that defines the concept; only the numbers may differ
 function buildExample(){ if(cur.example) return cur.example; let ex=null; const want=exampleSig(cur); const f={...focusFromCtx(cur.skill, ctxOf(cur))}; const m=cur.meta||{}; if(m.variant) f.variant=m.variant; if(m.kind) f.kind=m.kind; if(m.dir) f.dir=m.dir; if(m.op) f.op=m.op; if(m.which!==undefined) f.which=!!m.which;
   for(let i=0;i<40;i++){ const c=SKILLS[cur.skill].gen(cur.level, f); if(plain(c.prompt)!==plain(cur.prompt) && exampleSig(c)===want){ ex=c; break; } } if(!ex) return null;
-  const steps=expandAll(ex.steps||[]).map(st=>({t:st.t, ans: st.check ? (st.check.type==="mc" ? String((st.check.options||[])[st.check.answer]) : String(st.check.display)) : null}));
+  const steps=expandAll(ex.steps||[]).map(st=>({t:st.t, ans: st.check ? (st.check.type==="mc" ? String((st.check.options||[])[st.check.answer]) : String(st.check.display)) : null, after: st.after||null})); /* a worked example shows the answer and the explanation that a live walkthrough reveals only after she answers */
   cur.example={prompt:plain(ex.prompt), display:ex.display, steps}; return cur.example; }
 function exampleHTML(){ if(!exampleOpen) return ""; const ex=buildExample(); if(!ex) return `<p class="muted">No matching example is available for this exact kind of problem.</p>`;
-  return `<div class="hints" id="example" aria-live="polite"><div class="step"><span class="n">Example.</span><b>${esc(ex.prompt)}</b> Here is one like yours, all the way through. Then try yours.</div>${ex.steps.map((st,i)=>`<div class="step"><span class="n">${i+1}.</span>${st.t}${st.ans!==null?` <b class="good">→ ${esc(st.ans)}</b>`:""}</div>`).join("")}<div class="step"><span class="n">Answer.</span><b>${esc(ex.display)}</b>. Now yours: same steps, your numbers.</div></div>`; }
+  return `<div class="hints" id="example" aria-live="polite"><div class="step"><span class="n">Example.</span><b>${esc(ex.prompt)}</b> Here is one like yours, all the way through. Then try yours.</div>${ex.steps.map((st,i)=>`<div class="step"><span class="n">${i+1}.</span>${st.t}${st.ans!==null?` <b class="good">→ ${esc(st.ans)}</b>`:""}${st.after?`<div class="res after">${st.after}</div>`:""}</div>`).join("")}<div class="step"><span class="n">Answer.</span><b>${esc(ex.display)}</b>. Now yours: same steps, your numbers.</div></div>`; }
 function prevNeededHelp(sk){ const a=S.log.filter(e=>e.sk===sk); const p=a[a.length-2]; return !!p && (!p.ok || +p.hints>0); } // the attempt before the one just logged
 let scratchStrokes=[]; let penSeen=false; // scratch paper for the current problem; once a pencil is used, finger touches are ignored (palm rejection) // the "say why" question after a right answer: {sel, done, ok}; okEntry is the log entry it annotates
 function expandAll(steps){ const out=[]; for(const s of steps){ if(Array.isArray(s.sub)&&s.sub.length){ out.push(...expandAll(s.sub)); const c={...s, expanded:true}; if(c.tAfter) c.t=c.tAfter; out.push(c); } else out.push(s); } return out; }
@@ -3199,11 +3270,11 @@ function stepHTML(s,i,dim,withCheck){
     if(i<stepIdx){ // an earlier step: show how its check went
       const r=stepRes[i];
       if(r==="skipped") sub=`<div class="substep ok"><div class="res"><span aria-hidden="true">✓</span> Your grid already had this right, so we skip it.</div></div>`;
-      else sub=`<div class="substep ${r==="ok"?"ok":"bad"}">${c.q}<div class="res"><span aria-hidden="true">${r==="ok"?"✓":"•"}</span> ${r==="ok"?`You got <b>${esc(c.display)}</b>.`:`It's <b>${esc(c.display)}</b>.`}</div></div>`;
+      else sub=`<div class="substep ${r==="ok"?"ok":"bad"}">${c.q}<div class="res"><span aria-hidden="true">${r==="ok"?"✓":"•"}</span> ${r==="ok"?`You got <b>${esc(c.display)}</b>.`:`It's <b>${esc(c.display)}</b>.`}</div>${s.after?`<div class="res after">${s.after}</div>`:""}</div>`;
     } else if(sc){
-      const open=scActive();
+      const open=scActive(); const settled = sc.state==="ok" || sc.state==="revealed";
       sub=`<div class="substep ${sc.state==="ok"?"ok":sc.state==="revealed"?"bad":sc.state==="confirm"?"confirm":""}"><div class="cq">${c.q}</div>${checkCtlHTML(c)}
-        <div class="inline-msg" id="cmsg" role="status" aria-live="polite">${sc.msg}</div>
+        <div class="inline-msg" id="cmsg" role="status" aria-live="polite">${sc.msg}</div>${settled && s.after?`<div class="res after">${s.after}</div>`:""}
         ${open?`<div class="actions" style="margin-top:10px"><button class="btn primary" id="cstep">Check step</button></div>`:""}</div>`;
     }
   }
@@ -3211,7 +3282,7 @@ function stepHTML(s,i,dim,withCheck){
 }
 function checkCtlHTML(c){ // the entry control for a check, driven by sc. In confirm state it stays enabled with the right answer marked
   const open=scActive();
-  if(c.type==="mc") return optsHTML("copts", c.options||[], sc.sel, c.answer, !open, "opt copt", sc.state==="confirm"?c.answer:-1);
+  if(c.type==="mc") return optsHTML("copts", c.options||[], sc.sel, c.answer, !open, "opt copt", sc.state==="confirm"?c.answer:-1, sc.crossed);
   return `<label class="vh" for="cans">Your answer for this step</label><input class="ans small${isTextTarget(c)?" text":""}" id="cans" ${ansAttrs(c)} autocomplete="off" placeholder="${isTextTarget(c)?"Type your answer (like 2 × 2 × 3)":"Your answer"}" ${open?"":"disabled"} value="${esc(open?sc.val:c.display)}">`;
 }
 function focusFirst(){
@@ -3409,6 +3480,46 @@ function checkWhy(){ // the justification question: logged on the entry it belon
   save(); render(); const n=app.querySelector("#next"); if(n) n.focus({preventScroll:true});
 }
 // A walkthrough check's component outcome: tallied on the problem (cur.comps → the log entry) and, for a miss, into the weakness profile.
+// v9.10.1 cue ladder for a wrong step response. First miss: orient (point at the relationship, never the answer). Second miss: narrow
+// (a comparison, a partial relation, or "too big / too small"). Third miss: the answer and its explanation together. A step may supply its
+// own cues (step.cues[0..1]); otherwise the cue comes from the component the check tests, then from the shape of the question.
+const CUE_BY_COMP={
+  fact:[`Use a fact you know and count on from it: one more group, or one fewer.`, null],
+  regroup:[`Only one digit fits in a place. The rest of the number moves to the next column to the left.`, null],
+  "tens-zero":[`This row multiplies by tens. Every multiple of 10 ends in the same digit.`, `Think: 3 tens is 30, 8 tens is 80. What digit is always in the ones place?`],
+  rows:[`Which digit of the bottom number is this row using? Multiply the whole top number by just that digit.`, null],
+  "add-partials":[`Line up the ones under the ones, then add one column at a time from the right.`, null],
+  jump:[`Start at the number you are on and move by exactly that jump. Say the landing point out loud.`, null],
+  chart:[`Every number needs the same number of decimal digits. Add zeros on the end, not the front.`, null],
+  unit:[`Read the decimal as a count: how many of that small unit make it? Tenths: 1 = 10 tenths. Hundredths: 1 = 100 hundredths.`, null],
+  point:[`Compare with your estimate first: should the answer be bigger or smaller than that?`, null],
+  partition:[`Count the parts of each number, then multiply: every part of one number meets every part of the other.`, null],
+  sections:[`Line up the decimal points, then add the sections one place at a time.`, null],
+  groups:[`Ask: is each group bigger or smaller than 1? Smaller groups mean more of them fit.`, null],
+  "common-factor":[`Try the small primes in order: does 2 divide both? Does 3? Does 5?`, null],
+  "not-simplest":[`Check the new top and bottom: is there still a number besides 1 that divides both?`, null],
+  wholes:[`How many pieces make one whole? Count groups of that size.`, null],
+  remainder:[`Take away the pieces the wholes used. What is left keeps the same denominator.`, null],
+  benchmark:[`Compare the top with half the bottom: less than half is near 0, about half is near 1/2, almost all is near 1.`, null],
+  "common-denominator":[`Count up by the bigger denominator until you hit a number the smaller one divides too.`, null],
+  magnitude:[`Whatever you multiplied the bottom by, multiply the top by the same number.`, null],
+  structure:[`Do not go by one word. Ask: what is known, what is unknown, and how are they related: groups, parts of a whole, a comparison, or a change?`, null]
+};
+function cueFor(step, c, tries, yoursText){
+  const own = Array.isArray(step.cues) ? step.cues[tries-1] : null; if(own) return own;
+  let comp=c.comp; if(typeof comp==="function") comp=null;
+  const byComp = comp && CUE_BY_COMP[comp] ? CUE_BY_COMP[comp][tries-1] : null; if(byComp) return byComp;
+  const q=plain(c.q||"");
+  if(tries===1){ // orient by the shape of the question
+    const m=q.match(/^([\d.,]+)\s*([×+−÷])\s*([\d.,]+)\s*=\s*\?/);
+    if(m){ const [,a,op,b]=m; if(op==="×") return `Think of ${a} × ${b} as ${b} groups of ${a}. Count by ${a}s, or start from a ${a} fact you know.`; if(op==="+") return `Add the biggest place first, then the smaller places.`; if(op==="−") return `Take away in parts: first down to a friendly number, then the rest.`; if(op==="÷") return `How many ${b}s fit in ${a}? Count up by ${b}s.`; }
+    if(/how many/i.test(q)) return `Count it out, one at a time, and keep track as you go.`;
+    return c.type==="mc" ? `Read each choice against the card above: which one matches what it says?` : `Reread the card above; the step it describes is the one to do here.`;
+  }
+  // second miss: narrow. Numeric checks can say which direction she is off; multiple choice can cross off the wrong pick.
+  if(c.type!=="mc"){ const v=parseAnswer(String(yoursText||"")), ans=+c.answer; if(Number.isFinite(v) && Number.isFinite(ans) && v!==ans){ const ratio=ans!==0?v/ans:0; if(ratio>=9.5&&ratio<=10.5) return `Your answer is 10 times too big: the digits may be right but the place is not.`; if(ratio>0&&ratio>=0.095&&ratio<=0.105) return `Your answer is 10 times too small: the digits may be right but the place is not.`; return `Your answer is too ${v>ans?"big":"small"}. Adjust and try again.`; } return `Check it a different way: estimate first, then compute.`; }
+  return `Not that one: cross it off and pick from the rest.`;
+}
 function noteStepComp(c, sc, ok){
   let comp=c.comp; if(typeof comp==="function"){ try{ comp=comp(c.type==="mc"?String((c.options||[])[sc.sel]):String(sc.val)); }catch(e){ comp=null; } }
   if(!comp) return;
@@ -3446,8 +3557,8 @@ function checkStep(){
       initStepCheck(); if(sc) sc.msg="Not quite. Let's build it one piece at a time."; save(); render();
       const el=app.querySelectorAll("#wt .step"); if(el.length) el[el.length-1].scrollIntoView({behavior:"smooth",block:"nearest"});
       return; }
-    if(sc.tries<2){ sc.msg="Not quite. Try once more."; sc.val=""; sc.sel=-1; }
-    else { sc.state="confirm"; sc.msg=`${shown} ${lockIn}`; sc.val=""; sc.sel=-1; } }
+    if(sc.tries<3){ const yoursText = c.type==="mc" ? String((c.options||[])[sc.sel]) : sc.val; sc.msg=`Not quite. ${cueFor(st, c, sc.tries, yoursText)}`; if(c.type==="mc"){ sc.crossed=sc.crossed||[]; if(!sc.crossed.includes(sc.sel)) sc.crossed.push(sc.sel); } sc.val=""; sc.sel=-1; } /* first miss orients, second narrows; the answer waits until the third */
+    else { sc.state="confirm"; sc.msg=`${shown} ${st.after?`${st.after} `:""}${lockIn}`; sc.val=""; sc.sel=-1; } } /* reveal: the answer and its explanation arrive together; the lock-in is only so the step is closed on purpose */
   if(missEntry){ missEntry.revealed=revealed; missEntry.passed=passed; }
   if(last && (sc.state==="ok" || sc.state==="revealed")){ // finished the whole problem inside the walkthrough
     // "ok": she got the final answer herself → a guided completion. "revealed": the final answer was shown after repeated misses and she copied it in → finished with the answer shown (counted like the reveal path, never as guided).
