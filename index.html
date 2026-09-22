@@ -385,14 +385,14 @@ function genStandard(level, focus){
   const wf=toWordForm(num);
   const k=d.length, di=parseInt(d,10), dgs=String(di).length, place=DEC_PLACES[k-1];
   const steps=[];
-  if(w>0) steps.push({t:`Find the word <b>and</b>. It marks the decimal point. Everything before it is the whole number part.`, check:ci(`What is the whole number?`, w, w.toLocaleString("en-US"))});
-  else steps.push({t:`There is no word <b>and</b> in this problem. That means there is <b>no whole number</b>. A 0 holds the ones place.`, check:cm(`What goes to the left of the decimal point?`, ["0","Nothing, start with the decimal point","The first word"], 0)});
-  steps.push({t:`The last word is <b>${place}</b>. So the last digit must be in the ${place} place.`, check:ci(`How many places after the decimal point is the ${place} place?`, k)});
+  if(w>0) steps.push({t:`Find the word <b>and</b>. It marks the decimal point. Everything before it is the whole number part.`, cues:[`The words before "and" are the whole number. Read just those.`, `Write that whole number from its words: hundreds, then tens, then ones.`], check:ci(`What is the whole number?`, w, w.toLocaleString("en-US"))});
+  else steps.push({t:`There is no word <b>and</b> in this problem. That means there is <b>no whole number</b>. A 0 holds the ones place.`, cues:[`Is there an "and" anywhere? If not, there is no whole number part.`, `With no whole number, one digit still has to hold the ones place before the decimal point. Which digit means "none"?`], check:cm(`What goes to the left of the decimal point?`, ["0","Nothing, start with the decimal point","The first word"], 0)});
+  steps.push({t:`The last word is <b>${place}</b>. So the last digit must be in the ${place} place.`, cues:[`Count the places outward from the decimal point: tenths first, then hundredths, then thousandths.`, `Say the places from the decimal point outward: tenths, hundredths, thousandths. Stop at ${place} and count how many you said.`], check:ci(`How many places after the decimal point is the ${place} place?`, k)});
   steps.push({t:`The decimal part says <b>${words(di)}</b>. As a plain number that is <b>${di}</b>, which has <b>${dgs}</b> digit${dgs>1?"s":""}.`});
-  if(dgs<k) steps.push({t:`${dgs} is fewer than ${k}. Zeros go between the decimal point and the ${di}, so the last digit lands in the ${place} place.`, check:ci(`How many zeros go right after the decimal point?`, k-dgs)});
-  else steps.push({t:`That is exactly ${k} digit${k>1?"s":""}, so <b>no zeros are needed</b>. The digits fill the places exactly.`, check:ci(`How many zeros go right after the decimal point?`, 0)});
+  if(dgs<k) steps.push({t:`${dgs} is fewer than ${k}. Zeros go between the decimal point and the ${di}, so the last digit lands in the ${place} place.`, cues:[`The digits ${di} must end in the ${place} place. How many places sit empty before them?`, `${k} places to fill and only ${dgs} digit${dgs===1?"":"s"}: the difference is the number of zeros.`], check:ci(`How many zeros go right after the decimal point?`, k-dgs)});
+  else steps.push({t:`That is exactly ${k} digit${k>1?"s":""}, so <b>no zeros are needed</b>. The digits fill the places exactly.`, cues:[`Compare: how many places are there, and how many digits do you have?`, `The digits fill every place exactly, so nothing is left to fill with a zero.`], check:ci(`How many zeros go right after the decimal point?`, 0)});
   const p={skill:"standard", level, prompt:`Write the standard form for<br><span class="big-words">${wf}</span>`, type:"input", answer:numValue(num), display:fmt(num), show:"blank", meta:{num,k,dgs}};
-  steps.push({t:`Put it together: whole number part, decimal point, ${k-dgs?plural(k-dgs,"zero")+", ":""}then ${di}.`, chart:num, check:finalCheck(p)});
+  steps.push({t:`Put it together: whole number part, decimal point, ${k-dgs?plural(k-dgs,"zero")+", ":""}then ${di}.`, chart:num, cues:[`Whole number, then the decimal point, then the decimal digits in their places.`, `Whole part ${w.toLocaleString("en-US")}, a point, ${k-dgs?plural(k-dgs,"zero")+" first, ":""}then the digits ${di}.`], check:finalCheck(p)});
   p.steps=steps;
   p.hints=[
     {t:`"And" marks the decimal point. The last word tells you which place the last digit is in.`},
@@ -429,9 +429,9 @@ function genWords(level, focus){
   p.steps=[
     {t:`Split at the decimal point. Whole number part: <b>${w.toLocaleString("en-US")}</b>. Decimal part: <b>${d}</b>.`, chart:num},
     {t:`Whole number part in words: <b>${words(w)}</b>. The decimal point is read as <b>and</b>.`},
-    {t:`Count the digits after the decimal point. Every digit counts, including a zero right after the decimal point.`, chart:num, hl, check:ci(`How many digits are after the decimal point?`, k)},
-    {t:`The number of digits after the decimal point tells you the place of the <b>last</b> digit: 1 digit is tenths, 2 is hundredths, 3 is thousandths.`, check:Object.assign(cm(`So the name at the end is…`, DEC_PLACES.slice(), k-1),{visibleOk:true}), after:`${k} digit${k>1?"s":""} after the decimal point: the last digit is in the ${DEC_PLACES[k-1]} place.`},
-    {t:`Read the decimal digits like a normal number: ${d} is <b>${words(di)}</b>.${d[0]==="0"?" The zero right after the decimal point is not read aloud, but it still counts as a digit, so the place name is "+DEC_PLACES[k-1]+".":""}`, check:finalCheck(p)}
+    {t:`Count the digits after the decimal point. Every digit counts, including a zero right after the decimal point.`, chart:num, hl, cues:[`Count every digit to the right of the decimal point, zeros included.`, `Point at each digit after the point and count: 1, 2, …`], check:ci(`How many digits are after the decimal point?`, k)},
+    {t:`The number of digits after the decimal point tells you the place of the <b>last</b> digit: 1 digit is tenths, 2 is hundredths, 3 is thousandths.`, cues:[`1 digit after the point ends in tenths, 2 in hundredths, 3 in thousandths.`, `You counted the digits in the last step. Match that count to the place name.`], check:Object.assign(cm(`So the name at the end is…`, DEC_PLACES.slice(), k-1),{visibleOk:true}), after:`${k} digit${k>1?"s":""} after the decimal point: the last digit is in the ${DEC_PLACES[k-1]} place.`},
+    {t:`Read the decimal digits like a normal number: ${d} is <b>${words(di)}</b>.${d[0]==="0"?" The zero right after the decimal point is not read aloud, but it still counts as a digit, so the place name is "+DEC_PLACES[k-1]+".":""}`, cues:[`Whole number, "and", the decimal digits read as one number, then the place name.`, `Say the decimal digits as one whole number, then add the place name you just found.`], check:finalCheck(p)}
   ];
   p.hints=[
     {t:`Count the digits after the decimal point. That count tells you the place name.`},
@@ -477,15 +477,15 @@ function genExpanded(level, focus){
   const z=all.find(c=>c.digit==="0");
   const p={skill:"expanded", level, prompt:`Which is the expanded form of<br><span class="big-num">${fmt(num)}</span>`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:correct, show:num, meta:{num}};
   const valOf=c=> c.key[0]==="w" ? WHOLE_VALUE[+c.key[1]] : DEC_FRACTION[+c.key[1]-1];
-  const steps=[{t:`Find every digit that is <b>not</b> zero. Expanded form writes the value of each one as an addend, so count them.`, chart:num, check:ci(`How many addends will the expanded form have?`, nz.length), after:`The nonzero digits: ${nz.map(c=>"<b>"+c.digit+"</b>").join(", ")}.`}];
+  const steps=[{t:`Find every digit that is <b>not</b> zero. Expanded form writes the value of each one as an addend, so count them.`, chart:num, cues:[`Skip every 0. Count the digits that are left.`, `Each nonzero digit becomes one addend: touch each one on the chart and count.`], check:ci(`How many addends will the expanded form have?`, nz.length), after:`The nonzero digits: ${nz.map(c=>"<b>"+c.digit+"</b>").join(", ")}.`}];
   const allVals=[...WHOLE_VALUE.slice(0,4), ...DEC_FRACTION];
   nz.forEach((c,i)=>{ const val=valOf(c);
     const idx=allVals.indexOf(val); const cand=[val]; for(let dlt=1; cand.length<4 && dlt<7; dlt++){ if(allVals[idx-dlt]) cand.push(allVals[idx-dlt]); if(cand.length<4 && allVals[idx+dlt]) cand.push(allVals[idx+dlt]); }
     const opts=shuffle(cand);
-    steps.push({t:`The <b>${c.digit}</b> is in the <b>${c.place}</b> place.`, chart:num, hl:{[c.key]:"ul"}, check: i<2 ? cm(`The value of the ${c.digit} is ${c.digit} × …?`, opts, opts.indexOf(val)) : undefined}); });
-  if(z) steps.push({t:`The 0 in the ${z.place} place is worth 0 × ${valOf(z)} = 0. Writing that addend is not wrong, but expanded form <b>leaves it out</b> because it adds nothing. The zero still <b>holds its place</b>: the next digit does not move over.`, check:cm(`Which addend can be left out without changing the value?`, shuffle([`0 × ${valOf(z)}, because it equals 0`, `${nz[0].digit} × ${valOf(nz[0])}`, `the ${nz[nz.length-1].place} addend, because it is last`]), null)});
+    steps.push({t:`The <b>${c.digit}</b> is in the <b>${c.place}</b> place.`, chart:num, hl:{[c.key]:"ul"}, cues:[`Which place is the ${c.digit} in? Its value is the digit times that place.`, `Read the chart heading above the ${c.digit}: that place's value is the number to multiply by.`], check: i<2 ? cm(`The value of the ${c.digit} is ${c.digit} × …?`, opts, opts.indexOf(val)) : undefined}); });
+  if(z) steps.push({t:`The 0 in the ${z.place} place is worth 0 × ${valOf(z)} = 0. Writing that addend is not wrong, but expanded form <b>leaves it out</b> because it adds nothing. The zero still <b>holds its place</b>: the next digit does not move over.`, cues:[`Which addend is worth nothing at all?`, `0 times anything is 0: adding it changes nothing.`], check:cm(`Which addend can be left out without changing the value?`, shuffle([`0 × ${valOf(z)}, because it equals 0`, `${nz[0].digit} × ${valOf(nz[0])}`, `the ${nz[nz.length-1].place} addend, because it is last`]), null)});
   if(z){ const st=steps[steps.length-1]; st.check.answer=st.check.options.findIndex(o=>o.startsWith("0 ×")); st.check.display=st.check.options[st.check.answer]; }
-  steps.push({t:`Join the addends with plus signs. Count them: there should be ${nz.length}.`, check:finalCheck(p)});
+  steps.push({t:`Join the addends with plus signs. Count them: there should be ${nz.length}.`, cues:[`Each nonzero digit's value, joined with +.`, `${nz.length} addends, biggest place first, with + between them.`], check:finalCheck(p)});
   p.steps=steps;
   const fc=nz[0];
   p.hints=[
@@ -536,11 +536,11 @@ function genShift(level, focus){
                   `10${sup} has ${plural(zeros,"zero")}, so the decimal point moves ${plural(n+1,"place")} to the ${dir} when ${opw}`];
   const patOpts=shuffle([pattern, ...wrongPat]);
   p.steps=[
-    {t:`Write the power of ten in standard form: <b>${factor.toLocaleString("en-US")}</b> = 10${sup}. Count its zeros.`, check:ci(`How many zeros does ${factor.toLocaleString("en-US")} have?`, zeros)},
-    {t:`Identify the operation. <b>Multiplying</b> by a power of ten makes the number greater, so the decimal point moves <b>right</b>. <b>Dividing</b> makes it less, so the decimal point moves <b>left</b>.`, check:cm(`This is ${op==="×"?"multiplication":"division"}. Which way does the decimal point move?`, ["Right","Left"], op==="×"?0:1)},
+    {t:`Write the power of ten in standard form: <b>${factor.toLocaleString("en-US")}</b> = 10${sup}. Count its zeros.`, cues:[`Count the zeros in the power of ten.`, `Write ${factor.toLocaleString("en-US")} out and count each 0 after the 1.`], check:ci(`How many zeros does ${factor.toLocaleString("en-US")} have?`, zeros)},
+    {t:`Identify the operation. <b>Multiplying</b> by a power of ten makes the number greater, so the decimal point moves <b>right</b>. <b>Dividing</b> makes it less, so the decimal point moves <b>left</b>.`, cues:[`Multiplying makes a number bigger, so the point moves right; dividing makes it smaller, so the point moves left.`, `Will the answer be bigger or smaller than the start? Bigger: right. Smaller: left.`], check:cm(`This is ${op==="×"?"multiplication":"division"}. Which way does the decimal point move?`, ["Right","Left"], op==="×"?0:1)},
     {t:`Here is <b>${fmt(num)}</b>. ${num.d?"":"The decimal point of a whole number sits at the end: "+num.w.toLocaleString("en-US")+"."} Move the decimal point <b>${plural(n,"place")} ${dir}</b>, one place for each zero. Fill any empty places with 0.`, chart:num, hl:"all"},
-    {t:`Explain the pattern.`, check:cm(`Finish the sentence.`, patOpts, patOpts.indexOf(pattern))},
-    {t:`After the move, read the number.`, chart:result, hl:"all", check:finalCheck(p)}
+    {t:`Explain the pattern.`, cues:[`Each zero in the power of ten moves the decimal point one place.`, `How many zeros, and which direction: put those two facts in the sentence.`], check:cm(`Finish the sentence.`, patOpts, patOpts.indexOf(pattern))},
+    {t:`After the move, read the number.`, chart:result, hl:"all", cues:[`Move the decimal point one place per zero, in the direction you found, then read the digits.`, `Every digit slides the same number of places as zeros in the power of ten. Empty places get a 0.`], check:finalCheck(p)}
   ];
   p.hints=[
     {t:`Count the zeros in the power of ten. That is how many places the decimal point moves.`},
@@ -577,21 +577,21 @@ function genPowers(level, focus){
   if(variant==="repeated"){ p.answer=e; p.display=String(e); } else { p.answer=numValue(ans); p.display=fmt(ans); }
   const steps=[];
   if(variant==="repeated"){
-    steps.push({t:`Each <b>× 10</b> is one factor of ten. Count them.`, check:ci(`How many times is 10 a factor?`, e)});
-    steps.push({t:`Write it with an exponent. Keep the <b>×</b> between ${fmt(num)} and the power of ten (it is a product, not a sum).`, check:Object.assign(ci(`Type ${fmt(num)} × 10 with the exponent, like ${fmt(num)} x 10^${e===2?3:2}.`, e, `${fmt(num)} × 10^${e}`), {text:true, validate:str=>{ const m=String(str).replace(/\s+/g,"").replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g,ch=>"^"+"⁰¹²³⁴⁵⁶⁷⁸⁹".indexOf(ch)).match(/^([\d,]+(?:\.\d+)?)[x×*·]10\^(\d+)$/i); return !!m && parseAnswer(m[1])===numValue(num) && +m[2]===e; }})});
-    steps.push({t:`The exponent is that count: ${fmt(num)} × 10${sup}. What is 10${sup} worth? (The exponent says how many zeros.)`, check:ci(`What is 10${sup} in standard form?`, pow, pow.toLocaleString("en-US")), after:`10${sup} = ${pow.toLocaleString("en-US")}: ${plural(e,"zero")}.`});
-    steps.push({t:`Multiply: ${fmt(num)} × ${pow.toLocaleString("en-US")}. The decimal point moves ${plural(e,"place")} right.`, check:ci(`What is the final product?`, numValue(ans), fmt(ans)), after:`${fmt(num)} × ${pow.toLocaleString("en-US")} = ${fmt(ans)}.`});
-    steps.push({t:`The question asked for the exponent: how many times 10 was a factor.`, check:finalCheck(p), after:`The exponent is ${e}.`});
+    steps.push({t:`Each <b>× 10</b> is one factor of ten. Count them.`, cues:[`Count each × 10, one at a time.`, `Point at every 10 in the expression and count them.`], check:ci(`How many times is 10 a factor?`, e)});
+    steps.push({t:`Write it with an exponent. Keep the <b>×</b> between ${fmt(num)} and the power of ten (it is a product, not a sum).`, cues:[`The exponent is the count you just found. Write the number × 10 to that power.`, `Type it like 8 x 10^3: the number, x, 10, ^, then the exponent.`], check:Object.assign(ci(`Type ${fmt(num)} × 10 with the exponent, like ${fmt(num)} x 10^${e===2?3:2}.`, e, `${fmt(num)} × 10^${e}`), {text:true, validate:str=>{ const m=String(str).replace(/\s+/g,"").replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g,ch=>"^"+"⁰¹²³⁴⁵⁶⁷⁸⁹".indexOf(ch)).match(/^([\d,]+(?:\.\d+)?)[x×*·]10\^(\d+)$/i); return !!m && parseAnswer(m[1])===numValue(num) && +m[2]===e; }})});
+    steps.push({t:`The exponent is that count: ${fmt(num)} × 10${sup}. What is 10${sup} worth? (The exponent says how many zeros.)`, cues:[`The exponent tells how many zeros come after the 1.`, `Write a 1, then ${plural(e,"zero")}.`], check:ci(`What is 10${sup} in standard form?`, pow, pow.toLocaleString("en-US")), after:`10${sup} = ${pow.toLocaleString("en-US")}: ${plural(e,"zero")}.`});
+    steps.push({t:`Multiply: ${fmt(num)} × ${pow.toLocaleString("en-US")}. The decimal point moves ${plural(e,"place")} right.`, cues:[`Multiplying by a power of ten moves the decimal point right, one place per zero.`, `Write ${fmt(num)}, then move its decimal point ${plural(e,"place")} right; fill empty places with zeros.`], check:ci(`What is the final product?`, numValue(ans), fmt(ans)), after:`${fmt(num)} × ${pow.toLocaleString("en-US")} = ${fmt(ans)}.`});
+    steps.push({t:`The question asked for the exponent: how many times 10 was a factor.`, cues:[`The exponent is the small raised number: a count of tens.`, `How many times was 10 a factor? That count is the exponent.`], check:finalCheck(p), after:`The exponent is ${e}.`});
   } else {
-    if(variant==="threefactor"){ steps.push({t:`First multiply the factors without the power of 10: ${fmt(num)} × ${other}.`, check:ci(`${fmt(num)} × ${other} = ?`, prod.w, fmt(prod))});
-      steps.push({t:`Rewrite the problem with that product. The power of 10 <b>keeps its exponent</b>: ${fmt(num)} × 10${sup} × ${other} becomes ${fmt(prod)} × 10<sup>?</sup>.`, check:ci(`What exponent stays on the 10? (${fmt(prod)} × 10 to the …)`, e)}); }
-    steps.push({t:`Write the exponent number in standard form.`, check:ci(`10${sup} = ?`, pow, pow.toLocaleString("en-US"))});
+    if(variant==="threefactor"){ steps.push({t:`First multiply the factors without the power of 10: ${fmt(num)} × ${other}.`, cues:[`${fmt(num)} × ${other} is a basic fact.`, `Count by ${other}s, ${fmt(num)} times, or by ${fmt(num)}s, ${other} times.`], check:ci(`${fmt(num)} × ${other} = ?`, prod.w, fmt(prod))});
+      steps.push({t:`Rewrite the problem with that product. The power of 10 <b>keeps its exponent</b>: ${fmt(num)} × 10${sup} × ${other} becomes ${fmt(prod)} × 10<sup>?</sup>.`, cues:[`The power of ten did not change, so neither did its exponent.`, `Copy the exponent from the 10 in the original problem.`], check:ci(`What exponent stays on the 10? (${fmt(prod)} × 10 to the …)`, e)}); }
+    steps.push({t:`Write the exponent number in standard form.`, cues:[`The exponent tells how many zeros come after the 1.`, `Write a 1, then ${plural(e,"zero")}.`], check:ci(`10${sup} = ?`, pow, pow.toLocaleString("en-US"))});
     const mv=shuffle([`${e} to the right`, `${e} to the left`, `${e+1} to the right`]);
-    steps.push({t:`Multiplication makes the number greater, so the decimal point moves <b>right</b>. 10${sup} has <b>${plural(e,"zero")}</b>, so it moves ${plural(e,"place")}.`, check:cm(`How many places does the decimal point move, and which way?`, mv, mv.indexOf(`${e} to the right`))});
+    steps.push({t:`Multiplication makes the number greater, so the decimal point moves <b>right</b>. 10${sup} has <b>${plural(e,"zero")}</b>, so it moves ${plural(e,"place")}.`, cues:[`One place per zero; multiplication moves it right.`, `Count the zeros of 10${sup}: that many places, to the right.`], check:cm(`How many places does the decimal point move, and which way?`, mv, mv.indexOf(`${e} to the right`))});
     steps.push({t:`Start with <b>${fmt(prod)}</b>. ${prod.d?"":"For a whole number the decimal point sits at the end."}`, chart:prod, hl:"all"});
-    if(baseZeros && variant==="plain") steps.push({t:`Careful: ${num.w} already ends in ${plural(baseZeros,"zero")}. Moving the decimal point ${e} places adds ${plural(e,"zero")} more, for ${baseZeros+e} in all.`, check:ci(`How many zeros will the answer end with?`, baseZeros+e)});
+    if(baseZeros && variant==="plain") steps.push({t:`Careful: ${num.w} already ends in ${plural(baseZeros,"zero")}. Moving the decimal point ${e} places adds ${plural(e,"zero")} more, for ${baseZeros+e} in all.`, cues:[`Count the zeros already there, then add the zeros the power of ten brings.`, `Zeros already on the end + zeros in the power of ten = zeros in all.`], check:ci(`How many zeros will the answer end with?`, baseZeros+e)});
     if(dl) steps.push({t:`${fmt(prod)} has ${plural(dl,"decimal digit")}. After moving ${plural(e,"place")} right, ${e>=dl ? "the decimal point is past all of them"+(e>dl?", and "+plural(e-dl,"empty place")+" before it get a 0":"") : plural(dl-e,"digit")+" still sit after the decimal point"}.`});
-    steps.push({t:`After the move, read the number.`, chart:ans, hl:"all", check:finalCheck(p)});
+    steps.push({t:`After the move, read the number.`, chart:ans, hl:"all", cues:[`Move the decimal point right one place per zero, fill empty places with 0, and read it.`, `Start with the number, slide the point right ${plural(e,"place")}, and put a 0 in every empty place.`], check:finalCheck(p)});
   }
   p.steps=steps;
   p.hints= variant==="repeated" ? [
@@ -621,9 +621,9 @@ function roundingSteps(num, p, prob){
   const pn=placeName(p), key=placeKey(p), dkey=placeKey(p-1);
   const minCols=p>=0?p+1:1;
   const steps=[
-    {t:`Underline the digit in the <b>${pn}</b> place (the rounding place).`, chart:num, hl:{[key]:"ul"}, minCols, check:ci(`Which digit is in the ${pn} seat?`, ul)},
-    {t:`Circle the digit to the right of the underlined digit. Only the <b>circled digit</b> decides; the digits past it do not matter.`, chart:num, hl:{[key]:"ul",[dkey]:"circle"}, minCols, check:ci(`What is the deciding digit?`, dec)},
-    {t:`If the circled digit is <b>5 or greater</b>, add one to the underlined digit. If it is <b>4 or less</b>, keep the underlined digit the same.`, check:cm(`The circled digit is ${dec}. What happens to the underlined ${ul}?`, [`Goes up to ${ul===9?"0, and 1 regroups to the place on the left":ul+1}`, `Stays ${ul}`], up?0:1)}
+    {t:`Underline the digit in the <b>${pn}</b> place (the rounding place).`, chart:num, hl:{[key]:"ul"}, minCols, cues:[`Find the ${pn} column in the chart. Read the digit sitting in it.`, `Say the place names left to right until you reach ${pn}; the digit under that heading is the one.`], check:ci(`Which digit is in the ${pn} seat?`, ul)},
+    {t:`Circle the digit to the right of the underlined digit. Only the <b>circled digit</b> decides; the digits past it do not matter.`, chart:num, hl:{[key]:"ul",[dkey]:"circle"}, minCols, cues:[`The deciding digit is the one just to the right of the underlined digit.`, `Look one column to the right of the underline. That digit decides.`], check:ci(`What is the deciding digit?`, dec)},
+    {t:`If the circled digit is <b>5 or greater</b>, add one to the underlined digit. If it is <b>4 or less</b>, keep the underlined digit the same.`, cues:[`5 or greater rounds up; 4 or less keeps the digit the same.`, `${dec} is ${dec>=5?"5 or greater":"4 or less"}. Which rule is that?`], check:cm(`The circled digit is ${dec}. What happens to the underlined ${ul}?`, [`Goes up to ${ul===9?"0, and 1 regroups to the place on the left":ul+1}`, `Stays ${ul}`], up?0:1)}
   ];
   // How far the regroup travels: the run of 9s starting at the rounding place. The digit just past the run goes up by one (or a new 1 appears).
   let run=0; if(up){ while(digitAt(V,p+run)===9 && run<12) run++; }
@@ -638,7 +638,7 @@ function roundingSteps(num, p, prob){
   let last=`Read the answer off the chart.`; let lastAfter="";
   if(p<0 && /0$/.test(ans.d)) lastAfter+=` Zeros at the end of a decimal can be dropped, so <b>${fmt(ans)}</b> can also be written <b>${fmt(fromThousandths(R))}</b>. Both are correct.`;
   if(R!==C) lastAfter+=` Dropping the extra digits without rounding would have given ${fmt(p<0?fixedFrom(C,-p):fromThousandths(C))}. That is not rounding; rounding can go up.`;
-  steps.push({t:last, chart:ans, hl:{[key]:"ul"}, minCols, check: prob ? finalCheck(prob) : undefined, after: lastAfter.trim()||undefined});
+  steps.push({t:last, chart:ans, hl:{[key]:"ul"}, minCols, cues:[`Digits to the left stay, the underlined digit follows the rule, and everything to the right becomes 0 (or stops).`, `Read the chart digit by digit: left digits the same, the underlined digit as you decided, then zeros.`], check: prob ? finalCheck(prob) : undefined, after: lastAfter.trim()||undefined});
   return {steps, R, C, ans, minCols, ul, dec};
 }
 
@@ -697,8 +697,8 @@ function genRoundWhich(level, focus){
   const p0={skill:"rounding", level, prompt:`Which number, rounded to the nearest <b>${placeSing(p)}</b>, becomes<br><span class="big-num">${fmt(Tn)}</span>`, type:"mc", options:nums.map(fmt), optionTags:sh.map(c=>c.tag), answer:correctIdx, display:fmt(nums[correctIdx]), show:Tn, minCols:p>=0?p+1:1, meta:{p,T,which:true}};
   const steps=[{t:`Do not eyeball this. Round <b>every</b> choice to the nearest ${placeSing(p)} and write what it becomes.`}];
   nums.forEach((n,i)=>{ const r=roundedNum(sh[i].v,p); const dec=digitAt(sh[i].v,p-1);
-    steps.push({t:`<b>${letters[i]}.</b> ${fmt(n)}: the circled digit is ${dec}, so it ${dec>=5?"rounds up":"stays"}.`, check: i===0 ? ci(`What does ${fmt(n)} become?`, numValue(r), fmt(r)) : undefined, reveal:`${fmt(n)} → ${fmt(r)}`}); });
-  steps.push({t:`Only one lands on ${fmt(Tn)}.`, check:finalCheck(p0)});
+    steps.push({t:`<b>${letters[i]}.</b> ${fmt(n)}: the circled digit is ${dec}, so it ${dec>=5?"rounds up":"stays"}.`, cues:[`Circle the digit right of the rounding place; 5 or more rounds up.`, `Underlined digit ${dec>=5?"goes up one":"stays"}, then zeros after it.`], check: i===0 ? ci(`What does ${fmt(n)} become?`, numValue(r), fmt(r)) : undefined, reveal:`${fmt(n)} → ${fmt(r)}`}); });
+  steps.push({t:`Only one lands on ${fmt(Tn)}.`, cues:[`Round each choice the same way and see which lands on the target.`, `Check the choices one at a time: which one rounds to ${fmt(Tn)}?`], check:finalCheck(p0)});
   p0.steps=steps;
   const lo=fmt(fromThousandths(T-half)), hi=fmt(fromThousandths(T+half));
   p0.hints=[
@@ -736,17 +736,17 @@ function genComparePair(level, focus){
   const answer={"<":0,">":1,"=":2}[sym];
   const optionTags=options.map((o,i)=> i===answer ? "correct" : (i===2 ? "equal" : ((a.d.length!==b.d.length) && ((i===1) === (a.d.length>b.d.length)) ? "length" : "other")));
   const p={skill:"compare", level, prompt:`Which symbol makes this true?<br><span class="big-num">${fmt(a)} &nbsp;?&nbsp; ${fmt(b)}</span>`, type:"mc", options, optionTags, answer, display:`${fmt(a)} ${sym} ${fmt(b)}`, show:null, meta:{a,b,k}};
-  const steps=[{t:`Line up the decimal points. Give both numbers the same number of decimal digits by adding zeros on the <b>end</b>. Zeros on the end do not change a decimal.`, charts:[ap,bp], check:ci(`How many decimal digits should both numbers have?`, k)}];
-  if(a.w!==b.w){ steps.push({t:`Compare the whole number parts first: <b>${a.w}</b> and <b>${b.w}</b>. The greater whole number part makes the greater number; the decimal digits do not change that.`, check:cm(`Which whole number part is greater?`, [String(a.w), String(b.w)], a.w>b.w?0:1)}); }
+  const steps=[{t:`Line up the decimal points. Give both numbers the same number of decimal digits by adding zeros on the <b>end</b>. Zeros on the end do not change a decimal.`, charts:[ap,bp], cues:[`Count the decimal digits in each number; both need the bigger count.`, `Add zeros on the end of the shorter one until the counts match.`], check:ci(`How many decimal digits should both numbers have?`, k)}];
+  if(a.w!==b.w){ steps.push({t:`Compare the whole number parts first: <b>${a.w}</b> and <b>${b.w}</b>. The greater whole number part makes the greater number; the decimal digits do not change that.`, cues:[`The whole number part is left of the decimal point. Compare those two.`, `The bigger whole number wins, no matter what the decimals say.`], check:cm(`Which whole number part is greater?`, [String(a.w), String(b.w)], a.w>b.w?0:1)}); }
   else {
     steps.push({t:`The whole number parts are both <b>${a.w}</b>. They are equal, so compare the next place to the right.`});
     for(let i=0;i<k;i++){ const x=ap.d[i], y=bp.d[i];
       if(x===y) steps.push({t:`<b>${DEC_PLACES[i]}</b>: ${x} and ${y}. Equal again${i<k-1?", so compare the next place to the right":""}.`, charts:[ap,bp], hl:{["d"+(i+1)]:"ul"}});
-      else { steps.push({t:`<b>${DEC_PLACES[i]}</b>: <b>${x}</b> and <b>${y}</b>. This place decides. Stop here; the places to the right cannot change it.`, charts:[ap,bp], hl:{["d"+(i+1)]:"ul"}, check:cm(`Which number is greater?`, [fmt(a), fmt(b)], +x>+y?0:1)}); break; }
+      else { steps.push({t:`<b>${DEC_PLACES[i]}</b>: <b>${x}</b> and <b>${y}</b>. This place decides. Stop here; the places to the right cannot change it.`, charts:[ap,bp], hl:{["d"+(i+1)]:"ul"}, cues:[`Compare the two digits in this place: the bigger digit belongs to the bigger number.`, `Same-size pieces here: more of them means greater.`], check:cm(`Which number is greater?`, [fmt(a), fmt(b)], +x>+y?0:1)}); break; }
     }
     if(sym==="=") steps.push({t:`Every place is equal. <b>${fmt(a)}</b> and <b>${fmt(b)}</b> are <b>equivalent decimals</b>, the same value written with a different number of zeros on the end.`});
   }
-  steps.push({t:`Write the symbol. The open side faces the greater number.${a.d.length!==b.d.length && sym!=="=" ? " Notice: the longer number was "+((cmpV(a,b)<0 && a.d.length>b.d.length) || (cmpV(a,b)>0 && b.d.length>a.d.length) ? "the lesser one. More digits does not mean greater." : "greater this time, but only because of its digits, not its length.") : ""}`, check:finalCheck(p)});
+  steps.push({cues:[`The open side of the symbol faces the greater number.`, `You found which is greater: point the open side at it. Use = only if every digit matches.`], t:`Write the symbol. The open side faces the greater number.${a.d.length!==b.d.length && sym!=="=" ? " Notice: the longer number was "+((cmpV(a,b)<0 && a.d.length>b.d.length) || (cmpV(a,b)>0 && b.d.length>a.d.length) ? "the lesser one. More digits does not mean greater." : "greater this time, but only because of its digits, not its length.") : ""}`, check:finalCheck(p)});
   p.steps=steps;
   const diffPlace=(()=>{ const A=padTo(a,k), B=padTo(b,k); const sa=String(A.w)+A.d, sb=String(B.w)+B.d; const L=Math.max(sa.length,sb.length); const pa=sa.padStart(L,"0"), pb=sb.padStart(L,"0"); let i=0; while(i<L && pa[i]===pb[i]) i++; if(i>=L) return null; const wl=String(Math.max(A.w,B.w)).length; return {name: i<wl ? WHOLE_PLACES[wl-1-i] : DEC_PLACES[i-wl], da:pa[i], db:pb[i]}; })();
   p.hints=[
@@ -777,9 +777,9 @@ function genOrder(level, focus){
   const padded=nums.map(x=>padTo(x,k));
   const p={skill:"compare", level, prompt:`Put these in order from <b>${desc?"greatest to least":"least to greatest"}</b>.<br><span class="big-num">${shuffle(nums).map(fmt).join("&nbsp;&nbsp; ")}</span>`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:correct, show:null, meta:{nums,k,desc}};
   p.steps=[
-    {t:`All the whole parts are <b>${w}</b>, so the decimals decide. Give every number the same number of decimal digits by adding zeros on the end.`, charts:padded, check:ci(`How many decimal digits should each number have?`, k)},
-    {t:`Now the decimal parts can be read like whole numbers of ${DEC_PLACES[k-1]}: ${padded.map(x=>"<b>"+fmt(x)+"</b>").join(", ")}.`, check:ci(`Look only at the digits <b>after the decimal point</b> in ${fmt(padded[0])}. Read them as a whole number. What do you get?`, parseInt(padded[0].d,10))},
-    {t:`Order those whole numbers ${desc?"greatest to least":"least to greatest"}: ${sorted.map(x=>parseInt(padTo(x,k).d,10)).join(", ")}. Now swap the original numbers back in.`, check:finalCheck(p)}
+    {t:`All the whole parts are <b>${w}</b>, so the decimals decide. Give every number the same number of decimal digits by adding zeros on the end.`, charts:padded, cues:[`Count the decimal digits in each; every number needs the biggest count.`, `Add zeros on the end until all the counts match.`], check:ci(`How many decimal digits should each number have?`, k)},
+    {t:`Now the decimal parts can be read like whole numbers of ${DEC_PLACES[k-1]}: ${padded.map(x=>"<b>"+fmt(x)+"</b>").join(", ")}.`, cues:[`Cover the whole number and the point; read what is left as a whole number.`, `Just the digits after the point, left to right, as one number.`], check:ci(`Look only at the digits <b>after the decimal point</b> in ${fmt(padded[0])}. Read them as a whole number. What do you get?`, parseInt(padded[0].d,10))},
+    {t:`Order those whole numbers ${desc?"greatest to least":"least to greatest"}: ${sorted.map(x=>parseInt(padTo(x,k).d,10)).join(", ")}. Now swap the original numbers back in.`, cues:[`Order the whole-number readings, then write the original decimals back in that order.`, `${desc?"Biggest":"Smallest"} count of ${DEC_PLACES[k-1]} first; each count belongs to one original number.`], check:finalCheck(p)}
   ];
   p.hints=[
     {t:`Give every number the same number of decimal digits first.`},
@@ -798,7 +798,7 @@ function genWhichLarger(level, focus){
   const opts=[fmt(a),fmt(b)]; const ans=opts.indexOf(fmt(win));
   const tags=opts.map((o,i)=> i===ans ? "correct" : (a.d.length!==b.d.length ? "length" : "other"));
   const p={...base, prompt:`Which number is <b>${larger?"larger":"smaller"}</b>, ${fmt(a)} or ${fmt(b)}?`, options:opts, optionTags:tags, answer:ans, display:fmt(win), meta:{...base.meta, which:larger?"larger":"smaller"}};
-  p.steps=base.steps.slice(0,-1).concat([{t:`Say both numbers. In the first place where the digits differ, the greater digit belongs to the greater number.`, check:finalCheck(p)}]);
+  p.steps=base.steps.slice(0,-1).concat([{t:`Say both numbers. In the first place where the digits differ, the greater digit belongs to the greater number.`, cues:[`Find the first place, reading left to right, where the digits differ.`, `The greater digit in that first differing place belongs to the greater number.`], check:finalCheck(p)}]);
   p.hints=base.hints;
   return p;
 }
@@ -811,10 +811,10 @@ function genOpenDecimal(level, focus){
   const p={skill:"compare", level, prompt:`Write a decimal <b>${greater?"greater":"less"}</b> than<br><span class="big-num">${fmt(x)}</span>`, type:"input", validate, answer:numValue(sample), display:`any decimal ${greater?"greater":"less"} than ${fmt(x)}, such as ${fmt(sample)}`, show:x, meta:{x,greater,open:true}};
   const tenthOK = greater ? (t0<9) : (t0>0);
   p.steps=[
-    {t:`Put ${fmt(x)} in the chart. Look at the first place after the decimal point.`, chart:x, hl:{d1:"ul"}, check:ci(`What digit is in the tenths place?`, t0)},
-    tenthOK ? {t:`Keep the whole number part <b>${x.w}</b>. A tenths digit that is <b>${greater?"greater":"less"}</b> makes the whole number ${greater?"greater":"less"}.`, check:Object.assign(ci(`Type a tenths digit that makes the number ${greater?"greater":"less"} than ${fmt(x)}.`, greater?t0+1:t0-1), {validate:(v)=>Number.isInteger(v)&&v>=0&&v<=9&&(greater?v>t0:v<t0)})}
-            : {t:`The tenths digit is already ${t0}, so change the <b>whole number part</b> instead: a ${greater?"greater":"lesser"} whole number part decides no matter what the decimal digits are.`, check:ci(`What whole number part could you use?`, greater?x.w+1:x.w-1, String(greater?x.w+1:x.w-1))},
-    {t:`Write your number with <b>one</b> decimal point.`, check:Object.assign(ci(`Type a decimal ${greater?"greater":"less"} than ${fmt(x)}.`, numValue(sample), p.display), {validate})}
+    {t:`Put ${fmt(x)} in the chart. Look at the first place after the decimal point.`, chart:x, hl:{d1:"ul"}, cues:[`The tenths place is the first digit after the decimal point.`, `Look right after the decimal point: that digit.`], check:ci(`What digit is in the tenths place?`, t0)},
+    tenthOK ? {t:`Keep the whole number part <b>${x.w}</b>. A tenths digit that is <b>${greater?"greater":"less"}</b> makes the whole number ${greater?"greater":"less"}.`, cues:[`Keep the whole part; change only the tenths digit, in the right direction.`, `${greater?"Greater":"Less"} means a ${greater?"bigger":"smaller"} tenths digit than ${t0}. Pick one.`], check:Object.assign(ci(`Type a tenths digit that makes the number ${greater?"greater":"less"} than ${fmt(x)}.`, greater?t0+1:t0-1), {validate:(v)=>Number.isInteger(v)&&v>=0&&v<=9&&(greater?v>t0:v<t0)})}
+            : {t:`The tenths digit is already ${t0}, so change the <b>whole number part</b> instead: a ${greater?"greater":"lesser"} whole number part decides no matter what the decimal digits are.`, cues:[`Change the whole number part in the right direction; the decimals will not matter.`, `${greater?"Greater":"Less"} than ${x.w}: any whole number that far works.`], check:ci(`What whole number part could you use?`, greater?x.w+1:x.w-1, String(greater?x.w+1:x.w-1))},
+    {t:`Write your number with <b>one</b> decimal point.`, cues:[`One whole number, one decimal point, then your tenths digit.`, `Write it like 8.4: the whole part, a point, the digit you chose.`], check:Object.assign(ci(`Type a decimal ${greater?"greater":"less"} than ${fmt(x)}.`, numValue(sample), p.display), {validate})}
   ];
   p.hints=[{t:`Only one decimal point. Compare the tenths place first.`},{t:`Keep the whole number part ${x.w} and pick a tenths digit ${greater?"greater":"less"} than ${t0}${tenthOK?"":", or change the whole number part"}.`},{t:`For example, ${fmt(sample)}.`}];
   return p;
@@ -887,7 +887,7 @@ function genAddSub(level, focus){
   const digs=ints.map(v=>String(v).padStart(width,"0").split("").map(Number).reverse());
   const ops=nums.map((_,i)=>i?op:"");
   const p={skill:"addsub", level, prompt:`<span class="big-num">${nums.map(fmt).join(` ${op} `)} = ?</span>`, type:"input", answer:numValue(result), display:fmt(result), show:null, meta:{nums,op,k,RV}};
-  const steps=[{t:`Line up the <b>decimal points</b>, not the ends of the numbers. Add zeros on the end where needed so every number has the same number of decimal digits.${stackHTML(nums,ops,k)}`, check:ci(`How many decimal digits should every number have?`, k)}];
+  const steps=[{t:`Line up the <b>decimal points</b>, not the ends of the numbers. Add zeros on the end where needed so every number has the same number of decimal digits.${stackHTML(nums,ops,k)}`, cues:[`Count the decimal digits in each number. Every number needs the biggest count.`, `Add zeros on the end of the shorter numbers until all the counts match.`], check:ci(`How many decimal digits should every number have?`, k)}];
   if(op==="+"){
     let carry=0;
     for(let j=0;j<width;j++){
@@ -895,7 +895,7 @@ function genAddSub(level, focus){
       const expr=`${col.join(" + ")}${carry?` + ${carry} (regrouped)`:""}`;
       const t=`<b>${colName(j,k)}</b>: ${expr}. If that is 10 or more, only one digit fits in a place: write the last digit and regroup the rest to the ${colName(j+1,k)}.`;
       const written=sum%10; const c=Math.floor(sum/10);
-      steps.push({t, colExpr:expr, check:ci(`What digit goes in the ${colName(j,k)} column?`, written), after: sum>=10 ? `${expr.replace(" (regrouped)","")} = ${sum}: write the ${sum%10}, regroup ${c} to the ${colName(j+1,k)}.` : `${expr.replace(" (regrouped)","")} = ${sum}, which fits in one place.`});
+      steps.push({t, colExpr:expr, check:ci(`What digit goes in the ${colName(j,k)} column?`, written), cues:[`Add just this column: ${expr}. Say the sum before you write anything.`, sum>=10?`The sum is 10 or more, so only its last digit goes in this column; the 1 is carried to the ${colName(j+1,k)}.`:`The sum is less than 10, so the whole sum is the digit for this column.`], after: sum>=10 ? `${expr.replace(" (regrouped)","")} = ${sum}: write the ${sum%10}, regroup ${c} to the ${colName(j+1,k)}.` : `${expr.replace(" (regrouped)","")} = ${sum}, which fits in one place.`});
       carry=c;
     }
     if(carry) steps.push({t:`The last regrouped digit has no place to its right, so it becomes the leftmost digit: <b>${carry}</b>.`});
@@ -908,11 +908,11 @@ function genAddSub(level, focus){
       if(t0<bot[j]){ if(t0>=0) t+=`${t0} is less than ${bot[j]}, so <b>regroup 1</b> from the ${colName(j+1,k)}: ${t0+10} − ${bot[j]}.`; else t+=`9 − ${bot[j]}.`; res=(t0<0?9:t0+10)-bot[j]; borrow=1; }
       else { t+=`${t0} − ${bot[j]}.`; res=t0-bot[j]; borrow=0; }
       if(j===width-1 && j>=k && res===0) t+=` A 0 at the very front is not written.`;
-      steps.push({t, check:ci(`What digit goes in the ${colName(j,k)} column?`, res)});
+      steps.push({t, check:ci(`What digit goes in the ${colName(j,k)} column?`, res), cues:[`Look at the top digit here${borrow?" (after it gave 1 away)":""}. Is it big enough to take the bottom digit away?`, t0<bot[j]?`It is not, so regroup: 1 from the ${colName(j+1,k)} makes this digit ${(t0<0?9:t0+10)}. Then subtract ${bot[j]}.`:`It is, so subtract straight down: ${t0} − ${bot[j]}.`]});
     }
   }
   const rp=padTo(result,k);
-  steps.push({t:`Bring the decimal point <b>straight down</b>, under the other decimal points, and read the answer from the digits you wrote.${stackHTML(nums,ops,k)}`, check:finalCheck(p), after:`${rp.d!==result.d?`${fmt(rp)} and ${fmt(result)} are the same number: a zero on the end of a decimal adds nothing.`:""}${stackHTML(nums,ops,k,result)}`});
+  steps.push({t:`Bring the decimal point <b>straight down</b>, under the other decimal points, and read the answer from the digits you wrote.${stackHTML(nums,ops,k)}`, cues:[`Read the digits you wrote, right to left, and put the decimal point under the others.`, `Write the column digits in order, biggest place first, with the decimal point straight below the ones above it.`], check:finalCheck(p), after:`${rp.d!==result.d?`${fmt(rp)} and ${fmt(result)} are the same number: a zero on the end of a decimal adds nothing.`:""}${stackHTML(nums,ops,k,result)}`});
   p.steps=steps;
   // Hints go past the setup: each column gets a question (what to add or subtract, and whether to regroup) and then the worked step.
   const colSteps=steps.slice(1, steps.length-1); const colHints=[];
@@ -1198,10 +1198,10 @@ function genOrderOps(level, focus){
     if(st.piece===null){ steps.push({t:`${esc2(st.before)} → ${st.desc}`}); return; }
     const pieces=Array.from(new Set(allPieces(parseBack(st.before)))); const opts=shuffle(pieces).slice(0,4); if(!opts.includes(st.piece)) opts[0]=st.piece;
     const o=shuffle(opts);
-    steps.push({t:`<b>${esc2(st.before)}</b>. Which part is next? Remember: ${ruleName(st.rule)}.`, check: o.length>1 ? Object.assign(cm(`Do this part first:`, o.map(esc2), o.indexOf(st.piece)), {visibleOk:true}) : undefined}); /* visibleOk: the right part is of course visible inside the expression */
-    steps.push({t:`${esc2(st.piece)}.`, check:ci(`${esc2(st.piece)} = ?`, st.value)});
+    steps.push({t:`<b>${esc2(st.before)}</b>. Which part is next? Remember: ${ruleName(st.rule)}.`, cues:[`Grouping symbols first, then × and ÷ left to right, then + and − left to right.`, `Is there a parenthesis? Then that part. If not, look for × or ÷ before any + or −.`], check: o.length>1 ? Object.assign(cm(`Do this part first:`, o.map(esc2), o.indexOf(st.piece)), {visibleOk:true}) : undefined}); /* visibleOk: the right part is of course visible inside the expression */
+    steps.push({t:`${esc2(st.piece)}.`, cues:[`Just this one operation: ${esc2(st.piece)}. Ignore the rest of the expression for now.`, `${esc2(st.piece)}: ${/×/.test(st.piece)?"count by the second number as many times as the first":/÷/.test(st.piece)?"how many of the second number fit in the first?":/\+/.test(st.piece)?"add the bigger place first, then the rest":"take away in parts, down to a friendly number first"}.`], check:ci(`${esc2(st.piece)} = ?`, st.value)});
   });
-  steps.push({t:`Everything is done. The value you just found is the whole expression's value.`, check:finalCheck(p)});
+  steps.push({t:`Everything is done. The value you just found is the whole expression's value.`, cues:[`The last value you computed is the answer.`, `Nothing is left to do: the result of the final operation is the value.`], check:finalCheck(p)});
   p.steps=steps;
   p.hints=[{t:`Grouping symbols first, then × and ÷ left to right, then + and − left to right.`},{t:`${hasGroup(tokens)?"Do the part inside the parentheses first.":"There are no parentheses. Look for × or ÷ first, even if + or − comes earlier."}`},{t:`First step: ${esc2(trace[0].piece||trace[0].desc)}.`}];
   return p;
@@ -1229,8 +1229,8 @@ function genPlaceParens(level, focus){
   const o=buildOptions(tokStr(correct), D);
   const p={skill:"orderops", level, prompt:`Place the parentheses to produce the solution of <b>${target}</b>.<br><span class="big-num">${esc2(tokStr(base))}</span>`, type:"mc", options:o.options.map(esc2), optionTags:o.optionTags, answer:o.answer, display:tokStr(correct), show:null, meta:{variant:"place", target}};
   const steps=[{t:`Parentheses change which part happens first. Try each placement and evaluate it with the order of operations.`}];
-  o.options.slice(0,3).forEach((txt,i)=>{ const toks=parseBack(txt); const v=evalTokens(toks); steps.push({t:`Try <b>${esc2(txt)}</b>.`, check:ci(`${esc2(txt)} = ?`, v)}); });
-  steps.push({t:`Only one placement makes <b>${target}</b>.`, check:finalCheck(p)});
+  o.options.slice(0,3).forEach((txt,i)=>{ const toks=parseBack(txt); const v=evalTokens(toks); steps.push({t:`Try <b>${esc2(txt)}</b>.`, cues:[`Do the part in parentheses first, then the rest left to right.`, `Compute the parentheses, replace them with that value, then finish the rest.`], check:ci(`${esc2(txt)} = ?`, v)}); });
+  steps.push({t:`Only one placement makes <b>${target}</b>.`, cues:[`Which placement's value matched the target?`, `Compare each value you found with ${target}.`], check:finalCheck(p)});
   p.steps=steps;
   p.hints=[{t:`Parentheses say "do me first." Try each placement.`},{t:`Without parentheses the value is ${evalTokens(base)}. You need ${target}, so the parentheses must change the order.`},{t:`Evaluate each choice; the one that lands on ${target} is it.`}];
   return p;
@@ -1247,9 +1247,9 @@ function genWhichExpr(level, focus){
   const pair=shuffle([A,B]); const ans=pair.findIndex(t=>evalTokens(t)===target);
   const p={skill:"orderops", level, prompt:`Compare: which expression gives you the answer <b>${target}</b>?`, type:"mc", options:pair.map(t=>esc2(tokStr(t))), optionTags:pair.map((t,i)=>i===ans?"correct":"other-expr"), answer:ans, display:tokStr(pair[ans]), show:null, meta:{variant:"which", target}};
   p.steps=[{t:`Evaluate each expression with the order of operations. ${RULES}`},
-    {t:`Expression a: <b>${esc2(tokStr(pair[0]))}</b>.`, check:ci(`a. ${esc2(tokStr(pair[0]))} = ?`, evalTokens(pair[0]))},
-    {t:`Expression b: <b>${esc2(tokStr(pair[1]))}</b>.`, check:ci(`b. ${esc2(tokStr(pair[1]))} = ?`, evalTokens(pair[1]))},
-    {t:`One of them equals ${target}.`, check:finalCheck(p)}];
+    {t:`Expression a: <b>${esc2(tokStr(pair[0]))}</b>.`, cues:[`Parentheses first, then × and ÷, then + and −.`, `Replace each finished part with its value and keep going left to right.`], check:ci(`a. ${esc2(tokStr(pair[0]))} = ?`, evalTokens(pair[0]))},
+    {t:`Expression b: <b>${esc2(tokStr(pair[1]))}</b>.`, cues:[`Parentheses first, then × and ÷, then + and −.`, `Replace each finished part with its value and keep going left to right.`], check:ci(`b. ${esc2(tokStr(pair[1]))} = ?`, evalTokens(pair[1]))},
+    {t:`One of them equals ${target}.`, cues:[`Which value matched ${target}?`, `Compare a and b with the target and pick the one that equals it.`], check:finalCheck(p)}];
   p.hints=[{t:`Work out both. Parentheses first, then × ÷, then + −.`},{t:`They use the same kind of numbers but a different order. The order changes the answer.`},{t:`Expression a equals ${evalTokens(pair[0])}.`}];
   return p;
 }
@@ -1278,9 +1278,9 @@ function genExpressions(level, focus){
     const opWord=(sentence.match(/sum|product|difference|Twice|divide|Subtract|Add|multiply/gi)||[]).join(", ");
     p.steps=[
       {t:`Read the sentence. <b>Underline the operation words</b>: ${opWord}.`},
-      {t:`"Sum" means add, "product" means multiply, "difference" means subtract, "twice" means 2 ×. The operation named by a group word (sum, product, difference) goes inside <b>parentheses</b>.`, check:cm(`Which operation goes inside the parentheses?`, ["+","×","−","÷"], ["+","×","−","÷"].indexOf((expr.match(/\(\d+ ([+×−÷]) \d+\)/)||[])[1] || (expr.startsWith("2 ×")?"+":"+")))},
+      {t:`"Sum" means add, "product" means multiply, "difference" means subtract, "twice" means 2 ×. The operation named by a group word (sum, product, difference) goes inside <b>parentheses</b>.`, cues:[`Find the group word: sum, product, or difference.`, `Sum → +, product → ×, difference → −, quotient → ÷.`], check:cm(`Which operation goes inside the parentheses?`, ["+","×","−","÷"], ["+","×","−","÷"].indexOf((expr.match(/\(\d+ ([+×−÷]) \d+\)/)||[])[1] || (expr.startsWith("2 ×")?"+":"+")))},
       {t:`Check the order. "Subtract A <b>from</b> B" means B comes first. "Divide <b>by</b> A" means A is the divisor and comes last.`},
-      {t:`Write the expression.`, check:finalCheck(p)}
+      {t:`Write the expression.`, cues:[`The group word's operation goes inside the parentheses; the other operation happens to that group.`, `Check the order words: "from" puts the later number first; "by" puts the divisor last.`], check:finalCheck(p)}
     ];
     p.hints=[{t:`Circle the numbers next to each operation word. Group words (sum, product, difference) get parentheses.`},{t:`"From" and "by" flip the order: the thing after "from" is written first; the thing after "by" comes last.`},{t:`The parentheses hold ${(expr.match(/\([^)]+\)/)||[""])[0]}.`}];
     return p;
@@ -1290,9 +1290,9 @@ function genExpressions(level, focus){
   const o=buildOptions(sentence, others);
   const p={skill:"expressions", level, prompt:`Which sentence matches the expression?<br><span class="big-num">${expr}</span>`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:sentence, show:null, meta:{variant, sentence, expr}};
   p.steps=[
-    {t:`Find the part inside the parentheses. That is the group word: + is a <b>sum</b>, × is a <b>product</b>, − is a <b>difference</b>.`, check:cm(`What is inside the parentheses called?`, ["a sum","a product","a difference","a quotient"], {"+":0,"×":1,"−":2,"÷":3}[(expr.match(/\(\d+ ([+×−÷]) \d+\)/)||[])[1]||"+"])},
+    {t:`Find the part inside the parentheses. That is the group word: + is a <b>sum</b>, × is a <b>product</b>, − is a <b>difference</b>.`, cues:[`Look at the sign inside the parentheses.`, `+ is a sum, × a product, − a difference, ÷ a quotient.`], check:cm(`What is inside the parentheses called?`, ["a sum","a product","a difference","a quotient"], {"+":0,"×":1,"−":2,"÷":3}[(expr.match(/\(\d+ ([+×−÷]) \d+\)/)||[])[1]||"+"])},
     {t:`Then read the operation outside the parentheses, in the right order.`},
-    {t:`Pick the sentence that says exactly that.`, check:finalCheck(p)}
+    {t:`Pick the sentence that says exactly that.`, cues:[`Read the operation outside the parentheses and its order.`, `Which sentence names the group first, then does that outside operation to it?`], check:finalCheck(p)}
   ];
   p.hints=[{t:`Parentheses = the group word (sum, product, difference).`},{t:`What happens to that group? Added to, subtracted from, multiplied, divided?`},{t:`The group is ${(expr.match(/\([^)]+\)/)||[""])[0]}.`}];
   return p;
@@ -1312,10 +1312,10 @@ function genRelation(level, focus){
   const vB=evalTokens(parseBack(K.B));
   const p={skill:"expressions", level, prompt:`What is the relationship between the two expressions?<br><span class="big-num">A: ${base}&nbsp;&nbsp;&nbsp; B: ${K.B}</span>`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:K.txt, show:null, meta:{variant:"relation", A:base, B:K.B}};
   p.steps=[
-    {t:`Look at B without evaluating. B contains <b>(${base})</b>, which is all of A, and then does one more thing to it.`, check:cm(`What does B do to A?`, shuffle([`multiplies it by ${k}`,`adds ${m}`,`subtracts ${m}`,`multiplies it by 1`]), null)},
-    {t:`Prove it by evaluating. A = ${base}.`, check:ci(`A = ?`, baseV)},
-    {t:`B = ${K.B}.`, check:ci(`B = ?`, vB)},
-    {t:`A is ${baseV} and B is ${vB}. Say the relationship in words.`, check:finalCheck(p), after:`${K.txt}.`}
+    {t:`Look at B without evaluating. B contains <b>(${base})</b>, which is all of A, and then does one more thing to it.`, cues:[`Compare B with A: what was added to, taken from, or multiplied onto A?`, `Look at the extra number in B and the sign next to it.`], check:cm(`What does B do to A?`, shuffle([`multiplies it by ${k}`,`adds ${m}`,`subtracts ${m}`,`multiplies it by 1`]), null)},
+    {t:`Prove it by evaluating. A = ${base}.`, cues:[`Parentheses first, then × and ÷, then + and −.`, `Replace each finished part with its value and keep going.`], check:ci(`A = ?`, baseV)},
+    {t:`B = ${K.B}.`, cues:[`The parentheses hold A's value. Do the extra operation to it.`, `Use A's value from the last step, then apply the one extra step B adds.`], check:ci(`B = ?`, vB)},
+    {t:`A is ${baseV} and B is ${vB}. Say the relationship in words.`, cues:[`Compare the two values: how do you get from A's value to B's?`, `Is B a multiple of A, or A plus or minus something? Say it that way.`], check:finalCheck(p), after:`${K.txt}.`}
   ];
   const doWhat = K.B.startsWith(`${k} ×`) ? `multiplies it by ${k}` : K.B.endsWith(`+ ${m}`) ? `adds ${m}` : K.B.endsWith(`− ${m}`) ? `subtracts ${m}` : `multiplies it by 1`;
   p.steps[0].check.answer=p.steps[0].check.options.indexOf(doWhat); p.steps[0].check.display=doWhat;
@@ -1338,7 +1338,7 @@ function genWordExpr(level, focus){
   const p={skill:"expressions", level, prompt:`Write and evaluate an expression to answer the question.<br><span class="big-words">${T.q}</span>`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:T.e, show:null, meta:{variant:"word", value:T.v}};
   p.steps=[
     {t:`Read the sentence. What happens first in the story? That part goes in parentheses (or gets done first).`},
-    {t:`Write the expression that matches the story, then work it out with the order of operations.`, check:finalCheck(p), after:`${T.e} = ${T.v}. That answers the question.`}
+    {t:`Write the expression that matches the story, then work it out with the order of operations.`, cues:[`Match the story's relationship to an operation, then check the order of the numbers.`, `Which expression uses the story's numbers the way you named (groups, parts, a comparison)?`], check:finalCheck(p), after:`${T.e} = ${T.v}. That answers the question.`}
   ];
   p.hints=[{t:`What happens first in the story? Group that.`},{t:`"Each" usually means multiply. "In all" means add. "Left" means subtract. "Split equally" means divide.`},{t:`The value of the right expression is ${T.v}.`}];
   return p;
@@ -1358,19 +1358,19 @@ function genPrimes(level, focus){
   const steps=[{t:`Make a factor tree. Find a factor pair for <b>${n}</b>. Circle a factor when it is prime; keep factoring anything that is not.`}];
   let m=n; const circled=[];
   while(!isPrime(m)){ const sp=fs.find(q=>m%q===0); const rest=m/sp;
-    steps.push({t:`Split <b>${m}</b>: its smallest prime factor is ${sp}, so circle ${sp}. What goes with it?`, check:ci(`${m} = ${sp} × ?`, rest), after:`${m} = ${sp} × ${rest}.`});
+    steps.push({t:`Split <b>${m}</b>: its smallest prime factor is ${sp}, so circle ${sp}. What goes with it?`, cues:[`Divide ${m} by ${sp}. What do you get?`, `Count by ${sp}s up to ${m}: how many counts did it take?`], check:ci(`${m} = ${sp} × ?`, rest), after:`${m} = ${sp} × ${rest}.`});
     circled.push(sp); m=rest;
-    if(isPrime(m)) steps.push({t:`Look at <b>${m}</b>. Does anything besides 1 and ${m} divide it?`, check:cm(`Is ${m} prime?`, ["Yes, its only factors are 1 and itself","No, it has other factors"], 0), after:`${m} is prime, so circle it. Every branch ends in a circle.`});
-    else steps.push({t:`Look at <b>${m}</b>. Does anything besides 1 and ${m} divide it?`, check:cm(`Is ${m} prime?`, ["Yes","No, keep factoring"], 1), after:`${m} is not prime: keep factoring it.`});
+    if(isPrime(m)) steps.push({t:`Look at <b>${m}</b>. Does anything besides 1 and ${m} divide it?`, cues:[`Try dividing by 2, then 3, then 5. Does anything come out even?`, `Only 1 and ${m} divide it evenly if it is prime; any other even division means it is not.`], check:cm(`Is ${m} prime?`, ["Yes, its only factors are 1 and itself","No, it has other factors"], 0), after:`${m} is prime, so circle it. Every branch ends in a circle.`});
+    else steps.push({t:`Look at <b>${m}</b>. Does anything besides 1 and ${m} divide it?`, cues:[`Try dividing by 2, then 3, then 5. Does anything come out even?`, `Only 1 and ${m} divide it evenly if it is prime; any other even division means it is not.`], check:cm(`Is ${m} prime?`, ["Yes","No, keep factoring"], 1), after:`${m} is not prime: keep factoring it.`});
   }
-  steps.push({t:`Rewrite the circled primes as a multiplication expression, smallest first. Check: they should multiply back to ${n}.`, after:`${answer} = ${n}.`, check:Object.assign(ci(`Type the prime factorization of ${n} (like 2 × 2 × 3, you can type x for ×).`, n, answer), {text:true, validate})});
+  steps.push({t:`Rewrite the circled primes as a multiplication expression, smallest first. Check: they should multiply back to ${n}.`, after:`${answer} = ${n}.`, cues:[`List every circled prime, smallest first, with × between them.`, `Type them like 2 x 2 x 3. Multiply them back: the product should be ${n}.`], check:Object.assign(ci(`Type the prime factorization of ${n} (like 2 × 2 × 3, you can type x for ×).`, n, answer), {text:true, validate})});
   p.steps=steps;
   p.hints=[{t:`Start with any factor pair. Circle the primes. Keep splitting the rest.`},{t: n%2===0 ? `${n} is even, so 2 is a factor: ${n} = 2 × ${n/2}.` : `${n} is odd. Try 3, 5, or 7: ${n} = ${fs[0]} × ${n/fs[0]}.`},{t:`Prime factors of ${n}: there are ${fs.length} of them, and the smallest is ${fs[0]}.`}];
   return p;
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.10.1 · September 21, 2026";
+const BUILD="v9.11.1 · September 22, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -1468,10 +1468,10 @@ function genMultiply(level, focus){
   const steps=[];
   if(b<10 && (variant==="area"||variant==="distributive")){ // U2 L6/L7 with a one-digit multiplier: decompose the big factor by place value
     p.ws=false; const parts=String(a).split("").map((ch,i,arr)=>+ch*Math.pow(10,arr.length-1-i)).filter(x=>x>0);
-    if(variant==="area"){ steps.push({t:`Area model: break ${a} by place value: ${parts.join(" + ")}. Draw a rectangle ${b} tall, with one section for each part.`, check:ci(`How many sections does the area model have?`, parts.length), after:`One section per part of ${a}: ${parts.map(x=>`${x} × ${b}`).join(", ")}.`});
+    if(variant==="area"){ steps.push({t:`Area model: break ${a} by place value: ${parts.join(" + ")}. Draw a rectangle ${b} tall, with one section for each part.`, cues:[`One section for each part of ${a}.`, `${a} breaks into ${parts.length===1?"one part":parts.join(" + ")}: count the parts.`], check:ci(`How many sections does the area model have?`, parts.length), after:`One section per part of ${a}: ${parts.map(x=>`${x} × ${b}`).join(", ")}.`});
       parts.forEach(x=>steps.push({t:`Section: ${x} × ${b}.`, check:wc(ci(`${x} × ${b} = ?`, x*b, (x*b).toLocaleString("en-US")),"fact")}));
       steps.push(parts.length>1 ? {t:`Add the sections: ${parts.map(x=>(x*b).toLocaleString("en-US")).join(" + ")}.${stackMul(a,b,parts.map(x=>x*b))}`, check:wc(finalCheck(p),"add-partials")} : {t:`One section, so its area is the whole product.`, check:wc(finalCheck(p),"add-partials")}); }
-    else { steps.push({t:`Break ${a} into ${parts.join(" + ")}. Multiply each part by ${b}, then add the results. That is the distributive property.`, check:cm(`Which shows the distributive property for ${a} × ${b}?`, shuffle([parts.map(x=>`(${x} × ${b})`).join(" + "), parts.map(x=>`(${x} × ${b})`).join(" × "), `(${parts.join(" × ")}) + ${b}`]), null), after:`${a} × ${b} = ${parts.map(x=>`(${x} × ${b})`).join(" + ")}.`});
+    else { steps.push({t:`Break ${a} into ${parts.join(" + ")}. Multiply each part by ${b}, then add the results. That is the distributive property.`, cues:[`Each part of ${a} gets multiplied by ${b}, and the results are added.`, `Look for parentheses joined by +, each one a part × ${b}.`], check:cm(`Which shows the distributive property for ${a} × ${b}?`, shuffle([parts.map(x=>`(${x} × ${b})`).join(" + "), parts.map(x=>`(${x} × ${b})`).join(" × "), `(${parts.join(" × ")}) + ${b}`]), null), after:`${a} × ${b} = ${parts.map(x=>`(${x} × ${b})`).join(" + ")}.`});
       steps[0].check.answer=steps[0].check.options.indexOf(parts.map(x=>`(${x} × ${b})`).join(" + ")); steps[0].check.display=steps[0].check.options[steps[0].check.answer];
       parts.forEach(x=>steps.push({t:`${x} × ${b}.`, check:wc(ci(`${x} × ${b} = ?`, x*b, (x*b).toLocaleString("en-US")),"fact")}));
       steps.push(parts.length>1 ? {t:`Add the partial products: ${parts.map(x=>(x*b).toLocaleString("en-US")).join(" + ")}.${stackMul(a,b,parts.map(x=>x*b))}`, check:wc(finalCheck(p),"add-partials")} : {t:`One partial product, so that is the whole product.`, check:wc(finalCheck(p),"add-partials")}); }
@@ -1483,15 +1483,15 @@ function genMultiply(level, focus){
   } else if(variant==="area"){
     const pv=n=>String(n).split("").map((ch,i,arr)=>+ch*Math.pow(10,arr.length-1-i)).filter(x=>x>0); const pa=pv(a), pb=pv(b); // every place, as the worksheet draws it: 421 = 400 + 20 + 1
     const cells=[]; for(const x of pa) for(const y of pb) cells.push([x,y]);
-    steps.push({t:`Area model: break each factor by place value. ${a} = ${pa.join(" + ")} and ${b} = ${pb.join(" + ")}. Draw a rectangle with one section for each pair of parts.`, check:ci(`How many sections does the area model have?`, cells.length), after:`${pa.length} parts across and ${pb.length} down make ${cells.length} sections: ${cells.map(([x,y])=>`${x} × ${y}`).join(", ")}.`});
+    steps.push({t:`Area model: break each factor by place value. ${a} = ${pa.join(" + ")} and ${b} = ${pb.join(" + ")}. Draw a rectangle with one section for each pair of parts.`, cues:[`Parts across times parts down.`, `${pa.length} across and ${pb.length} down: multiply those two counts.`], check:ci(`How many sections does the area model have?`, cells.length), after:`${pa.length} parts across and ${pb.length} down make ${cells.length} sections: ${cells.map(([x,y])=>`${x} × ${y}`).join(", ")}.`});
     cells.forEach(([x,y])=>steps.push({t:`Section: ${x} × ${y}.`, check:wc(ci(`${x} × ${y} = ?`, x*y, (x*y).toLocaleString("en-US")),"fact")}));
     steps.push({t:`Add all the sections: ${cells.map(([x,y])=>(x*y).toLocaleString("en-US")).join(" + ")}. That is why the algorithm's partial products work.${stackMul(a,b,cells.map(([x,y])=>x*y))}`, check:wc(finalCheck(p),"add-partials")});
   } else if(variant==="distributive"){
     const tens=Math.floor(b/10)*10, ones=b%10;
-    steps.push({t:`Break ${b} into ${tens} + ${ones}. Multiply ${a} by each part, then add the two results. That is the distributive property.`, check:wc(cm(`Which shows the distributive property for ${a} × ${b}?`, shuffle([`(${a} × ${tens}) + (${a} × ${ones})`,`(${a} × ${tens}) × (${a} × ${ones})`,`(${a} + ${tens}) × (${a} + ${ones})`]), null),"rows"), after:`${a} × ${b} = (${a} × ${tens}) + (${a} × ${ones}).`});
+    steps.push({t:`Break ${b} into ${tens} + ${ones}. Multiply ${a} by each part, then add the two results. That is the distributive property.`, cues:[`${a} gets multiplied by each part of ${b}, and the two results are added.`, `Look for two parentheses joined by +, each one ${a} × a part of ${b}.`], check:wc(cm(`Which shows the distributive property for ${a} × ${b}?`, shuffle([`(${a} × ${tens}) + (${a} × ${ones})`,`(${a} × ${tens}) × (${a} × ${ones})`,`(${a} + ${tens}) × (${a} + ${ones})`]), null),"rows"), after:`${a} × ${b} = (${a} × ${tens}) + (${a} × ${ones}).`});
     steps[0].check.answer=steps[0].check.options.indexOf(`(${a} × ${tens}) + (${a} × ${ones})`); steps[0].check.display=steps[0].check.options[steps[0].check.answer];
     const r1=mulRowSteps(a,b,tens/10,1,[]), r0=mulRowSteps(a,b,ones,0,[]);
-    steps.push({t:`${a} × ${tens}: multiply ${a} × ${tens/10}, then add a zero.`, check:wc(ci(`${a} × ${tens} = ?`, a*tens), v=>near(parseAnswer(v),a*tens/10)?"tens-zero":"rows"), sub:r1.steps, tAfter:`Read that row from the digits you wrote (${r1.readBack}).`});
+    steps.push({t:`${a} × ${tens}: multiply ${a} × ${tens/10}, then add a zero.`, cues:[`Multiplying by ${tens} is multiplying by ${tens/10} tens: the answer ends in 0.`, `Do ${a} × ${tens/10}, then write a 0 on the end.`], check:wc(ci(`${a} × ${tens} = ?`, a*tens), v=>near(parseAnswer(v),a*tens/10)?"tens-zero":"rows"), sub:r1.steps, tAfter:`Read that row from the digits you wrote (${r1.readBack}).`});
     steps.push({t:`${a} × ${ones}.`, check:wc(ci(`${a} × ${ones} = ?`, a*ones),"rows"), sub:r0.steps, tAfter:`Read that row from the digits you wrote (${r0.readBack}).`});
     const ad=addColSteps(a,b,a*ones,a*tens);
     steps.push({t:`Add the two partial products: ${a*tens} + ${a*ones}.${stackMul(a,b,[a*ones,a*tens])}`, check:wc(finalCheck(p),"add-partials"), sub:ad.steps, tAfter:`Read the total from the digits you wrote (${ad.readBack}).`});
@@ -1500,7 +1500,7 @@ function genMultiply(level, focus){
     const r0=mulRowSteps(a,b,ones,0,[]), r1=mulRowSteps(a,b,tens,1,[r0.row]);
     steps.push({t:`Line up the two factors one above the other.${stackMul(a,b)}`, row:"setup"});
     steps.push({t:`Step 1: multiply ${a} by the <b>ones digit</b>, ${ones}. This is the first partial product.${stackMul(a,b,[""])}`, row:"r0", check:wc(ci(`${a} × ${ones} = ?`, a*ones),"rows"), sub:r0.steps, tAfter:`Step 1, finished: read the first partial product from the digits you wrote (${r0.readBack}).`});
-    steps.push({t:`Step 2: multiply ${a} by the <b>tens digit</b>, ${tens}. That is really ${a} × ${tens*10}, so write a <b>0</b> in the ones place first, then multiply.${stackMul(a,b,[r0.row,""])}`, check:wc(ci(`${a} × ${tens*10} = ? (the second partial product, with its 0)`, a*tens*10), v=>near(parseAnswer(v),a*tens)?"tens-zero":"rows"), row:"r1", sub:r1.steps, tAfter:`Step 2, finished: read the second partial product from the digits you wrote (${r1.readBack}).`});
+    steps.push({t:`Step 2: multiply ${a} by the <b>tens digit</b>, ${tens}. That is really ${a} × ${tens*10}, so write a <b>0</b> in the ones place first, then multiply.${stackMul(a,b,[r0.row,""])}`, cues:[`This row multiplies by the tens digit, so it is really × ${tens*10} and ends in 0.`, `Do ${a} × ${tens}, then write a 0 on the end.`], check:wc(ci(`${a} × ${tens*10} = ? (the second partial product, with its 0)`, a*tens*10), v=>near(parseAnswer(v),a*tens)?"tens-zero":"rows"), row:"r1", sub:r1.steps, tAfter:`Step 2, finished: read the second partial product from the digits you wrote (${r1.readBack}).`});
     const ad=addColSteps(a,b,a*ones,a*tens*10);
     steps.push({t:`Step 3: add the two partial products.${stackMul(a,b,[a*ones,a*tens*10])}`, row:"t", check:wc(finalCheck(p),"add-partials"), sub:ad.steps, tAfter:`Step 3, finished: read the total from the digits you wrote (${ad.readBack}).`});
   }
@@ -1590,9 +1590,9 @@ function genPlaceValue(level, focus){
     const val = +c.digit*Math.pow(10,pos); const valNum = pos>=0 ? {w:val,d:""} : fixedFrom(Math.round(val*1000), -pos);
     const p={skill:"placevalue", level, prompt:`What is the <b>value</b> of the digit <b>${c.digit}</b> in<br><span class="big-num">${fmt(num)}</span>`, type:"input", answer:val, display:fmt(valNum), show:num, meta:{variant, num, digit:c.digit, place:c.place}};
     p.steps=[
-      {t:`Find the ${c.digit} in the chart and name its place.`, chart:num, hl:{[c.key]:"ul"}, check:cm(`Which place is the ${c.digit} in?`, shuffle([c.place, ...shuffle([...WHOLE_PLACES.slice(0,4),...DEC_PLACES].filter(x=>x!==c.place)).slice(0,3)]), null)},
-      {t:`A digit's value is the digit × the value of its place. The ${c.place} place is worth ${pos>=0?WHOLE_VALUE[pos]:DEC_FRACTION[-pos-1]}.`, check:ci(`${c.digit} × ${pos>=0?WHOLE_VALUE[pos]:DEC_FRACTION[-pos-1]} = ?`, val, fmt(valNum))},
-      {t:`So what is the ${c.digit} worth?`, check:finalCheck(p), after:`The ${c.digit} in the ${c.place} place is worth ${fmt(valNum)}.`}
+      {t:`Find the ${c.digit} in the chart and name its place.`, chart:num, hl:{[c.key]:"ul"}, cues:[`Read the chart heading straight above the digit.`, `Count from the ones place: left is tens, then hundreds; right of the point is tenths, then hundredths.`], check:cm(`Which place is the ${c.digit} in?`, shuffle([c.place, ...shuffle([...WHOLE_PLACES.slice(0,4),...DEC_PLACES].filter(x=>x!==c.place)).slice(0,3)]), null)},
+      {t:`A digit's value is the digit × the value of its place. The ${c.place} place is worth ${pos>=0?WHOLE_VALUE[pos]:DEC_FRACTION[-pos-1]}.`, cues:[`Multiply the digit by its place value.`, `Write the place value, then take ${c.digit} of it.`], check:ci(`${c.digit} × ${pos>=0?WHOLE_VALUE[pos]:DEC_FRACTION[-pos-1]} = ?`, val, fmt(valNum))},
+      {t:`So what is the ${c.digit} worth?`, cues:[`Digit times place value, written as a number.`, `The product you just found is the value.`], check:finalCheck(p), after:`The ${c.digit} in the ${c.place} place is worth ${fmt(valNum)}.`}
     ];
     p.steps[0].check.answer=p.steps[0].check.options.indexOf(c.place); p.steps[0].check.display=c.place;
     p.hints=[{t:`Name the place first, then multiply the digit by that place's value.`},{t:`The ${c.digit} is in the <b>${c.place}</b> place.`, chart:num, hl:{[c.key]:"ul"}},{t:`${c.digit} × ${pos>=0?WHOLE_VALUE[pos]:DEC_FRACTION[-pos-1]}.`}];
@@ -1617,9 +1617,9 @@ function genPlaceValue(level, focus){
     const o=buildOptions(fmt(target), D.filter(x=>x.text!==fmt(target)));
     const p={skill:"placevalue", level, prompt:`Which number has a <b>${digit}</b> that is worth <b>${factor.toLocaleString("en-US")} times</b> as much as the ${digit} in<br><span class="big-num">${fmt(base)}</span>`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:fmt(target), show:base, meta:{variant, digit, lo, hi}};
     p.steps=[
-      {t:`The ${digit} in ${fmt(base)} is in the <b>${small}</b> place.`, chart:base, hl:{[lo>=0?"w"+lo:"d"+(-lo)]:"ul"}, check:ci(`How many places to the left must the ${digit} move to be worth ${factor.toLocaleString("en-US")} times as much?`, gap)},
+      {t:`The ${digit} in ${fmt(base)} is in the <b>${small}</b> place.`, chart:base, hl:{[lo>=0?"w"+lo:"d"+(-lo)]:"ul"}, cues:[`Each place to the left is worth 10 times as much. How many tens make ${factor.toLocaleString("en-US")}?`, `Each place to the left multiplies by 10. Count how many times you multiply by 10 to reach ${factor.toLocaleString("en-US")}.`], check:ci(`How many places to the left must the ${digit} move to be worth ${factor.toLocaleString("en-US")} times as much?`, gap)},
       {t:`Each place to the <b>left</b> is worth <b>10 times</b> as much. ${gap===1?"One place left: 10 times.":gap+" places left: "+factor.toLocaleString("en-US")+" times."} That puts the ${digit} in the <b>${big}</b> place.`, chart:base, hl:{[lo>=0?"w"+lo:"d"+(-lo)]:"ul"}},
-      {t:`Write the number with the ${digit} in the ${big} place (and zeros to hold the other places).`, check:finalCheck(p), after:`The number is ${fmt(target)}.`, chart:target, hl:{[hi>=0?"w"+hi:"d"+(-hi)]:"ul"}}
+      {t:`Write the number with the ${digit} in the ${big} place (and zeros to hold the other places).`, cues:[`Put the digit in its new place; zeros hold the empty places.`, `Write the ${digit}, then a 0 for each place between it and the ones place.`], check:finalCheck(p), after:`The number is ${fmt(target)}.`, chart:target, hl:{[hi>=0?"w"+hi:"d"+(-hi)]:"ul"}}
     ];
     p.hints=[{t:`Moving a digit one place to the left multiplies what it is worth by ten; one place to the right divides it by ten.`},{t:`${factor.toLocaleString("en-US")} times means ${gap} place${gap>1?"s":""} to the left.`},{t:`From the ${small} place, ${gap} left is the ${big} place.`, chart:target}];
     return p;
@@ -1633,9 +1633,9 @@ function genPlaceValue(level, focus){
   const p={skill:"placevalue", level, prompt:`In <span class="big-num">${fmt(num)}</span>the <b>${digit}</b> in the <b>${from}</b> place is ___ the value of the ${digit} in the <b>${to}</b> place.`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:correct, show:num, meta:{variant, digit, lo, hi, askBig, num}};
   const kLo = lo>=0?"w"+lo:"d"+(-lo), kHi = hi>=0?"w"+hi:"d"+(-hi);
   p.steps=[
-    {t:`Find both ${digit}s in the chart.`, chart:num, hl:{[kLo]:"ul",[kHi]:"ul"}, check:ci(`How many places apart are they?`, gap)},
-    {t:`Each place to the <b>left</b> is worth <b>10 times</b> as much; each place to the <b>right</b> is worth <b>1/10</b> as much. The ${from} place is to the ${askBig?"left":"right"} of the ${to} place.`, check:cm(`Going from the ${to} place to the ${from} place, the value becomes…`, ["10 times as much each place","1/10 as much each place"], askBig?0:1)},
-    {t:`${gap} step${gap>1?"s":""} ${askBig?"left":"right"}. ${askBig ? `Multiply by 10 for each step: ${Array(gap).fill("10").join(" × ")}.` : `Divide by 10 for each step: one tenth${gap>1?", of one tenth".repeat(gap-1):""}.`}`, check:finalCheck(p), after:`${askBig ? Array(gap).fill("10").join(" × ")+" = "+factor.toLocaleString("en-US")+" times" : "1/"+factor.toLocaleString("en-US")+" of"}.`}
+    {t:`Find both ${digit}s in the chart.`, chart:num, hl:{[kLo]:"ul",[kHi]:"ul"}, cues:[`Find both digits on the chart and count the columns between them.`, `Count the steps from one heading to the other, one column at a time.`], check:ci(`How many places apart are they?`, gap)},
+    {t:`Each place to the <b>left</b> is worth <b>10 times</b> as much; each place to the <b>right</b> is worth <b>1/10</b> as much. The ${from} place is to the ${askBig?"left":"right"} of the ${to} place.`, cues:[`Left is bigger (10 times each place); right is smaller (1/10 each place).`, `Is the ${from} place to the left or to the right of the ${to} place?`], check:cm(`Going from the ${to} place to the ${from} place, the value becomes…`, ["10 times as much each place","1/10 as much each place"], askBig?0:1)},
+    {t:`${gap} step${gap>1?"s":""} ${askBig?"left":"right"}. ${askBig ? `Multiply by 10 for each step: ${Array(gap).fill("10").join(" × ")}.` : `Divide by 10 for each step: one tenth${gap>1?", of one tenth".repeat(gap-1):""}.`}`, cues:[`Left: multiply by 10 for each step. Right: divide by 10 for each step. Count your steps.`, `${gap} step${gap>1?"s":""} ${askBig?"left: multiply by 10 that many times":"right: take 1/10 that many times"}.`], check:finalCheck(p), after:`${askBig ? Array(gap).fill("10").join(" × ")+" = "+factor.toLocaleString("en-US")+" times" : "1/"+factor.toLocaleString("en-US")+" of"}.`}
   ];
   p.hints=[{t:`Find both ${digit}s on the chart and count the places between them.`},{t:`Every place to the <b>left</b> is worth ten of the place beside it; every place to the <b>right</b> is worth a tenth of it. The two ${digit}s are ${gap} place${gap>1?"s":""} apart.`, chart:num, hl:{[kLo]:"ul",[kHi]:"ul"}},{t:`The ${from} place is to the ${askBig?"left":"right"}, so its ${digit} is worth ${askBig?"more":"less"}.`}];
   return p;
@@ -1651,7 +1651,8 @@ function divAreaSVG(d, N, found, o){ // found: [{q, piece}] chunks known so far;
   if(rem>0) parts.push({w:rem/d, label:`?`, sub:`area ${L$(rem)}`, known:false});
   const avail=W-left-24; let widths=parts.map(p=>Math.max(1e-9,p.w)); const tot=widths.reduce((a,b)=>a+b,0); widths=widths.map(w=>w/tot*avail); let squeezed=false;
   for(let k=0;k<4;k++){ const small=widths.map((w,i)=>w<minW&&parts.length>1?i:-1).filter(i=>i>=0); if(!small.length) break; squeezed=true; const need=small.reduce((s,i)=>s+(minW-widths[i]),0); const bigTot=widths.reduce((s,w,i)=>small.includes(i)?s:s+w,0); widths=widths.map((w,i)=>small.includes(i)?minW:w-need*(w/bigTot)); }
-  let svg=`<svg viewBox="0 0 ${W} ${H+20}" width="100%" style="max-width:${W}px;display:block;margin:8px auto" role="img" aria-label="area model for ${L$(N)} ÷ ${d}">`;
+  const desc = `Area model: height ${d}, total area ${L$(N)}.${found.length?` Known: ${found.map(f=>`a width of ${L$(f.q)} with area ${L$(f.piece)}`).join(", ")}.`:""}${rem>0?` The remaining area is ${L$(rem)} and its width is unknown.`:""}${o&&o.total!==undefined?` The whole side is ${found.map(f=>L$(f.q)).join(" + ")} = ${L$(o.total)}, so ${L$(N)} = ${d} × ${L$(o.total)}.`:""}`;
+  let svg=`<svg viewBox="0 0 ${W} ${H+20}" width="100%" style="max-width:${W}px;display:block;margin:8px auto" role="img" aria-label="${esc(desc)}"><title>${esc(desc)}</title>`;
   svg+=`<text x="${left-8}" y="${top+H/2+5}" font-size="15" font-weight="700" text-anchor="end" fill="#1B2A41">${d}</text>`;
   let x=left; parts.forEach((p,i)=>{ const w=widths[i]; svg+=`<rect x="${x}" y="${top}" width="${w}" height="${H}" fill="${p.known?"#FFF8D6":"#F3F4F6"}" stroke="#1B2A41" stroke-width="2"${p.known?"":' stroke-dasharray="6 4"'}/>`;
     svg+=`<text x="${x+w/2}" y="${top+H/2-4}" font-size="14" font-weight="700" text-anchor="middle" fill="${p.known?"#1B2A41":"#6B7280"}">${p.label}</text><text x="${x+w/2}" y="${top+H/2+16}" font-size="13" text-anchor="middle" fill="${p.known?"#1B2A41":"#6B7280"}">${p.sub}</text>`;
@@ -1696,6 +1697,7 @@ function genDivide(level, focus){
   const bounds=[[10,d*10],[100,d*100],[1000,d*1000]]; const lo=bounds.filter(b=>b[1]<=N).pop(), hi=bounds.find(b=>b[1]>N);
   steps.push({t:`${orientT} First, how big is the answer? ${d} × 10 = ${L$(d*10)}, ${d} × 100 = ${L$(d*100)}, ${d} × 1,000 = ${L$(d*1000)}.${fig([],{remaining:N})}`,
     check:cm(`Is the answer in the tens, the hundreds, or the thousands?`, sizeOpts, sizeAns),
+    explain:{q:`Which comparison proves the answer is in the ${unitWord(firstUnit)}?`, options:[`${L$(d*firstUnit)} < ${L$(N)} < ${L$(d*firstUnit*10)}`, `${L$(N)} is bigger than ${d}`, `${d} × ${L$(firstUnit)} has a zero in it`]},
     cues:[`Which two of those products surround ${L$(N)}: one smaller than it, one bigger?`, lo&&hi?`${L$(lo[1])} < ${L$(N)} < ${L$(hi[1])}: so the answer is more than ${L$(lo[0])} groups but fewer than ${L$(hi[0])}.`:`${L$(N)} is smaller than ${L$(d*100)}, so the answer is fewer than 100 groups.`],
     after:`${L$(N)} sits between ${L$(d*firstUnit)} and ${L$(d*firstUnit*10)}, so the answer has ${unitWord(firstUnit)} in it but no ${unitWord(firstUnit*10)}. Build it one chunk at a time, biggest chunk first.`});
   let remaining=N;
@@ -1708,14 +1710,17 @@ function genDivide(level, focus){
       const countBy=Array.from({length:Math.min(k,4)},(_,j)=>L$(d*(j+1))).join(", ");
       steps.push({t:`${skipNote}${area?`Chunk ${chunkNo} of the side, in ${frontWord}.`:`Chunk ${chunkNo}: ${frontWord} of groups.`} Cover the smaller places for now and look at the ${frontWord} in ${L$(remaining)}: <b>${L$(front)}</b> ${frontWord} (that is ${L$(front*unit)}). Count up by ${d}s.${fig(foundSoFar.slice(),{remaining})}`,
         check:ci(`What is the biggest number of ${d}s that fits in ${L$(front)} without going over?`, k),
-        cues:[`Count by ${d}s and stop before you pass ${L$(front)}: ${countBy}${k>4?", …":""}.`, `${d} × ${k+1} = ${L$(d*(k+1))} is past ${L$(front)}. How many ${d}s did you count before that?`],
+        explain:{q:`Why stop at ${k} and not ${k+1}?`, options:[`${d} × ${k+1} = ${L$(d*(k+1))} is more than ${L$(front)}: it would go over`, `${k} is always the best guess`, `${d} × ${k} is the biggest fact there is`]},
+        cues:[`Count by ${d}s, starting ${d}, … and stop before you pass ${L$(front)}.`, `The run so far: ${countBy}${k>4?", …":""}. ${d} × ${k+1} = ${L$(d*(k+1))} is past ${L$(front)}. How many ${d}s fit?`],
         after:`${d} × ${k} = ${L$(d*k)}${d*k<front?` (${d} × ${k+1} = ${L$(d*(k+1))} would go over)`:""}. That fact is the key to this chunk.`});
       const chunkFound=foundSoFar.concat([{q:x.qpart, piece:x.piece}]);
       steps.push({t:`Scale it up: those were ${frontWord}, so you have ${k} ${one(k,frontWord)} of groups, not ${k} ${grp(k)}. How many groups is that?${area?` (That is the length of this chunk of the side.)`:""}`,
         check:ci(`${k} ${one(k,frontWord)} of groups = how many groups?`, x.qpart, L$(x.qpart)),
+        explain:{q:`Why does ${k} become ${L$(x.qpart)} here?`, options:[`the ${k} counted ${frontWord}, so it is ${k} ${one(k,frontWord)} of groups: ${L$(x.qpart)} groups`, `we add a zero to make the answer bigger`, `${d} × ${k} is ${L$(d*k)}, and ${L$(d*k)} rounds to ${L$(x.qpart)}`]},
         cues:[`${k} ${one(k,frontWord)}: what number is that? (1 ten is 10, 1 hundred is 100.)`, `${k} ${one(k,frontWord)} is ${k} with ${unit===10?"a zero":unit===100?"two zeros":"three zeros"} after it.`],
         after:`<b>${L$(x.qpart)}</b> is your ${i===0?"first":"next"} small answer (a <b>partial quotient</b>). ${d} × ${L$(x.qpart)} = ${L$(x.piece)} (${d} × ${k} with ${unit===10?"a zero":unit===100?"two zeros":"three zeros"} on the end)${x.piece===remaining?`, which uses up all ${L$(remaining)}.`:`: it uses up ${L$(x.piece)} of the ${L$(remaining)}.`}${fig(chunkFound,{remaining:remaining-x.piece})}`});
       if(!isLast) steps.push({t:`Take that chunk away to see what is still left to share.`, check:ci(`${L$(remaining)} − ${L$(x.piece)} = ?`, remaining-x.piece, L$(remaining-x.piece)),
+        explain:{q:`Why take ${L$(x.piece)} away from ${L$(remaining)}?`, options:[`${L$(x.piece)} is already shared out; what is left still needs sharing`, `to find the next partial quotient directly`, `because ${L$(x.piece)} is the bigger number`]},
         cues:[`Subtract one place at a time, biggest place first: what is left after the ${unitWord(unit)} are taken away?`, `${L$(remaining)} − ${L$(x.piece)}: line up the places and subtract one column at a time, starting on the right.`],
         after:`${L$(remaining-x.piece)} is left. It is smaller than ${d} × ${L$(unit)}, so the next chunk is smaller.`});
       foundSoFar.push({q:x.qpart, piece:x.piece});
@@ -1723,7 +1728,8 @@ function genDivide(level, focus){
       const countBy=Array.from({length:Math.min(k,4)},(_,j)=>L$(d*(j+1))).join(", ");
       steps.push({t:`${skipNote}${area?`The last chunk of the side: a piece with area ${L$(remaining)} and width ${d}.`:`The last chunk: ${L$(remaining)} is left.`} Count by ${d}s.${fig(foundSoFar.slice(),{remaining})}`,
         check:ci(`How many ${d}s make ${L$(remaining)}?`, k),
-        cues:[`Count by ${d}s until you reach ${L$(remaining)} exactly: ${countBy}${k>4?", …":""}.`, `${d} × ${k-1} = ${L$(d*(k-1))} is not enough and ${d} × ${k+1} = ${L$(d*(k+1))} is too much.`],
+        explain:{q:`Why is ${k} the last chunk?`, options:[`${d} × ${k} = ${L$(remaining)} uses up everything that was left, with nothing over`, `${k} is smaller than ${d}`, `the last chunk is always a one-digit number`]},
+        cues:[`Count by ${d}s, starting ${d}, … until you land on ${L$(remaining)} exactly.`, `The run: ${countBy}${k>4?", …":""}. ${d} × ${k-1} = ${L$(d*(k-1))} is not enough and ${d} × ${k+1} = ${L$(d*(k+1))} is too much.`],
         after:`${d} × ${k} = ${L$(remaining)}, nothing left over. <b>${k}</b> is your last partial quotient.${fig(foundSoFar.concat([{q:x.qpart, piece:x.piece}]),{remaining:0})}`});
       foundSoFar.push({q:x.qpart, piece:x.piece});
     }
@@ -1732,6 +1738,7 @@ function genDivide(level, focus){
   const qparts=parts.map(x=>L$(x.qpart));
   const allFound=parts.map(x=>({q:x.qpart, piece:x.piece}));
   if(parts.length>1) steps.push({t:`${area?"The whole side is all the chunks together.":"Add the small answers together."} You found ${qparts.length>2?qparts.slice(0,-1).join(", ")+",":qparts[0]} and ${qparts[qparts.length-1]}.`, check:finalCheck(p),
+    explain:{q: area ? `How does the rectangle show ${L$(N)} ÷ ${d}?` : `Why add ${qparts.join(" + ")}?`, options: area ? [`the chunks of the side add to the whole side, and their areas add to ${L$(N)}`, `the tallest chunk is the answer`, `the rectangle shows ${d} + ${L$(q)}`] : [`each partial quotient is part of the groups; together they are all ${L$(q)} groups`, `adding checks that the subtraction was right`, `the biggest partial quotient is the answer and the rest are checks`]},
     cues:[`Add the partial quotients you found, biggest first: ${qparts.join(" + ")}.`, `${qparts.join(" + ")}: add the ${unitWord(firstUnit)} first, then the rest.`],
     after:`You split ${L$(N)} into ${parts.map(x=>L$(x.piece)).join(" + ")}, easier amounts that ${d} divides evenly. The small answers, ${qparts.length>2?qparts.slice(0,-1).join(", ")+",":qparts[0]} and ${qparts[qparts.length-1]}, are <b>partial quotients</b>; adding them gives the quotient. (SWUN calls this the <b>${area?"area model":"place value strategy"}</b>.)${fig(allFound,{remaining:0,total:q})}`});
   else steps.push({t:`Nothing is left over, so that one chunk is the whole answer.`, check:finalCheck(p), cues:[`The one partial quotient you found is the answer.`, `How many groups of ${d} did the one chunk make?`], after:`One partial quotient covered all of ${L$(N)}: ${d} × ${qparts[0]} = ${L$(N)}. (SWUN calls this the <b>${area?"area model":"place value strategy"}</b>.)${fig(allFound,{remaining:0,total:q})}`});
@@ -2042,7 +2049,8 @@ function genDecMul(level, focus){
     after:`${fmt(ans)} is ${sizeWords}, as it should be, so it makes sense.${p.meta.places?` (${fmt(A)} has ${plural(decPlaces(A),"decimal place")}${kind==="decimal"?` and ${fmt(B)} has ${plural(decPlaces(B),"decimal place")}`:""}; the product has ${plural(p.meta.places,"decimal place")} before any end zeros are dropped.)`:""}`});
   p.steps=steps;
   p.hints=[
-    {t:`Estimate first. ${estSetup} The real answer should be near that.`},
+    {t:`Estimate first: ${smallA&&smallB?`both factors are less than 1, so the answer is smaller than either of them.`:(smallA||smallB)?`one factor is less than 1, so the answer is smaller than the other factor.`:`about how big should ${fmt(A)} × ${fmt(B)} be? Round each factor to an easy number.`}`},
+    {t:`${estSetup} The real answer should be near that.`},
     {t:`Break the numbers into place-value parts and multiply every part: ${fmt(A)} is ${partsLabel(pa)}${pb.length>1?`, ${fmt(B)} is ${partsLabel(pb)}`:""}. (SWUN: the <b>${model}</b>.)`},
     ...sections.flatMap((s,i)=>{ const xd=decPlaces(D(s.x)), yd=decPlaces(D(s.y)); const digitsProd=(s.x/Math.pow(10,3-xd))*(s.y/Math.pow(10,3-yd)); return [
       {t:`Section ${i+1}: <b>${fmtV(s.x)} × ${fmtV(s.y)}</b>. Multiply the digits first: ${s.x/Math.pow(10,3-xd)} × ${s.y/Math.pow(10,3-yd)} = ?`},
@@ -2128,9 +2136,9 @@ function nlSteps(p){ // replaces the column steps with number-line jumps when th
   const {nums,op}=p.meta; if(nums.length!==2) return null; const A=dV(nums[0]), B=dV(nums[1]); const sign = op==="+" ? 1 : -1;
   const parts=decParts(nums[1]).sort((x,y)=>y-x); // biggest jump first: whole, then tenths, then hundredths
   const jumps=parts.map(v=>({dv:sign*v, label:`${op==="+"?"+":"−"}${fmtV(v)}`}));
-  const steps=[{t:`<b>Number-line strategy.</b> Start at <b>${fmt(nums[0])}</b>. ${op==="+"?"Jump forward":"Jump back"} by the parts of ${fmt(nums[1])}: ${parts.map(v=>fmtV(v)).join(", then ")}. Big jump first, then the smaller ones.${nlSVG(A, jumps, undefined, 0)}`, check:ci(`How many jumps will you make?`, jumps.length), after:`One jump for each part of ${fmt(nums[1])}.`}];
+  const steps=[{t:`<b>Number-line strategy.</b> Start at <b>${fmt(nums[0])}</b>. ${op==="+"?"Jump forward":"Jump back"} by the parts of ${fmt(nums[1])}: ${parts.map(v=>fmtV(v)).join(", then ")}. Big jump first, then the smaller ones.${nlSVG(A, jumps, undefined, 0)}`, cues:[`One jump for each part of the second number: wholes, tenths, hundredths.`, `Break ${fmt(nums[1])} into its parts and count them.`], check:ci(`How many jumps will you make?`, jumps.length), after:`One jump for each part of ${fmt(nums[1])}.`}];
   let cur=A; jumps.forEach((j,i)=>{ const nxt=cur+j.dv; steps.push({t:`Jump ${i+1}: from ${fmtV(cur)}, ${op==="+"?"forward":"back"} <b>${fmtV(Math.abs(j.dv))}</b>. Where do you land?${nlSVG(A, jumps.slice(0,i+1), undefined, i)}`, check:wc(ci(`${fmtV(cur)} ${op} ${fmtV(Math.abs(j.dv))} = ?`, nxt/1000, fmtV(nxt)),"jump"), after:`You landed on ${fmtV(nxt)}.`}); cur=nxt; });
-  steps.push({t:`The last landing point is the answer.${nlSVG(A, jumps, undefined, jumps.length-1)}`, check:finalCheck(p), after:`You landed on <b>${fmt(p.meta.result||D(cur))}</b>.`});
+  steps.push({t:`The last landing point is the answer.${nlSVG(A, jumps, undefined, jumps.length-1)}`, cues:[`Where did the last jump land? That number is the answer.`, `Look at the last landing point you found in the step above and write that number.`], check:finalCheck(p), after:`You landed on <b>${fmt(p.meta.result||D(cur))}</b>.`});
   return steps;
 }
 function chartSteps(p){ // U3 L1/L4: build both numbers on the place-value chart, then add or subtract place by place (same arithmetic as the column steps, with the chart in view)
@@ -2200,7 +2208,7 @@ genWordExpr=function(level, focus){
   p.steps=[
     {t:`<b>What is the relationship?</b> Before choosing an operation, ask: what do we know, what is unknown, and how are they related?`, check:wc(cm(`What kind of problem is this?`, sOpts, so.indexOf(T.s)),"structure"), after:`Here: ${T.rel}.`},
     {t:`Match the structure to an equation. Equal groups → multiply or divide. Comparison → "more than" and "times as many" tell you how two amounts relate (the bigger or the smaller may be the unknown). Part–whole → parts add to the whole. Change → start, change, result.`},
-    {t:`Write the expression that matches the story, then work it out with the order of operations.`, check:finalCheck(p), after:`${T.e} = ${T.v}. That answers the question.`}
+    {t:`Write the expression that matches the story, then work it out with the order of operations.`, cues:[`Match the story's relationship to an operation, then check the order of the numbers.`, `Which expression uses the story's numbers the way you named (groups, parts, a comparison)?`], check:finalCheck(p), after:`${T.e} = ${T.v}. That answers the question.`}
   ];
   p.hints=[{t:`Do not pick the operation from a word like "more" or "each". First say what is known, what is unknown, and how they are related.`},
     {t:`This one is ${/^[aeiou]/i.test(STRUCT[T.s])?"an":"a"} <b>${STRUCT[T.s]}</b> problem: ${T.rel}.`},
@@ -2254,11 +2262,11 @@ function genFractions(level, focus){
     p.steps = toMixed ? [
       {t:`${frText(impN,d)} means ${impN} pieces, each <b>1/${d}</b> of a whole. It takes <b>${d}</b> pieces to make one whole. How many wholes fit in ${impN} pieces? Think ${impN} ÷ ${d}.`, check:wc(ci(`How many whole groups of ${d} are in ${impN}?`, w),"wholes"), after:`${w} whole${w===1?"":"s"} use${w===1?"s":""} ${w*d} of the ${impN} pieces.`},
       {t:`The pieces left over are still ${ordName(d)}, so they stay over ${d}.`, check:wc(ci(`How many pieces are left over after ${w} wholes?`, n),"remainder"), after:`${impN} − ${w*d} = ${n}: the fraction part is ${n}/${d}.`},
-      {t:`Write the mixed number: the wholes, a space, then the leftover pieces over ${d}.${fracSVG([{w:0,n:impN,d}])}`, check:finalText(p), after:`${frText(impN,d)} = ${mixedText(w,n,d)}.`}]
+      {t:`Write the mixed number: the wholes, a space, then the leftover pieces over ${d}.${fracSVG([{w:0,n:impN,d}])}`, cues:[`Wholes, a space, then the leftover pieces over the denominator.`, `Type it like 2 1/3: the wholes you found, a space, the leftover count, then /${d}.`], check:finalText(p), after:`${frText(impN,d)} = ${mixedText(w,n,d)}.`}]
     : [
       {t:`${mixedText(w,n,d)} is ${w} whole${w===1?"":"s"} and ${n}/${d} more. Each whole is <b>${d}/${d}</b>: ${d} pieces. How many pieces are in ${w} whole${w===1?"":"s"}?`, check:wc(ci(`${w} × ${d} = ?`, w*d),"wholes"), after:`${w} whole${w===1?" is":"s are"} ${w*d} ${ordName(d)}.`},
       {t:`Now add the extra ${n} piece${n===1?"":"s"} from the fraction part.`, check:wc(ci(`${w*d} + ${n} = ?`, impN),"remainder"), after:`${impN} ${ordName(d)} in all.`},
-      {t:`Write the total pieces over ${d}. The denominator stays ${d}: the piece size did not change.${fracSVG([{w,n,d}])}`, check:finalText(p), after:`${mixedText(w,n,d)} = ${frText(impN,d)}.`}];
+      {t:`Write the total pieces over ${d}. The denominator stays ${d}: the piece size did not change.${fracSVG([{w,n,d}])}`, cues:[`Total pieces over the denominator.`, `Type it like 7/3: the total pieces you found, then /${d}.`], check:finalText(p), after:`${mixedText(w,n,d)} = ${frText(impN,d)}.`}];
     p.hints = toMixed ? [{t:`How many pieces make one whole? ${d}. So ask: how many groups of ${d} fit into ${impN}, and how many pieces are left?`},{t:`${impN} ÷ ${d}: the whole-number part of the answer is the wholes; the remainder is the numerator; the denominator stays ${d}.`},{t:`Type it as: <b>wholes</b>, a space, then <b>numerator/denominator</b> (for a different problem, ${d===5?"7/3 would be typed 2 1/3":"7/5 would be typed 1 2/5"}).`}]
       : [{t:`Each whole is ${d} pieces of size 1/${d}. Turn the ${w} whole${w===1?"":"s"} into pieces first.`},{t:`${w} whole${w===1?"":"s"} × ${d} pieces each = ${w*d} pieces. Then add the ${n} extra piece${n===1?"":"s"}.`},{t:`Write the total pieces over ${d}. Type it as <b>numerator/denominator</b> (for a different problem, ${d===5?"2 1/3 would be typed 7/3":"1 2/5 would be typed 7/5"}).`}];
     return p;
@@ -2273,7 +2281,7 @@ function genFractions(level, focus){
     p.traps=["benchmark"];
     p.steps=[{t:`<b>Benchmarks.</b> Compare each fraction with 0, 1/2, and 1. ${frText(A.n,A.d)}: is ${A.n} close to 0, to half of ${A.d} (${A.d/2}), or to ${A.d}?${fracSVG([A])}`, check:Object.assign(wc(cm(`${frText(A.n,A.d)} is closest to…`, ["0","1/2","1"], [0,0.5,1].indexOf(bench(A))),"benchmark"),{visibleOk:true}), after:`${A.n} out of ${A.d} is close to ${benchName(bench(A))}.`},
       {t:`${frText(B.n,B.d)}: is ${B.n} close to 0, to half of ${B.d} (${B.d/2}), or to ${B.d}?${fracSVG([B])}`, check:Object.assign(wc(cm(`${frText(B.n,B.d)} is closest to…`, ["0","1/2","1"], [0,0.5,1].indexOf(bench(B))),"benchmark"),{visibleOk:true}), after:`${B.n} out of ${B.d} is close to ${benchName(bench(B))}.`},
-      {t:`Add the two benchmarks you picked: about ${benchName(bench(A))} + ${benchName(bench(B))}. Pick the choice closest to that.`, check:Object.assign(finalCheck(p),{visibleOk:true}), after:`About ${tName(target)}. (The exact sum is ${sum.toFixed(2)}, which agrees.)`}];
+      {t:`Add the two benchmarks you picked: about ${benchName(bench(A))} + ${benchName(bench(B))}. Pick the choice closest to that.`, cues:[`Add the two benchmarks you chose.`, `0, 1/2, or 1 for each fraction: add those two, then pick the closest choice.`], check:Object.assign(finalCheck(p),{visibleOk:true}), after:`About ${tName(target)}. (The exact sum is ${sum.toFixed(2)}, which agrees.)`}];
     p.hints=[{t:`You do not need the exact sum. Ask about each fraction: is it near 0, near 1/2, or near 1? Half of the denominator is the "1/2" mark.`},{t:`${frText(A.n,A.d)}: is ${A.n} closer to 0, to ${A.d/2}, or to ${A.d}? Do the same for ${frText(B.n,B.d)} with ${B.d/2} and ${B.d}.`},{t:`${frText(A.n,A.d)} is near ${benchName(bench(A))}; ${frText(B.n,B.d)} is near ${benchName(bench(B))}. Add those two benchmarks and pick the closest choice.`}];
     return p;
   }
@@ -2285,7 +2293,7 @@ function genFractions(level, focus){
   p.traps=["common-denominator","magnitude"];
   p.steps=[{t:`Different denominators mean different piece sizes, so you cannot compare the numerators directly. Give both the <b>same denominator</b>: count up by ${Math.max(A.d,B.d)}s until you hit a number ${Math.min(A.d,B.d)} also goes into.`, check:wc(ci(`What is a common denominator for ${A.d} and ${B.d}?`, L, String(L)),"common-denominator"), after:`${A.d} and ${B.d} both go into ${L}.`},
     {t:`Rewrite ${frText(A.n,A.d)} in ${L}ths: ${A.d} × ${L/A.d} = ${L}, so multiply the top by ${L/A.d} too.`, check:wc(ci(`${frText(A.n,A.d)} = how many ${L}ths?`, A.n*L/A.d),"magnitude"), after:`${frText(A.n,A.d)} = ${frText(A.n*L/A.d, L)}. The same way, ${frText(B.n,B.d)} = ${frText(B.n*L/B.d, L)}.`},
-    {t:`Same-size pieces now: ${A.n*L/A.d} ${L}ths against ${B.n*L/B.d} ${L}ths. Which original fraction is greater?${fracSVG([A,B])}`, check:Object.assign(finalCheck(p),{visibleOk:true}), after:`${options[answer]} is greater: on the number line it sits farther right.`}];
+    {t:`Same-size pieces now: ${A.n*L/A.d} ${L}ths against ${B.n*L/B.d} ${L}ths. Which original fraction is greater?${fracSVG([A,B])}`, cues:[`Same denominator now: compare the numerators.`, `More pieces of the same size is the greater fraction. Pick that original fraction.`], check:Object.assign(finalCheck(p),{visibleOk:true}), after:`${options[answer]} is greater: on the number line it sits farther right.`}];
   p.hints=[{t:`Bigger denominator means smaller pieces. You cannot compare the tops until the pieces are the same size (or use benchmarks: is each fraction more or less than 1/2?).`},{t:`Find a common denominator: count up by ${Math.max(A.d,B.d)}s until ${Math.min(A.d,B.d)} also divides it. Rewrite both fractions with that denominator.`},{t:`Now compare the numerators: the bigger count of ${L}ths is the greater fraction.`}];
   return p;
 }
@@ -2646,6 +2654,7 @@ let revealed=0, passed=0, expanded=0, missEntry=null;
 let whyState=null, okEntry=null;
 let lastPraise=[];   // recovery / independence messages for the current right answer: [{t, big}]
 let sessionN=0, stopOfferedAt=-1, sessionDone=false, sessionMissRun=0, breakOfferedAt=-1;
+let pendingTransfer=null, helpPrompts=[]; // after a help chain (miss → walkthrough → one like it), the next fresh problem is the same skill with the coach hidden: an immediate, unprompted transfer check
 let todayPlan=null, todayIdx=0, todayExtra=0, todaySid=0; /* todaySid: this sitting's id; every fresh problem served in it is tagged, so the summary counts the sitting's own problems and nothing else */ // "Start today": the planned slots for this sitting, and how many extra problems were added to end on a win
 // The plan: a due check-in or review if there is one, this week's lesson (twice), the weakest open spot, then mixed practice. About six problems, and it ends on a win.
 function buildTodayPlan(){ const plan=[]; const now=Date.now(); const W=S.weak||{}; const okKey=k=>SKILLS[parseWeakKey(k).sk];
@@ -2673,7 +2682,8 @@ const SUPPORT_NAMES={3:"the pre-written tens-row zero and the opening coach line
 function resetSession(){ sessionN=0; stopOfferedAt=-1; sessionDone=false; sessionMissRun=0; breakOfferedAt=-1; } // a new learner starts a fresh sitting
 const coachLevel=sk=>{ const c=S.coach||{}; const lv = c[sk]===undefined ? 2 : c[sk]; const everRight=S.log.some(e=>e.sk===sk && e.ok && ["independent","supported"].includes(classifyEntry(e))); /* the same classification as the rest of the app: a hinted, studied, walkthrough, follow-up, copied, or paper entry is not "getting one right" */ return Math.min(lv, everRight?1:2); }; // full coaching (line + example) only until her first right answer on the skill; after that the coach is a one-line nudge at most
 const wsSup=()=> (cur && cur.placement && !cur.toolsOn) ? 0 : (S.support.multiply||0); /* the supports actually on screen: a quick placement check runs on the bare page unless she asks for a tool back */
-const coachOn=()=>!!(cur && cur.hints && cur.hints[0] && !cur.placement && (cur.ws ? wsSup()>=3 : coachLevel(cur.skill)>=1)); // the coach line shows hint 1 for free; on the workspace it is tied to the supports
+const coachOn=()=>!!(cur && cur.hints && cur.hints[0] && !cur.placement && !cur.transferCheck && (cur.ws ? wsSup()>=3 : (coachLevel(cur.skill)>=2 || (coachLevel(cur.skill)===1 && !!cur.nudgeOpen)))); // true only when a strategy line is actually on screen
+const nudgeAvailable=()=>!!(cur && !cur.ws && cur.hints && cur.hints[0] && !cur.placement && !cur.transferCheck && coachLevel(cur.skill)===1 && !cur.nudgeOpen); // level 1: the reminder waits behind a button // the coach line shows hint 1 for free; on the workspace it is tied to the supports
 // "Show me one first": a completed example of a similar problem, before she tries hers. Looking is recorded as studied (help), never as independent.
 let exampleOpen=false;
 const exampleBtn=()=> cur.hw&&cur.fixed ? "" : `<button class="btn quiet" id="showexample" title="See a similar problem worked out, step by step, before you try this one">${exampleOpen?"Hide the example":cur.studied?"See the example again":"Show me one first"}</button>`;
@@ -2950,14 +2960,16 @@ function next(){ // a fresh problem: new help chain
     if(sessionN%3===2){ const t=recoveryTarget(); if(t && t.state==="review"){ target=t; sk=t.sk; focus=t.focus; S.weak[t.key].served=Date.now(); }
       else { const due=Object.keys(S.checkins||{}).filter(k=>SKILLS[k.split("|")[0]] && S.checkins[k].due<=Date.now()).sort((a,b)=>S.checkins[a].due-S.checkins[b].due)[0]; if(due){ checkinSk=due; sk=due.split("|")[0]; } } } }
   const hw=hwMode();
+  let transfer=false; if(pendingTransfer && SKILLS[pendingTransfer] && !hw && mode!=="hw:check" && !checkinSk){ if(!target){ sk=pendingTransfer; transfer=true; focus=undefined; } else if(target.sk===pendingTransfer) transfer=true; pendingTransfer=null; } /* coached → guided → now a fresh one of the same kind, supports hidden */
   if(mode==="hw:check"){ if(!pendingHW){ hwEntry(); return; } cur=SKILLS[pendingHW.skill].gen(pendingHW.level, pendingHW.focus); cur.hw=true; cur.fixed=true; cur.hwLabel=pendingHW.label; pendingHW=null; }
   else if(hw){ const shape=pick(hw.shapes); cur=SKILLS[sk].gen(shapeLevel(shape), {shape, variant:hw.variant}); cur.hw=true; }
   else if(target){ cur=genForTarget(target); if(cur.notEligible){ cur.focusWhy=`could not build a problem for ${target.why.split(" · ")[0]}; this one is ordinary practice`; } else { cur.focusKey=target.key; cur.focusWhy=target.why; cur.harder=target.harder&&target.state==="weak"; if(STEP_COMPS[target.sk] && STEP_COMPS[target.sk].has(target.comp)) attachPre(cur, target.comp); } }
   else if(checkinSk){ const ck=S.checkins[checkinSk]; const cf=focusFromCtx(sk, ck.ctx||{}); let g=0; do{ cur=SKILLS[sk].gen(S.levels[sk], Object.keys(cf).length?cf:undefined); }while(g++<20 && ck.ctx && ctxKey(checkinCtx(cur))!==ctxKey(ck.ctx)); cur.checkin=checkinSk; } // the same kind of problem she showed, with new numbers
-  else cur = focus!==undefined ? SKILLS[sk].gen(S.levels[sk], focus) : SKILLS[sk].gen(S.levels[sk]);
+  else { cur = focus!==undefined ? SKILLS[sk].gen(S.levels[sk], focus) : SKILLS[sk].gen(S.levels[sk]); if(transfer){ let g=0; while(g++<20 && helpPrompts.includes(plain(cur.prompt))) cur=SKILLS[sk].gen(S.levels[sk]); } } /* the transfer item must not repeat the coached problem, the example, or the follow-up */
+  if(transfer && !cur.hw) cur.transferCheck=true;
   if(!cur.pre){ const rc=REP_COMP[`${cur.skill}:${cur.meta&&cur.meta.variant}`]; if(rc) attachPre(cur, rc); } // a representation lesson always asks for its own step
   // Quick placement check: a skill she has never tried starts with one level-3 problem, no coach. Right on her own → she starts at level 3. Wrong → level 1 as usual, and the miss does not count against her.
-  if(!cur.hw && !cur.focusKey && !cur.checkin && S.levels[sk]===1 && !S.log.some(e=>e.sk===sk) && cur.level===1 && !cur.fixed){ const trial=SKILLS[sk].gen(3, focus); if(trial && trial.skill===sk){ cur=trial; cur.placement=true; if(!cur.pre){ const rc=REP_COMP[`${cur.skill}:${cur.meta&&cur.meta.variant}`]; if(rc) attachPre(cur, rc); } } }
+  if(!cur.hw && !cur.focusKey && !cur.checkin && !cur.transferCheck && S.levels[sk]===1 && !S.log.some(e=>e.sk===sk) && cur.level===1 && !cur.fixed){ const trial=SKILLS[sk].gen(3, focus); if(trial && trial.skill===sk){ cur=trial; cur.placement=true; if(!cur.pre){ const rc=REP_COMP[`${cur.skill}:${cur.meta&&cur.meta.variant}`]; if(rc) attachPre(cur, rc); } } }
   if(mode==="today" && todayPlan){ cur.todaySlot=todayPlan[todayIdx]||"extra"; todayIdx++; if(todayIdx>todayPlan.length) todayExtra++; }
   resetProblemState(); render();
 }
@@ -3033,7 +3045,7 @@ function wsHTML(readonly, marks){
   const entry = readonly ? "" : `<div class="ws-entry-wrap"><label class="ws-entry-label" id="wsrowlbl" for="wsentry">${carryMode?"Carry box selected — type one digit":wsRowPrompt(active,sp)}</label><input class="ws-entry" id="wsentry" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="${cap}" aria-labelledby="wsrowlbl" ${carryMode?"disabled":""} value="${esc(ws.rows[active]||"")}" placeholder="${active==="r1"&&ws.locked["r1-0"]?"the digits before the 0":"Type the whole number"}"></div>`;
   const pad = readonly ? "" : `${entry}<div class="pad" role="group" aria-label="Number pad">${[1,2,3,4,5,6,7,8,9,0].map(d=>`<button type="button" class="btn" data-d="${d}">${d}</button>`).join("")}<button type="button" class="btn" data-d="bs" aria-label="Erase the last digit">⌫</button><button type="button" class="btn small-txt" data-d="clr" aria-label="Clear this row" title="Clear this row">clear</button><button type="button" class="btn wide" id="wsnext" data-d="nx" aria-label="${lastRow?"Check this answer":"Move to the next row"}">${lastRow?"check answer ↵":"next row ↵"}</button></div><p class="ws-howto muted">Type the whole row normally — for example, type <b>126</b>, not one box at a time. <b>↵</b> moves to the next row; on the last row it checks. Tap a carry box only when you want to write a carry.</p>`;
   const supNames=[sup>=2?"column labels":"", sup>=1?"carry boxes":"", sup>=3&&sp.two?"tens-row 0 written in":"", sup>=3?"coach line":""].filter(Boolean);
-  const supLine = readonly ? "" : `<p class="supports">${supNames.length?`Supports on: <b>${supNames.join(" · ")}</b> <span class="muted">(they come off as you get these right on your own)</span>`:`No supports: this is the bare page, like the worksheet.`}${sup<3?` <button type="button" class="btn quiet small" id="toolsback" title="Bring one support back for now; it fades again as you get these right">Bring a tool back</button>`:""}</p>`;
+  const supLine = readonly ? "" : `<p class="supports">${supNames.length?`Supports on: <b>${supNames.join(" · ")}</b> <span class="muted">(they come off as you get these right without hints; with any support on, a right answer counts as ${sup>=2?"supported":"prompted"}, not on your own)</span>`:`No supports: this is the bare page, like the worksheet.`}${sup<3?` <button type="button" class="btn quiet small" id="toolsback" title="Bring one support back for now; it fades again as you get these right">Bring a tool back</button>`:""}</p>`;
   const coach = (!readonly && sup>=3 && cur.hints && cur.hints[0]) ? `<div class="hints"><div class="step"><span class="n">Coach.</span>${cur.hints[0].t}</div></div>` : "";
   return `<div class="ws"><div class="ws-wrap">${g}</div>${pad}${supLine}${coach}</div>`;
 }
@@ -3145,7 +3157,7 @@ function render(){
   const sk=cur.skill; const lvl = stage==="followup" ? cur.level : S.levels[sk]; // a follow-up stays at the level of the problem she missed
   const top=`
     <div class="topbar"><button class="btn quiet" id="back">Home</button>
-      <div class="row"><button class="btn quiet small" id="scratchtoggle" aria-pressed="${S.scratch?"true":"false"}" title="Scratch paper for working it out with the pencil">${S.scratch?"Hide scratch paper":"Scratch paper"}</button><span class="pill">${SKILLS[sk].name}</span>${mode==="week"?`<span class="pill week">${Object.keys(weekWeights()).length?"This week":"Mixed review"}</span>`:""}${mode==="today"&&todayPlan?`<span class="pill week" title="${esc(todayLabel(cur.todaySlot))}">Today ${Math.min(todayIdx,todayPlan.length)} of ${todayPlan.length}${cur.todaySlot&&cur.todaySlot!=="extra"?` · ${esc(todayLabel(cur.todaySlot))}`:" · one more"}</span>`:""}${mode==="miss"?`<span class="pill week" title="Chosen from your weakness profile, not the calendar">${cur.focusWhy?`Focus: ${esc(cur.focusWhy)}`:"Where I missed"}</span>`:""}${mode!=="miss"&&cur.focusKey?`<span class="pill week" title="A review that came due">Review: ${esc(cur.focusWhy||"")}</span>`:""}${cur.checkin?`<span class="pill week" title="A skill you have shown before; checking it still holds after a break">Check-in</span>`:""}${cur.hw?`<span class="pill week" title="${cur.fixed?"A problem typed from the page":"Worksheet shapes"}; does not change levels">${cur.fixed?"From the page":"Homework"}</span>`:""}${stage==="followup"?`<span class="pill">One like it</span>`:""}${cur.hw?"":dots(lvl)}</div></div>${warnHTML()}`;
+      <div class="row"><button class="btn quiet small" id="scratchtoggle" aria-pressed="${S.scratch?"true":"false"}" title="Scratch paper for working it out with the pencil">${S.scratch?"Hide scratch paper":"Scratch paper"}</button><span class="pill">${SKILLS[sk].name}</span>${mode==="week"?`<span class="pill week">${Object.keys(weekWeights()).length?"This week":"Mixed review"}</span>`:""}${mode==="today"&&todayPlan?`<span class="pill week" title="${esc(todayLabel(cur.todaySlot))}">Today ${Math.min(todayIdx,todayPlan.length)} of ${todayPlan.length}${cur.todaySlot&&cur.todaySlot!=="extra"?` · ${esc(todayLabel(cur.todaySlot))}`:" · one more"}</span>`:""}${mode==="miss"?`<span class="pill week" title="Chosen from your weakness profile, not the calendar">${cur.focusWhy?`Focus: ${esc(cur.focusWhy)}`:"Where I missed"}</span>`:""}${mode!=="miss"&&cur.focusKey?`<span class="pill week" title="A review that came due">Review: ${esc(cur.focusWhy||"")}</span>`:""}${cur.checkin?`<span class="pill week" title="A skill you have shown before; checking it still holds after a break">Check-in</span>`:""}${cur.hw?`<span class="pill week" title="${cur.fixed?"A problem typed from the page":"Worksheet shapes"}; does not change levels">${cur.fixed?"From the page":"Homework"}</span>`:""}${stage==="followup"?`<span class="pill">One like it</span>`:""}${cur.transferCheck?`<span class="pill week" title="Right after help: a fresh problem of the same kind, coach hidden, so the app can see what you do on your own">Fresh one</span>`:""}${cur.hw?"":dots(lvl)}</div></div>${warnHTML()}`;
   let body=`<p class="prompt">${cur.prompt}</p>`; let right="";
   const showChart = cur.show ? chartHTML(cur.show, null, cur.minCols) : "";
   const m=cur.mistake;
@@ -3154,7 +3166,11 @@ function render(){
   if(phase==="q"||phase==="ok"||phase==="reveal"){
     body+=showChart;
     if(phase==="q" && cur.placement) body+=`<div class="hints"><div class="step"><span class="n">Quick check.</span>You have not tried this kind yet. Try this one on your own first: if you get it, you skip ahead. New to it? Tap <b>${cur.ws?"Bring a tool back":"Show me one first"}</b> and nothing is lost.</div></div>`;
-    else if(phase==="q" && !cur.ws && coachOn()) body+=`<div class="hints"><div class="step"><span class="n">Coach.</span>${cur.hints[0].t}${coachLevel(cur.skill)>=2?` <span class="muted">New to this? <b>Show me one first</b> below walks through one like it.</span>`:""}</div></div>`;
+    else if(phase==="q" && nudgeAvailable()) body+=`<div class="actions" style="margin:0 0 8px"><button type="button" class="btn quiet small" id="nudge" title="A one-line reminder of the strategy. Opening it means this problem counts as prompted, not on your own.">Need a nudge?</button></div>`;
+    else if(phase==="q" && !cur.ws && coachOn() && !cur.transferCheck){ const lv=coachLevel(cur.skill);
+      if(lv>=2) body+=`<div class="hints"><div class="step"><span class="n">Coach.</span>${cur.hints[0].t} <span class="muted">New to this? <b>Show me one first</b> below walks through one like it.</span></div></div>`;
+      else body+=`<div class="hints"><div class="step"><span class="n">Nudge.</span>${cur.hints[0].t} <span class="muted">(Opened: this one counts as prompted, not on your own.)</span></div></div>`; } /* level 1: the reminder is there if she wants it, and the log says whether she used it */
+    else if(phase==="q" && !cur.ws && cur.transferCheck) body+=`<div class="hints"><div class="step"><span class="n">Fresh one.</span>Same kind as the one you just worked through, new numbers, no coach. Show what you can do on your own.</div></div>`;
     body+=preHTML();
     if(cur.ws){ wsInit(); body+=wsHTML(phase!=="q", phase==="q"?null:(ws.marks||{})); if(phase==="q") body+=`<div class="inline-err" id="ierr" role="status" aria-live="polite">${esc(inlineErr)}</div>`; }
     else if(cur.type==="input"){
@@ -3162,7 +3178,7 @@ function render(){
       if(phase==="q") body+=`<div class="inline-err" id="ierr" role="status" aria-live="polite">${esc(inlineErr)}</div>`;
     } else body+=optsHTML("opts", cur.options, selected, cur.answer, phase!=="q", "opt");
     if(phase==="q"){
-      const hOff=coachOn()?1:0; // when the coach line already shows hint 1, the button hands out hint 2 onward
+      const hOff=(coachOn()||nudgeAvailable())?1:0; // hint 1 is the coach line (or the nudge behind its button); the Hint button hands out hint 2 onward
       if(cur.hintPlan && cur.ws && ws){ // workspace: hints follow her work, one cell at a time (only when this problem really has a live workspace)
         const log=cur.hintLog||[]; const total=(cur.hintTotal||cur.hints.length)-hOff; const more = !log.some(h=>h.done);
         body+=`<div class="hints" id="hints" aria-live="polite">${log.map((h,i)=>`<div class="step"><span class="n">Hint ${i+1+hOff} of ${total+hOff}.</span>${h.t}</div>`).join("")}</div>
@@ -3273,8 +3289,9 @@ function stepHTML(s,i,dim,withCheck){
       else sub=`<div class="substep ${r==="ok"?"ok":"bad"}">${c.q}<div class="res"><span aria-hidden="true">${r==="ok"?"✓":"•"}</span> ${r==="ok"?`You got <b>${esc(c.display)}</b>.`:`It's <b>${esc(c.display)}</b>.`}</div>${s.after?`<div class="res after">${s.after}</div>`:""}</div>`;
     } else if(sc){
       const open=scActive(); const settled = sc.state==="ok" || sc.state==="revealed";
-      sub=`<div class="substep ${sc.state==="ok"?"ok":sc.state==="revealed"?"bad":sc.state==="confirm"?"confirm":""}"><div class="cq">${c.q}</div>${checkCtlHTML(c)}
-        <div class="inline-msg" id="cmsg" role="status" aria-live="polite">${sc.msg}</div>${settled && s.after?`<div class="res after">${s.after}</div>`:""}
+      const explainHTML = sc.state==="explain" && sc.explain ? `<div class="substep why" style="margin-top:8px"><div class="cq">${esc(sc.explain.q)}</div>${optsHTML("xopts", sc.explain.options, sc.xsel, sc.explain.answer, false, "opt copt")}<div class="actions" style="margin-top:10px"><button class="btn primary" id="xcheck">Check reason</button></div></div>` : "";
+      sub=`<div class="substep ${sc.state==="ok"?"ok":sc.state==="revealed"?"bad":sc.state==="confirm"||sc.state==="explain"?"confirm":""}"><div class="cq">${c.q}</div>${checkCtlHTML(c)}
+        <div class="inline-msg" id="cmsg" role="status" aria-live="polite">${sc.msg}</div>${settled && s.after && !sc.xdone?`<div class="res after">${s.after}</div>`:""}${explainHTML}
         ${open?`<div class="actions" style="margin-top:10px"><button class="btn primary" id="cstep">Check step</button></div>`:""}</div>`;
     }
   }
@@ -3282,11 +3299,11 @@ function stepHTML(s,i,dim,withCheck){
 }
 function checkCtlHTML(c){ // the entry control for a check, driven by sc. In confirm state it stays enabled with the right answer marked
   const open=scActive();
-  if(c.type==="mc") return optsHTML("copts", c.options||[], sc.sel, c.answer, !open, "opt copt", sc.state==="confirm"?c.answer:-1, sc.crossed);
+  if(c.type==="mc") return optsHTML("copts", c.options||[], sc.state==="explain"?c.answer:sc.sel, c.answer, !open, "opt copt", sc.state==="confirm"?c.answer:-1, sc.crossed);
   return `<label class="vh" for="cans">Your answer for this step</label><input class="ans small${isTextTarget(c)?" text":""}" id="cans" ${ansAttrs(c)} autocomplete="off" placeholder="${isTextTarget(c)?"Type your answer (like 2 × 2 × 3)":"Your answer"}" ${open?"":"disabled"} value="${esc(open?sc.val:c.display)}">`;
 }
 function focusFirst(){
-  const el = ["#wsentry:not([disabled])","#ans:not([disabled])","#cans:not([disabled])","#check","#cstep","#wopts .opt","#step","#retry","#next"].map(s=>app.querySelector(s)).find(Boolean);
+  const el = ["#wsentry:not([disabled])","#ans:not([disabled])","#cans:not([disabled])","#check","#cstep","#xcheck","#wopts .opt","#step","#retry","#next"].map(s=>app.querySelector(s)).find(Boolean);
   if(el) el.focus({preventScroll:true});
 }
 function bind(){
@@ -3306,7 +3323,9 @@ function bind(){
     const ci=q("cans"); if(ci) ci.addEventListener("input",()=>{ sc.val=ci.value; });
     app.querySelectorAll("#copts .opt").forEach(b=>b.onclick=()=>setSel("copts",+b.dataset.i));
   }
+  if(q("xcheck")){ q("xcheck").onclick=checkExplain; app.querySelectorAll("#xopts .opt").forEach(b=>b.onclick=()=>setSel("xopts",+b.dataset.i)); }
   if(q("next")) q("next").onclick=next;
+  if(q("nudge")) q("nudge").onclick=()=>{ cur.nudgeOpen=true; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); }; /* her call; the attempt becomes "prompted" */
   if(q("showexample")) q("showexample").onclick=()=>{ exampleOpen=!exampleOpen; if(exampleOpen) cur.studied=true; inlineErr=""; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const ex=app.querySelector("#example"); if(ex) ex.scrollIntoView({behavior:"smooth",block:"nearest"}); };
   if(q("stopnow")) q("stopnow").onclick=()=>{ stopOfferedAt=sessionN; sessionDone=true; home(); };
   if(q("breaknow")) q("breaknow").onclick=()=>{ breakOfferedAt=sessionMissRun; sessionDone=true; save(); home(); };
@@ -3319,12 +3338,13 @@ function bind(){
   focusFirst();
 }
 function setSel(groupId, i, focusIt){ // select an MC option without re-rendering
-  if(groupId==="opts") selected=i; else if(groupId==="wopts"){ if(whyState) whyState.sel=i; } else if(groupId==="preopts") preSel=i; else if(sc) sc.sel=i;
+  if(groupId==="opts") selected=i; else if(groupId==="wopts"){ if(whyState) whyState.sel=i; } else if(groupId==="preopts") preSel=i; else if(groupId==="xopts"){ if(sc) sc.xsel=i; } else if(sc) sc.sel=i;
   app.querySelectorAll("#"+groupId+" .opt").forEach(x=>{ const on=+x.dataset.i===i; x.classList.toggle("sel",on); x.setAttribute("aria-checked",on); if(on&&focusIt) x.focus({preventScroll:true}); });
 }
 function activeGroup(){ // the MC radiogroup the keyboard should drive right now, if any
   if(phase==="q"&&cur.type==="mc") return {id:"opts", n:cur.options.length, get:()=>selected};
   if(phase==="ok"&&whyState&&!whyState.done&&cur.why) return {id:"wopts", n:cur.why.options.length, get:()=>whyState.sel};
+  if((phase==="wt"||phase==="reveal")&&sc&&sc.state==="explain"&&sc.explain) return {id:"xopts", n:sc.explain.options.length, get:()=>sc.xsel};
   if((phase==="wt"||phase==="reveal")&&scActive()&&cur.steps[stepIdx].check.type==="mc") return {id:"copts", n:(cur.steps[stepIdx].check.options||[]).length, get:()=>sc.sel};
   return null;
 }
@@ -3382,14 +3402,18 @@ function submit(){
   inlineErr="";
   const sk=cur.skill; S=normalize(S); if(!(cur.placement && !ok)){ S.attempted++; S.today.a++; } /* a missed quick check is not scored: it is not in the accuracy counts */
   if(stage==="fresh"){ sessionN++; sessionMissRun = ok ? 0 : sessionMissRun+1; }
+  if(stage==="followup" && !cur.hw){ pendingTransfer=sk; helpPrompts.push(plain(cur.prompt)); while(helpPrompts.length>6) helpPrompts.shift(); } /* the help chain is ending: queue a fresh same-skill check */
+  if(stage==="fresh" && !ok && !cur.hw){ helpPrompts.push(plain(cur.prompt)); while(helpPrompts.length>6) helpPrompts.shift(); }
   // Only independent attempts (fresh, no hints) move levels, up or down. Hints, follow-ups, walkthroughs never do.
   // In the multiplication workspace, "independent" also means the heavy supports are off (support level 1 or 0): with carry boxes and
   // column labels still on, a right answer is a supported success, which fades the supports but does not move the level.
-  const supported = (!!cur.ws && wsSup()>=2) || (!cur.ws && !cur.placement && coachLevel(sk)>=2 && !!(cur.hints&&cur.hints[0])); // tools on, or full coaching (line + example offer) on screen; a level-1 coach line is only a nudge
+  const coachVisible = !cur.ws && !cur.placement && !cur.transferCheck && !!(cur.hints&&cur.hints[0]) && (coachLevel(sk)>=2 || !!cur.nudgeOpen); // a strategy line she could read before answering
+  const supported = (!!cur.ws && wsSup()>=2) || (!cur.ws && !cur.placement && !cur.transferCheck && coachLevel(sk)>=2 && !!(cur.hints&&cur.hints[0])); // tools on, or full coaching (line + example offer) on screen
+  const prompted = (!cur.ws && !supported && coachVisible) || (!!cur.ws && wsSup()===1); // the level-1 reminder, opened by her, or the carry boxes alone on the multiplication page: prompted, not independent
   const stepWrong = !!(cur.pre && preRes && !preRes.ok); // the required step was wrong: the calculation may be right, but the attempt did not show the skill cleanly
-  const independent = stage==="fresh" && hintIdx===0 && !supported && !cur.studied && !stepWrong; // a worked example seen first is help, like a hint
+  const independent = stage==="fresh" && hintIdx===0 && !supported && !prompted && !cur.studied && !stepWrong; // a worked example seen first is help, like a hint; an opened nudge is a prompt
   const entry={t:Date.now(), sk, lvl:cur.level, q:plain(cur.prompt), yours:String(yours), ans:cur.display, ok:ok?1:0, stage, hints:hintIdx, independent:(ok&&independent)?1:0, tag: cur.mistake ? cur.mistake.tag : (cur.focusTag||"")};
-  if(cur.hw) entry.hw=1; if(cur.fixed) entry.page=1; if(cur.studied) entry.studied=1; if(mode==="today" && todayPlan && stage==="fresh"){ entry.today=todaySid; if(cur.todaySlot) entry.todaySlot=cur.todaySlot; } /* a primary problem of this planned sitting; a follow-up or walkthrough is help attached to the miss, not another problem */ entry.hintsOf=(cur.hintTotal||(cur.hints||[]).length)-(coachOn()?1:0); if(cur.ws){ entry.ws=1; entry.support=wsSup(); } if(supported) entry.supported=1; if(mode==="miss"&&cur.focusKey) entry.focus=cur.focusKey; const eck=ctxKey(ctxOf(cur)); if(eck) entry.ctx=eck;
+  if(cur.hw) entry.hw=1; if(cur.fixed) entry.page=1; if(cur.studied) entry.studied=1; if(mode==="today" && todayPlan && stage==="fresh"){ entry.today=todaySid; if(cur.todaySlot) entry.todaySlot=cur.todaySlot; } /* a primary problem of this planned sitting; a follow-up or walkthrough is help attached to the miss, not another problem */ entry.hintsOf=(cur.hintTotal||(cur.hints||[]).length)-((coachOn()||nudgeAvailable())?1:0); if(cur.ws){ entry.ws=1; entry.support=wsSup(); } if(supported) entry.supported=1; if(prompted) entry.prompted=1; if(coachVisible) entry.cues="coach line"; if(cur.transferCheck) entry.freshAfterHelp=1; if(mode==="miss"&&cur.focusKey) entry.focus=cur.focusKey; /* every support visible before she answered is logged; a fresh transfer item after help is marked */ const eck=ctxKey(ctxOf(cur)); if(eck) entry.ctx=eck;
   if(cur.pre && preRes){ entry.pre={comp:cur.pre.comp, ok:preRes.ok?1:0, yours:preRes.yours, ans:String(cur.pre.check.display), q:plain(cur.pre.check.q||"")}; cur.comps=cur.comps||{}; cur.comps[cur.pre.comp]={ok:preRes.ok?1:0, miss:preRes.ok?0:1}; entry.comps=cur.comps; if(!preRes.ok){ noteComp(sk, cur.pre.comp, false, {lvl:cur.level, ctx:ctxOf(cur)}); cur.preMiss=true; } }
   if(wsGrade){ entry.rows=wsGrade.yours; if(!ok) entry.wrong=wsGrade.wrongText; if(wsGrade.comps) entry.comps=wsGrade.compsTally; if(cur.unfinished) entry.unfinished=cur.unfinished;
     const cues=[]; if(ws&&ws.locked["r1-0"]) cues.push("zero written in"); if(coachOn()) cues.push("coach line"); if(wsSup()>=2) cues.push("column labels"); if(wsSup()>=1) cues.push("carry boxes"); if(cues.length) entry.cues=cues.join(", "); } // the assistance that was actually visible, not just whether Hint was tapped
@@ -3399,7 +3423,7 @@ function submit(){
   if(independent && !cur.hw && !cur.focusKey && !cur.checkin && !cur.placement){ const res=applyResult(S.hist[sk], S.levels[sk], ok); S.levels[sk]=res.level; S.hist[sk]=res.hist; lastChange=res.change; }
   // Coach fading (every non-workspace skill): two distinct clean successes while the coach is on fade it one level; a fresh miss brings it back one level.
   if(!cur.ws && stage==="fresh" && !cur.placement){ S.coach=S.coach||{}; S.coachWins=S.coachWins||{}; const lv=coachLevel(sk);
-    if(ok && hintIdx===0 && !cur.studied && lv>0){ const qtext=plain(cur.prompt); S.coachRecent=Array.isArray(S.coachRecent)?S.coachRecent:[]; if(!S.coachRecent.includes(qtext)){ S.coachRecent.push(qtext); while(S.coachRecent.length>12) S.coachRecent.shift(); S.coachWins[sk]=(S.coachWins[sk]||0)+1; if(S.coachWins[sk]>=2){ S.coach[sk]=lv-1; S.coachWins[sk]=0; lastPraise.push({big:true, t: lv-1===0 ? `The coach line is off for ${SKILLS[sk].name.toLowerCase()}: you have this one.` : `Two right with the coach on: from here ${SKILLS[sk].name.toLowerCase()} gets a one-line reminder only, and your right answers count as your own.`}); } } }
+    if(ok && hintIdx===0 && !cur.studied && !cur.nudgeOpen && lv>0){ const qtext=plain(cur.prompt); /* at level 1 only an unopened nudge counts toward switching the coach off */ S.coachRecent=Array.isArray(S.coachRecent)?S.coachRecent:[]; if(!S.coachRecent.includes(qtext)){ S.coachRecent.push(qtext); while(S.coachRecent.length>12) S.coachRecent.shift(); S.coachWins[sk]=(S.coachWins[sk]||0)+1; if(S.coachWins[sk]>=2){ S.coach[sk]=lv-1; S.coachWins[sk]=0; lastPraise.push({big:true, t: lv-1===0 ? `The coach line is off for ${SKILLS[sk].name.toLowerCase()}: you have this one.` : `Two right with the coach on: from here ${SKILLS[sk].name.toLowerCase()} gets a one-line reminder only, and your right answers count as your own.`}); } } }
     else if(!ok){ const shownBefore=S.log.some(e=>e.sk===sk && e.ok && e.independent); S.coach[sk]=Math.min(shownBefore?1:2, lv+1); S.coachWins[sk]=0; } }
   // Quick placement check: right on her own → start at level 3; wrong → level 1 and no penalty.
   if(cur.placement){ if(ok && independent){ S.levels[sk]=3; S.hist[sk]=[1]; lastChange=+2; S.coach=S.coach||{}; S.coach[sk]=0; if(cur.ws){ S.support.multiply=0; S.supportWins.multiply=0; } lastPraise.push({big:true, t:`You already have ${SKILLS[sk].name.toLowerCase()}. Starting you at level 3${cur.ws?", on the bare page, since that is how you just did it":""}.`}); } else if(!ok){ lastPraise.push({t:`No problem: that was a quick check. It is not scored, and your level stays where it is. We start ${SKILLS[sk].name.toLowerCase()} from the beginning, and the app will work on it with you.`}); } entry.placement=1; }
@@ -3483,42 +3507,92 @@ function checkWhy(){ // the justification question: logged on the entry it belon
 // v9.10.1 cue ladder for a wrong step response. First miss: orient (point at the relationship, never the answer). Second miss: narrow
 // (a comparison, a partial relation, or "too big / too small"). Third miss: the answer and its explanation together. A step may supply its
 // own cues (step.cues[0..1]); otherwise the cue comes from the component the check tests, then from the shape of the question.
-const CUE_BY_COMP={
-  fact:[`Use a fact you know and count on from it: one more group, or one fewer.`, null],
-  regroup:[`Only one digit fits in a place. The rest of the number moves to the next column to the left.`, null],
+const CUE_BY_COMP={ // [orient, narrow] for every component a check can test. Narrow cues may use the question's numbers through {a},{op},{b}.
+  fact:[`Use a fact you know and count on from it: one more group, or one fewer.`, `Neighbors: {a} × {bm1} and {a} × {bp1} sit on either side. The answer is between those two products.`],
+  regroup:[`Only one digit fits in a place. The rest of the number moves to the next column to the left.`, `Say the product as tens and ones: the ones digit stays here; the tens digit is what you carry.`],
   "tens-zero":[`This row multiplies by tens. Every multiple of 10 ends in the same digit.`, `Think: 3 tens is 30, 8 tens is 80. What digit is always in the ones place?`],
-  rows:[`Which digit of the bottom number is this row using? Multiply the whole top number by just that digit.`, null],
-  "add-partials":[`Line up the ones under the ones, then add one column at a time from the right.`, null],
-  jump:[`Start at the number you are on and move by exactly that jump. Say the landing point out loud.`, null],
-  chart:[`Every number needs the same number of decimal digits. Add zeros on the end, not the front.`, null],
-  unit:[`Read the decimal as a count: how many of that small unit make it? Tenths: 1 = 10 tenths. Hundredths: 1 = 100 hundredths.`, null],
-  point:[`Compare with your estimate first: should the answer be bigger or smaller than that?`, null],
-  partition:[`Count the parts of each number, then multiply: every part of one number meets every part of the other.`, null],
-  sections:[`Line up the decimal points, then add the sections one place at a time.`, null],
-  groups:[`Ask: is each group bigger or smaller than 1? Smaller groups mean more of them fit.`, null],
-  "common-factor":[`Try the small primes in order: does 2 divide both? Does 3? Does 5?`, null],
-  "not-simplest":[`Check the new top and bottom: is there still a number besides 1 that divides both?`, null],
-  wholes:[`How many pieces make one whole? Count groups of that size.`, null],
-  remainder:[`Take away the pieces the wholes used. What is left keeps the same denominator.`, null],
-  benchmark:[`Compare the top with half the bottom: less than half is near 0, about half is near 1/2, almost all is near 1.`, null],
-  "common-denominator":[`Count up by the bigger denominator until you hit a number the smaller one divides too.`, null],
-  magnitude:[`Whatever you multiplied the bottom by, multiply the top by the same number.`, null],
-  structure:[`Do not go by one word. Ask: what is known, what is unknown, and how are they related: groups, parts of a whole, a comparison, or a change?`, null]
+  rows:[`Which digit of the bottom number is this row using? Multiply the whole top number by just that digit.`, `Row 1 uses the ones digit; row 2 uses the tens digit and starts with a 0 in the ones place.`],
+  "add-partials":[`Line up the ones under the ones, then add one column at a time from the right.`, `Add the ones column first. Ten or more? Then only its last digit goes here, and a 1 carries to the next column.`],
+  jump:[`Start at the number you are on and move by exactly that jump. Say the landing point out loud.`, `Jump the whole-number part first, then the tenths, then the hundredths, saying each landing point.`],
+  chart:[`Every number needs the same number of decimal digits. Add zeros on the end, not the front.`, `Count the digits after each decimal point. The biggest count is the number every number needs.`],
+  unit:[`Read the decimal as a count: how many of that small unit make it? Tenths: 1 = 10 tenths. Hundredths: 1 = 100 hundredths.`, `Slide the decimal point: one place right for tenths, two for hundredths. The digits do not change.`],
+  point:[`Compare with your estimate first: should the answer be bigger or smaller than that?`, `The digits may be right; the decimal point sets the size. Is your number about 10 times too big, or 10 times too small, for the estimate?`],
+  partition:[`Count the parts of each number, then multiply: every part of one number meets every part of the other.`, `Two parts across and two parts down make 4 sections; two across and one down make 2. Count yours the same way.`],
+  sections:[`Line up the decimal points, then add the sections one place at a time.`, `Add the whole parts first, then the decimal parts. Then put them together.`],
+  groups:[`Ask: is each group bigger or smaller than 1? Smaller groups mean more of them fit.`, `Compare the divisor with 1. A divisor under 1 means small groups, so the count of groups goes up past the dividend; a divisor over 1 means the count goes down.`],
+  "common-factor":[`Try the small primes in order: does 2 divide both? Does 3? Does 5?`, `A number divides both if both divisions come out even, with nothing left over. Test 2, 3, and 5 on each number.`],
+  "not-simplest":[`Divide the top and bottom by the same common factor, then write the new fraction as top/bottom.`, `Write it as two blanks: (top ÷ factor) / (bottom ÷ factor). Fill both, then check that only 1 divides both.`],
+  wholes:[`How many pieces make one whole? Count groups of that size.`, `Count up by the denominator: each count is one whole. Stop before you pass the number of pieces.`],
+  remainder:[`Take away the pieces the wholes used. What is left keeps the same denominator.`, `Wholes × denominator = pieces used. Pieces − pieces used = what is left over.`],
+  benchmark:[`Compare the top with half the bottom: less than half is near 0, about half is near 1/2, almost all is near 1.`, `Half of the bottom is the 1/2 mark. Is the top well below it, close to it, or close to the whole bottom?`],
+  "common-denominator":[`Count up by the bigger denominator until you hit a number the smaller one divides too.`, `List the multiples of the bigger denominator: the first one the smaller denominator divides evenly is the common denominator.`],
+  magnitude:[`Whatever you multiplied the bottom by, multiply the top by the same number.`, `Bottom × ? = the common denominator. Use that same ? on the top.`],
+  structure:[`Do not go by one word. Ask: what is known, what is unknown, and how are they related: groups, parts of a whole, a comparison, or a change?`, `Equal groups: same-size groups and a total. Part–whole: parts inside a whole. Comparison: one amount described from another. Change: a start, a change, a result.`]
 };
+// v9.11.1 self-explanation after a reveal: when the answer had to be shown, the step closes with one "why" question instead of copying.
+// The right reason is listed first here and shuffled on screen. A step may bring its own question (step.explain = {q, options, answer}).
+const EXPLAIN_BY_COMP={
+  fact:{q:`Why does {a} × {b} give that product?`, opts:[`{b} groups of {a} make that many`, `{a} + {b} makes that many`, `it is a rule to memorize, with no reason`]},
+  regroup:{q:`Why is only one digit written in this place?`, opts:[`a place holds one digit; the rest is carried to the next place`, `the other digit is thrown away`, `the number was too big to write`]},
+  "tens-zero":{q:`Why does the tens row start with a 0?`, opts:[`it multiplies by tens, so it is 10 times a smaller row`, `to make the rows line up on the page`, `because there are no ones in the top number`]},
+  rows:{q:`What does each row of the algorithm show?`, opts:[`the top number times one digit of the bottom number`, `the two numbers added together`, `half of the product`]},
+  "add-partials":{q:`Why do we add the rows at the end?`, opts:[`each row is part of the product; together they are all of it`, `adding checks that the multiplication was right`, `the bigger row is the answer, the small one is a check`]},
+  jump:{q:`Why jump by the parts of the number instead of all at once?`, opts:[`each part is an easy jump, and the parts add up to the whole number`, `jumps on a number line must be whole numbers`, `small jumps are always exact and big ones are not`]},
+  chart:{q:`Why give both numbers the same number of decimal digits?`, opts:[`so every column holds the same place in both numbers`, `so the two numbers look the same length`, `to make both numbers bigger`]},
+  unit:{q:`Why rename the decimal as a count of tenths or hundredths?`, opts:[`then it is a whole-number count you can share or measure`, `decimals cannot be divided`, `to make the number smaller`]},
+  point:{q:`Why check the decimal point against the estimate?`, opts:[`the digits can be right while the point is in the wrong place`, `an estimate is always the exact answer`, `the decimal point never moves in multiplication`]},
+  partition:{q:`Why break each number into place-value parts?`, opts:[`each small product is easy, and the parts add back to the whole`, `smaller numbers are always right`, `the rectangle must have four boxes`]},
+  sections:{q:`Why add all the sections?`, opts:[`together the sections cover the whole rectangle, the whole product`, `the biggest section is the answer`, `to check the estimate`]},
+  groups:{q:`Why can the answer be bigger than the dividend when dividing by a decimal?`, opts:[`each group is smaller than 1, so more groups fit`, `division always makes numbers bigger`, `decimals add zeros to the answer`]},
+  "common-factor":{q:`Why divide the top and the bottom by the same number?`, opts:[`the value stays the same; only the size of the pieces changes`, `so the numbers get smaller`, `it makes a new fraction with a new value`]},
+  "not-simplest":{q:`What makes a fraction simplest form?`, opts:[`no number but 1 divides both the top and the bottom`, `the top is smaller than the bottom`, `both numbers are odd`]},
+  wholes:{q:`Why divide the pieces by the denominator?`, opts:[`the denominator says how many pieces make one whole`, `to make the fraction smaller`, `dividing always gives whole numbers`]},
+  remainder:{q:`Why do the leftover pieces keep the same denominator?`, opts:[`they are still the same size of piece`, `denominators never change in any problem`, `to match the number of wholes`]},
+  benchmark:{q:`Why compare the numerator with half the denominator?`, opts:[`half the denominator is the 1/2 mark`, `numerators are always small`, `it rounds the fraction to a whole`]},
+  "common-denominator":{q:`Why do fractions need the same denominator to compare?`, opts:[`same denominator means same-size pieces, so the tops can be compared`, `the tops have to match first`, `a bigger denominator always means a bigger fraction`]},
+  magnitude:{q:`Why multiply the top by the same number as the bottom?`, opts:[`to keep the value while changing the size of the pieces`, `to make the fraction bigger`, `so both numbers are even`]},
+  structure:{q:`Why name the kind of problem before choosing an operation?`, opts:[`the relationship tells the operation; a keyword can mislead`, `the kind of problem decides the grade`, `to find the biggest number first`]}
+};
+const EXPLAIN_BY_SKILL={ // one core-idea question per skill, for steps that test no named component
+  standard:{q:`Why must the last digit land in the named place?`, opts:[`the place name says where the last digit goes; zeros fill any empty places before it`, `digits always start right after the decimal point`, `the number of words equals the number of digits`]},
+  words:{q:`Why does the count of decimal digits give the place name?`, opts:[`each digit after the point is one more place: tenths, hundredths, thousandths`, `longer numbers have bigger names`, `the last digit is always tenths`]},
+  expanded:{q:`Why is each addend a digit times a place value?`, opts:[`a digit's value depends on the place it sits in`, `adding the digits gives the number`, `every digit is worth ten`]},
+  shift:{q:`Why does multiplying by 10 move every digit one place left?`, opts:[`each digit becomes worth 10 times as much, which is the next place over`, `a zero is added to the end of every number`, `the decimal point disappears`]},
+  powers:{q:`Why does 10³ have three zeros?`, opts:[`it is 10 × 10 × 10: each factor of 10 adds one zero`, `the exponent is a digit of the answer`, `powers of ten always have three zeros`]},
+  rounding:{q:`Why does the digit to the right of the rounding place decide?`, opts:[`it shows whether the number is past halfway to the next value`, `it is the biggest digit`, `rounding always goes up`]},
+  compare:{q:`Why compare the same place in both numbers?`, opts:[`digits in the same place are the same size, so they can be compared`, `longer decimals are bigger`, `the last digits decide`]},
+  orderops:{q:`Why does multiplication come before addition?`, opts:[`it groups equal amounts first; otherwise one expression would have two values`, `× is a bigger symbol than +`, `it is always on the left`]},
+  primes:{q:`Why is a factor tree finished when every branch is circled?`, opts:[`circled numbers are prime and cannot be split further`, `a tree has a fixed number of branches`, `circled numbers are the largest factors`]},
+  placevalue:{q:`Why is a digit one place to the left worth 10 times as much?`, opts:[`each place is ten of the place to its right`, `the digit itself gets bigger`, `because we count in fives`]},
+  addsub:{q:`Why line up the decimal points?`, opts:[`so digits with the same place value are added together`, `so the numbers are the same length`, `decimal points always go at the end`]},
+  expressions:{q:`Why put the group word's operation in parentheses?`, opts:[`the parentheses make that part happen first, as the sentence says`, `parentheses make the answer bigger`, `every expression needs parentheses`]},
+  fractions:{q:`Why do equivalent fractions have the same value?`, opts:[`the same amount is cut into a different number of same-size pieces`, `the numbers are the same size`, `fractions with bigger numbers are bigger`]},
+  multiply:{q:`Why does breaking a number into parts still give the right product?`, opts:[`each part is multiplied, and the parts add back to the whole`, `smaller numbers are always right`, `the parts are multiplied together`]},
+  divide:{q:`What is a partial quotient?`, opts:[`a chunk of the answer: some of the groups, found from an easy fact`, `the remainder after dividing`, `the divisor times ten`]},
+  decmul:{q:`Why estimate before multiplying decimals?`, opts:[`the estimate shows where the decimal point belongs`, `estimates are always exact`, `to make the numbers whole`]},
+  decdiv:{q:`Why rename decimals as counts of tenths or hundredths before dividing?`, opts:[`then it is whole-number dividing, and the unit tells where the point goes`, `decimals cannot be divided`, `to make the answer bigger`]}
+};
+function explainFor(step, c){ // {q, options, answer} or null
+  let ex=step.explain; if(!ex){ let comp=c.comp; if(typeof comp==="function") comp=null; const bank=(comp&&EXPLAIN_BY_COMP[comp]) || (cur&&EXPLAIN_BY_SKILL[cur.skill]); if(!bank) return null; const q=plain(c.q||""); const m=q.match(/^([\d.,]+)\s*([×+−÷])\s*([\d.,]+)\s*=\s*\?/); const fill=t=>m?t.replace(/\{a\}/g,m[1]).replace(/\{b\}/g,m[3]):t.replace(/\{a\} × \{b\}/g,"that multiplication").replace(/\{[ab]\}/g,"it"); ex={q:fill(bank.q), opts:bank.opts.map(fill)}; }
+  const opts=ex.options||ex.opts; if(!opts||opts.length<2) return null; const right=ex.answer!==undefined?opts[ex.answer]:opts[0]; const order=shuffle(opts.slice()); return {q:ex.q, options:order, answer:order.indexOf(right)};
+}
 function cueFor(step, c, tries, yoursText){
   const own = Array.isArray(step.cues) ? step.cues[tries-1] : null; if(own) return own;
+  const q=plain(c.q||""); const m=q.match(/^([\d.,]+)\s*([×+−÷])\s*([\d.,]+)\s*=\s*\?/); const fill=t=>{ if(!m) return t.replace(/\{[^}]+\}/g,"").replace(/\s+/g," ").trim(); const a=m[1], b=m[3], bn=parseAnswer(b); return t.replace(/\{a\}/g,a).replace(/\{b\}/g,b).replace(/\{op\}/g,m[2]).replace(/\{bm1\}/g,Number.isFinite(bn)?String(bn-1):"?").replace(/\{bp1\}/g,Number.isFinite(bn)?String(bn+1):"?"); };
   let comp=c.comp; if(typeof comp==="function") comp=null;
-  const byComp = comp && CUE_BY_COMP[comp] ? CUE_BY_COMP[comp][tries-1] : null; if(byComp) return byComp;
-  const q=plain(c.q||"");
+  const byComp = comp && CUE_BY_COMP[comp] ? CUE_BY_COMP[comp][tries-1] : null; if(byComp && (m || !/\{/.test(byComp))) return fill(byComp);
+  const textCheck = !!c.text || typeof c.validate==="function"; // a typed word, fraction, or expression: never a magnitude cue
   if(tries===1){ // orient by the shape of the question
-    const m=q.match(/^([\d.,]+)\s*([×+−÷])\s*([\d.,]+)\s*=\s*\?/);
     if(m){ const [,a,op,b]=m; if(op==="×") return `Think of ${a} × ${b} as ${b} groups of ${a}. Count by ${a}s, or start from a ${a} fact you know.`; if(op==="+") return `Add the biggest place first, then the smaller places.`; if(op==="−") return `Take away in parts: first down to a friendly number, then the rest.`; if(op==="÷") return `How many ${b}s fit in ${a}? Count up by ${b}s.`; }
+    if(textCheck) return `Look back at the last step: what did you find there, and how should it be written here?`;
     if(/how many/i.test(q)) return `Count it out, one at a time, and keep track as you go.`;
     return c.type==="mc" ? `Read each choice against the card above: which one matches what it says?` : `Reread the card above; the step it describes is the one to do here.`;
   }
-  // second miss: narrow. Numeric checks can say which direction she is off; multiple choice can cross off the wrong pick.
-  if(c.type!=="mc"){ const v=parseAnswer(String(yoursText||"")), ans=+c.answer; if(Number.isFinite(v) && Number.isFinite(ans) && v!==ans){ const ratio=ans!==0?v/ans:0; if(ratio>=9.5&&ratio<=10.5) return `Your answer is 10 times too big: the digits may be right but the place is not.`; if(ratio>0&&ratio>=0.095&&ratio<=0.105) return `Your answer is 10 times too small: the digits may be right but the place is not.`; return `Your answer is too ${v>ans?"big":"small"}. Adjust and try again.`; } return `Check it a different way: estimate first, then compute.`; }
-  return `Not that one: cross it off and pick from the rest.`;
+  // second miss: narrow. Numeric checks can say which direction she is off; multiple choice can cross off the wrong pick; typed text gets a form reminder.
+  if(c.type==="mc") return `Not that one: cross it off. Reread the card and pick from the rest.`;
+  if(textCheck) return `Check the form: ${/fraction|simplest|mixed|improper|\//i.test(q+" "+String(c.display))?"top/bottom, like 3/4 (a mixed number is wholes, a space, then the fraction, like 2 1/3)":/×|x 10|exponent/i.test(q)?"write the multiplication with × between the numbers":"the same kind of answer the card asks for"}. Then compare it with what the last step found.`;
+  const v=parseAnswer(String(yoursText||"")), ans=+c.answer; if(Number.isFinite(v) && Number.isFinite(ans) && v!==ans){ const ratio=ans!==0?v/ans:0; if(ratio>=9.5&&ratio<=10.5) return `Your answer is 10 times too big: the digits may be right but the place is not.`; if(ratio>0&&ratio>=0.095&&ratio<=0.105) return `Your answer is 10 times too small: the digits may be right but the place is not.`; return `Your answer is too ${v>ans?"big":"small"}. ${m?`Redo ${m[1]} ${m[2]} ${m[3]} one place at a time.`:"Work it one place at a time and try again."}`; }
+  return `Work it one place at a time, and say each step out loud before you type.`;
 }
 function noteStepComp(c, sc, ok){
   let comp=c.comp; if(typeof comp==="function"){ try{ comp=comp(c.type==="mc"?String((c.options||[])[sc.sel]):String(sc.val)); }catch(e){ comp=null; } }
@@ -3557,14 +3631,29 @@ function checkStep(){
       initStepCheck(); if(sc) sc.msg="Not quite. Let's build it one piece at a time."; save(); render();
       const el=app.querySelectorAll("#wt .step"); if(el.length) el[el.length-1].scrollIntoView({behavior:"smooth",block:"nearest"});
       return; }
-    if(sc.tries<3){ const yoursText = c.type==="mc" ? String((c.options||[])[sc.sel]) : sc.val; sc.msg=`Not quite. ${cueFor(st, c, sc.tries, yoursText)}`; if(c.type==="mc"){ sc.crossed=sc.crossed||[]; if(!sc.crossed.includes(sc.sel)) sc.crossed.push(sc.sel); } sc.val=""; sc.sel=-1; } /* first miss orients, second narrows; the answer waits until the third */
-    else { sc.state="confirm"; sc.msg=`${shown} ${st.after?`${st.after} `:""}${lockIn}`; sc.val=""; sc.sel=-1; } } /* reveal: the answer and its explanation arrive together; the lock-in is only so the step is closed on purpose */
+    if(c.type==="mc"){ sc.crossed=sc.crossed||[]; if(!sc.crossed.includes(sc.sel)) sc.crossed.push(sc.sel); }
+    const onlyOneLeft = c.type==="mc" && (c.options||[]).length - (sc.crossed||[]).length <= 1; /* every wrong choice is crossed off: picking the last one would be elimination, not knowing, so the answer is shown instead */
+    if(sc.tries<3 && !onlyOneLeft){ const yoursText = c.type==="mc" ? String((c.options||[])[sc.sel]) : sc.val; sc.msg=`Not quite. ${cueFor(st, c, sc.tries, yoursText)}`; sc.val=""; sc.sel=-1; } /* first miss orients, second narrows; the answer waits until the third */
+    else { const ex=explainFor(st, c); sc.val=""; sc.sel=-1;
+      if(ex){ sc.state="explain"; sc.explain=ex; sc.xsel=-1; sc.msg=`${shown} ${st.after?`${st.after} `:""}Before moving on, pick the reason.`; } /* reveal: answer and explanation together, then one act of sense-making instead of copying */
+      else { sc.state="confirm"; sc.msg=`${shown} ${st.after?`${st.after} `:""}${lockIn}`; } } }
+  finishStepCheck(c, last);
+}
+function checkExplain(){ // the "why" question after a reveal: right or wrong, the step closes as revealed; the pick is recorded, never a pass
+  if(!sc || sc.state!=="explain" || !sc.explain) return; if(sc.xsel<0){ const f=app.querySelector("#xopts .opt"); if(f) f.focus(); return; }
+  const ex=sc.explain, okX = sc.xsel===ex.answer; const c=cur.steps[stepIdx].check;
+  cur.explainAsked=(cur.explainAsked||0)+1; if(okX) cur.explainOk=(cur.explainOk||0)+1; if(missEntry){ missEntry.explainAsked=cur.explainAsked; missEntry.explainOk=cur.explainOk||0; }
+  sc.state="revealed"; revealed++; stepRes[stepIdx]="revealed"; sc.xdone=true;
+  sc.msg=`It's <b>${esc(c.display)}</b>. ${okX?`<span aria-hidden="true">✓</span> That is the reason.`:`The reason: <b>${esc(ex.options[ex.answer])}</b>.`}`;
+  finishStepCheck(c, stepIdx===cur.steps.length-1);
+}
+function finishStepCheck(c, last){
   if(missEntry){ missEntry.revealed=revealed; missEntry.passed=passed; }
   if(last && (sc.state==="ok" || sc.state==="revealed")){ // finished the whole problem inside the walkthrough
     // "ok": she got the final answer herself → a guided completion. "revealed": the final answer was shown after repeated misses and she copied it in → finished with the answer shown (counted like the reveal path, never as guided).
     const shownIn = sc.state==="revealed";
     if(shownIn) S.shown=(S.shown||0)+1; else S.guided++;
-    pushLog({t:Date.now(), sk:cur.skill, lvl:cur.level, q:plain(cur.prompt), yours:c.type==="mc"?String((c.options||[])[sc.sel]):String(sc.val).trim(), ans:cur.display, ok:1, guided:1, ...(shownIn?{shown:1}:{}), stage:"wt", hints:hintIdx, independent:0, tag:cur.mistake?cur.mistake.tag:"", revealed, passed});
+    pushLog({t:Date.now(), sk:cur.skill, lvl:cur.level, q:plain(cur.prompt), yours:c.type==="mc"?String((c.options||[])[sc.sel]):String(sc.val).trim(), ans:cur.display, ok:1, guided:1, ...(shownIn?{shown:1}:{}), stage:"wt", hints:hintIdx, independent:0, tag:cur.mistake?cur.mistake.tag:"", revealed, passed}); /* the reason counts live on the miss entry (missEntry), so they are not counted twice */
   }
   save(); render();
 }
@@ -3576,11 +3665,13 @@ const indep=e=>e.independent!==undefined?e.independent:((isFresh(e)&&!e.hints)?1
 // ONE classification for every logged attempt, used by the table, the tiers, and the summary line:
 //   independent  fresh, no hints, supports off (or not a workspace problem), answered right
 //   indep-miss   the same conditions, answered wrong (an independent attempt that missed)
-//   supported    fresh, no hints, right, but with the multiplication supports on (level 2 or 3)
+//   supported    fresh, no hints, right, but with the multiplication supports on (level 2 or 3) or the full coach card (line + example offer)
+//   prompted     fresh, no hints, right, with a one-line strategy reminder opened before answering (the level-1 nudge)
 //   copied       the answer was shown and typed in
 //   guided       everything else that ended right (hints, follow-up, walkthrough completion)
 //   miss         everything else that ended wrong
 function classifyEntry(e){ if(e.placement && !e.ok) return "placement-miss"; /* a missed quick check on a brand-new skill: recorded, walked through, never scored */ if(e.transfer) return e.ok?"paper":"paper-miss"; if(e.shown) return "copied"; if(e.studied) return e.ok?"guided":"miss"; if(e.pre && !e.pre.ok) return e.ok?"guided":"miss"; /* a right answer with the required step wrong is a completion with a gap, not independent work */ /* studied a worked example first: a completion with help, reported separately as "studied" */ const supported=!!e.supported || (!!e.ws && +e.support>=2); const fresh=isFresh(e), noHint=!(+e.hints>0);
+  if(fresh && noHint && !supported && !e.guided && e.prompted) return e.ok?"prompted":"miss"; /* a strategy reminder was open on screen: performance with that prompt, not independent evidence */
   if(fresh && noHint && !supported && !e.guided) return e.ok?"independent":"indep-miss";
   if(e.ok && supported && fresh && noHint && !e.guided) return "supported";
   return e.ok?"guided":"miss"; }
@@ -3660,8 +3751,11 @@ function tiersHTML(log){
     ${(()=>{ const cls=classifyEntry; const ind=log.filter(e=>cls(e)==="independent"); const distinct=new Set(ind.map(e=>String(e.sk)+"|"+String(e.q))).size; const sup=log.filter(e=>cls(e)==="supported").length; const studied=log.filter(e=>e.studied&&e.ok).length; const whyOk=log.filter(e=>e.why===1&&!e.whyMiss).length, whyAll=log.filter(e=>e.why!==undefined).length; const delayed=log.filter(e=>e.delayed).length, delayedMiss=log.filter(e=>e.delayedMiss).length; const dueSoon=Object.keys(S.checkins||{}).length;
       const row=(k,v)=>`<tr><td>${k}</td><td>${v}</td></tr>`;
       return `<div style="overflow-x:auto"><table class="report"><tr><th>Evidence</th><th>What the app has seen</th></tr>
-        ${row("Independent calculation", distinct?`${distinct} different problem${distinct===1?"":"s"} right without hints, examples, or answer cues`:"none yet")}
-        ${row("Supported completion", sup?`${sup} right with tools on (labels, carry boxes, or the written-in 0)`:"none")}
+        ${row("Independent calculation", distinct?`${distinct} different problem${distinct===1?"":"s"} right without hints, examples, an opened nudge, the full coach card, or answer cues`:"none yet")}
+        ${row("Supported completion", sup?`${sup} right with supports on (the multiplication tools, or the full coach card)`:"none")}
+        ${(()=>{ const asked=log.reduce((a,e)=>a+(+e.explainAsked||0),0), okX=log.reduce((a,e)=>a+(+e.explainOk||0),0); return row("Reason after a shown step", asked?`${okX} of ${asked} right reasons picked after a walkthrough step had to be shown`:"none yet"); })()}
+        ${(()=>{ const pr=log.filter(e=>cls(e)==="prompted").length; return row("Prompted", pr?`${pr} right after opening the one-line nudge`:"none"); })()}
+        ${(()=>{ const ft=log.filter(e=>e.freshAfterHelp); const fr=ft.filter(e=>cls(e)==="independent").length; return row("Fresh problem right after help", ft.length?`${fr} of ${ft.length} right on her own, new numbers, coach hidden (immediate transfer)`:"none yet"); })()}
         ${row("Studied first", studied?`${studied} right after looking at a worked example`:"none")}
         ${row("Explanation", whyAll?`recognized the correct reason on ${whyOk} of ${whyAll} "say why" questions`:"not asked yet")}
         ${row("Delayed check", delayed||delayedMiss?`${delayed} fresh problem${delayed===1?"":"s"} right after a gap of a week or more${delayedMiss?`; ${delayedMiss} missed`:""}`:(dueSoon?`not yet: ${dueSoon} check-in${dueSoon===1?"":"s"} scheduled`:"not checked yet"))}
@@ -3692,15 +3786,15 @@ function grownups(){
   const str=v=>v==null?"":String(v); // a missing field shows as blank, never "undefined"
   const rows=SKILL_ORDER.map(k=>{ const a=log.filter(e=>e.sk===k);
     const cls=a.map(e=>[e,classifyEntry(e)]); const ind=cls.filter(([e,c])=>c==="independent"||c==="indep-miss").slice(-20); const indRight=ind.filter(([e,c])=>c==="independent").length;
-    const supported=cls.filter(([e,c])=>c==="supported").length; const guided=cls.filter(([e,c])=>c==="guided").length; const shown=cls.filter(([e,c])=>c==="copied").length;
+    const supported=cls.filter(([e,c])=>c==="supported").length; const prompted=cls.filter(([e,c])=>c==="prompted").length; const guided=cls.filter(([e,c])=>c==="guided").length; const shown=cls.filter(([e,c])=>c==="copied").length;
     const missTags=a.filter(e=>!e.ok).slice(-20).map(e=>typeof e.tag==="string"?e.tag:"").filter(Boolean);
     const cnt={}; for(const t of missTags) cnt[t]=(cnt[t]||0)+1; const topTag=Object.keys(cnt).sort((x,y)=>cnt[y]-cnt[x])[0];
-    return `<tr><td><b>${SKILLS[k].name}</b></td><td>${S.levels[k]} of ${MAX_LEVEL}</td><td>${ind.length?`${indRight} of ${ind.length}`:"—"}</td><td>${supported||"—"}</td><td>${guided||"—"}</td><td>${shown||"—"}</td><td>${topTag?`${esc(topTag)} <span class="muted">(${cnt[topTag]})</span>`:"—"}</td></tr>`; }).join("");
+    return `<tr><td><b>${SKILLS[k].name}</b></td><td>${S.levels[k]} of ${MAX_LEVEL}</td><td>${ind.length?`${indRight} of ${ind.length}`:"—"}</td><td>${supported||"—"}${prompted?` <span class="muted">+${prompted} prompted</span>`:""}</td><td>${guided||"—"}</td><td>${shown||"—"}</td><td>${topTag?`${esc(topTag)} <span class="muted">(${cnt[topTag]})</span>`:"—"}</td></tr>`; }).join("");
   const misses=log.filter(e=>!e.ok || e.whyMiss).slice(-40).reverse(); // a right number with a wrong reason is a miss worth seeing too
   const weekAgo=Date.now()-7*864e5; const week=log.filter(e=>Number.isFinite(e.t)&&e.t>=weekAgo&&!e.guided);
   const days=new Set(week.map(e=>new Date(e.t).toDateString())).size;
   const skillName=k=>SKILLS[k]?SKILLS[k].name:esc(str(k)||"?");
-  const missMeta=e=>`${Number.isFinite(e.t)?fmtDate(e.t):"unknown time"} · ${skillName(e.sk)}${e.lvl!=null?` · level ${esc(str(e.lvl))}`:""} · ${e.stage?esc(str(e.stage)):(e.retry?"retry":"fresh")}${e.page?" · from the page":e.hw?" · homework":""}${e.shown?" · answer shown":""}${+e.hints>0?" · "+(+e.hints)+" hint"+(+e.hints>1?"s":"")+(e.hintsOf?" of "+e.hintsOf:""):""}${typeof e.tag==="string"&&e.tag?` · <span class="tag">${esc(e.tag)}</span>`:""}${e.revealed!==undefined?` · walkthrough: ${+e.passed||0} step${+e.passed===1?"":"s"} right, ${+e.revealed||0} shown`:""}${e.comps&&typeof e.comps==="object"?(()=>{ const m=Object.keys(e.comps).filter(c=>e.comps[c]&&e.comps[c].miss); return m.length?` · missed: ${m.map(c=>esc(compName(e.sk,c))).join(", ")}`:""; })():""}${e.support!==undefined?` · supports ${esc(str(e.support))} of 3`:""}${e.cues?` · visible: ${esc(str(e.cues))}`:""}${e.pre?` · step (${esc(compName(e.sk,e.pre.comp))}): ${e.pre.ok?"shown ✓":`answered ${esc(str(e.pre.yours))}, is ${esc(str(e.pre.ans))}`}`:""}${e.unfinished?` · sent back ${+e.unfinished} time${+e.unfinished===1?"":"s"} for empty boxes before this`:""}${e.proved?` · proved: ${esc(str(e.proved)).replace(/,/g,", ")}`:""}`;
+  const missMeta=e=>`${Number.isFinite(e.t)?fmtDate(e.t):"unknown time"} · ${skillName(e.sk)}${e.lvl!=null?` · level ${esc(str(e.lvl))}`:""} · ${e.stage?esc(str(e.stage)):(e.retry?"retry":"fresh")}${e.page?" · from the page":e.hw?" · homework":""}${e.shown?" · answer shown":""}${+e.hints>0?" · "+(+e.hints)+" hint"+(+e.hints>1?"s":"")+(e.hintsOf?" of "+e.hintsOf:""):""}${typeof e.tag==="string"&&e.tag?` · <span class="tag">${esc(e.tag)}</span>`:""}${e.revealed!==undefined?` · walkthrough: ${+e.passed||0} step${+e.passed===1?"":"s"} right, ${+e.revealed||0} shown${e.explainAsked?`, reasons ${+e.explainOk||0} of ${+e.explainAsked}`:""}`:""}${e.comps&&typeof e.comps==="object"?(()=>{ const m=Object.keys(e.comps).filter(c=>e.comps[c]&&e.comps[c].miss); return m.length?` · missed: ${m.map(c=>esc(compName(e.sk,c))).join(", ")}`:""; })():""}${e.support!==undefined?` · supports ${esc(str(e.support))} of 3`:""}${e.cues?` · visible: ${esc(str(e.cues))}`:""}${e.pre?` · step (${esc(compName(e.sk,e.pre.comp))}): ${e.pre.ok?"shown ✓":`answered ${esc(str(e.pre.yours))}, is ${esc(str(e.pre.ans))}`}`:""}${e.unfinished?` · sent back ${+e.unfinished} time${+e.unfinished===1?"":"s"} for empty boxes before this`:""}${e.proved?` · proved: ${esc(str(e.proved)).replace(/,/g,", ")}`:""}`;
   const exportText=JSON.stringify(DB); const nPlayers=Object.keys(DB.profiles).length;
   // Class position: the district calendar's estimate, or a lesson pinned here from the homework header
   const L=lessonList(), classId=effectiveClassAt(), calId=calendarClassAt();
@@ -3738,15 +3832,15 @@ function grownups(){
   const notYet = typeof NOT_YET_COVERED==="string" && NOT_YET_COVERED.trim() ? NOT_YET_COVERED : `Covered: 5.NBT.2, 5.NBT.3a, 5.NBT.3b, 5.NBT.4, and the add/subtract part of 5.NBT.7. Not yet covered from the grade-five "major" clusters: 5.NBT.1 as a stated relationship (10× / 1/10 between places), 5.NBT.5–6 (multi-digit multiplication and division), multiplying and dividing decimals (rest of 5.NBT.7), all of fractions (5.NF.1–7), and volume (5.MD.3–5). Also not covered: 5.OA, 5.MD.1–2, 5.G. Matching this to the SWUN unit and lesson sequence needs the classroom unit materials; the framework itself does not mention SWUN.`;
   app.innerHTML=`
     <div class="topbar"><button class="btn quiet" id="back">Home</button><h1 style="margin:0">${esc(S.name)}'s progress</h1><span class="muted build">Build ${esc(BUILD)}</span></div>${warnHTML()}
-    <p class="muted" style="margin:6px 0 0">${(()=>{ const cls=e=>classifyEntry(e); const wk=log.filter(e=>Number.isFinite(e.t)&&e.t>=weekAgo); const wi=wk.filter(e=>["independent","indep-miss"].includes(cls(e))); const wiR=wi.filter(e=>cls(e)==="independent").length; const wHelp=wk.filter(e=>["supported","guided"].includes(cls(e))).length; const wCopied=wk.filter(e=>cls(e)==="copied").length;
+    <p class="muted" style="margin:6px 0 0">${(()=>{ const cls=e=>classifyEntry(e); const wk=log.filter(e=>Number.isFinite(e.t)&&e.t>=weekAgo); const wi=wk.filter(e=>["independent","indep-miss"].includes(cls(e))); const wiR=wi.filter(e=>cls(e)==="independent").length; const wHelp=wk.filter(e=>["supported","prompted","guided"].includes(cls(e))).length; const wCopied=wk.filter(e=>cls(e)==="copied").length;
       const c={}; for(const e of log){ const k=cls(e); c[k]=(c[k]||0)+1; } let lastCopied=-1; log.forEach((e,i)=>{ if(cls(e)==="copied") lastCopied=i; }); const sinceCopied=log.slice(lastCopied+1).filter(e=>cls(e)==="guided").length;
-      return `Last 7 days: ${wk.length} problems on ${days} day${days===1?"":"s"}: independent ${wi.length?`${wiR} right of ${wi.length} (${Math.round(100*wiR/wi.length)}%)`:"none yet"}, ${wHelp} finished with help${wCopied?`, ${wCopied} with the answer shown`:""}. All time: independent ${c.independent||0} right of ${(c.independent||0)+(c["indep-miss"]||0)}; supported (tools on) ${c.supported||0}; guided ${c.guided||0}; copied (answer shown) ${c.copied||0}${c["placement-miss"]?`; quick checks on new skills missed (not scored) ${c["placement-miss"]}`:""}. Guided completions since the answer was last shown: ${sinceCopied}.`; })()}${(()=>{ const w=log.filter(e=>e.why!==undefined); return w.length?` "Say why" questions: ${w.filter(e=>e.why).length} of ${w.length} right.`:""; })()}</p>
+      return `Last 7 days: ${wk.length} problems on ${days} day${days===1?"":"s"}: independent ${wi.length?`${wiR} right of ${wi.length} (${Math.round(100*wiR/wi.length)}%)`:"none yet"}, ${wHelp} finished with help${wCopied?`, ${wCopied} with the answer shown`:""}. All time: independent ${c.independent||0} right of ${(c.independent||0)+(c["indep-miss"]||0)}; supported (tools or full coach on) ${c.supported||0}; prompted (a nudge opened) ${c.prompted||0}; guided ${c.guided||0}; copied (answer shown) ${c.copied||0}${c["placement-miss"]?`; quick checks on new skills missed (not scored) ${c["placement-miss"]}`:""}. Guided completions since the answer was last shown: ${sinceCopied}.`; })()}${(()=>{ const w=log.filter(e=>e.why!==undefined); return w.length?` "Say why" questions: ${w.filter(e=>e.why).length} of ${w.length} right.`:""; })()}</p>
     ${tiersHTML(log)}
     ${classHTML}
     <div class="card">
       <h2 style="margin-top:0">By skill</h2>
-      <div style="overflow-x:auto"><table class="report"><tr><th>Skill</th><th>Level</th><th>Independent<br><span style="text-transform:none;letter-spacing:0">right / tried, last 20</span></th><th>Supported<br><span style="text-transform:none;letter-spacing:0">right, tools on</span></th><th>Guided<br><span style="text-transform:none;letter-spacing:0">finished with help</span></th><th>Copied<br><span style="text-transform:none;letter-spacing:0">answer shown, typed in</span></th><th>Common mistake</th></tr>${rows}</table></div>
-      <p class="muted" style="font-size:13px;margin:10px 0 0">Only problems done fresh with no hints move levels: up after 3 right out of the last 4, down after 2 wrong out of the last 3. Hints, follow-ups, walkthroughs, and homework practice never move levels, up or down. Level ${MAX_LEVEL} mixes every trap at once. A guided completion is a problem finished with hints, inside a walkthrough, or on the follow-up. After a right answer, some skills ask one "say why" question in SWUN-style explain-and-prove wording; it is recorded but never moves a level. "Finished with the answer shown" means the answer was displayed after a third miss and typed in to move on; it is recorded, but it is not a right answer or a guided completion.</p>
+      <div style="overflow-x:auto"><table class="report"><tr><th>Skill</th><th>Level</th><th>Independent<br><span style="text-transform:none;letter-spacing:0">right / tried, last 20</span></th><th>Supported<br><span style="text-transform:none;letter-spacing:0">right, supports or coach on (+ nudge opened)</span></th><th>Guided<br><span style="text-transform:none;letter-spacing:0">finished with help</span></th><th>Copied<br><span style="text-transform:none;letter-spacing:0">answer shown, typed in</span></th><th>Common mistake</th></tr>${rows}</table></div>
+      <p class="muted" style="font-size:13px;margin:10px 0 0">Only problems done fresh with no hints, no opened nudge, and no coach card or tools on screen move levels: up after 3 right out of the last 4, down after 2 wrong out of the last 3. Hints, follow-ups, walkthroughs, and homework practice never move levels, up or down. Level ${MAX_LEVEL} mixes every trap at once. A guided completion is a problem finished with hints, inside a walkthrough, or on the follow-up. After a right answer, some skills ask one "say why" question in SWUN-style explain-and-prove wording; it is recorded but never moves a level. "Finished with the answer shown" means the answer was displayed after a third miss and typed in to move on; it is recorded, but it is not a right answer or a guided completion.</p>
       ${S.logTrimmed>0?`<p class="muted" style="font-size:13px;margin:6px 0 0">History shows the most recent ${LOG_CAP} attempts; older entries were trimmed.</p>`:""}
     </div>
     <div class="card">
