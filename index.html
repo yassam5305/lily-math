@@ -286,6 +286,18 @@ table.report tr.unit-row th{text-transform:none;letter-spacing:0;font-size:13px;
 ul.units{font-size:13px;margin:0;padding-left:20px}
 ul.units li{margin:2px 0}
 select.sel optgroup{font-style:normal;font-weight:700}
+/* v9.13: independent-learner supports */
+.idletip{display:none}
+.idletip.on{display:block;margin-top:12px;padding:10px 14px;border:2px solid var(--line);border-radius:12px;background:#FFFBEA;font-size:16px;color:var(--ink)}
+details.more{margin-top:8px;font-size:16px}
+details.more>summary{cursor:pointer;font-weight:600;color:var(--ink);min-height:44px;display:inline-flex;align-items:center;gap:6px;padding:0 4px}
+details.more>div{padding:4px 0 2px;color:var(--graphite)}
+.onramp{margin:0 0 10px}
+.onramp .actions{margin-top:10px}
+.exhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.exhead .yourq{font-size:16px}
+.exstep.cur{border-left:4px solid var(--ink);padding-left:10px}
+.exdone{font-size:15px}
 </style>
 </head>
 <body>
@@ -1392,7 +1404,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.12 · September 22, 2026";
+const BUILD="v9.13 · September 23, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -1431,7 +1443,7 @@ function mulRowSteps(a,b,d,shift,doneRows){
     else if(sum>=10){
       steps.push({t:`${sum} is 10 or more, so only one digit fits in the ${place(j)} place. Write that digit here and regroup the other to the ${place(j+1)} place.${pic()}`, check:wc(ci(`What digit do you write in the ${place(j)} place?`, sum%10),"regroup")}); written.push(String(sum%10));
       const c=Math.floor(sum/10);
-      steps.push({t:`The other digit of ${sum} is regrouped into the ${place(j+1)} place. Write it small, with a +, above the next digit of ${a} to the left, the <b>${digs[j+1]}</b>${shift?` (it lands in the ${place(j+1)} place because this row already starts one place over)`:""}.${pic()}`, check:wc(ci(`What do you regroup to the ${place(j+1)} place?`, c),"regroup"), after:`+${c} goes above the ${place(j+1)} column: it is added to that column's product.`});
+      steps.push({t:`The other digit of ${sum} is regrouped into the ${place(j+1)} place. Write it small, with a +, above the next digit of ${a} to the left, the <b>${digs[j+1]}</b>.${pic()}`, more: shift?`It lands in the ${place(j+1)} place because this row already starts one place over.`:null, check:wc(ci(`What do you regroup to the ${place(j+1)} place?`, c),"regroup"), after:`+${c} goes above the ${place(j+1)} column: it is added to that column's product.`});
       carryAt[j+1]=c; carry=c; // set after this card's picture, so the +digit appears above its column from the next step on
     } else { steps.push({t:`That product is less than 10, so the whole thing fits in the ${place(j)} place. Nothing to regroup.${pic()}`, check:wc(ci(`What digit goes in the ${place(j)} place?`, sum),"regroup")}); written.push(String(sum)); carry=0; }
   });
@@ -1719,10 +1731,11 @@ function genDivide(level, focus){
   const sizeOpts = firstUnit<10 ? ["ones","tens","hundreds"] : ["tens","hundreds","thousands"]; const sizeAns=Math.max(0,sizeOpts.indexOf(unitWord(firstUnit))); // v9.12: a typed homework problem like 91 ÷ 13 has a ones-only answer
   const one=(k,word)=> k===1 ? word.replace(/s$/,"") : word; const grp=k=> k===1 ? "group" : "groups"; // "1 hundred", "7 tens"; "1 group", "7 groups"
   const fig=(found,o)=> area ? divAreaSVG(d, N, found, o) : ""; const foundSoFar=[];
-  const orientT = area ? `<b>Area model.</b> A rectangle has one side <b>${d}</b> and area <b>${L$(N)}</b>. The other side is how many ${d}s make ${L$(N)}: the <b>quotient</b>.`
-                      : `You are finding how many groups of <b>${d}</b> make <b>${L$(N)}</b>. (${L$(N)} is the <b>dividend</b>, ${d} the <b>divisor</b>.)`;
+  const orientT = area ? `<b>Area model.</b> One side is <b>${d}</b> and the area is <b>${L$(N)}</b>. How many ${d}s make ${L$(N)}?`
+                      : `How many groups of <b>${d}</b> make <b>${L$(N)}</b>?`; // v9.13: one job per card; the words wait behind "Why?"
+  const orientMore = area ? `The missing side is the <b>quotient</b>: the answer to ${L$(N)} ÷ ${d}. Side × side = area, so ${d} × the quotient = ${L$(N)}.` : `${L$(N)} is the <b>dividend</b> (the total). ${d} is the <b>divisor</b> (the size of each group). The answer is the <b>quotient</b>.`;
   const bounds=[[10,d*10],[100,d*100],[1000,d*1000]]; const lo=bounds.filter(b=>b[1]<=N).pop(), hi=bounds.find(b=>b[1]>N);
-  steps.push({t:`${orientT} First, how big is the answer? ${d} × 10 = ${L$(d*10)}, ${d} × 100 = ${L$(d*100)}, ${d} × 1,000 = ${L$(d*1000)}.${fig([],{remaining:N})}`,
+  steps.push({t:`${orientT} First, how big is the answer? ${d} × 10 = ${L$(d*10)}, ${d} × 100 = ${L$(d*100)}, ${d} × 1,000 = ${L$(d*1000)}.${fig([],{remaining:N})}`, more:orientMore,
     check:cm(`Is the answer in the ${sizeOpts[0]}, the ${sizeOpts[1]}, or the ${sizeOpts[2]}?`, sizeOpts, sizeAns),
     explain:{q:`Which comparison proves the answer is in the ${unitWord(firstUnit)}?`, options:[`${L$(d*firstUnit)} ${d*firstUnit===N?"=":"<"} ${L$(N)} < ${L$(d*firstUnit*10)}`, `${L$(N)} is bigger than ${d}`, `${d} × ${L$(firstUnit)} has a zero in it`]},
     cues:[`Which two of those products surround ${L$(N)}: one smaller than it, one bigger?`, lo&&hi?`${L$(lo[1])} ${lo[1]===N?"=":"<"} ${L$(N)} < ${L$(hi[1])}: so the answer is ${lo[1]===N?"at least":"more than"} ${L$(lo[0])} groups but fewer than ${L$(hi[0])}.`:`${L$(N)} is smaller than ${L$(d*100)}, so the answer is fewer than 100 groups.`],
@@ -2091,7 +2104,7 @@ function genDecMul(level, focus){
     var addStep={t:`Add the ${byRow?"rows":"sections"}: ${addends.map(fmtV).join(" + ")}. Line up the decimal points when you add.`, check:wc(ci(`${addends.map(fmtV).join(" + ")} = ?`, V/1000, fmt(ans)),"sections"),
       ...(aggSub?{sub:aggSub, tAfter:`Put the two subtotals together: ${fmtV(wS)} + ${fmtV(dS)}.`}:{})}; }
   const sizeWords = smallA||smallB ? `smaller than ${smallA&&smallB?"both factors":smallB?fmt(A):fmt(B)}` : estIsExact ? `more than ${fmt(biggerF)}` : `near ${fmtV(est)}`; // never the exact answer
-  if(typeof addStep!=="undefined" && addStep){ addStep.t+=` Then check the total against your estimate: it should be ${sizeWords}.`; addStep.check=Object.assign(wc(finalCheck(p),"sections"),{q:`${addends.map(fmtV).join(" + ")} = ? (this total is the answer)`}); } // v9.12: the sum IS the answer; no second screen to retype it
+  if(typeof addStep!=="undefined" && addStep){ addStep.t+=` Then check it with your estimate: ${sizeWords}?`; /* v9.13: shorter; the estimate check stays visible because it is how she places the point */ addStep.check=Object.assign(wc(finalCheck(p),"sections"),{q:`${addends.map(fmtV).join(" + ")} = ? (this total is the answer)`}); } // v9.12: the sum IS the answer; no second screen to retype it
   steps.push(typeof addStep!=="undefined" && addStep ? Object.assign(addStep,{after:`${fmt(ans)} is ${sizeWords}, as it should be, so it makes sense.${p.meta.places?` (${fmt(A)} has ${plural(decPlaces(A),"decimal place")}${kind==="decimal"?` and ${fmt(B)} has ${plural(decPlaces(B),"decimal place")}`:""}; the product has ${plural(p.meta.places,"decimal place")} before any end zeros are dropped.)`:""}`}) : {t:`<b>Check the decimal point</b> against your estimate: the answer should be ${sizeWords}. Type the final answer.`, check:wc(finalCheck(p),"point"),
     after:`${fmt(ans)} is ${sizeWords}, as it should be, so it makes sense.${p.meta.places?` (${fmt(A)} has ${plural(decPlaces(A),"decimal place")}${kind==="decimal"?` and ${fmt(B)} has ${plural(decPlaces(B),"decimal place")}`:""}; the product has ${plural(p.meta.places,"decimal place")} before any end zeros are dropped.)`:""}`});
   p.steps=steps;
@@ -2373,7 +2386,7 @@ function genFractions(level, focus){
   const L=A.d*B.d/gcd(A.d,B.d);
   const p={skill:"fractions", level, prompt:`Which fraction is <b>greater</b>?<br><span class="big-num">${frText(A.n,A.d)} &nbsp;or&nbsp; ${frText(B.n,B.d)}</span>`, type:"mc", options, optionTags:[gt?"correct":"bigger-denominator", gt?"bigger-denominator":"correct"], answer, display:options[answer], show:null, meta:{variant, A, B}};
   p.traps=["common-denominator","magnitude"];
-  p.steps=[{t:`Different denominators mean different piece sizes, so you cannot compare the numerators directly. Give both the <b>same denominator</b>: count up by ${Math.max(A.d,B.d)}s until you hit a number ${Math.min(A.d,B.d)} also goes into.`, check:wc(Object.assign(ci(`What is a common denominator for ${A.d} and ${B.d}?`, L, String(L)),{validate:v=>Number.isInteger(v)&&v>0&&v%A.d===0&&v%B.d===0}),"common-denominator"), after:`${A.d} and ${B.d} both go into ${L}. (Any common multiple works; the smallest one, ${L}, keeps the numbers small, so we use ${L}.)`}, /* v9.12: any common multiple is a common denominator */
+  p.steps=[{t:`Give both fractions the <b>same denominator</b>: count up by ${Math.max(A.d,B.d)}s until you hit a number ${Math.min(A.d,B.d)} also goes into.`, more:`Different denominators mean different piece sizes, so you cannot compare the numerators directly. With the same denominator, the pieces are the same size.`, check:wc(Object.assign(ci(`What is a common denominator for ${A.d} and ${B.d}?`, L, String(L)),{validate:v=>Number.isInteger(v)&&v>0&&v%A.d===0&&v%B.d===0}),"common-denominator"), after:`${A.d} and ${B.d} both go into ${L}. (Any common multiple works; the smallest one, ${L}, keeps the numbers small, so we use ${L}.)`}, /* v9.12: any common multiple is a common denominator */
     {t:`Rewrite ${frText(A.n,A.d)} in ${L}ths: ${A.d} × ${L/A.d} = ${L}, so multiply the top by ${L/A.d} too.`, check:wc(ci(`${frText(A.n,A.d)} = how many ${L}ths?`, A.n*L/A.d),"magnitude"), after:`${frText(A.n,A.d)} = ${frText(A.n*L/A.d, L)}. The same way, ${frText(B.n,B.d)} = ${frText(B.n*L/B.d, L)}.`},
     {t:`Same-size pieces now: ${A.n*L/A.d} ${L}ths against ${B.n*L/B.d} ${L}ths. Which original fraction is greater?${fracSVG([A,B])}`, cues:[`Same denominator now: compare the numerators.`, `More pieces of the same size is the greater fraction. Pick that original fraction.`], check:Object.assign(finalCheck(p),{visibleOk:true}), after:`${options[answer]} is greater: on the number line it sits farther right.`}];
   p.hints=[{t:`Bigger denominator means smaller pieces. You cannot compare the tops until the pieces are the same size (or use benchmarks: is each fraction more or less than 1/2?).`},{t:`Find a common denominator: count up by ${Math.max(A.d,B.d)}s until ${Math.min(A.d,B.d)} also divides it. Rewrite both fractions with that denominator.`},{t:`Now compare the numerators: the bigger count of ${L}ths is the greater fraction.`}];
@@ -2749,11 +2762,12 @@ let stepIdx=0, selected=-1, lastAnswer="", hintIdx=0, lastChange=0, inlineErr=""
 let sc=null;     // state of the current step's check: {tries, state:"open"|"confirm"|"ok"|"revealed", val, sel, msg}
                  // open = still trying; confirm = answer shown, she must enter it to close the step; ok / revealed = closed
 let stepRes=[];  // per-step outcome for the walkthrough ("ok" | "revealed")
-let revealed=0, passed=0, expanded=0, missEntry=null;
+let revealed=0, passed=0, expanded=0, missEntry=null, wtSignals=0; // wtSignals (v9.13): help taps and wrong step entries in this walkthrough, for an earlier break offer
 let whyState=null, okEntry=null;
 let lastPraise=[];   // recovery / independence messages for the current right answer: [{t, big}]
 let sessionN=0, stopOfferedAt=-1, sessionDone=false, sessionMissRun=0, breakOfferedAt=-1, wtKeepGoing=false;
-let pendingTransfer=null, helpPrompts=[]; // after a help chain (miss → walkthrough → one like it), the next fresh problem is the same skill with the coach hidden: an immediate, unprompted transfer check
+let pendingTransfer=null, helpPrompts=[], pendingStretch=null; // pendingStretch (v9.13): after a warm-up success she chose "Try a bigger one"
+ // after a help chain (miss → walkthrough → one like it), the next fresh problem is the same skill with the coach hidden: an immediate, unprompted transfer check
 let todayPlan=null, todayIdx=0, todayExtra=0, todaySid=0; /* todaySid: this sitting's id; every fresh problem served in it is tagged, so the summary counts the sitting's own problems and nothing else */ // "Start today": the planned slots for this sitting, and how many extra problems were added to end on a win
 // The plan: a due check-in or review if there is one, this week's lesson (twice), the weakest open spot, then mixed practice. About six problems, and it ends on a win.
 function buildTodayPlan(){ const plan=[]; const now=Date.now(); const W=S.weak||{}; const okKey=k=>SKILLS[parseWeakKey(k).sk];
@@ -2782,18 +2796,38 @@ const SUPPORT_NAMES={3:"the pre-written tens-row zero and the opening coach line
 function resetSession(){ sessionN=0; stopOfferedAt=-1; sessionDone=false; sessionMissRun=0; breakOfferedAt=-1; } // a new learner starts a fresh sitting
 const coachLevel=sk=>{ const c=S.coach||{}; const lv = c[sk]===undefined ? 2 : c[sk]; const everRight=S.log.some(e=>e.sk===sk && e.ok && ["independent","supported"].includes(classifyEntry(e))); /* the same classification as the rest of the app: a hinted, studied, walkthrough, follow-up, copied, or paper entry is not "getting one right" */ return Math.min(lv, everRight?1:2); }; // full coaching (line + example) only until her first right answer on the skill; after that the coach is a one-line nudge at most
 const wsSup=()=> (cur && cur.placement && !cur.toolsOn) ? 0 : (S.support.multiply||0); /* the supports actually on screen: a quick placement check runs on the bare page unless she asks for a tool back */
-const coachOn=()=>!!(cur && cur.hints && cur.hints[0] && !cur.placement && !cur.transferCheck && (cur.ws ? wsSup()>=3 : (coachLevel(cur.skill)>=2 || (coachLevel(cur.skill)===1 && !!cur.nudgeOpen)))); // true only when a strategy line is actually on screen
-const nudgeAvailable=()=>!!(cur && !cur.ws && cur.hints && cur.hints[0] && !cur.placement && !cur.transferCheck && coachLevel(cur.skill)===1 && !cur.nudgeOpen); // level 1: the reminder waits behind a button // the coach line shows hint 1 for free; on the workspace it is tied to the supports
+const coachOn=()=>(cur && cur.onramp && !cur.ws) ? !!(cur.nudgeOpen && cur.hints && cur.hints[0]) : !!(cur && cur.hints && cur.hints[0] && !cur.placement && !cur.transferCheck && (cur.ws ? wsSup()>=3 : (coachLevel(cur.skill)>=2 || (coachLevel(cur.skill)===1 && !!cur.nudgeOpen)))); // true only when a strategy line is actually on screen
+const nudgeAvailable=()=>!!(cur && !cur.ws && !cur.onramp && cur.hints && cur.hints[0] && !cur.placement && !cur.transferCheck && coachLevel(cur.skill)===1 && !cur.nudgeOpen); // level 1: the reminder waits behind a button // the coach line shows hint 1 for free; on the workspace it is tied to the supports
 // "Show me one first": a completed example of a similar problem, before she tries hers. Looking is recorded as studied (help), never as independent.
-let exampleOpen=false;
+let exampleOpen=false, exStep=0, exAll=false, exSub={}; // v9.13: the example is revealed one step at a time (exStep = steps shown); exAll = every step at once; exSub[i] = that step's smaller steps open
 const exampleBtn=()=> cur.hw&&cur.fixed ? "" : `<button class="btn quiet" id="showexample" title="See a similar problem worked out, step by step, before you try this one">${exampleOpen?"Hide the example":cur.studied?"See the example again":"Show me one first"}</button>`;
 const exampleSig=p=>{ const m=p.meta||{}; return JSON.stringify([p.skill, p.type, ctxKey(ctxOf(p)), m.kind||"", m.dir||"", m.variant||"", m.op||"", m.which===undefined?"":!!m.which, p.ws?1:0]); }; // everything that defines the concept; only the numbers may differ
 function buildExample(){ if(cur.example) return cur.example; let ex=null; const want=exampleSig(cur); const f={...focusFromCtx(cur.skill, ctxOf(cur))}; const m=cur.meta||{}; if(m.variant) f.variant=m.variant; if(m.kind) f.kind=m.kind; if(m.dir) f.dir=m.dir; if(m.op) f.op=m.op; if(m.which!==undefined) f.which=!!m.which;
   for(let i=0;i<40;i++){ const c=SKILLS[cur.skill].gen(cur.level, f); if(plain(c.prompt)!==plain(cur.prompt) && exampleSig(c)===want){ ex=c; break; } } if(!ex) return null;
-  const steps=expandAll(ex.steps||[]).map(st=>({t:st.t, ans: st.check ? (st.check.type==="mc" ? String((st.check.options||[])[st.check.answer]) : String(st.check.display)) : null, after: st.after||null})); /* a worked example shows the answer and the explanation that a live walkthrough reveals only after she answers */
+  const mk=st=>({t:st.t, ans: st.check ? (st.check.type==="mc" ? String((st.check.options||[])[st.check.answer]) : String(st.check.display)) : null, after: st.after||null, more: st.more||null}); /* a worked example shows the answer and the explanation that a live walkthrough reveals only after she answers */
+  const steps=(ex.steps||[]).map(st=> Array.isArray(st.sub)&&st.sub.length ? {...mk(st), sub:expandAll(st.sub).map(mk)} : mk(st)); /* v9.13: the big steps, each with its smaller steps kept behind "Show smaller steps" */
   cur.example={prompt:plain(ex.prompt), display:ex.display, steps}; return cur.example; }
+// v9.13 progressive worked example: one decision at a time. The step she is on shows its question with the answer hidden until she taps
+// "Show this step"; the step before it stays visible; older steps fold into one line. "See all steps" opens the whole solution, and
+// "Back to my problem" is always at the top, beside a reminder of her own problem.
+function exStepHTML(st, i, showAns){ const subOpen=!!exSub[i] && st.sub; const subBtn = st.sub && !subOpen ? `<div class="actions" style="margin-top:6px"><button class="btn quiet small exsub" data-i="${i}">Show smaller steps</button></div>` : "";
+  const subList = subOpen ? `<div class="substep">${st.sub.map((x,j)=>`<div class="step"><span class="n">${i+1}${"abcdefghijklmnopqrstuvwxyz"[j]||"+"}.</span>${x.t}${x.ans!==null?` <b class="good">→ ${esc(x.ans)}</b>`:""}</div>`).join("")}</div>` : "";
+  return `<div class="step exstep${showAns?"":" cur"}"><span class="n">${i+1}.</span>${st.t}${st.more?moreHTML(st.more):""}${subList}${showAns?`${st.ans!==null?` <b class="good">→ ${esc(st.ans)}</b>`:""}${st.after?`<div class="res after">${st.after}</div>`:""}`:subBtn}</div>`; }
 function exampleHTML(){ if(!exampleOpen) return ""; const ex=buildExample(); if(!ex) return `<p class="muted">No matching example is available for this exact kind of problem.</p>`;
-  return `<div class="hints" id="example" aria-live="polite"><div class="step"><span class="n">Example.</span><b>${esc(ex.prompt)}</b> Here is one like yours, all the way through. Then try yours.</div>${ex.steps.map((st,i)=>`<div class="step"><span class="n">${i+1}.</span>${st.t}${st.ans!==null?` <b class="good">→ ${esc(st.ans)}</b>`:""}${st.after?`<div class="res after">${st.after}</div>`:""}</div>`).join("")}<div class="step"><span class="n">Answer.</span><b>${esc(ex.display)}</b>. Now yours: same steps, your numbers.</div></div>`; }
+  const n=ex.steps.length; const k=Math.max(0,Math.min(n,exStep)); const done=exAll||k>=n;
+  const head=`<div class="step exhead"><span class="yourq">Your problem: <b>${esc(plain(cur.prompt))}</b></span><button class="btn quiet small" id="exback">Back to my problem</button></div><div class="step"><span class="n">Example.</span><b>${esc(ex.prompt)}</b> ${exAll?"All the steps.":"One like yours, one step at a time."}</div>`;
+  let body="";
+  if(exAll) body=ex.steps.map((st,i)=>exStepHTML(st,i,true)).join("");
+  else { if(k>=2) body+=`<div class="step exdone muted"><span aria-hidden="true">✓</span> Step${k-1>1?`s 1–${k-1}`:" 1"} done.</div>`; if(k>=1) body+=exStepHTML(ex.steps[k-1],k-1,true);
+    if(k<n){ const st=ex.steps[k]; body+=exStepHTML(st,k,false)+`<div class="actions" style="margin-top:6px"><button class="btn primary" id="exnext">${st.ans!==null?"Show this step":"Next"}</button>${st.ans!==null?`<span class="muted" style="align-self:center">Think first: what would you write?</span>`:""}</div>`; } }
+  const foot = done ? `<div class="step"><span class="n">Answer.</span><b>${esc(ex.display)}</b>. Now yours: same steps, your numbers.<div class="actions" style="margin-top:8px"><button class="btn primary" id="extry">Try mine</button>${exAll?"":`<button class="btn quiet small" id="exall">See all steps</button>`}</div></div>` : `<div class="actions" style="margin-top:6px"><button class="btn quiet small" id="exall">See all steps</button></div>`;
+  return `<div class="hints" id="example" aria-live="polite">${head}${body}${foot}</div>`; }
+const moreHTML=t=>`<details class="more"><summary>Why?</summary><div>${t}</div></details>`; // v9.13: extra explanation waits behind one tap
+// v9.13 on-ramp card for a brand-new skill: a plain choice, never a gate. The answer box works whether or not she picks one.
+function onrampHTML(){ const nm=SKILLS[cur.skill].name.toLowerCase();
+  const hintLine = cur.nudgeOpen && cur.hints && cur.hints[0] && !cur.ws ? `<div class="step"><span class="n">Start here.</span>${cur.hints[0].t}</div>` : "";
+  if(cur.onrampChoice) return `<div class="hints onramp"><div class="step"><span class="n">Warm-up.</span>A first one to get started. If you miss it, it is not scored.</div>${hintLine}</div>`;
+  return `<div class="hints onramp"><div class="step"><span class="n">New kind of problem.</span>This is a warm-up for ${esc(nm)}. If you miss it, it is not scored. How do you want to start?<div class="actions"><button class="btn quiet" id="ortry">Let me try</button><button class="btn quiet" id="orhelp" title="See the first move. This one then counts as prompted.">Help me start</button>${cur.hw&&cur.fixed?"":`<button class="btn quiet" id="orshow" title="See one like it worked out, one step at a time">Show me one</button>`}</div></div></div>`; }
 function prevNeededHelp(sk){ const a=S.log.filter(e=>e.sk===sk); const p=a[a.length-2]; return !!p && (!p.ok || +p.hints>0); } // the attempt before the one just logged
 let scratchStrokes=[]; let penSeen=false; // scratch paper for the current problem; once a pencil is used, finger touches are ignored (palm rejection) // the "say why" question after a right answer: {sel, done, ok}; okEntry is the log entry it annotates
 function expandAll(steps){ const out=[]; for(const s of steps){ if(Array.isArray(s.sub)&&s.sub.length){ out.push(...expandAll(s.sub)); const c={...s, expanded:true}; if(c.tAfter) c.t=c.tAfter; out.push(c); } else out.push(s); } return out; }
@@ -3024,7 +3058,7 @@ function pickSkill(){
 }
 // v9.12: leaving a problem after working on it (typing, a hint, the nudge, the example) is recorded, and counts as a miss for the level.
 // Before this, Home or a reload erased the attempt, so a learner who left whenever she was stuck looked 100% independent.
-function pendSnap(){ return {sk:cur.skill, lvl:cur.level, q:plain(cur.prompt), ans:cur.display, stage, hints:hintIdx, hw:!!cur.hw, focus:!!cur.focusKey, checkin:!!cur.checkin, placement:!!cur.placement, typed:!!(S&&S.pendingQ&&S.pendingQ.typed), engaged:!!(hintIdx>0||cur.nudgeOpen||cur.studied||exampleOpen||selected>=0||preSel>=0), supported:!cur.ws && !cur.transferCheck && coachLevel(cur.skill)>=2, prompted:!!cur.nudgeOpen, studied:!!(cur.studied||exampleOpen)}; }
+function pendSnap(){ return {sk:cur.skill, lvl:cur.level, q:plain(cur.prompt), ans:cur.display, stage, hints:hintIdx, hw:!!cur.hw, focus:!!cur.focusKey, checkin:!!cur.checkin, placement:!!(cur.placement||cur.onramp), typed:!!(S&&S.pendingQ&&S.pendingQ.typed), engaged:!!(hintIdx>0||cur.nudgeOpen||cur.studied||exampleOpen||selected>=0||preSel>=0), supported:!cur.ws && !cur.transferCheck && coachLevel(cur.skill)>=2, prompted:!!cur.nudgeOpen, studied:!!(cur.studied||exampleOpen)}; }
 function engagedNow(){ if(!cur || phase!=="q" || cur.abandonLogged) return false; const inp=typeof app!=="undefined"&&app?app.querySelector("#ans"):null; const typed=!!((inp&&inp.value.trim())||String(lastAnswer||"").trim()||selected>=0||(ws&&ws.rows&&Object.values(ws.rows).some(v=>v))||String(preVal||"").trim()||preSel>=0||(S&&S.pendingQ&&S.pendingQ.typed)); return typed || hintIdx>0 || !!cur.nudgeOpen || !!cur.studied || !!exampleOpen; }
 function logAbandon(src){ if(!S || !src || !SKILLS[src.sk]) return; pushLog({t:Date.now(), sk:src.sk, lvl:src.lvl, q:src.q, yours:"(left before answering)", ans:src.ans, ok:0, stage:src.stage||"fresh", hints:src.hints||0, independent:0, abandoned:1, tag:"left", ...(src.supported?{supported:1}:{}), ...(src.prompted?{prompted:1}:{}), ...(src.studied?{studied:1}:{})});
   if((src.stage||"fresh")==="fresh" && !src.hints && !src.supported && !src.prompted && !src.studied && !src.hw && !src.focus && !src.checkin && !src.placement && Array.isArray(S.hist[src.sk])){ /* scored like a wrong answer given in the same conditions, never harder */ const res=applyResult(S.hist[src.sk], S.levels[src.sk], false); S.levels[src.sk]=res.level; S.hist[src.sk]=res.hist; } }
@@ -3034,7 +3068,7 @@ const TAB_ID=(()=>{ try{ let t=sessionStorage.getItem("lm-tab"); if(!t){ t=Strin
 function resolvePending(){ if(S && S.pendingQ){ const pq=S.pendingQ; const mine=!pq.tab || pq.tab===TAB_ID; const stale=!pq.at || Date.now()-pq.at>3*60*1000; /* another tab that has not touched its problem for 3 minutes is treated as closed */ if(!mine && !stale) return; S.pendingQ=null; if(pq.typed||pq.engaged) logAbandon(pq); save(); } } // a reload or a closed app mid-problem
 function resetProblemState(){ // everything that must not leak from one problem into the next
   phase="q"; stepIdx=0; selected=-1; lastAnswer=""; hintIdx=0; lastChange=0; inlineErr=""; wtKeepGoing=false; // the per-walkthrough "keep going" applies to that walkthrough only
-  sc=null; stepRes=[]; revealed=0; passed=0; expanded=0; missEntry=null; whyState=null; okEntry=null; scratchStrokes=[]; ws=null; lastPraise=[]; exampleOpen=false; preVal=""; preSel=-1;
+  sc=null; stepRes=[]; revealed=0; passed=0; expanded=0; wtSignals=0; missEntry=null; whyState=null; okEntry=null; scratchStrokes=[]; ws=null; lastPraise=[]; exampleOpen=false; exStep=0; exAll=false; exSub={}; preVal=""; preSel=-1;
 }
 let pendingHW=null; // the parsed problem waiting to be served by next() in "hw:check" mode
 function start(m){ mode=m; if(m==="hw:check"){ pendingHW=null; hwEntry(); return; } if(m==="today"){ todayPlan=buildTodayPlan(); todayIdx=0; todayExtra=0; todaySid=Date.now(); } next(); }
@@ -3059,6 +3093,10 @@ function hwEntry(prefill, err){
   inp.focus({preventScroll:true});
 }
 function next(){ // a fresh problem: new help chain
+  if(pendingStretch && SKILLS[pendingStretch] && mode!=="hw:check" && !hwMode()){ const sk0=pendingStretch; pendingStretch=null; const trial=SKILLS[sk0].gen(3); // v9.13: the old level-3 quick check, now her choice and only after a warm-up success
+    if(trial && trial.skill===sk0){ stage="fresh"; chain=0; cur=trial; cur.placement=true; cur.stretch=true; if(!cur.pre){ const rc=REP_COMP[`${cur.skill}:${cur.meta&&cur.meta.variant}`]; if(rc) attachPre(cur, rc); }
+      if(mode==="today" && todayPlan){ cur.todaySlot=todayPlan[todayIdx]||"extra"; todayIdx++; if(todayIdx>todayPlan.length) todayExtra++; }
+      resetProblemState(); render(); return; } }
   let sk=pickSkill();
   stage="fresh"; chain=0;
   // Week mode: the current lesson may ask for a particular flavour of a skill (e.g. area-model multiplication). Skill mode passes nothing.
@@ -3080,8 +3118,10 @@ function next(){ // a fresh problem: new help chain
   else { cur = focus!==undefined ? SKILLS[sk].gen(S.levels[sk], focus) : SKILLS[sk].gen(S.levels[sk]); if(transfer){ let g=0; while(g++<20 && helpPrompts.includes(plain(cur.prompt))) cur=SKILLS[sk].gen(S.levels[sk]); } } /* the transfer item must not repeat the coached problem, the example, or the follow-up */
   if(transfer && !cur.hw) cur.transferCheck=true;
   if(!cur.pre){ const rc=REP_COMP[`${cur.skill}:${cur.meta&&cur.meta.variant}`]; if(rc) attachPre(cur, rc); } // a representation lesson always asks for its own step
-  // Quick placement check: a skill she has never tried starts with one level-3 problem, no coach. Right on her own → she starts at level 3. Wrong → level 1 as usual, and the miss does not count against her.
-  if(!cur.hw && !cur.focusKey && !cur.checkin && !cur.transferCheck && S.levels[sk]===1 && !S.log.some(e=>e.sk===sk) && cur.level===1 && !cur.fixed){ const trial=SKILLS[sk].gen(3, focus); if(trial && trial.skill===sk){ cur=trial; cur.placement=true; if(!cur.pre){ const rc=REP_COMP[`${cur.skill}:${cur.meta&&cur.meta.variant}`]; if(rc) attachPre(cur, rc); } } }
+  // v9.13 on-ramp (replaces the cold level-3 quick check): a skill she has never tried starts with an ordinary level-1 warm-up and a plain choice:
+  // Let me try / Help me start / Show me one. A missed warm-up is walked through and not scored. A warm-up done on her own offers, as her choice,
+  // one bigger "stretch" problem (the old level-3 check): right on her own → level 3; not right → nothing lost.
+  if(!cur.hw && !cur.focusKey && !cur.checkin && !cur.transferCheck && S.levels[sk]===1 && !S.log.some(e=>e.sk===sk) && cur.level===1 && !cur.fixed){ cur.onramp=true; }
   if(mode==="today" && todayPlan){ cur.todaySlot=todayPlan[todayIdx]||"extra"; todayIdx++; if(todayIdx>todayPlan.length) todayExtra++; }
   resetProblemState(); render();
 }
@@ -3280,7 +3320,8 @@ function render(){
   const downHTML = lastChange<0 ? `<small>The next few will be a little smaller, to build back up.</small>` : "";
   if(phase==="q"||phase==="ok"||phase==="reveal"){
     body+=showChart;
-    if(phase==="q" && cur.placement) body+=`<div class="hints"><div class="step"><span class="n">Quick check.</span>You have not tried this kind yet. Try this one on your own first: if you get it, you skip ahead. New to it? Tap <b>${cur.ws?"Bring a tool back":"Show me one first"}</b> and nothing is lost.</div></div>`;
+    if(phase==="q" && cur.onramp) body+=onrampHTML();
+    else if(phase==="q" && cur.placement) body+=`<div class="hints"><div class="step"><span class="n">Stretch.</span>You got the warm-up, so here is a bigger one. Get it on your own and you skip ahead. Not sure? Tap <b>${cur.ws?"Bring a tool back":"Show me one first"}</b>. Nothing is lost either way.</div></div>`;
     else if(phase==="q" && nudgeAvailable()) body+=`<div class="actions" style="margin:0 0 8px"><button type="button" class="btn quiet small" id="nudge" title="A one-line reminder of the strategy. Opening it means this problem counts as prompted, not on your own.">Need a nudge?</button></div>`;
     else if(phase==="q" && !cur.ws && coachOn() && !cur.transferCheck){ const lv=coachLevel(cur.skill);
       if(lv>=2) body+=`<div class="hints"><div class="step"><span class="n">Coach.</span>${cur.hints[0].t} <span class="muted">New to this? <b>Show me one first</b> below walks through one like it.</span></div></div>`;
@@ -3315,6 +3356,7 @@ function render(){
       body+=`<div class="banner ok" role="status" aria-live="polite"><span class="mark" aria-hidden="true">✓</span><div>${msg}</div></div>`;
       if(cur.pre && okEntry && okEntry.pre) body+=`<div class="substep ${okEntry.pre.ok?"ok":"bad"}"><div class="cq">Your step (${esc(compName(cur.skill,cur.pre.comp))}): ${cur.pre.check.q}</div><div class="res"><span aria-hidden="true">${okEntry.pre.ok?"✓":"•"}</span> ${okEntry.pre.ok?`You showed it: <b>${esc(okEntry.pre.ans)}</b>.`:`The answer was right, but this step was not: it is <b>${esc(okEntry.pre.ans)}</b>. That step goes on the watch list.`}</div></div>`;
       if(lastPraise.length) body+=`<div class="praise" role="status">${lastPraise.map(p=>`<div class="${p.big?"big":""}">${p.t}</div>`).join("")}</div>`;
+      if(cur.onramp && independent && !cur.hw && (!whyState || whyState.done) && S.levels[sk]<3) body+=`<div class="stop" role="status"><b>You got the warm-up on your own.</b> Want to try a bigger one? Get it on your own and you skip ahead. Miss it and nothing is lost.<div class="actions" style="margin-top:8px"><button class="btn quiet" id="stretch">Try a bigger one</button></div></div>`; // v9.13: skipping ahead is her choice, after a success
       if(whyState && cur.why){ const w=cur.why;
         if(!whyState.done) body+=`<div class="substep why"><div class="cq">${w.q}</div>${optsHTML("wopts", w.options, whyState.sel, w.answer, false, "opt copt")}<div class="actions" style="margin-top:10px"><button class="btn primary" id="wcheck">Check</button></div></div>`;
         else body+=`<div class="substep why ${whyState.ok?"ok":"bad"}"><div class="cq">${w.q}</div>${optsHTML("wopts", w.options, whyState.sel, w.answer, true, "opt copt")}<div class="res">${whyState.ok?`<span aria-hidden="true">✓</span> That is the reason.`:`<span aria-hidden="true">•</span> The reason: ${w.display}`}</div></div>`; }
@@ -3342,20 +3384,28 @@ function render(){
     if(cur.ws){ wsInit(); body+=`<div class="yours">Your work (red cells are the ones to look at)</div>`+wsHTML(true, ws.marks||{}); }
     else if(cur.type==="input") body+=`<div class="yours" id="yourslbl">Your answer</div><input class="ans" disabled aria-labelledby="yourslbl" value="${esc(lastAnswer)}">`;
     else body+=optsHTML("opts", cur.options, selected, -1, true, "opt");
-    const head = chain>=2 ? "Still not there. One more walk through, then another try." : (cur.skippedTo ? "Not yet. What you had right stays; we start at the first mistake." : "Not yet. Let's walk through it.");
+    const head = chain>=2 ? "Still not there. One more walk through, then another try." : (stage==="fresh" && cur.onramp) ? "Not yet, and that is OK. It was a warm-up, so it is not scored. Let's walk through it together." : (stage==="fresh" && cur.stretch) ? "Not yet, and that is OK. That was a stretch, so it is not scored and your level stays. Let's look at it together." : (cur.skippedTo ? "Not yet. What you had right stays; we start at the first mistake." : "Not yet. Let's walk through it.");
     // A break is offered during sustained struggle, not only after success: three fresh misses in a row this sitting, or three shown answers inside one walkthrough.
-    const struggling = (sessionMissRun>=3 && breakOfferedAt!==sessionMissRun) || (revealed>=3 && !wtKeepGoing); // v9.12: one "keep going" answers both conditions
-    const breakHTML = struggling ? `<div class="stop" role="status"><b>This one is hard today.</b>${sessionMissRun>=3?`${sessionMissRun} tough ones in a row. `:""}Brains learn more after a break than after a fourth try. Stop here and come back tomorrow, or keep going?<div class="actions" style="margin-top:8px"><button class="btn primary" id="breaknow">Take a break</button><button class="btn quiet" id="keepgoing">Keep going</button></div></div>` : "";
+    // v9.13: the offer comes earlier. Two tough ones in a row, two shown answers, or four struggle signals (help taps and wrong step entries) in this walkthrough.
+    const struggling = !wtKeepGoing && ((sessionMissRun>=2 && breakOfferedAt!==sessionMissRun) || revealed>=2 || wtSignals>=4); // one "keep going" answers every condition for this walkthrough
+    const breakHTML = struggling ? `<div class="stop" role="status"><b>This one is hard today.</b>${sessionMissRun>=2?`${sessionMissRun} tough ones in a row. `:""}That is OK. You can tap <b>Help me</b> on any step, or take a break. Brains often learn more after a rest than after another try.<div class="actions" style="margin-top:8px"><button class="btn primary" id="breaknow">Take a break</button><button class="btn quiet" id="keepgoing">Keep going</button></div></div>` : "";
     right=`<div class="banner no" style="margin-top:0" role="status" aria-live="polite"><span class="mark" aria-hidden="true">✕</span><div>${head}${noteHTML}<small>Step ${stepIdx+1} of ${total}</small>${downHTML}</div></div>
       ${breakHTML}<div class="progress" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${stepIdx+1}" aria-label="Walkthrough progress"><i style="width:${Math.round(100*(stepIdx+1)/total)}%"></i></div>
       <div class="wt" id="wt">${cur.steps.slice(0,stepIdx+1).map((s,i)=>stepHTML(s,i,i<stepIdx,true)).join("")}</div>
       <div class="actions">${(open || (sc && sc.state==="explain"))?"":(!last?`<button class="btn primary" id="step">Next step</button>`:`<button class="btn primary" id="retry">Try one like it</button>`)}</div>`; /* the reason question must be answered before moving on */
   }
+  const idleTip=`<div class="idletip" id="idletip" role="status" aria-live="polite"></div>`; if(phase==="wt") right+=idleTip; else if(phase==="q") body+=idleTip; // v9.13: a quiet "stuck?" line after a long pause
   if(S.scratch) body+=scratchHTML();
   const card = right ? `<div class="card two"><div class="left">${body}</div><div class="right">${right}</div></div>` : `<div class="card">${body}</div>`;
   app.innerHTML=top+card+`<p class="streak" style="margin-top:12px">${S.today.c ? `${S.today.c} right today` : "Just getting started today"}${S.run>=2?` · ${S.run} in a row`:""}</p>`; // v9.12: no "0 right today" scoreboard
-  bind(); if(S.scratch) bindScratch();
+  bind(); if(S.scratch) bindScratch(); armIdle();
 }
+// v9.13 long-pause signal: after 75 seconds with no typing, tapping, or new screen, one calm line points at the help that is already there.
+// It changes nothing in the records. Any touch or key restarts the clock; a new screen clears the line.
+let idleTimer=null; const IDLE_MS=75000;
+function idleText(){ if(phase==="wt" && sc && sc.state==="open") return `Stuck? That is OK. Tap <b>Help me</b> for a clue, or <b>Home</b> to take a break.`; if(phase==="q") return `Stuck? That is OK. Tap <b>${cur&&cur.ws?"Hint for the next box":"Hint"}</b>${cur&&cur.hw&&cur.fixed?"":` or <b>Show me one first</b>`}, or <b>Home</b> to take a break.`; return ""; }
+function armIdle(){ if(idleTimer) clearTimeout(idleTimer); idleTimer=null; if(!(phase==="q"||phase==="wt")) return; idleTimer=setTimeout(()=>{ const el=app.querySelector("#idletip"); const t=idleText(); if(el && t){ el.innerHTML=t; el.classList.add("on"); if(cur) cur.idleTips=(cur.idleTips||0)+1; } }, IDLE_MS); }
+["pointerdown","keydown","input"].forEach(ev=>app.addEventListener(ev,()=>{ if(idleTimer){ armIdle(); } const el=app.querySelector("#idletip.on"); if(el && ev!=="pointerdown"){ el.classList.remove("on"); el.innerHTML=""; } }, true));
 function scratchHTML(){
   return `<div class="scratch" id="scratch">
     <div class="scratch-bar"><span class="muted">Scratch paper</span>
@@ -3406,13 +3456,14 @@ function stepHTML(s,i,dim,withCheck){
       else sub=`<div class="substep ${r==="ok"?"ok":"bad"}">${c.q}<div class="res"><span aria-hidden="true">${r==="ok"?"✓":"•"}</span> ${r==="ok"?`You got <b>${esc(c.display)}</b>.`:`It's <b>${esc(c.display)}</b>.`}</div>${s.after?`<div class="res after">${s.after}</div>`:""}</div>`;
     } else if(sc){
       const open=scActive(); const settled = sc.state==="ok" || sc.state==="revealed";
-      const explainHTML = sc.state==="explain" && sc.explain ? `<div class="substep why" style="margin-top:8px"><div class="cq">${esc(sc.explain.q)}</div>${optsHTML("xopts", sc.explain.options, sc.xsel, sc.explain.answer, false, "opt copt")}<div class="actions" style="margin-top:10px"><button class="btn primary" id="xcheck">Check reason</button></div></div>` : "";
+      const explainHTML = sc.state==="explain" && sc.explain ? `<div class="substep why" style="margin-top:8px"><div class="cq">${esc(sc.explain.q)}</div>${optsHTML("xopts", sc.explain.options, sc.xsel, sc.explain.answer, false, "opt copt")}<div class="actions" style="margin-top:10px"><button class="btn primary" id="xcheck">Check reason</button><button class="btn quiet" id="xskip" title="See the reason without picking one">Just tell me why</button></div></div>` : ""; /* v9.13: the reason is an invitation, not a second gate */
+      const helpLbl = stepHelpLabel(s, c); const twoMisses = open && sc.state==="open" && (sc.tries||0)>=2; /* v9.13: help without a wrong answer first; after two misses on one step, an explicit choice */
       sub=`<div class="substep ${sc.state==="ok"?"ok":sc.state==="revealed"?"bad":sc.state==="confirm"||sc.state==="explain"?"confirm":""}"><div class="cq">${c.q}</div>${checkCtlHTML(c)}
         <div class="inline-msg" id="cmsg" role="status" aria-live="polite">${sc.msg}</div>${settled && s.after && !sc.xdone?`<div class="res after">${s.after}</div>`:""}${explainHTML}
-        ${open?`<div class="actions" style="margin-top:10px"><button class="btn primary" id="cstep">Check step</button></div>`:""}</div>`;
+        ${open?`<div class="actions" style="margin-top:10px"><button class="btn primary" id="cstep">Check step</button>${sc.state==="open"?`<button class="btn quiet" id="stephelp" title="Get the next clue for this step. You do not have to get it wrong first.">${helpLbl}</button>`:""}${twoMisses?`<button class="btn quiet" id="stepbreak">Take a break</button>`:""}</div>`:""}</div>`;
     }
   }
-  return `<div class="step ${dim?"dim":""}"><span class="n">${i+1}.</span>${s.t}${chartsHTML(s)}${sub}</div>`;
+  return `<div class="step ${dim?"dim":""}"><span class="n">${i+1}.</span>${s.t}${s.more&&!dim?moreHTML(s.more):""}${chartsHTML(s)}${sub}</div>`;
 }
 function checkCtlHTML(c){ // the entry control for a check, driven by sc. In confirm state it stays enabled with the right answer marked
   const open=scActive();
@@ -3440,13 +3491,26 @@ function bind(){
     const ci=q("cans"); if(ci) ci.addEventListener("input",()=>{ sc.val=ci.value; });
     app.querySelectorAll("#copts .opt").forEach(b=>b.onclick=()=>setSel("copts",+b.dataset.i));
   }
-  if(q("xcheck")){ q("xcheck").onclick=checkExplain; app.querySelectorAll("#xopts .opt").forEach(b=>b.onclick=()=>setSel("xopts",+b.dataset.i)); }
+  if(q("xcheck")){ q("xcheck").onclick=()=>checkExplain(false); app.querySelectorAll("#xopts .opt").forEach(b=>b.onclick=()=>setSel("xopts",+b.dataset.i)); }
+  if(q("xskip")) q("xskip").onclick=()=>checkExplain(true);
+  if(q("stephelp")) q("stephelp").onclick=stepHelp;
+  if(q("stepbreak")) q("stepbreak").onclick=()=>{ if(missEntry){ missEntry.breakTaken=1; } breakOfferedAt=sessionMissRun; sessionDone=true; save(); home(); };
   if(q("next")) q("next").onclick=next;
+  if(q("ortry")) q("ortry").onclick=()=>{ cur.onrampChoice="try"; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const f=app.querySelector("#ans:not([disabled])")||app.querySelector("#wsentry")||app.querySelector("#opts .opt"); if(f) f.focus({preventScroll:true}); };
+  if(q("orhelp")) q("orhelp").onclick=()=>{ cur.onrampChoice="help"; const inp=q("ans"); if(inp) lastAnswer=inp.value; if(cur.ws && ws && cur.hintPlan){ wsNextHint(); hintIdx=(cur.hintLog||[]).filter(h=>!h.done).length; } else cur.nudgeOpen=true; render(); }; /* her call; the attempt becomes "prompted" (a hint on the workspace) */
+  if(q("orshow")) q("orshow").onclick=()=>{ cur.onrampChoice="example"; exampleOpen=true; cur.studied=true; exStep=0; exAll=false; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const ex=app.querySelector("#example"); if(ex) ex.scrollIntoView({behavior:"smooth",block:"nearest"}); };
+  if(q("stretch")) q("stretch").onclick=()=>{ pendingStretch=cur.skill; next(); };
   if(q("nudge")) q("nudge").onclick=()=>{ cur.nudgeOpen=true; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); }; /* her call; the attempt becomes "prompted" */
-  if(q("showexample")) q("showexample").onclick=()=>{ exampleOpen=!exampleOpen; if(exampleOpen) cur.studied=true; inlineErr=""; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const ex=app.querySelector("#example"); if(ex) ex.scrollIntoView({behavior:"smooth",block:"nearest"}); };
+  const toMine=()=>{ const f=app.querySelector("#ans:not([disabled])")||app.querySelector("#wsentry")||app.querySelector("#opts .opt")||app.querySelector("#check"); const pr=app.querySelector(".prompt"); if(pr && pr.scrollIntoView) pr.scrollIntoView({behavior:"smooth",block:"start"}); if(f) f.focus({preventScroll:true}); };
+  if(q("exnext")) q("exnext").onclick=()=>{ exStep++; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const c=app.querySelector("#exnext")||app.querySelector("#extry"); if(c && c.scrollIntoView) c.scrollIntoView({behavior:"smooth",block:"nearest"}); };
+  if(q("exall")) q("exall").onclick=()=>{ exAll=true; cur.exAll=true; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); };
+  app.querySelectorAll(".exsub").forEach(b=>b.onclick=()=>{ exSub[+b.dataset.i]=true; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); });
+  if(q("exback")) q("exback").onclick=toMine;
+  if(q("extry")) q("extry").onclick=()=>{ const inp=q("ans"); if(inp) lastAnswer=inp.value; exampleOpen=false; render(); toMine(); };
+  if(q("showexample")) q("showexample").onclick=()=>{ exampleOpen=!exampleOpen; if(exampleOpen){ cur.studied=true; exStep=0; exAll=false; exSub={}; } inlineErr=""; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const ex=app.querySelector("#example"); if(ex) ex.scrollIntoView({behavior:"smooth",block:"nearest"}); };
   if(q("stopnow")) q("stopnow").onclick=()=>{ stopOfferedAt=sessionN; sessionDone=true; home(); };
   if(q("breaknow")) q("breaknow").onclick=()=>{ breakOfferedAt=sessionMissRun; sessionDone=true; save(); home(); };
-  if(q("keepgoing")) q("keepgoing").onclick=()=>{ if(sessionMissRun>=3) breakOfferedAt=sessionMissRun; wtKeepGoing=true; render(); };
+  if(q("keepgoing")) q("keepgoing").onclick=()=>{ if(sessionMissRun>=2) breakOfferedAt=sessionMissRun; wtKeepGoing=true; render(); };
   if(q("onemore")) q("onemore").onclick=()=>{ stopOfferedAt=sessionN; if(mode==="today"&&todayPlan){ todayExtra=-99; } next(); }; // "one more anyway" turns off the today summary for this sitting
   if(cur.ws && phase==="q") bindWS();
   if(q("wcheck")){ q("wcheck").onclick=checkWhy; app.querySelectorAll("#wopts .opt").forEach(b=>b.onclick=()=>setSel("wopts",+b.dataset.i)); }
@@ -3518,15 +3582,15 @@ function submit(){
     ok=twoPoints ? false : !!checkInput(cur,v); yours=v.trim(); raw=v; }
   else { if(selected<0){ inlineErr=""; const f=app.querySelector("#opts .opt"); if(f) f.focus(); return; } ok=(selected===cur.answer); yours=cur.options[selected]; raw=selected; }
   inlineErr=""; if(S) S.pendingQ=null; // answered: nothing pending
-  const sk=cur.skill; S=normalize(S); if(!(cur.placement && !ok)){ S.attempted++; S.today.a++; } /* a missed quick check is not scored: it is not in the accuracy counts */
-  if(stage==="fresh"){ sessionN++; if(!cur.placement) sessionMissRun = ok ? 0 : sessionMissRun+1; } // v9.12: a missed quick check on a brand-new skill is not a "tough one in a row"
+  const sk=cur.skill; S=normalize(S); if(!((cur.placement||cur.onramp) && !ok)){ S.attempted++; S.today.a++; } /* a missed quick check is not scored: it is not in the accuracy counts */
+  if(stage==="fresh"){ sessionN++; if(!cur.placement && !(cur.onramp && !ok)) sessionMissRun = ok ? 0 : sessionMissRun+1; } // v9.12: a missed quick check on a brand-new skill is not a "tough one in a row"
   if(stage==="followup" && !cur.hw){ pendingTransfer=sk; helpPrompts.push(plain(cur.prompt)); while(helpPrompts.length>6) helpPrompts.shift(); } /* the help chain is ending: queue a fresh same-skill check */
   if(stage==="fresh" && !ok && !cur.hw){ helpPrompts.push(plain(cur.prompt)); while(helpPrompts.length>6) helpPrompts.shift(); }
   // Only independent attempts (fresh, no hints) move levels, up or down. Hints, follow-ups, walkthroughs never do.
   // In the multiplication workspace, "independent" also means the heavy supports are off (support level 1 or 0): with carry boxes and
   // column labels still on, a right answer is a supported success, which fades the supports but does not move the level.
-  const coachVisible = !cur.ws && !cur.placement && !cur.transferCheck && !!(cur.hints&&cur.hints[0]) && (coachLevel(sk)>=2 || !!cur.nudgeOpen); // a strategy line she could read before answering
-  const supported = (!!cur.ws && wsSup()>=2) || (!cur.ws && !cur.placement && !cur.transferCheck && coachLevel(sk)>=2 && !!(cur.hints&&cur.hints[0])); // tools on, or full coaching (line + example offer) on screen
+  const coachVisible = (cur.onramp && !cur.ws) ? !!cur.nudgeOpen : !cur.ws && !cur.placement && !cur.transferCheck && !!(cur.hints&&cur.hints[0]) && (coachLevel(sk)>=2 || !!cur.nudgeOpen); // a strategy line she could read before answering
+  const supported = (!!cur.ws && wsSup()>=2) || (!cur.ws && !cur.onramp && !cur.placement && !cur.transferCheck && coachLevel(sk)>=2 && !!(cur.hints&&cur.hints[0])); // tools on, or full coaching (line + example offer) on screen
   const prompted = (!cur.ws && !supported && coachVisible) || (!!cur.ws && wsSup()===1); // the level-1 reminder, opened by her, or the carry boxes alone on the multiplication page: prompted, not independent
   const stepWrong = !!(cur.pre && preRes && !preRes.ok); // the required step was wrong: the calculation may be right, but the attempt did not show the skill cleanly
   const independent = stage==="fresh" && hintIdx===0 && !supported && !prompted && !cur.studied && !stepWrong; // a worked example seen first is help, like a hint; an opened nudge is a prompt
@@ -3539,14 +3603,15 @@ function submit(){
   // Homework practice is level-neutral: the shape was chosen from the worksheet, not earned, so it moves nothing up or down.
   // Focus problems are chosen by the recovery system, often a notch above her ordinary level, so like homework they are level-neutral: they move the weakness state, never the dots.
   const levelMiss = !ok && stage==="fresh" && hintIdx===0 && !supported && !prompted && !cur.studied; // v9.12: a wrong answer counts toward a level drop even when the required step was also wrong
-  if((independent || levelMiss) && !cur.hw && !cur.focusKey && !cur.checkin && !cur.placement){ const res=applyResult(S.hist[sk], S.levels[sk], ok, cur.type==="mc" && !cur.ws); S.levels[sk]=res.level; S.hist[sk]=res.hist; lastChange=res.change; }
+  if((independent || levelMiss) && !cur.hw && !cur.focusKey && !cur.checkin && !cur.placement && !(cur.onramp && !ok)){ const res=applyResult(S.hist[sk], S.levels[sk], ok, cur.type==="mc" && !cur.ws); S.levels[sk]=res.level; S.hist[sk]=res.hist; lastChange=res.change; }
   // Coach fading (every non-workspace skill): two distinct clean successes while the coach is on fade it one level; a fresh miss brings it back one level.
   if(!cur.ws && stage==="fresh" && !cur.placement && !cur.hw){ S.coach=S.coach||{}; /* v9.12: homework self-checks do not fade the coach */ S.coachWins=S.coachWins||{}; const lv=coachLevel(sk);
     if(ok && hintIdx===0 && !cur.studied && !cur.nudgeOpen && lv>0){ const qtext=plain(cur.prompt); /* at level 1 only an unopened nudge counts toward switching the coach off */ S.coachRecent=Array.isArray(S.coachRecent)?S.coachRecent:[]; if(!S.coachRecent.includes(qtext)){ S.coachRecent.push(qtext); while(S.coachRecent.length>12) S.coachRecent.shift(); S.coachWins[sk]=(S.coachWins[sk]||0)+1; if(S.coachWins[sk]>=2){ S.coach[sk]=lv-1; S.coachWins[sk]=0; lastPraise.push({big:true, t: lv-1===0 ? `The coach line is off for ${SKILLS[sk].name.toLowerCase()}: you have this one.` : `Two right with the coach on: from here ${SKILLS[sk].name.toLowerCase()} gets a one-line reminder only, and your right answers count as your own.`}); } } }
     else if(!ok){ const shownBefore=S.log.some(e=>e.sk===sk && e.ok && e.independent); S.coach[sk]=Math.min(shownBefore?1:2, lv+1); S.coachWins[sk]=0; } }
   // Quick placement check: right on her own → start at level 3; wrong → level 1 and no penalty.
   if(cur.placement && ok && independent && cur.type==="mc" && !cur.ws){ S.levels[sk]=2; S.hist[sk]=[0.75]; lastChange=+1; S.coach=S.coach||{}; S.coach[sk]=1; lastPraise.push({big:true, t:`Nice pick. One right choice could be a lucky guess, so ${SKILLS[sk].name.toLowerCase()} starts at level 2 with a one-line reminder you can open.`}); entry.placement=1; } // v9.12: a multiple-choice quick check cannot skip two levels on one tap
-  else if(cur.placement){ if(ok && independent){ S.levels[sk]=3; S.hist[sk]=[1]; lastChange=+2; S.coach=S.coach||{}; S.coach[sk]=0; if(cur.ws){ S.support.multiply=0; S.supportWins.multiply=0; } lastPraise.push({big:true, t:`You already have ${SKILLS[sk].name.toLowerCase()}. Starting you at level 3${cur.ws?", on the bare page, since that is how you just did it":""}.`}); } else if(!ok){ lastPraise.push({t:`No problem: that was a quick check. It is not scored, and your level stays where it is. We start ${SKILLS[sk].name.toLowerCase()} from the beginning, and the app will work on it with you.`}); } entry.placement=1; }
+  else if(cur.placement){ if(ok && independent){ S.levels[sk]=3; S.hist[sk]=[1]; lastChange=+2; S.coach=S.coach||{}; S.coach[sk]=0; if(cur.ws){ S.support.multiply=0; S.supportWins.multiply=0; } lastPraise.push({big:true, t:`You already have ${SKILLS[sk].name.toLowerCase()}. Starting you at level 3${cur.ws?", on the bare page, since that is how you just did it":""}.`}); } else if(!ok){ lastPraise.push({t:`No problem: that bigger one was a stretch. It is not scored, and your level stays where it is. Let's look at it together.`}); } entry.placement=1; }
+  else if(cur.onramp){ entry.warmup=1; if(!ok){ entry.placement=1; lastPraise.push({t:`No problem: that was a warm-up. It is not scored. Let's walk through it together.`}); } } // v9.13: a missed warm-up is recorded, walked through, never scored
   // Fading supports (multiplication workspace): two clean successes in a row at this support level remove the next support; a fresh miss brings one back.
   if(cur.ws && stage==="fresh" && !cur.placement){ const sp=S.support, sw=S.supportWins;
     const qtext=plain(cur.prompt); S.supportRecent=Array.isArray(S.supportRecent)?S.supportRecent:[]; const distinct = !S.supportRecent.includes(qtext); // a problem seen in the last several is not new evidence for taking a tool away (alternating two memorized ones included)
@@ -3588,7 +3653,7 @@ function submit(){
       cur.steps.unshift({t:`First, ${fmt(x)} and ${fmt(xx)} are the <b>same number</b>: a zero on the end of a decimal adds nothing. Compare them in the chart.`, charts:[x,xx], check:cm(`${fmt(xx)} is … ${fmt(x)}`, ["greater than","less than","equal to"], 2)}); }
     if(stage==="fresh") chain=1; else chain++;
     missEntry=pushLog(entry);
-    if(chain<3){ phase="wt"; stepIdx=0; stepRes=[]; revealed=0; passed=0;
+    if(chain<3){ phase="wt"; stepIdx=0; stepRes=[]; revealed=0; passed=0; wtSignals=0;
       if(wsGrade && wsGrade.marks){ // adaptive start: open the sub-steps of the first wrong row and begin at the first wrong column; earlier work is shown as already right
         const target=wsFirstBad(wsGrade.marks, cur); let start=-1;
         if(target){ const rowOrder = cur.meta.b<10 ? ["t"] : ["r0","r1","t"];
@@ -3774,16 +3839,44 @@ function checkStep(){
       return; }
     if(c.type==="mc"){ sc.crossed=sc.crossed||[]; if(!sc.crossed.includes(sc.sel)) sc.crossed.push(sc.sel); }
     const onlyOneLeft = c.type==="mc" && (c.options||[]).length - (sc.crossed||[]).length <= 1; /* every wrong choice is crossed off: picking the last one would be elimination, not knowing, so the answer is shown instead */
-    if(sc.tries<3 && !onlyOneLeft){ const yoursText = c.type==="mc" ? String((c.options||[])[sc.sel]) : sc.val; sc.msg=`Not quite. ${cueFor(st, c, sc.tries, yoursText)}`; sc.val=""; sc.sel=-1; } /* first miss orients, second narrows; the answer waits until the third */
-    else { const ex=explainFor(st, c); sc.val=""; sc.sel=-1;
-      if(ex){ sc.state="explain"; sc.explain=ex; sc.xsel=-1; sc.msg=`${shown} ${st.after?`${st.after} `:""}Before moving on, pick the reason.`; } /* reveal: answer and explanation together, then one act of sense-making instead of copying */
-      else { sc.state="confirm"; sc.msg=`${shown} ${st.after?`${st.after} `:""}${lockIn}`; } } }
+    wtSignals++; // v9.13: a wrong step entry is a struggle signal
+    if(sc.tries<3 && !onlyOneLeft){ const yoursText = c.type==="mc" ? String((c.options||[])[sc.sel]) : sc.val; sc.msg=`Not quite. ${cueFor(st, c, sc.tries, yoursText)}${sc.tries>=2?` <span class="muted">Still stuck? <b>Show me this step</b> is below, or take a break.</span>`:""}`; sc.val=""; sc.sel=-1; } /* first miss orients, second narrows; the answer waits until the third */
+    else revealStepAnswer(st, c); }
   finishStepCheck(c, last);
 }
-function checkExplain(){ // the "why" question after a reveal: right or wrong, the step closes as revealed; the pick is recorded, never a pass
-  if(!sc || sc.state!=="explain" || !sc.explain) return; if(sc.xsel<0){ const f=app.querySelector("#xopts .opt"); if(f) f.focus(); return; }
-  const ex=sc.explain, okX = sc.xsel===ex.answer; const c=cur.steps[stepIdx].check;
-  cur.explainAsked=(cur.explainAsked||0)+1; if(okX) cur.explainOk=(cur.explainOk||0)+1; if(missEntry){ missEntry.explainAsked=cur.explainAsked; missEntry.explainOk=cur.explainOk||0; }
+function revealStepAnswer(st, c){ // the answer and its explanation together; the reason question follows as an invitation (v9.13: it can be skipped)
+  const shown=`It's <b>${esc(c.display)}</b>.`, lockIn = c.type==="mc" ? "Tap it to lock it in." : "Type it in to lock it in.";
+  const ex=explainFor(st, c); sc.val=""; sc.sel=-1;
+  if(ex){ sc.state="explain"; sc.explain=ex; sc.xsel=-1; sc.msg=`${shown} ${st.after?`${st.after} `:""}Can you see why? Pick the reason, or tap <b>Just tell me why</b>.`; }
+  else { sc.state="confirm"; sc.msg=`${shown} ${st.after?`${st.after} `:""}${lockIn}`; }
+}
+// v9.13 "Help me" on a walkthrough step: the same ladder a wrong answer climbs (smaller steps → orienting clue → narrower clue → the answer),
+// reached by asking instead of by being wrong. For the records it counts the same as a miss on that step, so evidence stays honest.
+function stepHelpLabel(st, c){ if(!sc) return "Help me"; if(Array.isArray(st.sub) && st.sub.length && !st.expanded) return "Help me"; const left = c.type==="mc" ? (c.options||[]).length-(sc.crossed||[]).length : 99; if((sc.tries||0)>=2 || (c.type==="mc" && left<=2 && (sc.tries||0)>=1)) return "Show me this step"; return (sc.tries||0)===0 ? "Help me" : "Another clue"; }
+function stepHelp(){
+  if(!sc || sc.state!=="open" || !(phase==="wt")) return;
+  const st=cur.steps[stepIdx], c=st.check, last=stepIdx===cur.steps.length-1;
+  cur.helpTaps=(cur.helpTaps||0)+1; if(missEntry) missEntry.helpTaps=cur.helpTaps; wtSignals++;
+  const inp=app.querySelector("#cans"); if(inp) sc.val=inp.value;
+  if(Array.isArray(st.sub) && st.sub.length && !st.expanded){ // too big a bite: the smaller steps are the first help
+    st.expanded=true; if(st.tAfter) st.t=st.tAfter; cur.steps.splice(stepIdx, 0, ...st.sub.map(x=>({...x}))); expanded++; if(missEntry) missEntry.expanded=expanded;
+    initStepCheck(); if(sc) sc.msg="Here it is in smaller pieces. Start with this one."; save(); render();
+    const el=app.querySelectorAll("#wt .step"); if(el.length) el[el.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); return; }
+  if((sc.tries||0)===0 && typeof c.comp!=="function") noteStepComp(c, sc, false); // asking on the first try: the step was not hers yet (a function-keyed component needs an answer to read, so it waits)
+  sc.tries=(sc.tries||0)+1; sc.helped=(sc.helped||0)+1;
+  if(c.type==="mc"){ sc.crossed=sc.crossed||[]; }
+  const left = c.type==="mc" ? (c.options||[]).length-sc.crossed.length : 99;
+  if(sc.tries>=3 || (c.type==="mc" && sc.tries>=2 && left<=2)) revealStepAnswer(st, c);
+  else if(c.type==="mc" && sc.tries===2){ const wrong=(c.options||[]).map((_,i)=>i).filter(i=>i!==c.answer && !sc.crossed.includes(i)); if(wrong.length){ sc.crossed.push(wrong[0]); } sc.sel=-1; sc.msg=`One choice that does not fit is crossed off. Pick from the ones left. <span class="muted">Still stuck? Tap <b>Show me this step</b>.</span>`; }
+  else { sc.msg=`Here is a clue. ${cueFor(st, c, sc.tries, "")}`; }
+  finishStepCheck(c, last);
+  const cm=app.querySelector("#cmsg"); if(cm && cm.scrollIntoView) cm.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+function checkExplain(skip){ skip=skip===true; // the "why" question after a reveal: right, wrong, or skipped, the step closes as revealed; the pick is recorded, never a pass
+  if(!sc || sc.state!=="explain" || !sc.explain) return; if(!skip && sc.xsel<0){ const f=app.querySelector("#xopts .opt"); if(f) f.focus(); return; }
+  const ex=sc.explain, okX = !skip && sc.xsel===ex.answer; const c=cur.steps[stepIdx].check;
+  if(skip){ cur.explainSkipped=(cur.explainSkipped||0)+1; if(missEntry) missEntry.explainSkipped=cur.explainSkipped; } // v9.13: "Just tell me why" is recorded apart from right and wrong reasons
+  else { cur.explainAsked=(cur.explainAsked||0)+1; if(okX) cur.explainOk=(cur.explainOk||0)+1; if(missEntry){ missEntry.explainAsked=cur.explainAsked; missEntry.explainOk=cur.explainOk||0; } }
   sc.state="revealed"; revealed++; stepRes[stepIdx]="revealed"; sc.xdone=true;
   sc.msg=`It's <b>${esc(c.display)}</b>. ${okX?`<span aria-hidden="true">✓</span> That is the reason.`:`The reason: <b>${esc(ex.options[ex.answer])}</b>.`}`;
   finishStepCheck(c, stepIdx===cur.steps.length-1);
@@ -3894,7 +3987,7 @@ function tiersHTML(log){
       return `<div style="overflow-x:auto"><table class="report"><tr><th>Evidence</th><th>What the app has seen</th></tr>
         ${row("Independent calculation", distinct?`${distinct} different problem${distinct===1?"":"s"} right without hints, examples, an opened nudge, the full coach card, or answer cues`:"none yet")}
         ${row("Supported completion", sup?`${sup} right with supports on (the multiplication tools, or the full coach card)`:"none")}
-        ${(()=>{ const asked=log.reduce((a,e)=>a+(+e.explainAsked||0),0), okX=log.reduce((a,e)=>a+(+e.explainOk||0),0); return row("Reason after a shown step", asked?`${okX} of ${asked} right reasons picked after a walkthrough step had to be shown`:"none yet"); })()}
+        ${(()=>{ const asked=log.reduce((a,e)=>a+(+e.explainAsked||0),0), okX=log.reduce((a,e)=>a+(+e.explainOk||0),0); const skipped=log.reduce((a,e)=>a+(+e.explainSkipped||0),0), helps=log.reduce((a,e)=>a+(+e.helpTaps||0),0), breaks=log.filter(e=>e.breakTaken).length; return row("Reason after a shown step", asked||skipped?`${asked?`${okX} of ${asked} right reasons picked after a walkthrough step had to be shown`:"no reasons picked yet"}${skipped?`; ${skipped} time${skipped===1?"":"s"} she tapped “Just tell me why” instead`:""}`:"none yet")+row("Asked for help in a walkthrough", helps||breaks?`${helps} “Help me” tap${helps===1?"":"s"}${breaks?`; took a break from a walkthrough ${breaks} time${breaks===1?"":"s"}`:""}. Asking counts like a miss on that step, so the evidence stays honest.`:"none yet"); })()}
         ${(()=>{ const pr=log.filter(e=>cls(e)==="prompted").length; return row("Prompted", pr?`${pr} right after opening the one-line nudge`:"none"); })()}
         ${(()=>{ const ft=log.filter(e=>e.freshAfterHelp); const fr=ft.filter(e=>cls(e)==="independent").length; return row("Fresh problem right after help", ft.length?`${fr} of ${ft.length} right on her own, new numbers, coach hidden (immediate transfer)`:"none yet"); })()}
         ${row("Studied first", studied?`${studied} right after looking at a worked example`:"none")}
@@ -3935,7 +4028,7 @@ function grownups(){
   const weekAgo=Date.now()-7*864e5; const week=log.filter(e=>Number.isFinite(e.t)&&e.t>=weekAgo&&!e.guided);
   const days=new Set(week.map(e=>new Date(e.t).toDateString())).size;
   const skillName=k=>SKILLS[k]?SKILLS[k].name:esc(str(k)||"?");
-  const missMeta=e=>`${Number.isFinite(e.t)?fmtDate(e.t):"unknown time"} · ${skillName(e.sk)}${e.lvl!=null?` · level ${esc(str(e.lvl))}`:""} · ${e.stage?esc(str(e.stage)):(e.retry?"retry":"fresh")}${e.page?" · from the page":e.hw?" · homework":""}${e.shown?" · answer shown":""}${+e.hints>0?" · "+(+e.hints)+" hint"+(+e.hints>1?"s":"")+(e.hintsOf?" of "+e.hintsOf:""):""}${typeof e.tag==="string"&&e.tag?` · <span class="tag">${esc(e.tag)}</span>`:""}${e.revealed!==undefined?` · walkthrough: ${+e.passed||0} step${+e.passed===1?"":"s"} right, ${+e.revealed||0} shown${e.explainAsked?`, reasons ${+e.explainOk||0} of ${+e.explainAsked}`:""}`:""}${e.comps&&typeof e.comps==="object"?(()=>{ const m=Object.keys(e.comps).filter(c=>e.comps[c]&&e.comps[c].miss); return m.length?` · missed: ${m.map(c=>esc(compName(e.sk,c))).join(", ")}`:""; })():""}${e.support!==undefined?` · supports ${esc(str(e.support))} of 3`:""}${e.cues?` · visible: ${esc(str(e.cues))}`:""}${e.pre?` · step (${esc(compName(e.sk,e.pre.comp))}): ${e.pre.ok?"shown ✓":`answered ${esc(str(e.pre.yours))}, is ${esc(str(e.pre.ans))}`}`:""}${e.unfinished?` · sent back ${+e.unfinished} time${+e.unfinished===1?"":"s"} for empty boxes before this`:""}${e.proved?` · proved: ${esc(str(e.proved)).replace(/,/g,", ")}`:""}`;
+  const missMeta=e=>`${Number.isFinite(e.t)?fmtDate(e.t):"unknown time"} · ${skillName(e.sk)}${e.lvl!=null?` · level ${esc(str(e.lvl))}`:""} · ${e.stage?esc(str(e.stage)):(e.retry?"retry":"fresh")}${e.page?" · from the page":e.hw?" · homework":""}${e.shown?" · answer shown":""}${+e.hints>0?" · "+(+e.hints)+" hint"+(+e.hints>1?"s":"")+(e.hintsOf?" of "+e.hintsOf:""):""}${typeof e.tag==="string"&&e.tag?` · <span class="tag">${esc(e.tag)}</span>`:""}${e.revealed!==undefined?` · walkthrough: ${+e.passed||0} step${+e.passed===1?"":"s"} right, ${+e.revealed||0} shown${e.explainAsked?`, reasons ${+e.explainOk||0} of ${+e.explainAsked}`:""}${+e.explainSkipped?`, ${+e.explainSkipped} reason${+e.explainSkipped===1?"":"s"} just shown`:""}${+e.helpTaps?`, ${+e.helpTaps} help tap${+e.helpTaps===1?"":"s"}`:""}`:""}${e.comps&&typeof e.comps==="object"?(()=>{ const m=Object.keys(e.comps).filter(c=>e.comps[c]&&e.comps[c].miss); return m.length?` · missed: ${m.map(c=>esc(compName(e.sk,c))).join(", ")}`:""; })():""}${e.support!==undefined?` · supports ${esc(str(e.support))} of 3`:""}${e.cues?` · visible: ${esc(str(e.cues))}`:""}${e.pre?` · step (${esc(compName(e.sk,e.pre.comp))}): ${e.pre.ok?"shown ✓":`answered ${esc(str(e.pre.yours))}, is ${esc(str(e.pre.ans))}`}`:""}${e.unfinished?` · sent back ${+e.unfinished} time${+e.unfinished===1?"":"s"} for empty boxes before this`:""}${e.proved?` · proved: ${esc(str(e.proved)).replace(/,/g,", ")}`:""}`;
   const exportText=JSON.stringify(DB); const nPlayers=Object.keys(DB.profiles).length;
   // Class position: the district calendar's estimate, or a lesson pinned here from the homework header
   const L=lessonList(), classId=effectiveClassAt(), calId=calendarClassAt();
@@ -3975,7 +4068,7 @@ function grownups(){
     <div class="topbar"><button class="btn quiet" id="back">Home</button><h1 style="margin:0">${esc(S.name)}'s progress</h1><span class="muted build">Build ${esc(BUILD)}</span></div>${warnHTML()}
     <p class="muted" style="margin:6px 0 0">${(()=>{ const cls=e=>classifyEntry(e); const wk=log.filter(e=>Number.isFinite(e.t)&&e.t>=weekAgo); const wi=wk.filter(e=>["independent","indep-miss"].includes(cls(e))); const wiR=wi.filter(e=>cls(e)==="independent").length; const wHelp=wk.filter(e=>["supported","prompted","guided"].includes(cls(e))).length; const wCopied=wk.filter(e=>cls(e)==="copied").length;
       const c={}; for(const e of log){ const k=cls(e); c[k]=(c[k]||0)+1; } let lastCopied=-1; log.forEach((e,i)=>{ if(cls(e)==="copied") lastCopied=i; }); const sinceCopied=log.slice(lastCopied+1).filter(e=>cls(e)==="guided").length;
-      return `Last 7 days: ${wk.filter(e=>isFresh(e)&&!e.abandoned).length} problems${wk.filter(e=>e.abandoned).length?` (plus ${wk.filter(e=>e.abandoned).length} left before answering)`:""} on ${days} day${days===1?"":"s"}: independent ${wi.length?`${wiR} right of ${wi.length} (${Math.round(100*wiR/wi.length)}%)`:"none yet"}, ${wHelp} finished with help${wCopied?`, ${wCopied} with the answer shown`:""}. ${S.logTrimmed?`Saved history (the most recent ${log.length} records)`:"All time"}: independent ${c.independent||0} right of ${(c.independent||0)+(c["indep-miss"]||0)}; supported (tools or full coach on) ${c.supported||0}; prompted (a nudge opened) ${c.prompted||0}; guided ${c.guided||0}; copied (answer shown) ${c.copied||0}${c["placement-miss"]?`; quick checks on new skills missed (not scored) ${c["placement-miss"]}`:""}. Guided completions since the answer was last shown: ${sinceCopied}.`; })()}${(()=>{ const w=log.filter(e=>e.why!==undefined); return w.length?` "Say why" questions: ${w.filter(e=>e.why).length} of ${w.length} right.`:""; })()}</p>
+      return `Last 7 days: ${wk.filter(e=>isFresh(e)&&!e.abandoned).length} problems${wk.filter(e=>e.abandoned).length?` (plus ${wk.filter(e=>e.abandoned).length} left before answering)`:""} on ${days} day${days===1?"":"s"}: independent ${wi.length?`${wiR} right of ${wi.length} (${Math.round(100*wiR/wi.length)}%)`:"none yet"}, ${wHelp} finished with help${wCopied?`, ${wCopied} with the answer shown`:""}. ${S.logTrimmed?`Saved history (the most recent ${log.length} records)`:"All time"}: independent ${c.independent||0} right of ${(c.independent||0)+(c["indep-miss"]||0)}; supported (tools or full coach on) ${c.supported||0}; prompted (a nudge opened) ${c.prompted||0}; guided ${c.guided||0}; copied (answer shown) ${c.copied||0}${c["placement-miss"]?`; quick checks or warm-ups on new skills missed (not scored) ${c["placement-miss"]}`:""}. Guided completions since the answer was last shown: ${sinceCopied}.`; })()}${(()=>{ const w=log.filter(e=>e.why!==undefined); return w.length?` "Say why" questions: ${w.filter(e=>e.why).length} of ${w.length} right.`:""; })()}</p>
     ${tiersHTML(log)}
     ${classHTML}
     <div class="card">
