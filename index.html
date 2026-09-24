@@ -1404,7 +1404,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.13 · September 23, 2026";
+const BUILD="v9.13.1 · September 23, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -2800,7 +2800,8 @@ const coachOn=()=>(cur && cur.onramp && !cur.ws) ? !!(cur.nudgeOpen && cur.hints
 const nudgeAvailable=()=>!!(cur && !cur.ws && !cur.onramp && cur.hints && cur.hints[0] && !cur.placement && !cur.transferCheck && coachLevel(cur.skill)===1 && !cur.nudgeOpen); // level 1: the reminder waits behind a button // the coach line shows hint 1 for free; on the workspace it is tied to the supports
 // "Show me one first": a completed example of a similar problem, before she tries hers. Looking is recorded as studied (help), never as independent.
 let exampleOpen=false, exStep=0, exAll=false, exSub={}; // v9.13: the example is revealed one step at a time (exStep = steps shown); exAll = every step at once; exSub[i] = that step's smaller steps open
-const exampleBtn=()=> cur.hw&&cur.fixed ? "" : `<button class="btn quiet" id="showexample" title="See a similar problem worked out, step by step, before you try this one">${exampleOpen?"Hide the example":cur.studied?"See the example again":"Show me one first"}</button>`;
+const onrampWaiting=()=>!!(cur && cur.onramp && !cur.onrampChoice && phase==="q"); // v9.13.1: while the on-ramp card waits for a choice, its buttons are the only help controls on screen
+const exampleBtn=()=> (cur.hw&&cur.fixed) || onrampWaiting() ? "" : `<button class="btn quiet" id="showexample" title="See a similar problem worked out, step by step, before you try this one">${exampleOpen?"Hide the example":cur.studied?"See the example again":"Show me one first"}</button>`;
 const exampleSig=p=>{ const m=p.meta||{}; return JSON.stringify([p.skill, p.type, ctxKey(ctxOf(p)), m.kind||"", m.dir||"", m.variant||"", m.op||"", m.which===undefined?"":!!m.which, p.ws?1:0]); }; // everything that defines the concept; only the numbers may differ
 function buildExample(){ if(cur.example) return cur.example; let ex=null; const want=exampleSig(cur); const f={...focusFromCtx(cur.skill, ctxOf(cur))}; const m=cur.meta||{}; if(m.variant) f.variant=m.variant; if(m.kind) f.kind=m.kind; if(m.dir) f.dir=m.dir; if(m.op) f.op=m.op; if(m.which!==undefined) f.which=!!m.which;
   for(let i=0;i<40;i++){ const c=SKILLS[cur.skill].gen(cur.level, f); if(plain(c.prompt)!==plain(cur.prompt) && exampleSig(c)===want){ ex=c; break; } } if(!ex) return null;
@@ -2827,7 +2828,7 @@ const moreHTML=t=>`<details class="more"><summary>Why?</summary><div>${t}</div><
 function onrampHTML(){ const nm=SKILLS[cur.skill].name.toLowerCase();
   const hintLine = cur.nudgeOpen && cur.hints && cur.hints[0] && !cur.ws ? `<div class="step"><span class="n">Start here.</span>${cur.hints[0].t}</div>` : "";
   if(cur.onrampChoice) return `<div class="hints onramp"><div class="step"><span class="n">Warm-up.</span>A first one to get started. If you miss it, it is not scored.</div>${hintLine}</div>`;
-  return `<div class="hints onramp"><div class="step"><span class="n">New kind of problem.</span>This is a warm-up for ${esc(nm)}. If you miss it, it is not scored. How do you want to start?<div class="actions"><button class="btn quiet" id="ortry">Let me try</button><button class="btn quiet" id="orhelp" title="See the first move. This one then counts as prompted.">Help me start</button>${cur.hw&&cur.fixed?"":`<button class="btn quiet" id="orshow" title="See one like it worked out, one step at a time">Show me one</button>`}</div></div></div>`; }
+  return `<div class="hints onramp"><div class="step"><span class="n">New kind of problem.</span>This is a warm-up for ${esc(nm)}. If you miss it, it is not scored.${cur.ws&&wsSup()>0?" The tools are on to help you: they come off one at a time as you get these right.":""} How do you want to start?<div class="actions"><button class="btn quiet" id="ortry">${cur.ws?"Try with the tools":"Let me try"}</button><button class="btn quiet" id="orhelp" title="See the first move. This one then counts as prompted.">Help me start</button>${cur.hw&&cur.fixed?"":`<button class="btn quiet" id="orshow" title="See one like it worked out, one step at a time">Show me one</button>`}</div></div></div>`; }
 function prevNeededHelp(sk){ const a=S.log.filter(e=>e.sk===sk); const p=a[a.length-2]; return !!p && (!p.ok || +p.hints>0); } // the attempt before the one just logged
 let scratchStrokes=[]; let penSeen=false; // scratch paper for the current problem; once a pencil is used, finger touches are ignored (palm rejection) // the "say why" question after a right answer: {sel, done, ok}; okEntry is the log entry it annotates
 function expandAll(steps){ const out=[]; for(const s of steps){ if(Array.isArray(s.sub)&&s.sub.length){ out.push(...expandAll(s.sub)); const c={...s, expanded:true}; if(c.tAfter) c.t=c.tAfter; out.push(c); } else out.push(s); } return out; }
@@ -3096,7 +3097,7 @@ function next(){ // a fresh problem: new help chain
   if(pendingStretch && SKILLS[pendingStretch] && mode!=="hw:check" && !hwMode()){ const sk0=pendingStretch; pendingStretch=null; const trial=SKILLS[sk0].gen(3); // v9.13: the old level-3 quick check, now her choice and only after a warm-up success
     if(trial && trial.skill===sk0){ stage="fresh"; chain=0; cur=trial; cur.placement=true; cur.stretch=true; if(!cur.pre){ const rc=REP_COMP[`${cur.skill}:${cur.meta&&cur.meta.variant}`]; if(rc) attachPre(cur, rc); }
       if(mode==="today" && todayPlan){ cur.todaySlot=todayPlan[todayIdx]||"extra"; todayIdx++; if(todayIdx>todayPlan.length) todayExtra++; }
-      resetProblemState(); render(); return; } }
+      resetProblemState(); render(); toProblemTop(); return; } }
   let sk=pickSkill();
   stage="fresh"; chain=0;
   // Week mode: the current lesson may ask for a particular flavour of a skill (e.g. area-model multiplication). Skill mode passes nothing.
@@ -3123,8 +3124,10 @@ function next(){ // a fresh problem: new help chain
   // one bigger "stretch" problem (the old level-3 check): right on her own → level 3; not right → nothing lost.
   if(!cur.hw && !cur.focusKey && !cur.checkin && !cur.transferCheck && S.levels[sk]===1 && !S.log.some(e=>e.sk===sk) && cur.level===1 && !cur.fixed){ cur.onramp=true; }
   if(mode==="today" && todayPlan){ cur.todaySlot=todayPlan[todayIdx]||"extra"; todayIdx++; if(todayIdx>todayPlan.length) todayExtra++; }
-  resetProblemState(); render();
+  resetProblemState(); render(); toProblemTop();
 }
+// v9.13.1: a fresh problem always opens at the top, with the problem and any on-ramp choices in view (Home's scroll offset used to carry over)
+function toProblemTop(){ try{ window.scrollTo(0,0); }catch(e){} try{ if(document.documentElement) document.documentElement.scrollTop=0; if(document.body) document.body.scrollTop=0; }catch(e){} }
 function followup(){ // "Try one like it": same skill, same level as the one she missed, aimed at the same mistake
   const prev=cur, sk=prev.skill, tag=prev.mistake?prev.mistake.tag:"other";
   let focus; try{ focus = typeof focusFor==="function" ? focusFor(prev, tag) : undefined; }catch(e){ focus=undefined; }
@@ -3338,10 +3341,10 @@ function render(){
       if(cur.hintPlan && cur.ws && ws){ // workspace: hints follow her work, one cell at a time (only when this problem really has a live workspace)
         const log=cur.hintLog||[]; const total=(cur.hintTotal||cur.hints.length)-hOff; const more = !log.some(h=>h.done);
         body+=`<div class="hints" id="hints" aria-live="polite">${log.map((h,i)=>`<div class="step"><span class="n">Hint ${i+1+hOff} of ${total+hOff}.</span>${h.t}</div>`).join("")}</div>
-          <div class="actions"><button class="btn primary" id="check">Check</button><button class="btn quiet" id="showhint" ${more?"":"disabled"}>${log.length===0?(hOff?"Hint for the next box":"Hint"):more?"Hint for the next box":"No more hints"}</button>${exampleBtn()}</div>${exampleHTML()}`; }
+          <div class="actions"><button class="btn primary" id="check">Check</button>${onrampWaiting()?"":`<button class="btn quiet" id="showhint" ${more?"":"disabled"}>${log.length===0?(hOff?"Hint for the next box":"Hint"):more?"Hint for the next box":"No more hints"}</button>`}${exampleBtn()}</div>${exampleHTML()}`; }
       else { const hAvail=cur.hints.length-hOff;
       body+=`<div class="hints" id="hints" aria-live="polite">${cur.hints.slice(hOff,hOff+hintIdx).map((h,i)=>`<div class="step"><span class="n">Hint ${i+1+hOff}${cur.hints.length>4?` of ${cur.hints.length}`:""}.</span>${h.t}${chartsHTML(h)}</div>`).join("")}</div>
-        <div class="actions"><button class="btn primary" id="check">Check</button><button class="btn quiet" id="showhint" ${hintIdx>=hAvail?"disabled":""}>${hintIdx===0?(hOff?"Next hint":"Hint"):hintIdx<hAvail?"Another hint":"No more hints"}</button>${exampleBtn()}</div>${exampleHTML()}`; }
+        <div class="actions"><button class="btn primary" id="check">Check</button>${onrampWaiting()?"":`<button class="btn quiet" id="showhint" ${hintIdx>=hAvail?"disabled":""}>${hintIdx===0?(hOff?"Next hint":"Hint"):hintIdx<hAvail?"Another hint":"No more hints"}</button>`}${exampleBtn()}</div>${exampleHTML()}`; }
     }
     if(phase==="ok"){
       const independent = okEntry ? !!okEntry.independent : (stage==="fresh" && hintIdx===0);
@@ -3403,7 +3406,7 @@ function render(){
 // v9.13 long-pause signal: after 75 seconds with no typing, tapping, or new screen, one calm line points at the help that is already there.
 // It changes nothing in the records. Any touch or key restarts the clock; a new screen clears the line.
 let idleTimer=null; const IDLE_MS=75000;
-function idleText(){ if(phase==="wt" && sc && sc.state==="open") return `Stuck? That is OK. Tap <b>Help me</b> for a clue, or <b>Home</b> to take a break.`; if(phase==="q") return `Stuck? That is OK. Tap <b>${cur&&cur.ws?"Hint for the next box":"Hint"}</b>${cur&&cur.hw&&cur.fixed?"":` or <b>Show me one first</b>`}, or <b>Home</b> to take a break.`; return ""; }
+function idleText(){ if(phase==="wt" && sc && sc.state==="open") return `Stuck? That is OK. Tap <b>Help me</b> for a clue, or <b>Home</b> to take a break.`; if(phase==="q" && onrampWaiting()) return `Stuck? That is OK. Tap <b>Help me start</b> or <b>Show me one</b>, or <b>Home</b> to take a break.`; if(phase==="q") return `Stuck? That is OK. Tap <b>${cur&&cur.ws?"Hint for the next box":"Hint"}</b>${cur&&cur.hw&&cur.fixed?"":` or <b>Show me one first</b>`}, or <b>Home</b> to take a break.`; return ""; }
 function armIdle(){ if(idleTimer) clearTimeout(idleTimer); idleTimer=null; if(!(phase==="q"||phase==="wt")) return; idleTimer=setTimeout(()=>{ const el=app.querySelector("#idletip"); const t=idleText(); if(el && t){ el.innerHTML=t; el.classList.add("on"); if(cur) cur.idleTips=(cur.idleTips||0)+1; } }, IDLE_MS); }
 ["pointerdown","keydown","input"].forEach(ev=>app.addEventListener(ev,()=>{ if(idleTimer){ armIdle(); } const el=app.querySelector("#idletip.on"); if(el && ev!=="pointerdown"){ el.classList.remove("on"); el.innerHTML=""; } }, true));
 function scratchHTML(){
@@ -3483,7 +3486,7 @@ function bind(){
     const inp=q("ans"); if(inp) inp.addEventListener("input",()=>{ lastAnswer=inp.value; if(S && S.pendingQ && !S.pendingQ.typed && inp.value.trim()){ S.pendingQ.typed=true; S.pendingQ.at=Date.now(); save(); } });
     app.querySelectorAll("#opts .opt").forEach(b=>b.onclick=()=>setSel("opts",+b.dataset.i));
     app.querySelectorAll("#preopts .opt").forEach(b=>b.onclick=()=>setSel("preopts",+b.dataset.i)); const pi=q("preans"); if(pi) pi.addEventListener("input",()=>{ preVal=pi.value; if(S && S.pendingQ && !S.pendingQ.typed && pi.value.trim()){ S.pendingQ.typed=true; save(); } });
-    q("showhint").onclick=()=>{ if(cur.hintPlan && cur.ws && ws){ wsNextHint(); hintIdx=(cur.hintLog||[]).filter(h=>!h.done).length; inlineErr=""; render(); const hs=app.querySelectorAll("#hints .step"); if(hs.length) hs[hs.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); return; }
+    if(q("showhint")) q("showhint").onclick=()=>{ if(cur.hintPlan && cur.ws && ws){ wsNextHint(); hintIdx=(cur.hintLog||[]).filter(h=>!h.done).length; inlineErr=""; render(); const hs=app.querySelectorAll("#hints .step"); if(hs.length) hs[hs.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); return; }
       if(hintIdx<cur.hints.length-(coachOn()?1:0)){ hintIdx++; inlineErr=""; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const hs=app.querySelectorAll("#hints .step"); if(hs.length) hs[hs.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); } };
   }
   if(q("cstep")){
