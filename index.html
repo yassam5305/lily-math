@@ -1408,7 +1408,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.15 · September 25, 2026";
+const BUILD="v9.15.1 · September 25, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -3384,7 +3384,7 @@ function render(){
     else if(phase==="q" && cur.placement) body+=`<div class="hints"><div class="step"><span class="n">Stretch.</span>You got the warm-up, so here is a bigger one. Get it on your own and you skip ahead. Not sure? Tap <b>${cur.ws?"Bring a tool back":"Show me one first"}</b>. Nothing is lost either way.</div></div>`;
     else if(phase==="q" && nudgeAvailable()) body+=`<div class="actions" style="margin:0 0 8px"><button type="button" class="btn quiet small" id="nudge" title="A one-line reminder of the strategy. Opening it means this problem counts as prompted, not on your own.">Need a nudge?</button></div>`;
     else if(phase==="q" && !cur.ws && coachOn() && !cur.transferCheck){ const lv=coachLevel(cur.skill);
-      if(lv>=2) body+=`<div class="hints"><div class="step"><span class="n">Coach.</span>${cur.hints[0].t} <span class="muted">New to this? <b>Show me one first</b> below walks through one like it.</span></div></div>`;
+      if(lv>=2) body+=`<div class="hints"><div class="step"><span class="n">Coach.</span>${cur.hints[0].t} <span class="muted">${cur.hw&&cur.fixed ? (walkthroughBtn()?`Want help now? Tap <b>Work through this problem</b> above.`:`Want another clue? Tap <b>Next hint</b> below.`) : `New to this? <b>Show me one first</b> below walks through one like it.`}</span></div></div>`;
       else body+=`<div class="hints"><div class="step"><span class="n">Nudge.</span>${cur.hints[0].t} <span class="muted">(Opened: this one counts as prompted, not on your own.)</span></div></div>`; } /* level 1: the reminder is there if she wants it, and the log says whether she used it */
     else if(phase==="q" && !cur.ws && cur.transferCheck) body+=`<div class="hints"><div class="step"><span class="n">Fresh one.</span>Same kind as the one you just worked through, new numbers, no coach. Show what you can do on your own.</div></div>`;
     body+=preHTML();
@@ -3464,7 +3464,7 @@ function render(){
 // v9.13 long-pause signal: after 75 seconds with no typing, tapping, or new screen, one calm line points at the help that is already there.
 // It changes nothing in the records. Any touch or key restarts the clock; a new screen clears the line.
 let idleTimer=null; const IDLE_MS=75000;
-function idleText(){ if(phase==="wt" && sc && sc.state==="open") return `Stuck? That is OK. Tap <b>Help me</b> for a clue, or <b>Home</b> to take a break.`; if(phase==="q" && onrampWaiting()) return `Stuck? That is OK. Tap <b>Help me start</b> or <b>Show me one</b>, or <b>Home</b> to take a break.`; if(phase==="q") return `Stuck? That is OK. Tap <b>${cur&&cur.ws?"Hint for the next box":"Hint"}</b>${cur&&cur.hw&&cur.fixed?"":` or <b>Show me one first</b>`}, or <b>Home</b> to take a break.`; return ""; }
+function idleText(){ if(phase==="wt" && sc && sc.state==="open") return `Stuck? That is OK. Tap <b>Help me</b> for a clue, or <b>Home</b> to take a break.`; if(phase==="q" && onrampWaiting()) return `Stuck? That is OK. Tap <b>Help me start</b> or <b>Show me one</b>, or <b>Home</b> to take a break.`; if(phase==="q" && walkthroughBtn()) return `Stuck? That is OK. Tap <b>Work through this problem</b> above for one small step at a time.`; if(phase==="q") return `Stuck? That is OK. Tap <b>${cur&&cur.ws?"Hint for the next box":"Hint"}</b>${cur&&cur.hw&&cur.fixed?"":` or <b>Show me one first</b>`}, or <b>Home</b> to take a break.`; return ""; }
 function armIdle(){ if(idleTimer) clearTimeout(idleTimer); idleTimer=null; if(!(phase==="q"||phase==="wt")) return; idleTimer=setTimeout(()=>{ const el=app.querySelector("#idletip"); const t=idleText(); if(el && t){ el.innerHTML=t; el.classList.add("on"); if(cur) cur.idleTips=(cur.idleTips||0)+1; } }, IDLE_MS); }
 ["pointerdown","keydown","input"].forEach(ev=>app.addEventListener(ev,()=>{ if(idleTimer){ armIdle(); } const el=app.querySelector("#idletip.on"); if(el && ev!=="pointerdown"){ el.classList.remove("on"); el.innerHTML=""; } }, true));
 function scratchHTML(){
