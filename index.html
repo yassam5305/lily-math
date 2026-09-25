@@ -154,6 +154,12 @@ pre.stack .cr{color:#B45309;font-weight:600}
 .ws .cell.bad{border-color:var(--no);background:var(--no-bg);color:var(--no)}
 .ws .cell.good{border-color:var(--ok);background:var(--ok-bg)}
 .ws .cell:disabled{cursor:default}
+.div-map{margin:10px 0 14px;padding:12px 14px;border:2px solid #D6E5F4;border-radius:12px;background:#F1F7FC;font-variant-numeric:tabular-nums}
+.div-map strong{display:block;margin-bottom:6px;font-size:16px}
+.div-map .split{font-weight:800;margin-bottom:8px;line-height:1.4}
+.div-map .piece{padding:5px 8px;border-radius:7px;font-size:16px}
+.div-map .piece.active{background:#FFF3C5;outline:2px solid #E5BA50}
+.div-map .combine{border-top:1px solid #C9D7E5;margin-top:8px;padding-top:8px;font-weight:700}
 .ws .lbl{font-size:11px;color:var(--graphite);text-align:center;font-weight:600;line-height:1.1;align-self:end;padding-bottom:2px}
 .ws .op{width:30px;text-align:right;font-size:26px;font-weight:800;line-height:52px;color:var(--ink);font-family:Menlo,Consolas,"Courier New",monospace}
 .ws .rowlbl{width:30px;font-size:10px;color:#B45309;text-align:right;line-height:30px;font-weight:600;white-space:nowrap}
@@ -194,6 +200,7 @@ pre.stack .cr{color:#B45309;font-weight:600}
 .banner{border-radius:12px;padding:12px 14px;margin-top:14px;font-weight:700;display:flex;gap:10px;align-items:flex-start}
 .banner.ok{background:var(--ok-bg);color:#1D6B47;border:2px solid var(--ok)}
 .banner.no{background:var(--no-bg);color:#8A2E27;border:2px solid var(--no)}
+.banner.learn{background:#F1F7FC;color:#234C6F;border:2px solid #91B9D8}
 .banner .mark{font-size:22px;line-height:1}
 .banner small{display:block;font-weight:500;margin-top:3px}
 .banner .lvl{display:block;margin-top:6px;font-weight:800}
@@ -1401,7 +1408,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.14.1 · September 25, 2026";
+const BUILD="v9.15 · September 25, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -1434,7 +1441,14 @@ function mulRowSteps(a,b,d,shift,doneRows){
   digs.forEach((g,j)=>{
     const last=j===digs.length-1, prodD=g*d, sum=prodD+carry, cin=carry;
     const fact={t:`<b>${cap(place(j))}</b>: multiply ${d} × ${g}${cin?`, then add the <b>+${cin}</b> written above it`:""}.${pic()}`, check:wc(ci(cin?`${d} × ${g} + ${cin} = ?`:`${d} × ${g} = ?`, sum), cin?"regroup":"fact")};
-    if(cin){ fact.sub=[{t:`First just the fact: ${d} × ${g}.${pic()}`, check:wc(ci(`${d} × ${g} = ?`, prodD),"fact")},{t:`Now add the <b>+${cin}</b> that was regrouped into the ${place(j)} place.${pic()}`, check:wc(ci(`${prodD} + ${cin} = ?`, sum),"regroup")}]; fact.tAfter=`So ${d} × ${g} + ${cin}: put those two steps together.`; }
+    if(g>=6 && d>=6){
+      const anchor=d>=8?10:5, diff=Math.abs(anchor-d), anchorVal=anchor*g, diffVal=diff*g;
+      fact.sub=[{t:`Start from a fact you know: ${anchor} × ${g}.${pic()}`,check:wc(ci(`${anchor} × ${g} = ?`,anchorVal),"fact")}];
+      if(diff>1) fact.sub.push({t:`${anchor} has ${diff} ${anchor>d?"extra":"fewer"} groups of ${g}. Find those groups first.${pic()}`,check:wc(ci(`${diff} × ${g} = ?`,diffVal),"fact")});
+      fact.sub.push({t:`Now ${anchor>d?"take away":"add"} ${diff} ${diff===1?"group":"groups"} of ${g}.${pic()}`,check:wc(ci(`${anchorVal} ${anchor>d?"−":"+"} ${diffVal} = ?`,prodD),"fact")});
+      if(cin) fact.sub.push({t:`Add the regrouped +${cin} to that product.${pic()}`,check:wc(ci(`${prodD} + ${cin} = ?`,sum),"regroup")});
+      fact.tAfter=`Put those smaller facts together: ${d} × ${g}${cin?` + ${cin}`:""} = ?`;
+    } else if(cin){ fact.sub=[{t:`First just the fact: ${d} × ${g}.${pic()}`, check:wc(ci(`${d} × ${g} = ?`, prodD),"fact")},{t:`Now add the <b>+${cin}</b> that was regrouped into the ${place(j)} place.${pic()}`, check:wc(ci(`${prodD} + ${cin} = ?`, sum),"regroup")}]; fact.tAfter=`So ${d} × ${g} + ${cin}: put those two steps together.`; }
     steps.push(fact);
     if(last){ steps.push({t:`This is the last digit of ${a}, so there is nowhere left to regroup. Write the whole number you just got here, starting in the ${place(j)} place.${pic()}`, check:wc(ci(`What do you write in the ${place(j)} place and up?`, sum),"regroup")}); written.push(String(sum)); carry=0; }
     else if(sum>=10){
@@ -1696,6 +1710,56 @@ function divAreaSVG(d, N, found, o){ // found: [{q, piece}] chunks known so far;
 // v9.12 second cue for "how many d's": one anchor fact that is neither the answer nor its neighbor, so the count is still hers to finish.
 function divAnchorCue(d, k, target, mode){ const L=v=>v.toLocaleString("en-US"); const a = k<=3 ? 5 : k<=6 ? 2 : 5; const prod=d*a, below=prod<target;
   return `${d} × ${a} = ${L(prod)}, which is ${below?"less":"more"} than ${L(target)}. Count ${below?"on":"back"} by ${d}s from ${L(prod)}, and stop ${mode==="fit"?(below?`at the last one that does not pass ${L(target)}`:`at the first one that is not past ${L(target)}`):`when you land on ${L(target)}`}.`; }
+// The worksheet's place-value strategy: split the dividend into friendly multiples of the divisor,
+// divide each piece, then add the small answers. Some pieces combine ordinary place-value parts.
+function divPlaceLesson(p, parts){
+  const {N,d,q}=p.meta, L=n=>n.toLocaleString("en-US");
+  const sumPieces=parts.map(x=>L(x.piece)).join(" + "), sumQuotients=parts.map(x=>L(x.qpart)).join(" + ");
+  const steps=[{t:`<b>Make friendly parts.</b> ${L(N)} = ${sumPieces}. These parts add back to ${L(N)}, and ${d} divides each one evenly. We will divide each part by ${d}, then add the small answers.`, more:`A friendly split does not always follow the printed digits one at a time. For example, a hundreds-and-tens amount can stay together if that makes an easier division.`}];
+  let remaining=N;
+  parts.forEach((x,i)=>{
+    const unit=Math.pow(10,String(x.qpart).length-1), digit=x.qpart/unit, unitName=unit>=1000?"thousands":unit===100?"hundreds":unit===10?"tens":"ones";
+    let base=d; while(base%10===0) base/=10;
+    const core=base*digit, before=remaining, after=remaining-x.piece;
+    const anchor=digit===1?2:digit-1, anchorProduct=base*anchor;
+    steps.push({t:`<b>Part ${i+1}: ${L(x.piece)} ÷ ${d}.</b> Start with a smaller multiplication fact. How many ${base}s make ${L(core)}?`,
+      check:wc(ci(`${base} × ? = ${L(core)}`,digit),"fact"), divIndex:i, ...(unit===1?{divDone:i}:{}),
+      cues:[`Count by ${base}s until you reach ${L(core)}. Keep track of each group.`,`${base} × ${anchor} = ${L(anchorProduct)}. ${digit===1?"That is too many groups. Try fewer.":`How many more groups of ${base} reach ${L(core)}?`}`],
+      after:unit===1?`${L(x.piece)} ÷ ${d} = ${digit}. Check: ${d} × ${digit} = ${L(x.piece)}.`:`You found ${digit} ${unitName} of groups. Write that as a number in the next step.`});
+    if(unit>1) steps.push({t:`That small fact found <b>${digit} ${unitName} of groups</b> for the ${L(x.piece)} part. How many groups is ${digit} ${unitName}?`,
+      check:wc(ci(`${digit} ${unitName} of groups = ? groups`,x.qpart,L(x.qpart)),"place"), divIndex:i, divDone:i,
+      cues:[`One ${unitName.slice(0,-1)} is ${L(unit)}. Count ${digit} of them.`,`${digit} × ${L(unit)} = ?`],
+      after:`${L(x.piece)} ÷ ${d} = ${L(x.qpart)}. Check: ${d} × ${L(x.qpart)} = ${L(x.piece)}.`});
+    if(i<parts.length-1){ steps.push({t:`We have shared out ${L(x.piece)} of the ${L(before)}. What is left to divide by ${d}?`,
+      check:wc(ci(`${L(before)} − ${L(x.piece)} = ?`,after,L(after)),"rows"), divIndex:i,
+      cues:[`Line up the place values and take away ${L(x.piece)}.`,`${L(before)} = ${L(x.piece)} + ?`], after:`${L(after)} is left. That is the sum of the parts we have not divided yet.`});
+      const nextUnit=Math.pow(10,String(parts[i+1].qpart).length-1);
+      for(let missing=unit/10; missing>nextUnit; missing/=10){ const name=missing===1000?"thousands":missing===100?"hundreds":missing===10?"tens":"ones";
+        steps.push({t:`There is no ${name} chunk. ${L(after)} is less than ${d} × ${L(missing)} = ${L(d*missing)}, so it cannot make one whole ${name.slice(0,-1)} of groups.`,
+          check:wc(ci(`What digit goes in the ${name} place of the answer?`,0),"place"), divIndex:i+1,
+          after:`Write 0 in the ${name} place. Keep dividing what is left.`}); }
+    }
+    remaining=after;
+  });
+  const firstTwo=parts.length>=3?parts[0].qpart+parts[1].qpart:0;
+  steps.push({t:`<b>Add the small answers.</b> ${sumQuotients} = ? Each small answer counts some of the groups; together they count all the groups.`,
+    check:finalCheck(p), divIndex:-1, ...(parts.length>=3?{sub:[{t:`First add the first two small answers: ${L(parts[0].qpart)} + ${L(parts[1].qpart)}.`, check:wc(ci(`${L(parts[0].qpart)} + ${L(parts[1].qpart)} = ?`,firstTwo,L(firstTwo)),"place")}], tAfter:`Now add the subtotal to the rest: ${L(firstTwo)} + ${parts.slice(2).map(x=>L(x.qpart)).join(" + ")} = ?`}:{}),
+    cues:[`Put the partial quotients together: ${sumQuotients}.`, `Check the sum by asking whether ${d} × that number equals ${L(N)}.`],
+    after:`${L(N)} ÷ ${d} = ${L(q)} because ${d} × ${L(q)} = ${L(N)}.`});
+  p.steps=steps; p.divMap=true;
+  p.hints=[
+    {t:`Split ${L(N)} into friendly parts that ${d} can divide evenly. A part can combine place values; all the parts must add back to ${L(N)}.`},
+    {t:`One friendly split is ${L(N)} = ${sumPieces}. Divide each part by ${d}, then add the small answers.`},
+    {t:`Start with ${L(parts[0].piece)} ÷ ${d}. Count groups using a small multiplication fact, then give those groups their place value.`},
+    {t:`After each part, check by multiplying its small answer by ${d}. Then add all the small answers.`}
+  ];
+  return p;
+}
+function divPlaceMap(p){
+  const {N,d,parts}=p.meta, L=n=>n.toLocaleString("en-US"); const active=p.steps[stepIdx]?.divIndex;
+  const solved=new Set(); p.steps.forEach((st,i)=>{ if(st.divDone!==undefined && stepRes[i] && stepRes[i]!=="skipped") solved.add(st.divDone); });
+  return `<div class="div-map" role="group" aria-label="Friendly parts for ${L(N)} divided by ${d}"><strong>Our division plan</strong><div class="split">${L(N)} = ${parts.map(x=>L(x.piece)).join(" + ")}</div>${parts.map((x,i)=>`<div class="piece${active===i?" active":""}">${L(x.piece)} ÷ ${d} = <b>${solved.has(i)?L(x.qpart):"?"}</b></div>`).join("")}<div class="combine">Add the small answers to find ${L(N)} ÷ ${d}.</div></div>`;
+}
 function genDivide(level, focus){
   const f=focus&&focus.tag;
   let variant = level>=3 && Math.random()<0.4 ? "area" : "placevalue";
@@ -1719,6 +1783,7 @@ function genDivide(level, focus){
   const qd=String(q).split("").map(Number); const L=qd.length;
   const parts=qd.map((dg,i)=>({qpart:dg*Math.pow(10,L-1-i), piece:dg*Math.pow(10,L-1-i)*d})).filter(x=>x.qpart>0);
   const p={skill:"divide", level, prompt:`<span class="big-num">${N.toLocaleString("en-US")} ÷ ${d} = ?</span>`, type:"input", answer:q, display:q.toLocaleString("en-US"), show:null, meta:{N,d,q,variant,parts}};
+  if(variant==="placevalue") return divPlaceLesson(p,parts);
   const steps=[];
   // v9.10 coaching: Lily produces every chunk. The card asks; the result is explained only after she answers (step.after).
   // Sequence: orient → bound (tens / hundreds / thousands) → fact (how many d's fit in the front of the number) → scale it → take it away → next chunk → combine → name the method.
@@ -2799,6 +2864,7 @@ const nudgeAvailable=()=>!!(cur && !cur.ws && !cur.onramp && cur.hints && cur.hi
 let exampleOpen=false, exStep=0, exAll=false, exSub={}; // v9.13: the example is revealed one step at a time (exStep = steps shown); exAll = every step at once; exSub[i] = that step's smaller steps open
 const onrampWaiting=()=>!!(cur && cur.onramp && !cur.onrampChoice && phase==="q"); // v9.13.1: while the on-ramp card waits for a choice, its buttons are the only help controls on screen
 const exampleBtn=()=> (cur.hw&&cur.fixed) || onrampWaiting() ? "" : `<button class="btn quiet" id="showexample" title="See a similar problem worked out, step by step, before you try this one">${exampleOpen?"Hide the example":cur.studied?"See the example again":"Show me one first"}</button>`;
+const walkthroughBtn=()=>cur.hw&&cur.fixed&&(cur.skill==="multiply"||cur.skill==="divide") ? `<button class="btn quiet" id="workthrough" title="Work through this exact problem, one small checked step at a time">Work through this problem</button>` : "";
 const exampleSig=p=>{ const m=p.meta||{}; return JSON.stringify([p.skill, p.type, ctxKey(ctxOf(p)), m.kind||"", m.dir||"", m.variant||"", m.op||"", m.which===undefined?"":!!m.which, p.ws?1:0]); }; // everything that defines the concept; only the numbers may differ
 function buildExample(){ if(cur.example) return cur.example; let ex=null; const want=exampleSig(cur); const f={...focusFromCtx(cur.skill, ctxOf(cur))}; const m=cur.meta||{}; if(m.variant) f.variant=m.variant; if(m.kind) f.kind=m.kind; if(m.dir) f.dir=m.dir; if(m.op) f.op=m.op; if(m.which!==undefined) f.which=!!m.which;
   for(let i=0;i<40;i++){ const c=SKILLS[cur.skill].gen(cur.level, f); if(plain(c.prompt)!==plain(cur.prompt) && exampleSig(c)===want){ ex=c; break; } } if(!ex) return null;
@@ -2919,7 +2985,7 @@ function home(){
     <div class="card hw">
       <div class="week-head"><h2 style="margin:0">Homework practice</h2><span class="std" title="Problem shapes from the worksheet, not from your level">Worksheet shapes</span></div>
       <p class="muted" style="font-size:14px;margin:6px 0 10px">Tonight's page, at tonight's size. These use the worksheet's problem shapes no matter what the dots say, and they never move a level up or down.</p>
-      <button class="skill" data-skill="hw:check"><div style="flex:1"><div class="name">Check a problem from the page</div><div class="blurb">Type the exact problem (148 × 19, 3,660 ÷ 30, 3.45 + 2.7, 8 × 10^5 × 6, 2 + 3 × 4, round 2.98 to the nearest tenth). Answer it here; a miss walks through that problem.</div></div></button>
+      <button class="skill" data-skill="hw:check"><div style="flex:1"><div class="name">Check a problem from the page</div><div class="blurb">Type the exact problem (148 × 19, 3,660 ÷ 30, 3.45 + 2.7, 8 × 10^5 × 6, 2 + 3 × 4, round 2.98 to the nearest tenth). For multiplication and division, work through it together whenever you need to.</div></div></button>
       ${Object.keys(HW_MODES).map(id=>{ const h=HW_MODES[id]; return `<button class="skill" data-skill="hw:${id}"><div style="flex:1"><div class="name">${esc(h.name)}</div><div class="blurb">${esc(h.blurb)}</div><div class="tags" aria-label="Standard"><span class="tag">${esc(h.std)}</span></div></div></button>`; }).join("")}
       <p class="muted week-note" style="margin:10px 0 0"><b>Need to build up to it?</b> “${esc(SKILLS.multiply.name)}” below is the easier, step-up practice: it starts at your level (level ${S.levels.multiply}: ${MUL_SHAPE_BY_LEVEL[S.levels.multiply]||""}) and grows as you level up. That is prerequisite practice, not tonight's page.</p>
     </div>
@@ -3077,7 +3143,7 @@ function hwEntry(prefill, err){
     <div class="topbar"><button class="btn quiet" id="back">Home</button><div class="row"><span class="pill week">Homework</span></div></div>${warnHTML()}
     <div class="card">
       <h2 style="margin-top:0">Check a problem from the page</h2>
-      <p class="muted" style="margin:0 0 10px">Type the problem from the worksheet, like <b>16 × 24</b>. Extra words are fine ("What is 16 × 24?", "4. 421 x 17", "16 times 24 area model"). You will answer it here, and if it is not right, the app walks through <b>that</b> problem step by step. Nothing here changes your levels.</p>
+      <p class="muted" style="margin:0 0 10px">Type the problem from the worksheet, like <b>16 × 24</b>. Extra words are fine ("What is 16 × 24?", "4. 421 x 17", "16 times 24 area model"). You can try it yourself or work through <b>that</b> problem step by step. Nothing here changes your levels.</p>
       <label class="vh" for="hwq">The problem</label>
       <input class="ans text" id="hwq" type="text" inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="like 148 × 19" value="${esc(prefill||"")}">
       <div class="inline-err" id="hwerr" role="status" aria-live="polite">${esc(err||"")}</div>
@@ -3307,7 +3373,7 @@ function render(){
   const top=`
     <div class="topbar"><button class="btn quiet" id="back">Home</button>
       <div class="row"><button class="btn quiet small" id="scratchtoggle" aria-pressed="${S.scratch?"true":"false"}" title="Scratch paper for working it out with the pencil">${S.scratch?"Hide scratch paper":"Scratch paper"}</button><span class="pill">${SKILLS[sk].name}</span>${mode==="week"?`<span class="pill week">${Object.keys(weekWeights()).length?"This week":"Mixed review"}</span>`:""}${mode==="today"&&todayPlan?`<span class="pill week" title="${esc(todayLabel(cur.todaySlot))}">Today ${Math.min(todayIdx,todayPlan.length)} of ${todayPlan.length}${cur.todaySlot&&cur.todaySlot!=="extra"?` · ${esc(todayLabel(cur.todaySlot))}`:" · one more"}</span>`:""}${mode==="miss"?`<span class="pill week" title="Chosen from your weakness profile, not the calendar">${cur.focusWhy?`Focus: ${esc(cur.focusWhy)}`:"Where I missed"}</span>`:""}${mode!=="miss"&&cur.focusKey?`<span class="pill week" title="A review that came due">Review: ${esc(cur.focusWhy||"")}</span>`:""}${cur.checkin?`<span class="pill week" title="A skill you have shown before; checking it still holds after a break">Check-in</span>`:""}${cur.hw?`<span class="pill week" title="${cur.fixed?"A problem typed from the page":"Worksheet shapes"}; does not change levels">${cur.fixed?"From the page":"Homework"}</span>`:""}${stage==="followup"?`<span class="pill">One like it</span>`:""}${cur.transferCheck?`<span class="pill week" title="Right after help: a fresh problem of the same kind, coach hidden, so the app can see what you do on your own">Fresh one</span>`:""}${cur.hw?"":dots(lvl)}</div></div>${warnHTML()}`;
-  let body=`<p class="prompt">${cur.prompt}</p>`; let right="";
+  let body=`<p class="prompt">${cur.prompt}</p>${phase==="q"&&walkthroughBtn()?`<div class="actions" style="margin:0 0 10px">${walkthroughBtn()}</div>`:""}`; let right="";
   const showChart = cur.show ? chartHTML(cur.show, null, cur.minCols) : "";
   const m=cur.mistake;
   const noteHTML = m&&m.note ? `<small>${m.note}</small>` : "";
@@ -3375,16 +3441,17 @@ function render(){
     const total=cur.steps.length, last=stepIdx===total-1, step=cur.steps[stepIdx];
     const open = scActive();
     body+=showChart;
-    if(cur.ws){ wsInit(); body+=`<div class="yours">Your work (red cells are the ones to look at)</div>`+wsHTML(true, ws.marks||{}); }
-    else if(cur.type==="input") body+=`<div class="yours" id="yourslbl">Your answer</div><input class="ans" disabled aria-labelledby="yourslbl" value="${esc(lastAnswer)}">`;
+    if(cur.ws){ wsInit(); body+=`<div class="yours">${cur.voluntaryWalkthrough?"Your work so far":"Your work (red cells are the ones to look at)"}</div>`+wsHTML(true, ws.marks||{}); }
+    else if(cur.type==="input"){ if(!cur.voluntaryWalkthrough || lastAnswer) body+=`<div class="yours" id="yourslbl">${cur.voluntaryWalkthrough?"Your work so far":"Your answer"}</div><input class="ans" disabled aria-labelledby="yourslbl" value="${esc(lastAnswer)}">`; }
     else body+=optsHTML("opts", cur.options, selected, -1, true, "opt");
-    const head = chain>=2 ? "Still not there. One more walk through, then another try." : (stage==="fresh" && cur.onramp) ? "Not yet, and that is OK. It was a warm-up, so it is not scored. Let's walk through it together." : (stage==="fresh" && cur.stretch) ? "Not yet, and that is OK. That was a stretch, so it is not scored and your level stays. Let's look at it together." : (cur.skippedTo ? "Not yet. What you had right stays; we start at the first mistake." : "Not yet. Let's walk through it.");
+    const head = cur.voluntaryWalkthrough ? "Let's work through this exact problem together. Nothing was marked wrong." : chain>=2 ? "Still not there. One more walk through, then another try." : (stage==="fresh" && cur.onramp) ? "Not yet, and that is OK. It was a warm-up, so it is not scored. Let's walk through it together." : (stage==="fresh" && cur.stretch) ? "Not yet, and that is OK. That was a stretch, so it is not scored and your level stays. Let's look at it together." : (cur.skippedTo ? "Not yet. What you had right stays; we start at the first mistake." : "Not yet. Let's walk through it.");
     // A break is offered during sustained struggle, not only after success: three fresh misses in a row this sitting, or three shown answers inside one walkthrough.
     // v9.13: the offer comes earlier. Two tough ones in a row, two shown answers, or four struggle signals (help taps and wrong step entries) in this walkthrough.
     const struggling = !wtKeepGoing && ((sessionMissRun>=2 && breakOfferedAt!==sessionMissRun) || revealed>=2 || wtSignals>=4); // one "keep going" answers every condition for this walkthrough
     const breakHTML = struggling ? `<div class="stop" role="status"><b>This one is hard today.</b>${sessionMissRun>=2?`${sessionMissRun} tough ones in a row. `:""}That is OK. You can tap <b>Help me</b> on any step, or take a break. Brains often learn more after a rest than after another try.<div class="actions" style="margin-top:8px"><button class="btn primary" id="breaknow">Take a break</button><button class="btn quiet" id="keepgoing">Keep going</button></div></div>` : "";
-    right=`<div class="banner no" style="margin-top:0" role="status" aria-live="polite"><span class="mark" aria-hidden="true">✕</span><div>${head}${noteHTML}<small>Step ${stepIdx+1} of ${total}</small>${downHTML}</div></div>
+    right=`<div class="banner ${cur.voluntaryWalkthrough?"learn":"no"}" style="margin-top:0" role="status" aria-live="polite"><span class="mark" aria-hidden="true">${cur.voluntaryWalkthrough?"→":"✕"}</span><div>${head}${noteHTML}<small>Step ${stepIdx+1} of ${total}</small>${downHTML}</div></div>
       ${breakHTML}<div class="progress" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${stepIdx+1}" aria-label="Walkthrough progress"><i style="width:${Math.round(100*(stepIdx+1)/total)}%"></i></div>
+      ${cur.divMap?divPlaceMap(cur):""}
       <div class="wt" id="wt">${cur.steps.slice(0,stepIdx+1).map((s,i)=>stepHTML(s,i,i<stepIdx,true)).join("")}</div>
       <div class="actions">${(open || (sc && sc.state==="explain"))?"":(!last?`<button class="btn primary" id="step">Next step</button>`:`<button class="btn primary" id="retry">Try one like it</button>`)}</div>`; /* the reason question must be answered before moving on */
   }
@@ -3468,6 +3535,14 @@ function focusFirst(){
   const el = [".ws .cell.sel:not([disabled])","#ans:not([disabled])","#cans:not([disabled])","#check","#cstep","#xcheck","#wopts .opt","#step","#retry","#next"].map(s=>app.querySelector(s)).find(Boolean);
   if(el) el.focus({preventScroll:true});
 }
+function beginWalkthrough(){
+  if(phase!=="q" || !cur || !cur.steps || !cur.steps.length) return;
+  const inp=app.querySelector("#ans"); if(inp) lastAnswer=inp.value;
+  cur.voluntaryWalkthrough=true; cur.studied=true;
+  S.pendingQ=null; phase="wt"; stepIdx=0; stepRes=[]; revealed=0; passed=0; expanded=0; wtSignals=0; missEntry=null;
+  initStepCheck(); save(); render();
+  const target=app.querySelector(".banner.learn"); if(target && target.scrollIntoView) target.scrollIntoView({behavior:"smooth",block:"start"});
+}
 function bind(){
   const q=id=>app.querySelector("#"+id);
   q("back").onclick=home;
@@ -3480,6 +3555,7 @@ function bind(){
     if(q("showhint")) q("showhint").onclick=()=>{ if(cur.hintPlan && cur.ws && ws){ wsNextHint(); hintIdx=(cur.hintLog||[]).filter(h=>!h.done).length; inlineErr=""; render(); const hs=app.querySelectorAll("#hints .step"); if(hs.length) hs[hs.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); return; }
       if(hintIdx<cur.hints.length-(coachOn()?1:0)){ hintIdx++; inlineErr=""; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const hs=app.querySelectorAll("#hints .step"); if(hs.length) hs[hs.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); } };
   }
+  if(q("workthrough")) q("workthrough").onclick=beginWalkthrough;
   if(q("cstep")){
     q("cstep").onclick=checkStep;
     const ci=q("cans"); if(ci) ci.addEventListener("input",()=>{ sc.val=ci.value; });
@@ -3799,6 +3875,7 @@ function cueForRaw(step, c, tries, yoursText){
 function noteStepComp(c, sc, ok){
   let comp=c.comp; if(typeof comp==="function"){ try{ comp=comp(c.type==="mc"?String((c.options||[])[sc.sel]):String(sc.val)); }catch(e){ comp=null; } }
   if(!comp) return;
+  if(!ok && cur.voluntaryWalkthrough) return; // choosing to study a page problem never creates a weakness or a reported miss
   cur.comps=cur.comps||{}; const t=cur.comps[comp]=cur.comps[comp]||{ok:0,miss:0}; if(ok) t.ok++; else t.miss++;
   if(!ok) noteComp(cur.skill, comp, false, {lvl:cur.level, ctx:ctxOf(cur)});
   if(missEntry) missEntry.comps=cur.comps;
@@ -3883,7 +3960,7 @@ function finishStepCheck(c, last){
     // "ok": she got the final answer herself → a guided completion. "revealed": the final answer was shown after repeated misses and she copied it in → finished with the answer shown (counted like the reveal path, never as guided).
     const shownIn = sc.state==="revealed";
     if(shownIn) S.shown=(S.shown||0)+1; else S.guided++;
-    pushLog({t:Date.now(), sk:cur.skill, lvl:cur.level, q:plain(cur.prompt), yours:c.type==="mc"?String((c.options||[])[sc.sel]):String(sc.val).trim(), ans:cur.display, ok:1, guided:1, ...(shownIn?{shown:1}:{}), stage:"wt", hints:hintIdx, independent:0, tag:cur.mistake?cur.mistake.tag:"", revealed, passed}); /* the reason counts live on the miss entry (missEntry), so they are not counted twice */
+    pushLog({t:Date.now(), sk:cur.skill, lvl:cur.level, q:plain(cur.prompt), yours:c.type==="mc"?String((c.options||[])[sc.sel]):String(sc.val).trim(), ans:cur.display, ok:1, guided:1, ...(shownIn?{shown:1}:{}), ...(cur.voluntaryWalkthrough?{studied:1,hw:cur.hw?1:0,page:cur.fixed?1:0}:{}), stage:"wt", hints:hintIdx, independent:0, tag:cur.mistake?cur.mistake.tag:"", revealed, passed}); /* the reason counts live on the miss entry (missEntry), so they are not counted twice */
   }
   save(); render();
 }
