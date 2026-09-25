@@ -141,14 +141,11 @@ pre.stack .cr{color:#B45309;font-weight:600}
 .ws-grid{display:inline-grid;gap:4px 3px;margin:0 auto;padding:12px 14px 12px 8px;background:#F7F9FC;border:2px solid var(--line);border-radius:12px;font-variant-numeric:tabular-nums}
 .ws-wrap{text-align:center;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .ws .cell{width:46px;height:52px;border:2px solid var(--line);border-radius:9px;background:#fff;font-size:26px;font-weight:800;text-align:center;line-height:48px;padding:0;color:var(--ink);cursor:pointer;font-family:Menlo,Consolas,"Courier New",monospace}
-.ws .cell.sel{border-color:var(--ink);background:#FFFDF0}
-.ws-entry-wrap{max-width:420px;margin:10px auto 0;text-align:left}
-.ws-entry-label{display:block;font-size:14px;font-weight:800;color:var(--ink);margin:0 0 5px}
-.ws-entry{display:block;width:100%;box-sizing:border-box;border:3px solid var(--ink);border-radius:11px;background:#fff;padding:10px 12px;font:800 26px/1.1 Menlo,Consolas,"Courier New",monospace;color:var(--ink);letter-spacing:.08em;text-align:right}
-.ws-entry:focus{outline:4px solid var(--hi);outline-offset:2px}
-.ws-entry:disabled{border-color:var(--line);background:#F0F3F7;color:var(--graphite)}
-.ws-howto{font-size:14px;color:var(--graphite);text-align:center;margin:8px 0 0}
-#wsrowlbl{font-weight:700;color:var(--ink);margin-top:10px}
+.ws .cell.sel{border-color:#1762A6;background:#E9F4FF;box-shadow:0 0 0 3px #B9DCFC;position:relative;z-index:1}
+.ws-direction{max-width:420px;margin:0 auto 10px;padding:10px 12px;border:2px solid #D6E5F4;border-radius:10px;background:#F1F7FC;text-align:left;font-size:15px;line-height:1.35}
+.ws-direction b{display:block;font-size:17px;margin-bottom:2px}
+.ws-direction .ws-current{display:block;margin-top:4px;color:var(--hi-ink);font-weight:700}
+.ws-howto{font-size:13px;color:var(--graphite);text-align:center;margin:8px 0 0}
 .pad .btn.small-txt{font-family:inherit;font-size:15px}
 .ws .cell.fixed{border-color:transparent;background:transparent;cursor:default;font-size:28px}
 .ws .cell.locked{background:#F0F3F7;color:var(--graphite);cursor:default;border-style:dashed}
@@ -1404,7 +1401,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.13.1 · September 23, 2026";
+const BUILD="v9.14 · September 25, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -3060,7 +3057,7 @@ function pickSkill(){
 // v9.12: leaving a problem after working on it (typing, a hint, the nudge, the example) is recorded, and counts as a miss for the level.
 // Before this, Home or a reload erased the attempt, so a learner who left whenever she was stuck looked 100% independent.
 function pendSnap(){ return {sk:cur.skill, lvl:cur.level, q:plain(cur.prompt), ans:cur.display, stage, hints:hintIdx, hw:!!cur.hw, focus:!!cur.focusKey, checkin:!!cur.checkin, placement:!!(cur.placement||cur.onramp), typed:!!(S&&S.pendingQ&&S.pendingQ.typed), engaged:!!(hintIdx>0||cur.nudgeOpen||cur.studied||exampleOpen||selected>=0||preSel>=0), supported:!cur.ws && !cur.transferCheck && coachLevel(cur.skill)>=2, prompted:!!cur.nudgeOpen, studied:!!(cur.studied||exampleOpen)}; }
-function engagedNow(){ if(!cur || phase!=="q" || cur.abandonLogged) return false; const inp=typeof app!=="undefined"&&app?app.querySelector("#ans"):null; const typed=!!((inp&&inp.value.trim())||String(lastAnswer||"").trim()||selected>=0||(ws&&ws.rows&&Object.values(ws.rows).some(v=>v))||String(preVal||"").trim()||preSel>=0||(S&&S.pendingQ&&S.pendingQ.typed)); return typed || hintIdx>0 || !!cur.nudgeOpen || !!cur.studied || !!exampleOpen; }
+function engagedNow(){ if(!cur || phase!=="q" || cur.abandonLogged) return false; const inp=typeof app!=="undefined"&&app?app.querySelector("#ans"):null; const typed=!!((inp&&inp.value.trim())||String(lastAnswer||"").trim()||selected>=0||(ws&&Object.keys(ws.vals).some(k=>!ws.locked[k]&&ws.vals[k]!==""))||String(preVal||"").trim()||preSel>=0||(S&&S.pendingQ&&S.pendingQ.typed)); return typed || hintIdx>0 || !!cur.nudgeOpen || !!cur.studied || !!exampleOpen; }
 function logAbandon(src){ if(!S || !src || !SKILLS[src.sk]) return; pushLog({t:Date.now(), sk:src.sk, lvl:src.lvl, q:src.q, yours:"(left before answering)", ans:src.ans, ok:0, stage:src.stage||"fresh", hints:src.hints||0, independent:0, abandoned:1, tag:"left", ...(src.supported?{supported:1}:{}), ...(src.prompted?{prompted:1}:{}), ...(src.studied?{studied:1}:{})});
   if((src.stage||"fresh")==="fresh" && !src.hints && !src.supported && !src.prompted && !src.studied && !src.hw && !src.focus && !src.checkin && !src.placement && Array.isArray(S.hist[src.sk])){ /* scored like a wrong answer given in the same conditions, never harder */ const res=applyResult(S.hist[src.sk], S.levels[src.sk], false); S.levels[src.sk]=res.level; S.hist[src.sk]=res.hist; } }
 function leaveProblem(){ if(S && engagedNow()){ cur.abandonLogged=true; logAbandon(pendSnap()); } if(S) S.pendingQ=null; }
@@ -3176,18 +3173,17 @@ function wsSpec(p){
   const order=[]; rowsDef.forEach(r=>{ for(let p=0;p<cols;p++) order.push(`${r.key}-${p}`); }); if(two) for(let p=0;p<cols;p++) order.push(`t-${p}`);
   return {a,b,ones,tens,two,cols,rowsDef,exp,carries,cin,carryRows,carryCols,order};
 }
-// Entry model: every worksheet row has one ordinary text field. Type 1-2-6 and the answer stays "126" in the field while the worksheet
-// boxes mirror it, right-aligned. This gives hardware and on-screen keyboards normal cursor, selection, paste, and correction behavior.
-// Enter moves to the next row; Enter on the last row checks. A carry box is the one-digit exception: tap it and type one digit, then the
-// selection returns to the row. ws.rows holds the typed strings; ws.vals (per cell) is derived from them so grading is unchanged.
-function wsInit(){ if(ws) return; const sp=wsSpec(cur); const rowKeys=sp.two?["r0","r1","t"]:["t"]; ws={rows:{}, carries:{}, vals:{}, sel:rowKeys[0], rowKeys, locked:{}, marks:null}; if(wsSup()>=3 && sp.two){ ws.locked["r1-0"]=true; } wsSync(); }
-function wsSync(){ if(S && S.pendingQ && !S.pendingQ.typed && ws && ws.rows && Object.values(ws.rows).some(v=>v)){ S.pendingQ.typed=true; S.pendingQ.at=Date.now(); save(); } const sp=wsSpec(cur); ws.vals={}; for(const k of ws.rowKeys){ let str=ws.rows[k]||""; if(k==="r1" && ws.locked["r1-0"]) str+="0"; const digs=str.split("").reverse(); digs.forEach((ch,p)=>{ if(p<sp.cols) ws.vals[`${k}-${p}`]=ch; }); } for(const k in ws.carries){ if(ws.carries[k]!=="") ws.vals[k]=ws.carries[k]; } }
+// The worksheet boxes are the input. A digit stays in the selected place, then selection moves one place left.
+// ws.rows is a readback for engagement/reporting; the keyed cells in ws.vals are the grading source of truth.
+function wsInit(){ if(ws) return; const sp=wsSpec(cur); const rowKeys=sp.two?["r0","r1","t"]:["t"]; ws={rows:{}, carries:{}, vals:{}, sel:`${rowKeys[0]}-0`, rowKeys, locked:{}, marks:null, edge:false}; if(wsSup()>=3 && sp.two){ ws.locked["r1-0"]=true; ws.vals["r1-0"]="0"; } wsSync(); }
+function wsSync(){ const sp=wsSpec(cur); for(const row of ws.rowKeys){ let high=-1; for(let p=sp.cols-1;p>=0;p--) if(ws.vals[`${row}-${p}`]!==undefined){ high=p; break; } ws.rows[row]=high<0?"":Array.from({length:high+1},(_,i)=>ws.vals[`${row}-${high-i}`]??" ").join(""); } if(S && S.pendingQ && !S.pendingQ.typed && Object.keys(ws.vals).some(k=>!ws.locked[k] && ws.vals[k]!=="")){ S.pendingQ.typed=true; S.pendingQ.at=Date.now(); save(); } }
 function wsRowLabel(k, sp){ return ({r0:"ones row (top partial product)",r1:"tens row",t:sp.two?"total (bottom row)":"answer"})[k]||"answer"; }
-function wsRowPrompt(k, sp){ if(k==="r1" && ws.locked["r1-0"]) return "The 0 at the end is already written. Type the rest of the tens row."; if(k==="r1") return "Type the second partial product (the tens row)."; return `Type the whole ${wsRowLabel(k,sp)}`; } // no cue about the 0 unless it is already written for her
-function wsActiveRow(){ return wsIsRow(ws.sel)?ws.sel:(wsIsRow(ws.retRow)?ws.retRow:ws.rowKeys[0]); }
+function wsRowPrompt(k, sp){ if(k==="r1" && ws.locked["r1-0"]) return "The 0 is written for you. Start just left of it; each digit moves one box left."; return "Start at the ones box on the right. Each digit moves one box left."; }
+function wsActiveRow(){ const row=(ws.sel||"").split("-")[0]; return wsIsRow(row)?row:(wsIsRow(ws.retRow)?ws.retRow:ws.rowKeys[0]); }
+function wsFirstCell(row){ return `${row}-${ws.locked[`${row}-0`]?1:0}`; }
 function wsHTML(readonly, marks){
   const sp=wsSpec(cur); const sup=wsSup(); const cellW = window.innerWidth>=700 ? 54 : 46;
-  const cellsRow=(key, cls, locked)=>{ let h=""; for(let p=sp.cols-1;p>=0;p--){ const k=`${key}-${p}`; const v=ws.vals[k]||""; const lk=!!ws.locked[k]; const m=marks&&marks[k]; const role=key==="t"?"answer":key.startsWith("c")?"carry":"partial product"; h+=`<button type="button" class="cell ${cls||""}${(k===ws.sel||key===ws.sel)&&!readonly?" sel":""}${lk?" locked":""}${m?" "+m:""}" data-k="${k}" ${readonly||lk?"disabled":""} aria-label="${role} ${WHOLE_PLACES[p]||""} place, ${v?"digit "+esc(v):"empty"}">${esc(v)}</button>`; } return h; };
+  const cellsRow=(key, cls, locked)=>{ let h=""; for(let p=sp.cols-1;p>=0;p--){ const k=`${key}-${p}`; const v=ws.vals[k]||""; const lk=!!ws.locked[k]; const m=marks&&marks[k]; const role=key==="t"?"answer": "partial product"; h+=`<button type="button" class="cell ${cls||""}${k===ws.sel&&!readonly?" sel":""}${lk?" locked":""}${m?" "+m:""}" data-k="${k}" ${readonly||lk?"disabled":""} aria-label="${role} ${WHOLE_PLACES[p]||""} place, ${v?"digit "+esc(v):"empty"}">${esc(v)}</button>`; } return h; };
   let g=`<div class="ws-grid" style="grid-template-columns:30px repeat(${sp.cols},${cellW}px)">`;
   if(sup>=2){ g+=`<div></div>`; for(let p=sp.cols-1;p>=0;p--) g+=`<div class="lbl">${WHOLE_PLACES[p]||""}</div>`; }
   if(sup>=1){ for(const cr of sp.carryRows){ const allowed=new Set(sp.carryCols(cr)); g+=`<div class="rowlbl">${sp.two?(cr==="c1"?"×tens":"×ones"):"carry"}</div>`;
@@ -3197,38 +3193,39 @@ function wsHTML(readonly, marks){
   if(sp.two){ g+=`<div class="op"></div>`+cellsRow("r0"); g+=`<div class="op">+</div>`+cellsRow("r1"); g+=`<div class="rule"></div>`; g+=`<div class="op"></div>`+cellsRow("t"); }
   else { g+=`<div class="op"></div>`+cellsRow("t"); }
   g+=`</div>`;
-  const active=wsActiveRow(), carryMode=!wsIsRow(ws.sel), cap=wsRowCap(active), rowName=wsRowLabel(active,sp), lastRow=active===ws.rowKeys[ws.rowKeys.length-1];
-  const entry = readonly ? "" : `<div class="ws-entry-wrap"><label class="ws-entry-label" id="wsrowlbl" for="wsentry">${carryMode?"Carry box selected — type one digit":wsRowPrompt(active,sp)}</label><input class="ws-entry" id="wsentry" inputmode="${(window.matchMedia&&window.matchMedia("(pointer:coarse)").matches)?"none":"numeric"}" pattern="[0-9]*" autocomplete="off" maxlength="${cap}" aria-labelledby="wsrowlbl" ${carryMode?"disabled":""} value="${esc(ws.rows[active]||"")}" placeholder="${active==="r1"&&ws.locked["r1-0"]?"the digits before the 0":"Type the whole number"}"></div>`;
-  const pad = readonly ? "" : `${entry}<div class="pad" role="group" aria-label="Number pad">${[1,2,3,4,5,6,7,8,9,0].map(d=>`<button type="button" class="btn" data-d="${d}">${d}</button>`).join("")}<button type="button" class="btn" data-d="bs" aria-label="Erase the last digit">⌫</button><button type="button" class="btn small-txt" data-d="clr" aria-label="Clear this row" title="Clear this row">clear</button><button type="button" class="btn wide" id="wsnext" data-d="nx" aria-label="${lastRow?"Check this answer":"Move to the next row"}">${lastRow?"check answer ↵":"next row ↵"}</button></div><p class="ws-howto muted">Type the whole row normally — for example, type <b>126</b>, not one box at a time. <b>↵</b> moves to the next row; on the last row it checks. Tap a carry box only when you want to write a carry.</p>`;
+  const active=wsActiveRow(), carryMode=(ws.sel||"").startsWith("c"), lastRow=active===ws.rowKeys[ws.rowKeys.length-1];
+  const direction = readonly ? "" : `<div class="ws-direction" role="status" aria-live="polite"><b id="wsrowlbl">${wsRowLabel(active,sp)}</b><span id="wsinstruction">${carryMode?"Carry box selected. Type one digit.":wsRowPrompt(active,sp)}</span><span class="ws-current" id="wscurrent"></span></div>`;
+  const pad = readonly ? "" : `<div class="pad" role="group" aria-label="Number pad">${[1,2,3,4,5,6,7,8,9,0].map(d=>`<button type="button" class="btn" data-d="${d}">${d}</button>`).join("")}<button type="button" class="btn" data-d="bs" aria-label="Erase the selected or last digit">⌫</button><button type="button" class="btn small-txt" data-d="clr" aria-label="Clear this row" title="Clear this row">clear row</button><button type="button" class="btn wide" id="wsnext" data-d="nx" aria-label="${lastRow?"Check this answer":"Move to the next row"}">${lastRow?"check answer ↵":"next row ↵"}</button></div><p class="ws-howto muted">Tap a box to change just that digit. Use the number pad or your keyboard. Tap a carry box above when needed.</p>`;
   const supNames=[sup>=2?"column labels":"", sup>=1?"carry boxes":"", sup>=3&&sp.two?"tens-row 0 written in":"", sup>=3?"coach line":""].filter(Boolean);
   const supLine = readonly ? "" : `<p class="supports">${supNames.length?`Supports on: <b>${supNames.join(" · ")}</b> <span class="muted">(they come off one at a time as you get these right)</span>`:`No supports: this is the bare page, like the worksheet.`}${sup<3?` <button type="button" class="btn quiet small" id="toolsback" title="Bring one support back for now; it fades again as you get these right">Bring a tool back</button>`:""}</p>`;
   const coach = (!readonly && sup>=3 && cur.hints && cur.hints[0]) ? `<div class="hints"><div class="step"><span class="n">Coach.</span>${cur.hints[0].t}</div></div>` : "";
-  return `<div class="ws"><div class="ws-wrap">${g}</div>${pad}${supLine}${coach}</div>`;
+  return `<div class="ws">${direction}<div class="ws-wrap">${g}</div>${pad}${supLine}${coach}</div>`;
 }
 function wsRowCap(k){ const sp=wsSpec(cur); return sp.cols - ((k==="r1" && ws.locked["r1-0"])?1:0); }
 function wsIsRow(k){ return ws.rowKeys.includes(k); }
-function wsNextRow(){ const i=ws.rowKeys.indexOf(ws.sel); if(i<0){ ws.sel=ws.rowKeys[0]; return false; } if(i<ws.rowKeys.length-1){ ws.sel=ws.rowKeys[i+1]; return false; } return true; } // true = already on the last row
-function wsPrevRow(){ const i=ws.rowKeys.indexOf(ws.sel); ws.sel = i>0 ? ws.rowKeys[i-1] : ws.rowKeys[0]; }
-function wsType(d){ d=String(d); if(!ws.sel) ws.sel=ws.rowKeys[0];
-  if(!wsIsRow(ws.sel)){ ws.carries[ws.sel]=d; ws.sel=ws.retRow||ws.rowKeys[0]; wsSync(); wsPaint(); return; } // a carry box takes one digit, then back to the row
-  const cur_=ws.rows[ws.sel]||""; if(cur_.length>=wsRowCap(ws.sel)){ wsPaint(); return; } // the row is as long as the page allows
-  ws.rows[ws.sel]=cur_+d; wsSync(); wsPaint(); }
-function wsBack(){ if(!ws.sel) return; if(!wsIsRow(ws.sel)){ delete ws.carries[ws.sel]; ws.sel=ws.retRow||ws.rowKeys[0]; wsSync(); wsPaint(); return; }
-  const cur_=ws.rows[ws.sel]||""; if(cur_.length){ ws.rows[ws.sel]=cur_.slice(0,-1); } else { wsPrevRow(); } wsSync(); wsPaint(); }
-function wsClearRow(){ if(wsIsRow(ws.sel)) ws.rows[ws.sel]=""; wsSync(); wsPaint(); }
+function wsNextRow(){ const i=ws.rowKeys.indexOf(wsActiveRow()); if(i<ws.rowKeys.length-1){ ws.sel=wsFirstCell(ws.rowKeys[i+1]); ws.edge=false; return false; } return true; }
+function wsPrevRow(){ const i=ws.rowKeys.indexOf(wsActiveRow()); ws.sel=wsFirstCell(ws.rowKeys[Math.max(0,i-1)]); ws.edge=false; }
+function wsType(d){ d=String(d); if(!/^[0-9]$/.test(d)) return; if(!ws.sel) ws.sel=wsFirstCell(ws.rowKeys[0]);
+  if(ws.sel.startsWith("c")){ ws.vals[ws.sel]=d; ws.carries[ws.sel]=d; ws.sel=ws.retCell||wsFirstCell(ws.rowKeys[0]); wsSync(); wsPaint(); return; }
+  if(ws.edge) return;
+  if(ws.locked[ws.sel]) return; const [row,p0]=ws.sel.split("-"); const p=+p0; ws.vals[ws.sel]=d;
+  ws.edge=true; for(let next=p+1;next<wsSpec(cur).cols;next++){ if(!ws.locked[`${row}-${next}`]){ ws.sel=`${row}-${next}`; ws.edge=false; break; } }
+  wsSync(); wsPaint(); }
+function wsBack(){ if(!ws.sel) return; if(ws.sel.startsWith("c")){ delete ws.vals[ws.sel]; delete ws.carries[ws.sel]; ws.sel=ws.retCell||wsFirstCell(ws.rowKeys[0]); wsSync(); wsPaint(); return; }
+  let k=ws.sel; if(ws.vals[k]===undefined){ const [row,p0]=k.split("-"); for(let p=+p0-1;p>=0;p--){ const prev=`${row}-${p}`; if(!ws.locked[prev] && ws.vals[prev]!==undefined){ k=prev; break; } } }
+  if(!ws.locked[k]){ delete ws.vals[k]; ws.sel=k; ws.edge=false; } wsSync(); wsPaint(); }
+function wsClearRow(){ const row=wsActiveRow(); for(let p=0;p<wsSpec(cur).cols;p++){ const k=`${row}-${p}`; if(!ws.locked[k]) delete ws.vals[k]; } ws.sel=wsFirstCell(row); ws.edge=false; wsSync(); wsPaint(); }
 function wsPaint(){ const sp=wsSpec(cur);
   app.querySelectorAll(".ws .cell[data-k]").forEach(el=>{ const k=el.dataset.k; el.textContent=ws.vals[k]||""; const row=k.split("-")[0]; const p=+k.split("-")[1];
-    const selRow = wsIsRow(ws.sel) && row===ws.sel; el.classList.toggle("sel", selRow || k===ws.sel);
+    el.classList.toggle("sel", k===ws.sel);
     const role=row==="t"?"answer":row.startsWith("c")?"carry":"partial product"; el.setAttribute("aria-label",`${role} ${WHOLE_PLACES[p]||""} place, ${el.textContent?"digit "+el.textContent:"empty"}`); });
-  const active=wsActiveRow(), carryMode=!wsIsRow(ws.sel), entry=app.querySelector("#wsentry"), rl=app.querySelector("#wsrowlbl");
-  if(rl) rl.textContent=carryMode?"Carry box selected — type one digit":wsRowPrompt(active,sp);
-  if(entry){ const want=ws.rows[active]||""; entry.disabled=carryMode; entry.maxLength=wsRowCap(active); if(entry.value!==want) entry.value=want; }
+  const active=wsActiveRow(), carryMode=(ws.sel||"").startsWith("c"), rl=app.querySelector("#wsrowlbl"), instruction=app.querySelector("#wsinstruction"), current=app.querySelector("#wscurrent");
+  if(rl) rl.textContent=wsRowLabel(active,sp);
+  if(instruction) instruction.textContent=carryMode?"Carry box selected. Type one digit.":ws.edge?"No more boxes to the left. Tap a box to change it, or choose Next row.":wsRowPrompt(active,sp);
+  if(current){ const place=+(ws.sel||"0-0").split("-")[1]; current.textContent=carryMode?`Selected: carry into ${WHOLE_PLACES[place]||""}.`:`Selected: ${WHOLE_PLACES[place]||""} box${ws.vals[ws.sel]!==undefined?". Type to replace its digit":""}.`; }
   const nx=app.querySelector("#wsnext"); if(nx){ const last=active===ws.rowKeys[ws.rowKeys.length-1]; nx.textContent=last?"check answer ↵":"next row ↵"; nx.setAttribute("aria-label",last?"Check this answer":"Move to the next row"); }
 }
-function wsFocusEntry(cellKey){ const entry=app.querySelector("#wsentry"); if(!entry||entry.disabled) return; entry.focus({preventScroll:true}); const row=wsActiveRow(), str=ws.rows[row]||"";
-  if(cellKey){ const p=+cellKey.split("-")[1], shift=(row==="r1"&&ws.locked["r1-0"])?1:0, i=str.length-1-(p-shift); if(i>=0&&i<str.length){ entry.setSelectionRange(i,i+1); return; } }
-  entry.setSelectionRange(str.length,str.length);
-}
+function wsFocusCell(){ const cell=app.querySelector(`.ws .cell[data-k="${ws.sel}"]`); if(cell && !cell.disabled) cell.focus({preventScroll:true}); }
 // Which cell the next hint should be about: the first empty box in algorithm order; if none is empty, the first box that does not match the
 // steps; a cell whose mini-ladder is used up is passed over. Returns null when every box is filled and matches.
 function wsHintCursor(){ const sp=wsSpec(cur); const plan=cur.hintPlan||[]; const used=cur.hintUsed||{};
@@ -3242,15 +3239,9 @@ function wsNextHint(){ cur.hintUsed=cur.hintUsed||{}; cur.hintLog=cur.hintLog||[
   if(!c){ if(!cur.hintLog.some(h=>h.done)) cur.hintLog.push({t:`Every box is filled in and matches the steps. Press <b>Check</b>.`, done:true}); return; }
   const idx=cur.hintUsed[c.key]||0; cur.hintLog.push({t:c.hints[idx], key:c.key}); cur.hintUsed[c.key]=idx+1; }
 function bindWS(){
-  app.querySelectorAll(".ws .cell[data-k]:not([disabled])").forEach(el=>el.onclick=()=>{ const k=el.dataset.k; const row=k.split("-")[0]; if(wsIsRow(row)){ ws.sel=row; wsPaint(); wsFocusEntry(k); } else { ws.retRow=wsActiveRow(); ws.sel=k; wsPaint(); } });
-  const entry=app.querySelector("#wsentry"); if(entry){ entry.oninput=()=>{ const row=wsActiveRow(), cap=wsRowCap(row); let clean=entry.value.replace(/\D/g,""); if(row==="r1" && ws.locked["r1-0"] && clean.length===cap+1 && /0$/.test(clean)) clean=clean.slice(0,-1); /* she typed the 0 that is already there: fine, drop it quietly */ clean=clean.slice(0,cap); if(entry.value!==clean) entry.value=clean; ws.rows[row]=clean; wsSync(); wsPaint(); };
-    entry.onkeydown=e=>{ if(e.altKey||e.ctrlKey||e.metaKey) return; if(e.key==="Enter"||e.key==="ArrowDown"||(e.key==="Tab"&&!e.shiftKey)){ e.preventDefault(); e.stopPropagation(); if(wsNextRow()){ if(e.key==="Enter") submit(); else app.querySelector("#check").focus(); } else { wsPaint(); wsFocusEntry(); } }
-      else if(e.key==="ArrowUp"||(e.key==="Tab"&&e.shiftKey)){ e.preventDefault(); e.stopPropagation(); wsPrevRow(); wsPaint(); wsFocusEntry(); }
-      else if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); wsClearRow(); wsFocusEntry(); }
-      else if(e.key==="Backspace"&&!entry.value&&ws.rowKeys.indexOf(wsActiveRow())>0){ e.preventDefault(); e.stopPropagation(); wsPrevRow(); wsPaint(); wsFocusEntry(); } };
-  }
+  app.querySelectorAll(".ws .cell[data-k]:not([disabled])").forEach(el=>el.onclick=()=>{ const k=el.dataset.k; if(k.startsWith("c")) ws.retCell=ws.sel; else ws.edge=false; ws.sel=k; wsPaint(); });
   app.querySelectorAll(".pad .btn").forEach(b=>b.onclick=()=>{ const d=b.dataset.d; if(d==="bs") wsBack(); else if(d==="nx"){ if(wsNextRow()) submit(); else wsPaint(); } else if(d==="clr") wsClearRow(); else wsType(d); });
-  const tb=app.querySelector("#toolsback"); if(tb) tb.onclick=()=>{ if(cur.placement){ cur.toolsOn=true; } else { S.support.multiply=Math.min(3,(S.support.multiply||0)+1); S.supportWins.multiply=0; } /* on a quick check the tools come back for this problem only; the answer then counts as supported, and nothing is lost */ const keep=ws?{rows:{...ws.rows},carries:{...ws.carries}}:null; ws=null; wsInit(); if(keep){ ws.rows=keep.rows; ws.carries=keep.carries; if(ws.locked["r1-0"] && /0$/.test(ws.rows.r1||"")) ws.rows.r1=ws.rows.r1.slice(0,-1); wsSync(); } save(); render(); }; // her call; a right answer with it on counts as supported
+  const tb=app.querySelector("#toolsback"); if(tb) tb.onclick=()=>{ if(cur.placement){ cur.toolsOn=true; } else { S.support.multiply=Math.min(3,(S.support.multiply||0)+1); S.supportWins.multiply=0; } /* on a quick check the tools come back for this problem only; the answer then counts as supported, and nothing is lost */ const keep=ws?{vals:{...ws.vals},sel:ws.sel,carries:{...ws.carries}}:null; ws=null; wsInit(); if(keep){ ws.vals={...keep.vals,...ws.vals}; ws.carries=keep.carries; const keepRow=keep.sel.split("-")[0]; ws.sel=ws.locked[keep.sel]?wsFirstCell(keepRow):keep.sel; wsSync(); } save(); render(); }; // her call; a right answer with it on counts as supported
   wsPaint();
 }
 // The first wrong cell in the order the algorithm works: row r0, then r1, then the total; within a row, the lowest place. A wrong carry box
@@ -3474,7 +3465,7 @@ function checkCtlHTML(c){ // the entry control for a check, driven by sc. In con
   return `<label class="vh" for="cans">Your answer for this step</label><input class="ans small${isTextTarget(c)?" text":""}" id="cans" ${ansAttrs(c)} autocomplete="off" placeholder="${isTextTarget(c)?textPH(c):"Your answer"}" ${open?"":"disabled"} value="${esc(open?sc.val:c.display)}">`;
 }
 function focusFirst(){
-  const el = ["#wsentry:not([disabled])","#ans:not([disabled])","#cans:not([disabled])","#check","#cstep","#xcheck","#wopts .opt","#step","#retry","#next"].map(s=>app.querySelector(s)).find(Boolean);
+  const el = [".ws .cell.sel:not([disabled])","#ans:not([disabled])","#cans:not([disabled])","#check","#cstep","#xcheck","#wopts .opt","#step","#retry","#next"].map(s=>app.querySelector(s)).find(Boolean);
   if(el) el.focus({preventScroll:true});
 }
 function bind(){
@@ -3499,12 +3490,12 @@ function bind(){
   if(q("stephelp")) q("stephelp").onclick=stepHelp;
   if(q("stepbreak")) q("stepbreak").onclick=()=>{ if(missEntry){ missEntry.breakTaken=1; } breakOfferedAt=sessionMissRun; sessionDone=true; save(); home(); };
   if(q("next")) q("next").onclick=next;
-  if(q("ortry")) q("ortry").onclick=()=>{ cur.onrampChoice="try"; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const f=app.querySelector("#ans:not([disabled])")||app.querySelector("#wsentry")||app.querySelector("#opts .opt"); if(f) f.focus({preventScroll:true}); };
+  if(q("ortry")) q("ortry").onclick=()=>{ cur.onrampChoice="try"; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const f=app.querySelector("#ans:not([disabled])")||app.querySelector(".ws .cell.sel:not([disabled])")||app.querySelector("#opts .opt"); if(f) f.focus({preventScroll:true}); };
   if(q("orhelp")) q("orhelp").onclick=()=>{ cur.onrampChoice="help"; const inp=q("ans"); if(inp) lastAnswer=inp.value; if(cur.ws && ws && cur.hintPlan){ wsNextHint(); hintIdx=(cur.hintLog||[]).filter(h=>!h.done).length; } else cur.nudgeOpen=true; render(); }; /* her call; the attempt becomes "prompted" (a hint on the workspace) */
   if(q("orshow")) q("orshow").onclick=()=>{ cur.onrampChoice="example"; exampleOpen=true; cur.studied=true; exStep=0; exAll=false; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const ex=app.querySelector("#example"); if(ex) ex.scrollIntoView({behavior:"smooth",block:"nearest"}); };
   if(q("stretch")) q("stretch").onclick=()=>{ pendingStretch=cur.skill; next(); };
   if(q("nudge")) q("nudge").onclick=()=>{ cur.nudgeOpen=true; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); }; /* her call; the attempt becomes "prompted" */
-  const toMine=()=>{ const f=app.querySelector("#ans:not([disabled])")||app.querySelector("#wsentry")||app.querySelector("#opts .opt")||app.querySelector("#check"); const pr=app.querySelector(".prompt"); if(pr && pr.scrollIntoView) pr.scrollIntoView({behavior:"smooth",block:"start"}); if(f) f.focus({preventScroll:true}); };
+  const toMine=()=>{ const f=app.querySelector("#ans:not([disabled])")||app.querySelector(".ws .cell.sel:not([disabled])")||app.querySelector("#opts .opt")||app.querySelector("#check"); const pr=app.querySelector(".prompt"); if(pr && pr.scrollIntoView) pr.scrollIntoView({behavior:"smooth",block:"start"}); if(f) f.focus({preventScroll:true}); };
   if(q("exnext")) q("exnext").onclick=()=>{ exStep++; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const c=app.querySelector("#exnext")||app.querySelector("#extry"); if(c && c.scrollIntoView) c.scrollIntoView({behavior:"smooth",block:"nearest"}); };
   if(q("exall")) q("exall").onclick=()=>{ exAll=true; cur.exAll=true; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); };
   app.querySelectorAll(".exsub").forEach(b=>b.onclick=()=>{ exSub[+b.dataset.i]=true; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); });
@@ -3536,10 +3527,12 @@ function activeGroup(){ // the MC radiogroup the keyboard should drive right now
 // Workspace keys. Returns true when the key was used. Also listened on the window, so it works no matter where focus went (a tapped canvas, a button, nowhere).
 function wsKey(e){
   if(!cur || !cur.ws || phase!=="q" || !ws) return false; const tg=e.target, tag=tg&&tg.tagName; if(tag==="INPUT"||tag==="TEXTAREA"||e.altKey||e.ctrlKey||e.metaKey) return false;
-  if(/^[0-9]$/.test(e.key)){ e.preventDefault(); const carry=!wsIsRow(ws.sel); wsType(e.key); if(carry) wsFocusEntry(); return true; }
-  if(e.key==="Backspace"||e.key==="Delete"){ e.preventDefault(); wsBack(); return true; }
-  if(e.key==="Enter"||(e.key==="Tab"&&!e.shiftKey)||e.key==="ArrowDown"){ e.preventDefault(); if(wsNextRow()){ if(e.key==="Enter") submit(); else wsPaint(); } else wsPaint(); return true; }
-  if((e.key==="Tab"&&e.shiftKey)||e.key==="ArrowUp"){ e.preventDefault(); wsPrevRow(); wsPaint(); return true; }
+  if(e.key==="Tab" || (tag==="BUTTON" && !(tg.closest&&tg.closest(".ws")) && e.key==="Enter")) return false;
+  if(/^[0-9]$/.test(e.key)){ e.preventDefault(); wsType(e.key); if(tag==="BUTTON" && tg.closest(".ws")) wsFocusCell(); return true; }
+  if(e.key==="Backspace"||e.key==="Delete"){ e.preventDefault(); wsBack(); if(tag==="BUTTON" && tg.closest(".ws")) wsFocusCell(); return true; }
+  if(e.key==="Enter"||e.key==="ArrowDown"){ e.preventDefault(); if(wsNextRow()){ if(e.key==="Enter") submit(); else wsPaint(); } else wsPaint(); if(e.key!=="Enter") wsFocusCell(); return true; }
+  if(e.key==="ArrowUp"){ e.preventDefault(); wsPrevRow(); wsPaint(); wsFocusCell(); return true; }
+  if(e.key==="ArrowLeft"||e.key==="ArrowRight"){ e.preventDefault(); const [row,p0]=(ws.sel||wsFirstCell(ws.rowKeys[0])).split("-"); const p=Math.max(0,Math.min(wsSpec(cur).cols-1,+p0+(e.key==="ArrowLeft"?1:-1))); if(!ws.locked[`${row}-${p}`]){ ws.sel=`${row}-${p}`; ws.edge=false; } wsPaint(); wsFocusCell(); return true; }
   if(e.key==="Escape"){ e.preventDefault(); wsClearRow(); return true; }
   return false;
 }
