@@ -355,6 +355,20 @@ function toWordForm(num){
   if(!parts.length) return "zero";
   return parts.join(" ");
 }
+// v9.17: read number words typed from the page ("six hundred forty-seven and eight hundred ninety-two thousandths") back into {w,d}.
+// It reads loosely, then accepts the result only if writing it back out gives the same words, so a typo never turns into a different number.
+function wordsToInt(s){ const tk=String(s).trim().split(/[\s-]+/).filter(Boolean); if(!tk.length) return null; let total=0, part=0, any=false;
+  for(const t of tk){ const o=ONES.indexOf(t), te=TENS.indexOf(t);
+    if(t==="zero"){ any=true; } else if(o>0){ part+=o; any=true; } else if(te>1){ part+=te*10; any=true; }
+    else if(t==="hundred"){ part=(part||1)*100; any=true; } else if(t==="thousand"){ total+=(part||1)*1000; part=0; any=true; } else return null; }
+  return any ? total+part : null; }
+function parseNumberWords(str){ const norm=x=>String(x).toLowerCase().replace(/[-\s]+/g," ").replace(/\ba (?=hundred|thousand)/g,"one ").replace(/\b(tenth|hundredth|thousandth)s\b/g,"$1").replace(/^zero and /,"").trim(); // "one tenths" / "six and four tenth" / "zero and three tenths" read the same as the correct form
+  const s=norm(str).replace(/[.!?]+$/,"").trim(); if(!/^[a-z ]+$/.test(s)) return null;
+  let w=0, d=""; const m=s.match(/^(?:(.+?) and )?(.+?) (tenth|hundredth|thousandth)$/);
+  if(m){ if(m[1]){ w=wordsToInt(m[1]); if(w===null) return null; } const dv=wordsToInt(m[2]); if(dv===null) return null;
+    const k=/^ten/.test(m[3])?1:/^hun/.test(m[3])?2:3; if(dv<1 || String(dv).length>k) return null; d=String(dv).padStart(k,"0"); }
+  else { w=wordsToInt(s); if(w===null) return null; }
+  if(w>999999) return null; const num={w,d}; return norm(toWordForm(num))===s ? num : null; }
 function trimDec(d){ return d.replace(/0+$/,""); }
 function fromThousandths(V){ const w=Math.floor(V/1000); const d=String(V%1000).padStart(3,"0"); return {w, d: trimDec(d)}; }
 function fixedFrom(V, places){ const w=Math.floor(V/1000); const d=String(V%1000).padStart(3,"0").slice(0,places); return {w,d}; }
@@ -413,6 +427,7 @@ function genStandard(level, focus){
   if(f==="zeros"){ const k=Math.max(2,d.length); d=digitsWithLeadingZeros(k, ri(1,k-1)); }           // zeros after the dot were the problem
   if(f==="whole" && w===0) w=ri(1,99);                                                                   // whole part was the problem
   if(f==="no-whole") w=0;
+  if(focus && focus.fixed && focus.fixed.num && focus.fixed.num.d){ w=+focus.fixed.num.w; d=String(focus.fixed.num.d); } // v9.17: a number typed from the page
   const num={w,d};
   const wf=toWordForm(num);
   const k=d.length, di=parseInt(d,10), dgs=String(di).length, place=DEC_PLACES[k-1], lastWord=(di===1?DEC_SING:DEC_PLACES)[k-1];
@@ -1219,9 +1234,11 @@ function ruleName(r){ return r==="group" ? "grouping symbols come first" : r==="
 
 function genOrderOps(level, focus){
   const f=focus&&focus.tag;
-  let variant = level===3 ? "place" : level===4 ? "which" : "evaluate";
-  if(level===5) variant=pick(["evaluate","evaluate","place","which"]);
+  let variant = level===3 ? "place" : level===4 ? pick(["which","compare"]) : "evaluate";
+  if(level===5) variant=pick(["evaluate","evaluate","place","which","compare"]);
   if(focus && focus.variant) variant=focus.variant;
+  if(focus && focus.fixed && focus.fixed.target!==undefined) variant="compare";
+  if(variant==="compare") return genCompareValue(level, focus);
   if(variant==="place") return genPlaceParens(level, focus);
   if(variant==="which") return genWhichExpr(level, focus);
   const fixedTokens = focus && focus.fixed && Array.isArray(focus.fixed.tokens) ? focus.fixed.tokens : null; // a problem typed from the worksheet
@@ -1280,6 +1297,23 @@ function genPlaceParens(level, focus){
   p.hints=[{t:`Parentheses say "do me first." Try each placement.`},{t:`Without parentheses the value is ${evalTokens(base)}. You need ${target}, so the parentheses must change the order.`},{t:`Evaluate each choice; the one that lands on ${target} is it.`}];
   return p;
 }
+// v9.17: "Decide if the value of each expression is less than, equal to, or greater than 12" (Unit 2 Lesson 15 homework).
+// Evaluate first (one operation at a time), then compare the value with the target.
+function genCompareValue(level, focus){
+  const fx = focus && focus.fixed && Array.isArray(focus.fixed.tokens) && focus.fixed.target!==undefined ? focus.fixed : null;
+  let tokens, target;
+  if(fx){ tokens=JSON.parse(JSON.stringify(fx.tokens)); target=+fx.target; }
+  else { let g=0; do{ tokens=pickExpr(2); }while(g++<40 && !hasGroup(tokens)); const v0=evalTokens(tokens); target=Math.max(1, v0+pick([-3,-1,0,0,1,2])); }
+  const v=evalTokens(tokens), expr=tokStr(tokens);
+  const opts=[`less than ${target}`,`equal to ${target}`,`greater than ${target}`]; const ans = v<target ? 0 : v===target ? 1 : 2;
+  const p={skill:"orderops", level, prompt:`Is the value of this expression less than, equal to, or greater than <b>${target}</b>?<br><span class="big-num">${esc2(expr)}</span>`, type:"mc", options:opts, optionTags:opts.map((_,i)=>i===ans?"correct":"compare"), answer:ans, display:opts[ans], show:null, meta:{variant:"compare", target, value:v, expr}};
+  const sub=evalSub(tokens);
+  p.steps=[{t:`First find the value of the expression. ${RULES}`},
+    Object.assign({t:`Evaluate <b>${esc2(expr)}</b>.`, cues:[`Parentheses first, then × and ÷, then + and −.`, `Replace each finished part with its value and keep going.`], check:ci(`${esc2(expr)} = ?`, v)}, sub?{sub, tAfter:`So ${esc2(expr)} = ${v}.`}:{}),
+    {t:`Now compare the value with ${target}.`, cues:[`Is the value smaller than, the same as, or bigger than ${target}?`, `Picture a number line: the number farther right is greater.`], check:finalCheck(p), after:`${esc2(expr)} = ${v}, which is ${opts[ans]}.`}];
+  p.hints=[{t:`Find the value first. Parentheses first, then × and ÷, then + and −.`},{t:`First step: ${esc2((traceTokens(tokens).find(st=>st.piece)||{piece:"the part in parentheses"}).piece)}.`},{t:`Once you have the value, put it next to ${target} and compare.`}];
+  return p;
+}
 function genWhichExpr(level, focus){
   let tries=0, A, B, target;
   while(tries++<80){
@@ -1308,8 +1342,48 @@ const SENT=[
   {s:(A,B,C)=>`Twice the sum of ${B} and ${C}.`, e:(A,B,C)=>`2 × (${B} + ${C})`, d:(A,B,C)=>[[`2 × ${B} + ${C}`,"grouping"],[`2 + (${B} + ${C})`,"operation"],[`2 × (${B} × ${C})`,"operation"]]},
   {s:(A,B,C)=>`Subtract ${A} from ${B}, then multiply by ${C}.`, e:(A,B,C)=>`(${B} − ${A}) × ${C}`, d:(A,B,C)=>[[`${B} − (${A} × ${C})`,"grouping"],[`(${A} − ${B}) × ${C}`,"order"],[`(${B} − ${A}) + ${C}`,"operation"]]},
   {s:(A,B,C)=>`Add ${B} and ${C}, then divide by ${A}.`, e:(A,B,C)=>`(${B} + ${C}) ÷ ${A}`, d:(A,B,C)=>[[`${B} + (${C} ÷ ${A})`,"grouping"],[`${A} ÷ (${B} + ${C})`,"order"],[`(${B} − ${C}) ÷ ${A}`,"operation"]]},
+  // v9.17: the Unit 2 homework phrases "half of the sum of 17 and 9" and "half of his age minus one year"
+  {s:(A,B,C)=>`Half of the sum of ${B} and ${C}.`, e:(A,B,C)=>`(${B} + ${C}) ÷ 2`, d:(A,B,C)=>[[`${B} + ${C} ÷ 2`,"grouping"],[`(${B} + ${C}) × 2`,"operation"],[`2 ÷ (${B} + ${C})`,"order"]]},
+  {s:(A,B,C)=>`Half of the difference of ${B} and ${C}.`, e:(A,B,C)=>`(${B} − ${C}) ÷ 2`, d:(A,B,C)=>[[`${B} − ${C} ÷ 2`,"grouping"],[`(${B} + ${C}) ÷ 2`,"operation"],[`(${C} − ${B}) ÷ 2`,"order"]]},
+  {s:(A,B,C)=>`Half of ${B}, minus ${A}.`, e:(A,B,C)=>`${B} ÷ 2 − ${A}`, d:(A,B,C)=>[[`(${B} − ${A}) ÷ 2`,"grouping"],[`${B} × 2 − ${A}`,"operation"],[`${A} − ${B} ÷ 2`,"order"]]},
 ];
+// v9.17: the operation question fits the expression: the one inside the parentheses, or (with no parentheses) the one done first.
+function s2eOpCheck(expr){ const OPS4=["+","×","−","÷"]; const inside=(String(expr).match(/\((\d+) ([+×−÷]) (\d+)\)/)||[])[2];
+  if(inside) return cm(`Which operation goes inside the parentheses?`, OPS4, OPS4.indexOf(inside));
+  let first="+"; try{ const tr=traceTokens(parseBack(expr)).find(st=>st.piece); if(tr) first=(tr.piece.match(/[+×−÷]/)||["+"])[0]; }catch(e){}
+  return cm(`Which operation happens first?`, OPS4, OPS4.indexOf(first)); }
+// v9.17: a sentence typed from the page ("half of the sum of 17 and 9"), already read into an expression by parseExprWords.
+// Distractors are built from the expression itself: the parentheses dropped, the grouped operation changed, the outer order flipped.
+function exprFixedS2E(level, sentence, expr){
+  const SW={"+":"×","×":"+","−":"+","÷":"×"}; const D=[]; const add=(text,tag)=>{ if(text && text!==expr && !D.some(x=>x.text===text)) D.push({text,tag}); };
+  let toks=null; try{ toks=parseBack(expr); }catch(e){}
+  if(/[()]/.test(expr)) add(expr.replace(/[()]/g,""),"grouping");
+  const g=expr.match(/\((\d+) ([+×−÷]) (\d+)\)/); if(g) add(expr.replace(g[0],`(${g[1]} ${SW[g[2]]} ${g[3]})`),"operation");
+  if(toks && toks.length===3){ const [L,op,R]=toks; const ts=x=>typeof x==="object"?"("+tokStr(x.grp)+")":String(x);
+    if(op==="−"||op==="÷") add(`${ts(R)} ${op} ${ts(L)}`,"order"); add(`${ts(L)} ${SW[op]} ${ts(R)}`,"operation"); }
+  if(toks && toks.length===5 && toks.every(x=>typeof x!=="object")){ const [a,o1,b,o2,c]=toks; add(`${a} ${o1} (${b} ${o2} ${c})`,"grouping"); add(`(${a} ${o2} ${c}) ${o1} ${b}`,"order"); add(`${a} ${SW[o1]} ${b} ${o2} ${c}`,"operation"); }
+  const valOf=e=>{ try{ return evalTokens(parseBack(e)); }catch(err){ return NaN; } }; const V=valOf(expr);
+  const keep=D.filter(x=>valOf(x.text)!==V); // a choice worth the same as the answer would be a second right answer
+  if(keep.length<3 && toks){ const flat=[]; const walk=ts=>ts.forEach(x=>typeof x==="object"?walk(x.grp):flat.push(x)); walk(toks);
+    const nums=flat.filter(x=>typeof x==="number"), ops=flat.filter(x=>typeof x==="string");
+    for(let i=0;i<ops.length && keep.length<3;i++){ const alt=ops.slice(); alt[i]=SW[alt[i]]; let k=0; const txt=expr.replace(/[+×−÷]/g,()=>alt[k++]); if(txt!==expr && valOf(txt)!==V && !keep.some(x=>x.text===txt)) keep.push({text:txt, tag:"operation"}); }
+    if(keep.length<3 && nums.length>=2){ const txt=expr.replace(/\d+/, "§").replace(new RegExp(`\\b${nums[1]}\\b`), String(nums[0])).replace("§", String(nums[1])); if(txt!==expr && valOf(txt)!==V && !keep.some(x=>x.text===txt)) keep.push({text:txt, tag:"order"}); } }
+  const o=buildOptions(expr, keep);
+  const S0=String(sentence).trim(); const sent=S0.charAt(0).toUpperCase()+S0.slice(1)+(/[.?!]$/.test(S0)?"":".");
+  const p={skill:"expressions", level, prompt:`Write a numerical expression for the sentence.<br><span class="big-words">${esc2(sent)}</span>`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:expr, show:null, meta:{variant:"s2e", sentence:sent, expr}};
+  const opWord=(sent.match(/sum|product|difference|quotient|twice|double|triple|half|divide|subtract|add|multiply|minus|plus|times/gi)||[]).join(", ");
+  p.steps=[
+    {t:`Read the sentence. <b>Underline the operation words</b>${opWord?`: ${esc2(opWord)}`:""}.`},
+    {t:`"Sum" means add, "product" means multiply, "difference" means subtract, "twice" means 2 ×, "half of" means ÷ 2. The operation named by a group word (sum, product, difference) goes inside <b>parentheses</b>.`, cues:[`Find the group word: sum, product, or difference.`, `Sum → +, product → ×, difference → −, quotient → ÷, half of → ÷ 2.`], check:s2eOpCheck(expr)},
+    {t:`Check the order. "Subtract A <b>from</b> B" means B comes first. "Divide <b>by</b> A" means A is the divisor and comes last. "Half of" something is that something ÷ 2.`},
+    {t:`Write the expression.`, cues:[`The group word's operation goes inside the parentheses; the other operation happens to that group.`, `Check the order words: "from" puts the later number first; "by" puts the divisor last.`], check:finalCheck(p)}
+  ];
+  p.hints=[{t:`Circle the numbers next to each operation word. Group words (sum, product, difference) get parentheses.`},{t:`"Half of" means divide by 2. "From" and "by" flip the order: the thing after "from" is written first; the thing after "by" comes last.`},{t:(expr.match(/\([^)]+\)/)?`The parentheses hold ${(expr.match(/\([^)]+\)/)||[""])[0]}.`:`No group word here, so no parentheses are needed. Do the operations in the order the sentence says.`)}];
+  return p;
+}
 function genExpressions(level, focus){
+  if(focus && focus.fixed && focus.fixed.expr) return exprFixedS2E(level, focus.fixed.sentence||focus.fixed.expr, focus.fixed.expr);
+  if(focus && focus.fixed && focus.fixed.A && focus.fixed.B) return genRelation(level, focus);
   const f=focus&&focus.tag;
   let variant = level===1 ? "s2e" : level===2 ? "e2s" : level===3 ? "relation" : level===4 ? "word" : pick(["s2e","e2s","relation","word"]);
   if(focus && focus.variant) variant=focus.variant;
@@ -1325,7 +1399,7 @@ function genExpressions(level, focus){
     const opWord=(sentence.match(/sum|product|difference|Twice|divide|Subtract|Add|multiply/gi)||[]).join(", ");
     p.steps=[
       {t:`Read the sentence. <b>Underline the operation words</b>: ${opWord}.`},
-      {t:`"Sum" means add, "product" means multiply, "difference" means subtract, "twice" means 2 ×. The operation named by a group word (sum, product, difference) goes inside <b>parentheses</b>.`, cues:[`Find the group word: sum, product, or difference.`, `Sum → +, product → ×, difference → −, quotient → ÷.`], check:cm(`Which operation goes inside the parentheses?`, ["+","×","−","÷"], ["+","×","−","÷"].indexOf((expr.match(/\(\d+ ([+×−÷]) \d+\)/)||[])[1] || (expr.startsWith("2 ×")?"+":"+")))},
+      {t:`"Sum" means add, "product" means multiply, "difference" means subtract, "twice" means 2 ×, "half of" means ÷ 2. The operation named by a group word (sum, product, difference) goes inside <b>parentheses</b>.`, cues:[`Find the group word: sum, product, or difference.`, `Sum → +, product → ×, difference → −, quotient → ÷, half of → ÷ 2.`], check:s2eOpCheck(expr)},
       {t:`Check the order. "Subtract A <b>from</b> B" means B comes first. "Divide <b>by</b> A" means A is the divisor and comes last.`},
       {t:`Write the expression.`, cues:[`The group word's operation goes inside the parentheses; the other operation happens to that group.`, `Check the order words: "from" puts the later number first; "by" puts the divisor last.`], check:finalCheck(p)}
     ];
@@ -1344,30 +1418,63 @@ function genExpressions(level, focus){
   p.hints=[{t:`Parentheses = the group word (sum, product, difference).`},{t:`What happens to that group? Added to, subtracted from, multiplied, divided?`},{t:`The group is ${(expr.match(/\([^)]+\)/)||[""])[0]}.`}];
   return p;
 }
+// v9.17: the relationship is read from the two expressions themselves, so a pair typed from the page ("8 + 4" and "(8 + 4) ÷ 2")
+// works the same way as a generated one. B must contain all of A in parentheses and do exactly one more thing to it.
+const FRAC_WORD={2:"half",3:"one third",4:"one fourth",5:"one fifth",6:"one sixth",10:"one tenth"};
+function relationKind(A, B){ let a, b; try{ a=tokStr(parseBack(A)); b=tokStr(parseBack(B)); }catch(e){ return null; } if(!/[+−×÷]/.test(a)) return null;
+  const G=`(${a})`; let rest=null, lead=null;
+  if(b.startsWith(G+" ")) rest=b.slice(G.length+1); else if(b.endsWith(" "+G)) lead=b.slice(0, b.length-G.length-1);
+  let m;
+  if(lead!==null && (m=lead.match(/^(\d+) ([×+])$/))){ const k=+m[1]; if(m[2]==="×") return timesKind(a,b,k); return {A:a,B:b,n:k,op:"+",txt:`B is ${k} more than A`, wrong:[`A is ${k} more than B`,`B is ${k} times as large as A`,`A and B are equal`], doWhat:`adds ${k}`}; }
+  if(rest===null || !(m=rest.match(/^([+−×÷]) (\d+)$/))) return null; const op=m[1], k=+m[2];
+  if(op==="×") return timesKind(a,b,k);
+  if(op==="+") return {A:a,B:b,n:k,op,txt:`B is ${k} more than A`, wrong:[`A is ${k} more than B`,`B is ${k} times as large as A`,`A and B are equal`], doWhat:`adds ${k}`};
+  if(op==="−") return {A:a,B:b,n:k,op,txt:`B is ${k} less than A`, wrong:[`A is ${k} less than B`,`B is ${k} times as large as A`,`A and B are equal`], doWhat:`subtracts ${k}`};
+  if(k<2) return null; const fw=FRAC_WORD[k]||`1/${k}`;
+  return {A:a,B:b,n:k,op:"÷",txt:k===2?`B is half of A`:`B is ${fw} of A`, wrong:[k===2?`A is half of B`:`A is ${fw} of B`,`B is ${k} less than A`,`B is ${k} times as large as A`], doWhat:`divides it by ${k}`}; }
+function timesKind(a,b,k){ if(k===1) return {A:a,B:b,n:1,op:"×",txt:`A and B are equal`, wrong:[`B is 1 more than A`,`B is twice A`,`A is 1 less than B`], doWhat:`multiplies it by 1`};
+  return {A:a,B:b,n:k,op:"×",txt:`B is ${k} times as large as A`, wrong:[`A is ${k} times as large as B`,`B is ${k} more than A`,`A and B are equal`], doWhat:`multiplies it by ${k}`}; }
+// Is a relationship sentence true for these two values? Used to keep every "wrong" choice actually wrong (with A = 4, "B is half of A" and "B is 2 less than A" are both true).
+function relTrue(txt, a, b){ let m; const [X,Y]= /^A /.test(txt) ? [a,b] : [b,a]; // X is the subject, Y the other one
+  if(/equal/.test(txt)) return a===b;
+  if((m=txt.match(/is (\d+) more than/))) return X===Y+ +m[1];
+  if((m=txt.match(/is (\d+) less than/))) return X===Y- +m[1];
+  if((m=txt.match(/is (\d+) times as large as/))) return X===Y* +m[1];
+  if(/is twice/.test(txt)) return X===2*Y;
+  if(/is half of/.test(txt)) return 2*X===Y;
+  if((m=txt.match(/is one (third|fourth|fifth|sixth|tenth) of/))) return X*({third:3,fourth:4,fifth:5,sixth:6,tenth:10}[m[1]])===Y;
+  return false; }
+function relWrongs(K, a, b){ const n=K.n; const pool=K.wrong.concat([`A and B are equal`,`B is ${n} more than A`,`B is ${n} less than A`,`B is ${n} times as large as A`,`A is ${n} times as large as B`,`B is half of A`,`A is half of B`,`A is ${n} more than B`,`A is ${n} less than B`,`B is ${n+1} more than A`]);
+  const out=[]; for(const t of pool){ if(t!==K.txt && !out.includes(t) && !relTrue(t,a,b)) out.push(t); if(out.length>=3) break; } return out; }
+const swapAB=x=>String(x).replace(/\b([AB])\b/g,m=>m==="A"?"B":"A");
 function genRelation(level, focus){
-  const a=ri(2,12), b=ri(2,9); const base=`${a} ${pick(["+","×","−"])} ${b}`; let baseV; try{ baseV=evalTokens(parseBack(base)); }catch(e){ baseV=a+b; }
-  if(baseV<=0){ return genRelation(level, focus); }
-  const k=ri(2,5), m=ri(2,9);
-  if(baseV<3) return genRelation(level, focus); // v9.12: with A = 2, "2 more" and "2 times" are both true
-  const kinds=[
-    {B:`${k} × (${base})`, txt:`B is ${k} times as large as A`, wrong:[`A is ${k} times as large as B`,`B is ${k} more than A`,`A and B are equal`]},
-    {B:`(${base}) + ${m}`, txt:`B is ${m} more than A`, wrong:[`A is ${m} more than B`,`B is ${m} times as large as A`,`A and B are equal`]},
-    {B:`(${base}) − ${m}`, txt:`B is ${m} less than A`, wrong:[`A is ${m} less than B`,`B is ${m} times as large as A`,`A and B are equal`]},
-    {B:`(${base}) × 1`, txt:`A and B are equal`, wrong:[`B is 1 more than A`,`B is twice A`,`A is 1 less than B`]},
-  ];
-  const K=pick(kinds); if(K.B.includes("−") && baseV-m<0) return genRelation(level, focus);
-  const o=buildOptions(K.txt, K.wrong.map(t=>({text:t, tag:"relation"})));
-  const vB=evalTokens(parseBack(K.B));
-  const p={skill:"expressions", level, prompt:`What is the relationship between the two expressions?<br><span class="big-num">A: ${base}&nbsp;&nbsp;&nbsp; B: ${K.B}</span>`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:K.txt, show:null, meta:{variant:"relation", A:base, B:K.B}};
+  let K=null; const rev=!!(focus && focus.fixed && focus.fixed.rev);
+  if(focus && focus.fixed && focus.fixed.A && focus.fixed.B) K=relationKind(focus.fixed.A, focus.fixed.B);
+  let guard=0;
+  while(!K && guard++<60){
+    const a=ri(2,12), b=ri(2,9); const base=`${a} ${pick(["+","×","−"])} ${b}`; let baseV; try{ baseV=evalTokens(parseBack(base)); }catch(e){ continue; }
+    if(baseV<3) continue; // v9.12: with A = 2, "2 more" and "2 times" are both true
+    const k=ri(2,5), m=ri(2,9);
+    const Bs=[`${k} × (${base})`, `(${base}) + ${m}`, `(${base}) − ${m}`, `(${base}) × 1`].concat(baseV%2===0 ? [`(${base}) ÷ 2`,`(${base}) ÷ 2`] : []); // v9.17: "B is half of A" (Unit 2 Lesson 13 homework)
+    const Bpick=pick(Bs); if(!validTokens(parseBack(Bpick))) continue; K=relationKind(base, Bpick);
+    if(K && K.wrong.some(t=>relTrue(t, baseV, evalTokens(parseBack(Bpick))))) K=null; } // a pair where a "wrong" statement is also true is redrawn
+  if(!K) K=relationKind("8 + 4","(8 + 4) ÷ 2");
+  const base=K.A; const baseV=evalTokens(parseBack(base)); const vB=evalTokens(parseBack(K.B));
+  const o=buildOptions(K.txt, relWrongs(K, baseV, vB).map(t=>({text:t, tag:"relation"})));
+  const p={skill:"expressions", level, prompt:`What is the relationship between the two expressions?<br><span class="big-num">A: ${esc2(base)}&nbsp;&nbsp;&nbsp; B: ${esc2(K.B)}</span>`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:K.txt, show:null, meta:{variant:"relation", A:base, B:K.B}};
+  const doOpts=shuffle([`multiplies it by ${K.n}`,`adds ${K.n}`,`subtracts ${K.n}`,`divides it by ${K.n}`]); if(!doOpts.includes(K.doWhat)) doOpts[0]=K.doWhat;
   p.steps=[
-    {t:`Look at B without evaluating. B contains <b>(${base})</b>, which is all of A, and then does one more thing to it.`, cues:[`Compare B with A: what was added to, taken from, or multiplied onto A?`, `Look at the extra number in B and the sign next to it.`], check:cm(`What does B do to A?`, shuffle([`multiplies it by ${k}`,`adds ${m}`,`subtracts ${m}`,`multiplies it by 1`]), null)},
-    {t:`Prove it by evaluating. A = ${base}.`, cues:[`Parentheses first, then × and ÷, then + and −.`, `Replace each finished part with its value and keep going.`], check:ci(`A = ?`, baseV)},
-    {t:`B = ${K.B}.`, cues:[`The parentheses hold A's value. Do the extra operation to it.`, `Use A's value from the last step, then apply the one extra step B adds.`], check:ci(`B = ?`, vB)},
-    {t:`A is ${baseV} and B is ${vB}. Say the relationship in words.`, cues:[`Compare the two values: how do you get from A's value to B's?`, `Is B a multiple of A, or A plus or minus something? Say it that way.`], check:finalCheck(p), after:`${K.txt}.`}
+    {t:`Look at B without evaluating. B contains <b>(${esc2(base)})</b>, which is all of A, and then does one more thing to it.`, cues:[`Compare B with A: what was added to, taken from, multiplied onto, or divided out of A?`, `Look at the extra number in B and the sign next to it.`], check:cm(`What does B do to A?`, doOpts, doOpts.indexOf(K.doWhat))},
+    {t:`Prove it by evaluating. A = ${esc2(base)}.`, cues:[`Parentheses first, then × and ÷, then + and −.`, `Replace each finished part with its value and keep going.`], check:ci(`A = ?`, baseV)},
+    {t:`B = ${esc2(K.B)}.`, cues:[`The parentheses hold A's value. Do the extra operation to it.`, `Use A's value from the last step, then apply the one extra step B adds.`], check:ci(`B = ?`, vB)},
+    {t:`A is ${baseV} and B is ${vB}. Say the relationship in words.`, cues:[`Compare the two values: how do you get from A's value to B's?`, `Is B a multiple of A, a part of A, or A plus or minus something? Say it that way.`], check:finalCheck(p), after:`${K.txt}.`}
   ];
-  const doWhat = K.B.startsWith(`${k} ×`) ? `multiplies it by ${k}` : K.B.endsWith(`+ ${m}`) ? `adds ${m}` : K.B.endsWith(`− ${m}`) ? `subtracts ${m}` : `multiplies it by 1`;
-  p.steps[0].check.answer=p.steps[0].check.options.indexOf(doWhat); p.steps[0].check.display=doWhat;
-  p.hints=[{t:`Find A hiding inside B. What extra thing does B do?`},{t:`Multiplying A by k makes B k times as large. Adding makes B more; subtracting makes B less.`},{t:`Evaluate both to prove it: A = ${baseV}.`}];
+  p.hints=[{t:`Find A hiding inside B. What extra thing does B do?`},{t:`Multiplying A by k makes B k times as large. Dividing A by 2 makes B half of A. Adding makes B more; subtracting makes B less.`},{t:`Evaluate both to prove it: A = ${baseV}.`}];
+  if(rev){ // typed from the page with the bigger expression first: keep her letters (A is the one that contains B)
+    p.prompt=`What is the relationship between the two expressions?<br><span class="big-num">A: ${esc2(K.B)}&nbsp;&nbsp;&nbsp; B: ${esc2(base)}</span>`;
+    p.options=p.options.map(swapAB); p.display=swapAB(p.display); p.meta={variant:"relation", A:K.B, B:base};
+    p.steps.forEach(st=>{ st.t=swapAB(st.t); if(st.cues) st.cues=st.cues.map(swapAB); if(st.after) st.after=swapAB(st.after); if(st.check){ st.check.q=swapAB(st.check.q); if(st.check.options) st.check.options=st.check.options.map(swapAB); if(st.check.display!==undefined) st.check.display=swapAB(st.check.display); } });
+    p.steps[1].check=ci(`B = ?`, baseV); p.steps[2].check=ci(`A = ?`, vB); p.steps[p.steps.length-1].check=finalCheck(p); p.hints=p.hints.map(h=>({t:swapAB(h.t)})); }
   return p;
 }
 const NAMES=["Sara","Bartolo","Maya","Jamal","Priya","Diego","Nora","Theo","Amara","Luis"];
@@ -1420,7 +1527,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.16.1 · September 25, 2026";
+const BUILD="v9.17 · September 25, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -2356,6 +2463,7 @@ const _genWordExprBase=genWordExpr;
 genWordExpr=function(level, focus){
   const N=pick(NAMES), [one,many]=pick(ITEMS); const her = ["Sara","Maya","Priya","Nora","Amara"].includes(N) ? "her" : "him";
   const [a,b,c]=shuffle([2,3,4,5,6,7,8,9]).slice(0,3); /* v9.12: three different numbers, so two orderings never tie as right answers */ const F=pick(NAMES.filter(x=>x!==N));
+  const she = her==="her" ? "She" : "He"; const bk=pick([["muffin","muffins"],["cookie","cookies"],["cupcake","cupcakes"]]); const age=ri(6,12), yrs=ri(1,3); const sib=pick([{w:"brother",n:"Josh"},{w:"sister",n:"Lena"},{w:"brother",n:"Omar"},{w:"sister",n:"Rosa"}]);
   const STRUCT={groups:"equal groups", compare:"comparison", partwhole:"part–whole", change:"change (start, change, result)"};
   const W=[
     {s:"groups", q:`${N} bought ${a} red ${many} and ${b} blue ${many}. Each ${one} cost $${c}. How much money did ${N} spend?`, e:`(${a} + ${b}) × ${c}`, v:(a+b)*c, d:[[`${a} + ${b} × ${c}`,"grouping"],[`(${a} × ${b}) + ${c}`,"operation"],[`(${a} + ${b}) + ${c}`,"operation"]], rel:`the total number of ${many} (${a} + ${b}) is a count of equal groups, each worth $${c}`},
@@ -2367,7 +2475,11 @@ genWordExpr=function(level, focus){
     {s:"groups", q:`${a*b} ${many} are shared equally among ${a} ${a===1?"bag":"bags"}. Each bag gets some ${many}. How many ${many} are in each bag?`, e:`${a*b} ÷ ${a}`, v:b, d:[[`${a*b} × ${a}`,"keyword"],[`${a*b} − ${a}`,"operation"],[`${a*b} + ${a}`,"operation"]], rel:`"each" here asks for the size of one equal group, so divide`},
     {s:"compare", q:`${F} read ${a} books. ${N} read ${b} times as many books as ${F}. How many books did ${N} read?`, e:`${a} × ${b}`, v:a*b, d:[[`${a} + ${b}`,"keyword"],[`${a} − ${b}`,"operation"],[`${b} − ${a}`,"operation"]], rel:`"times as many" compares by multiplying`},
     {s:"partwhole", q:`A class has ${a*b+c} students. ${a*b} of them are in the gym; the rest are in the library. How many are in the library?`, e:`${a*b+c} − ${a*b}`, v:c, d:[[`${a*b+c} + ${a*b}`,"keyword"],[`${a*b+c} ÷ ${a*b}`,"operation"],[`${a*b} − ${a*b+c}`,"order"]], rel:`whole ${a*b+c}, known part ${a*b}, unknown part`},
-  ];
+    // v9.17: the Unit 2 Lesson 11, 13, and 15 homework stories (a dozen; "each filled with ... gave away"; "half of his age minus one year")
+    {s:"change", q:`${N}'s mom made ${a} dozen ${bk[1]} for a party. She ate ${c} of the ${bk[1]} on the way. How many ${bk[1]} made it to the party?`, e:`${a} × 12 − ${c}`, v:a*12-c, d:[[`${a} × (12 − ${c})`,"grouping"],[`${a} + 12 − ${c}`,"operation"],[`(${a} − ${c}) × 12`,"order"]], rel:`start with ${a} dozen, which is ${a} groups of 12, then a change of −${c}`},
+    {s:"change", q:`${N} had ${a} boxes, each filled with ${b} ${many}. ${she} gave ${c} ${many} to ${her==="her"?"her":"his"} little brother. How many ${many} does ${N} have left?`, e:`${a} × ${b} − ${c}`, v:a*b-c, d:[[`${a} × (${b} − ${c})`,"grouping"],[`${a} × ${b} + ${c}`,"operation"],[`${a} + ${b} − ${c}`,"operation"]], rel:`start with ${a} groups of ${b}, then a change of −${c}`},
+    {s:"compare", q:`${N} is ${2*age} years old. ${N}'s little ${sib.w}, ${sib.n}, is half of ${N}'s age minus ${yrs} year${yrs===1?"":"s"}. How old is ${sib.n}?`, e:`${2*age} ÷ 2 − ${yrs}`, v:age-yrs, d:[[`(${2*age} − ${yrs}) ÷ 2`,"grouping"],[`${2*age} × 2 − ${yrs}`,"operation"],[`${2*age} − ${yrs} ÷ 2`,"order"]], rel:`${sib.n}'s age compares to ${N}'s: take half of ${N}'s age (÷ 2), then ${yrs} less`},
+  ].filter(x=>x.v>0);
   const T=pick(W); const valOf=e=>{ try{ return evalTokens(parseBack(e)); }catch(err){ return NaN; } };
   if(T.d.some(([text])=>valOf(text)===T.v) && !(focus&&focus.noRetry)) return genWordExpr(level, {...(focus||{}), noRetry:(focus&&focus.retryN||0)>20, retryN:((focus&&focus.retryN)||0)+1}); // v9.12: no wrong choice that happens to have the same value
   const o=buildOptions(T.e, T.d.map(([text,tag])=>({text,tag})));
@@ -2997,7 +3109,7 @@ function home(){
     <div class="card hw">
       <div class="week-head"><h2 style="margin:0">Homework practice</h2><span class="std" title="Problem shapes from the worksheet, not from your level">Worksheet shapes</span></div>
       <p class="muted" style="font-size:14px;margin:6px 0 10px">Tonight's page, at tonight's size. These use the worksheet's problem shapes no matter what the dots say, and they never move a level up or down.</p>
-      <button class="skill" data-skill="hw:check"><div style="flex:1"><div class="name">Check a problem from the page</div><div class="blurb">Type the exact problem (148 × 19, 3,660 ÷ 30, 3.45 + 2.7, 8 × 10^5 × 6, 2 + 3 × 4, round 2.98 to the nearest tenth). For multiplication and division, work through it together whenever you need to.</div></div></button>
+      <button class="skill" data-skill="hw:check"><div style="flex:1"><div class="name">Check a problem from the page</div><div class="blurb">Type the exact problem (148 × 19, 1,144 ÷ 11, 6,426 ÷ 9 area model, 49 ÷ (34 − 27) × 9, half of the sum of 17 and 9, round 2.98 to the nearest tenth). For multiplication and division, work through it together whenever you need to.</div></div></button>
       ${Object.keys(HW_MODES).map(id=>{ const h=HW_MODES[id]; return `<button class="skill" data-skill="hw:${id}"><div style="flex:1"><div class="name">${esc(h.name)}</div><div class="blurb">${esc(h.blurb)}</div><div class="tags" aria-label="Standard"><span class="tag">${esc(h.std)}</span></div></div></button>`; }).join("")}
       <p class="muted week-note" style="margin:10px 0 0"><b>Need to build up to it?</b> “${esc(SKILLS.multiply.name)}” below is the easier, step-up practice: it starts at your level (level ${S.levels.multiply}: ${MUL_SHAPE_BY_LEVEL[S.levels.multiply]||""}) and grows as you level up. That is prerequisite practice, not tonight's page.</p>
     </div>
@@ -3021,16 +3133,90 @@ const HW_MODES={
     shapes:[[2,1],[3,1],[2,2],[3,2],[3,2]], variant:"algorithm"}
 };
 const hwId=m=>typeof m==="string"&&m.startsWith("hw:")?m.slice(3):null;
+// v9.17: the worksheet's expression phrases (5.OA.2), read into an expression: "half of the sum of 17 and 9" → "(17 + 9) ÷ 2",
+// "subtract 2 from the sum of 9 and 4" → "(9 + 4) − 2", "subtract 3 from 10, then multiply by 2" → "(10 − 3) × 2".
+// Group words (sum, product, difference, quotient) and anything already built get parentheses, the way the worksheet writes them;
+// "half of 20" stays bare next to + or − ("half of 20 minus 1" → "20 ÷ 2 − 1", the worksheet's reading). Returns null when it is
+// not one of these phrases, or {err} when it is ambiguous or does not come out whole.
+function parseExprWords(str){
+  let s=String(str||"").toLowerCase().replace(/[–—‒-]/g,"−").replace(/[x*·](?=\s*[\d(])/g,"×").replace(/[.?!]+$/,"").replace(/\s+/g," ").trim();
+  s=s.replace(/^(?:what is|what's|find|evaluate|solve)\s+/,"").trim();
+  if(!/[a-z]/.test(s) || !/\d/.test(s)) return null;
+  const NUMRE="(\\d{1,3}(?:,\\d{3})+|\\d+)"; const num=x=>String(x).replace(/,/g,"");
+  const bare=new Set(); // results that need no parentheses next to + or −
+  const pars=(e,op)=>{ if(!/[+−×÷]/.test(e)) return e; if(bare.has(e) && (op==="+"||op==="−")) return e; return `(${e})`; };
+  const OPW={plus:"+",minus:"−","take away":"−",times:"×","divided by":"÷",add:"+",subtract:"−","multiply by":"×","divide by":"÷"};
+  const K={twice:2,double:2,triple:3};
+  let ambiguous=null;
+  const bareSum=x=>/^[\d\s,]+[+−][\d\s,+−×÷]*$/.test(x.trim()) || /^[\d\s,×÷]+[+−]/.test(x.trim()); // "20 − 1" typed with no parentheses after "half of" / "twice"
+  const twoWays=(t,a,b)=>{ ambiguous=`"${t}" can be read two ways: ${a} or ${b}. Type the expression the way your page means it, with parentheses, like ${a}.`; return null; };
+  const rd=(t,depth,noInfix)=>{ if(depth>8) return null; t=t.trim().replace(/^the /,"").replace(/,$/,""); let m;
+    if(new RegExp(`^${NUMRE}$`).test(t)) return num(t);
+    if(/^[\d\s,+−×÷()\[\]]+$/.test(t) && /[+−×÷]/.test(t)){ // already an expression ("6 × 3", "(17 + 9)")
+      try{ const tk=parseBack(t.replace(/(\d),(?=\d{3}\b)/g,"$1")); const e=tokStr(tk); return tk.length===1 && typeof tk[0]==="object" ? tokStr(tk[0].grp) : e; }catch(err){ return null; } }
+    if((m=t.match(/^(.+?),? then (add|subtract|multiply by|divide by|times|minus|plus) (.+)$/))){ const e=rd(m[1],depth+1), n=rd(m[3],depth+1); const op=OPW[m[2]]; return e&&n&&`${pars(e,op)} ${op} ${pars(n,op)}`; }
+    if((m=t.match(/^half (?:of )?(\d[\d,]*) ([+−]) (\d[\d,]*)$/))){ ambiguous=`Is that half of ${m[1]}, then ${m[2]==="+"?"plus":"minus"} ${m[3]} (${m[1]} ÷ 2 ${m[2]} ${m[3]}), or half of (${m[1]} ${m[2]} ${m[3]})? Type it the way your page means it, like ${m[1]} ÷ 2 ${m[2]} ${m[3]} or (${m[1]} ${m[2]} ${m[3]}) ÷ 2.`; return null; }
+    if(!noInfix && (m=t.match(new RegExp(`^(.+) (plus|minus|take away|times|divided by) ${NUMRE}$`)))){ const e=rd(m[1],depth+1); const op=OPW[m[2]];
+      if(e){ const r=`${pars(e,op)} ${op} ${num(m[3])}`;
+        if(/^(?:subtract|add|multiply|divide|twice|double|triple|\d+ times|two times|three times|four times|five times)\b/.test(m[1].replace(/^the /,""))){ const alt=rd(t,depth,true); if(alt && alt!==r) return twoWays(t, r, alt); } // "subtract 2 from 9 plus 4": (9 − 2) + 4 or (9 + 4) − 2
+        return r; } }
+    if((m=t.match(/^(.+?) (more|less|fewer) than (.+)$/))){ const a=rd(m[1],depth+1), b=rd(m[3],depth+1); const op=m[2]==="more"?"+":"−"; return a&&b&&`${pars(b,op)} ${op} ${pars(a,op)}`; }
+    if((m=t.match(/^half (?:of )?(.+)$/))){ const e=rd(m[1],depth+1); if(!e) return null; const r=`${pars(e,"÷")} ÷ 2`; if(!/[+−×÷]/.test(e)) bare.add(r); return r; }
+    if((m=t.match(/^(twice|double|triple|(\d+|two|three|four|five|ten) times) (.+)$/))){ const k=K[m[1]] || (/^\d/.test(m[2])?+m[2]:{two:2,three:3,four:4,five:5,ten:10}[m[2]]); const e=rd(m[3],depth+1);
+      if(e && k && bareSum(m[3])){ const [x,op,y]=[m[3].split(/\s*([+−])\s*/)[0], (m[3].match(/[+−]/)||["+"])[0], m[3].split(/\s*[+−]\s*/).slice(1).join(" ")]; return twoWays(t, `${k} × (${e})`, `${k} × ${x} ${op} ${y}`); } // "double 8 − 3"
+      return e&&k ? `${k} × ${pars(e,"×")}` : null; }
+    if((m=t.match(new RegExp(`^(sum|product|difference|quotient) (?:of|between) ${NUMRE} and (.+)$`)))||(m=t.match(new RegExp(`^(sum|product|difference|quotient) (?:of|between) (.+) and ${NUMRE}$`)))){
+      const op={sum:"+",product:"×",difference:"−",quotient:"÷"}[m[1]]; const a=rd(m[2],depth+1), b=rd(m[3],depth+1); return a&&b&&`${pars(a,op)} ${op} ${pars(b,op)}`; }
+    if((m=t.match(new RegExp(`^subtract ${NUMRE} from (.+)$`)))){ const e=rd(m[2],depth+1); return e&&`${pars(e,"−")} − ${num(m[1])}`; }
+    if((m=t.match(new RegExp(`^subtract (.+) from ${NUMRE}$`)))){ const e=rd(m[1],depth+1); return e&&`${num(m[2])} − ${pars(e,"−")}`; }
+    if((m=t.match(new RegExp(`^add ${NUMRE} to (.+)$`)))){ const e=rd(m[2],depth+1); return e&&`${pars(e,"+")} + ${num(m[1])}`; }
+    if((m=t.match(new RegExp(`^multiply (.+) by ${NUMRE}$`)))){ const e=rd(m[1],depth+1); return e&&`${pars(e,"×")} × ${num(m[2])}`; }
+    if((m=t.match(new RegExp(`^divide (.+) by ${NUMRE}$`)))){ const e=rd(m[1],depth+1); return e&&`${pars(e,"÷")} ÷ ${num(m[2])}`; }
+    if((m=t.match(new RegExp(`^(add|multiply) ${NUMRE} and ${NUMRE}$`)))) return `${num(m[2])} ${m[1]==="add"?"+":"×"} ${num(m[3])}`;
+    return null; };
+  const e=rd(s,0); if(!e){ return ambiguous ? {err:ambiguous} : null; } if(!/[+−×÷]/.test(e)) return null;
+  try{ const tk=parseBack(e); if(!validTokens(tk)) return {err:`That reads as ${e}, and one of its steps does not come out a whole number, so the app cannot check it. Check the numbers, or type the expression itself.`}; return {expr:tokStr(tk), ops:(e.match(/[+−×÷]/g)||[]).length, sentence:s}; }catch(err){ return null; } }
 // "Check my homework": read a problem typed from the page. Returns {skill, focus, level, label} or {err}.
-function parseHomework(text){
+function parseHomework(text, depth){
   let t=String(text||"").trim().toLowerCase().replace(/\s+/g," ").replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g,m=>"^"+[...m].map(ch=>"⁰¹²³⁴⁵⁶⁷⁸⁹".indexOf(ch)).join("")).replace(/=\s*[\d,.\s?_]*$/,"").trim(); // "= ?", "= ____", or an answer she already wrote after the equals sign are all dropped
+  // v9.17: Unit 2 homework shapes typed as printed.
+  t=t.replace(/[–—‒]/g,"−").replace(/[.!]+$/,"").trim(); // an en dash from an iPad keyboard is a minus sign
+  // Long division as printed: "40)8,760" means 8,760 ÷ 40. Only when nothing but a number follows (so "4) 16 × 24" stays item 4, and "(8 + 4) ÷ 2" is untouched).
+  t=t.replace(/(^|[\s.:])(\d[\d,]*)\s*[)⟌]\s*(\d[\d,]*)(?![\d,]*\s*[)⟌×x*÷\/+\-−(\d])/,(m0,pre,dv,nv)=>`${pre}${nv} ÷ ${dv}`);
+  // Item numbers and direction labels: "4. ", "4) ", "(4) ", "#4 ", "b) ", "Write a numerical expression:", "Example:".
+  t=t.replace(/^(?:(?:#|q|question|number|problem)\s*\d{1,2}\s*[.):]?|\(\s*(?:\d{1,2}|[a-h])\s*\)|(?:\d{1,2}|[a-h])\s*[.):])\s+(?=\S)/,"")
+     .replace(/^(?:(?:example|directions?|problem|practice|homework|review|evaluate|solve)\s*:|write (?:a |an |the )?(?:numerical )?expression(?:s)?(?: for| to show)?(?: the (?:sentence|phrase))?(?: and (?:evaluate|solve)(?: it)?)?\s*:?|write and (?:evaluate|solve)(?: the expression)?\s*:?|write (?:this|the) number in standard form\s*:?)\s*/,"").replace(/(\d+)\s+dozen\b/g,"$1 × 12").trim();
+  // 1) A number in words ("six hundred forty-seven and eight hundred ninety-two thousandths").
+  { const tw=t.replace(/\s*(?:in|to) standard form\s*$/,"").trim(); const nw=parseNumberWords(tw);
+    if(nw){ if(!nw.d) return {err:`That reads as ${nw.w.toLocaleString("en-US")}, a whole number. The standard-form practice here is for decimals, like "six and four tenths".`}; return {skill:"standard", focus:{fixed:{num:nw}}, level:3, label:`Standard form of ${toWordForm(nw)}`}; }
+    if(/^[a-z\s-]+$/.test(tw) && /\b(?:one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|forty|fourty|fifty|hundred|thousand|tenths?|hundredths?|hundreths?|thousandths?)\b/.test(tw)) return {err:`I could not read those number words. Check the spelling (forty, hundred, hundredths, thousandths), or type the number in digits, like 647.892.`}; }
+  // 2) An expression phrase ("half of the sum of 17 and 9"). Two or more operations: write-the-expression practice. One operation ("divide 1,144 by 11"): read it as that problem.
+  { const ew=parseExprWords(t); if(ew && ew.err) return {err:ew.err}; if(ew && ew.ops>=2) return {skill:"expressions", focus:{fixed:{sentence:ew.sentence, expr:ew.expr}}, level:1, label:`Write an expression: ${ew.sentence}`}; if(ew && ew.ops===1) t=ew.expr; }
+  // 3) Division words from the page: "using the place value strategy", "partial quotients", "decompose", "area model". The area model is kept as the method.
+  const isDiv=/[÷\/]|\bdivid/.test(t);
+  let divMethod=null; if(/\barea(?: model)?\b/.test(t) && isDiv) divMethod="area"; else if(/place[\s-]*value|partial quotients?|decompos|expanded (?:notation|form)/.test(t)) divMethod="placevalue";
+  t=t.replace(/\b(?:(?:divide|dividing)\s+)?(?:using|use|with|by)\s+(?:the\s+|a\s+|an\s+)?(?:place[\s-]*value|partial quotients?|expanded (?:notation|form)|compatible numbers?)(?:\s+(?:strategy|method|way))?\b/g," ").replace(/\b(?:place[\s-]*value|partial quotients?|decompos\w*(?: the dividend)?|expanded (?:notation|form))(?:\s+(?:strategy|method|way))?\b/g," ").replace(/\b(?:strategy|method)\b/g," ").replace(/\s+/g," ").trim();
+  if(divMethod==="area") t=t.replace(/\b(?:(?:divide|dividing|solve)\s+)?(?:using|use|with|by)?\s*(?:an?\s+|the\s+)?area(?: model)?\b/g," ").replace(/\s+/g," ").trim();
+  // 4) Comparing an expression with a number, or two expressions (Unit 2 Lessons 13 and 15): "(24 ÷ 4) × 2 vs 12", "A: 8 + 4 B: (8 + 4) ÷ 2".
+  { const cmpT=t.replace(/^is\s+/,"").replace(/,\s*(?=b\s*[:.=)])/," ").replace(/^a\s*[:.=)]\s*/,"").replace(/\s+b\s*[:.=)]\s*/," | ")
+      .replace(/\s*(?:is\s+)?(?:less than,? equal to,? or greater than|greater than,? equal to,? or less than|less than|greater than|equal to|compared (?:to|with)|versus|vs\.?|\?|<|>|=|○|◯|_+)\s*/g," | ").replace(/\s+and\s+(?=[\d(\[])/," | ").replace(/;\s*|,\s+(?=[\d(\[])/," | ");
+    const parts=cmpT.split("|").map(x=>x.trim().replace(/(\d),(?=\d{3}\b)/g,"$1")).filter(Boolean);
+    const exprOK=x=>/^[\d\s+\-−×x*÷\/()\[\]{}]+$/.test(x);
+    const toks=x=>{ const oo=x.replace(/[x*·]/g,"×").replace(/\//g,"÷").replace(/-/g,"−").replace(/\{/g,"[").replace(/\}/g,"]"); try{ const tk=parseBack(oo); return tokStr(tk).replace(/\s/g,"")===oo.replace(/\s/g,"") && validTokens(tk) ? tk : null; }catch(e){ return null; } };
+    const isNum=tk=>tk && tk.length===1 && typeof tk[0]==="number", isExpr=tk=>tk && /[+−×÷]/.test(tokStr(tk));
+    if(parts.length===2 && exprOK(parts[0]) && exprOK(parts[1])){ const A=toks(parts[0]), B=toks(parts[1]);
+      if(isExpr(A) && isNum(B)) return {skill:"orderops", focus:{fixed:{tokens:A, target:B[0]}, variant:"compare"}, level:4, label:`${tokStr(A)} compared with ${B[0]}`};
+      if(isNum(A) && isExpr(B)) return {skill:"orderops", focus:{fixed:{tokens:B, target:A[0]}, variant:"compare"}, level:4, label:`${tokStr(B)} compared with ${A[0]}`};
+      if(isExpr(A) && isExpr(B) && relationKind(tokStr(A), tokStr(B))) return {skill:"expressions", focus:{fixed:{A:tokStr(A), B:tokStr(B)}, variant:"relation"}, level:3, label:`Relationship: A = ${tokStr(A)}, B = ${tokStr(B)}`};
+      if(isExpr(A) && isExpr(B) && relationKind(tokStr(B), tokStr(A))) return {skill:"expressions", focus:{fixed:{A:tokStr(B), B:tokStr(A), rev:true}, variant:"relation"}, level:3, label:`Relationship: A = ${tokStr(A)}, B = ${tokStr(B)}`}; } }
   // Worksheet phrasing, typed as printed: "4. What is 16 × 24?", "find the product of 421 and 17", "16 times 24 using the area model". Strip the words, keep the problem; a method word is kept as a hint.
-  let method=null; const mm=t.match(/\b(area model|area|model|algorithm|standard algorithm|partial products|distributive)\b/); if(mm){ method = /area|model/.test(mm[1]) ? "area" : /distributive|partial/.test(mm[1]) ? "distributive" : "algorithm"; t=t.replace(/\b(?:using|use|with|by|show|and|an|the|draw)\b\s*/g," ").replace(/\b(?:area model|area|standard algorithm|algorithm|partial products|distributive(?: property)?|model)\b/g," ").replace(/\s+/g," ").trim(); }
+  let method=null; const mm=t.match(/\b(area model|area|model|algorithm|standard algorithm|partial products|distributive)\b/); if(mm){ method = /area|model/.test(mm[1]) ? "area" : /distributive|partial/.test(mm[1]) ? "distributive" : "algorithm"; t=t.replace(/\b(?:using|use|with|by(?!\s+\d)|show|and(?!\s+\d)|an|the|draw)\b\s*/g," ").replace(/\b(?:area model|area|standard algorithm|algorithm|partial products|distributive(?: property)?|model)\b/g," ").replace(/\s+/g," ").trim(); }
   t=t.replace(/^(?:#|q|question\s*|number\s*)?\d{1,2}\s*[.):]\s+(?=\S)/,"").replace(/^(?:[a-z]\s*[.)]\s+)(?=\S)/,""); // "4. ", "4) ", "#4 ", "b) " item numbers, only when followed by a space (so 4.5 stays a decimal)
+  const verb=(t.match(/^(divide|multiply)\b/)||[])[1]; // v9.17: "divide 1144 by 11" is a division, not a multiplication
   t=t.replace(/^(?:what is|what's|whats|find|solve|compute|calculate|evaluate|simplify|work out|figure out|multiply|divide|add|subtract|round off)\s+(?:the\s+)?(?:product of|sum of|difference of|difference between|quotient of|value of)?\s*/,"");
   const wordPair=t.match(/^(?:the\s+)?(product|sum|difference|quotient)\s+(?:of|between)\s+(\S+)\s+and\s+(\S+)$/); if(wordPair){ const op={product:"×",sum:"+",difference:"−",quotient:"÷"}[wordPair[1]]; t=`${wordPair[2]} ${op} ${wordPair[3]}`; }
   else { const andPair=t.match(/^(\S+)\s+and\s+(\S+)$/); if(andPair && /^[\d,.]+$/.test(andPair[1]) && /^[\d,.]+$/.test(andPair[2])) t=`${andPair[1]} × ${andPair[2]}`; } // "multiply 16 and 24" after the verb was stripped
-  t=t.replace(/\s*(?:times|multiplied by|multiply by)\s*/g," × ").replace(/\s*(?:divided by|divide by|over)\s*/g," ÷ ").replace(/\s+plus\s+/g," + ").replace(/\s+(?:minus|take away|less)\s+/g," − ").replace(/[⨯✕✖]/g,"×").replace(/[∙•]/g,"·").replace(/\s*[?!]+\s*$/,"").replace(/\s+\.$/,"").replace(/([a-z\d])\.$/,"$1").replace(/^([\d,.]+)\s+by\s+([\d,.]+)$/,"$1 × $2").replace(/\s+/g," ").trim();
+  t=t.replace(/\s*(?:times|multiplied by|multiply by)\s*/g," × ").replace(/\s*(?:divided by|divide by|over)\s*/g," ÷ ").replace(/\s+plus\s+/g," + ").replace(/\s+(?:minus|take away|less)\s+/g," − ").replace(/[⨯✕✖]/g,"×").replace(/[∙•]/g,"·").replace(/\s*[?!]+\s*$/,"").replace(/\s+\.$/,"").replace(/([a-z\d])\.$/,"$1").replace(/^([\d,.]+)\s+by\s+([\d,.]+)$/, verb==="divide" ? "$1 ÷ $2" : "$1 × $2").replace(/\s+/g," ").trim();
   if(!t) return {err:"Type the problem first."};
   // Commas must sit between groups of three digits, the same rule the answer fields apply: "1,2 × 3" is not "12 × 3".
   for(const n of t.match(/\d[\d,]*(?:\.\d+)?/g)||[]){ if(n.includes(",") && !/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(n)) return {err:`${n}: commas go between groups of three digits, like 1,234 or 72,585.`}; }
@@ -3070,11 +3256,12 @@ function parseHomework(text){
     return {skill:"multiply", focus:{fixed:{a,b},variant}, level:shapeLevel([String(a).length,String(b).length]), label:`${a.toLocaleString("en-US")} × ${b}${variant!=="algorithm"?` (${variant==="area"?"area model":"distributive"})`:""}`}; }
   // division: "3,660 ÷ 30", "1728 / 12"
   m=t.match(new RegExp("^"+NUM+"\\s*[÷/]\\s*"+NUM+"$"));
-  if(m){ const A=numOf(m[1]), B=numOf(m[2]); if(!A||!B) return {err:"I could not read those numbers."}; if(A.d||B.d){ const NV=toThousandths({w:A.w,d:A.d}), dv=toThousandths({w:B.w,d:B.d}); if(dv===0) return {err:"Cannot divide by 0."}; if((NV*1000)%dv!==0 || (NV*1000/dv)%10!==0) return {err:`${fmt(A)} ÷ ${fmt(B)} does not come out evenly to hundredths; the app's decimal division works with even answers.`}; if(B.d && (NV*1000/dv)%1000!==0) return {err:`${fmt(A)} ÷ ${fmt(B)} = ${fmt(D(NV*1000/dv))}: a part of a group is left over. The app's measuring-up strategy counts whole groups (like 4.8 ÷ 0.6); for a decimal answer, divide by a whole number (like 4.8 ÷ 6).`};
+  if(m){ const A=numOf(m[1]), B=numOf(m[2]); if(!A||!B) return {err:"I could not read those numbers."}; if(A.d||B.d){ if(A.w>99999||B.w>99999) return {err:"Decimal division here works with numbers up to 99,999."}; const NV=toThousandths({w:A.w,d:A.d}), dv=toThousandths({w:B.w,d:B.d}); if(dv===0) return {err:"Cannot divide by 0."}; if((NV*1000)%dv!==0 || (NV*1000/dv)%10!==0) return {err:`${fmt(A)} ÷ ${fmt(B)} does not come out evenly to hundredths; the app's decimal division works with even answers.`}; if(B.d && (NV*1000/dv)%1000!==0) return {err:`${fmt(A)} ÷ ${fmt(B)} = ${fmt(D(NV*1000/dv))}: a part of a group is left over. The app's measuring-up strategy counts whole groups (like 4.8 ÷ 0.6); for a decimal answer, divide by a whole number (like 4.8 ÷ 6).`};
     return {skill:"decdiv", focus:{fixed:{N:{w:A.w,d:A.d}, d:{w:B.w,d:B.d}}, variant:B.d?"measuring":"dealing"}, level:3, label:`${fmt(A)} ÷ ${fmt(B)}`}; }
     const N=A.w, d=B.w; if(d<2) return {err:"The divisor should be 2 or more."}; if(N%d!==0) return {err:`${N.toLocaleString("en-US")} ÷ ${d} has a remainder (${N%d}). The app's place-value strategy handles division that comes out even.`};
     if(N>99999) return {err:"Dividends up to 99,999, please."}; const q=N/d; if(q<2) return {err:"The quotient should be 2 or more."};
-    return {skill:"divide", focus:{fixed:{d,q},variant:"placevalue"}, level:3, label:`${N.toLocaleString("en-US")} ÷ ${d}`}; }
+    const dv = (divMethod==="area" || method==="area") ? "area" : "placevalue"; // v9.17: "divide using an area model" walks through the area model
+    return {skill:"divide", focus:{fixed:{d,q},variant:dv}, level:3, label:`${N.toLocaleString("en-US")} ÷ ${d}${dv==="area"?" (area model)":""}`}; }
   // add / subtract, with decimals: "3.45 + 2.7", "12.5 − 3.75", "1.2 + 3.4 + 5"
   m=t.match(new RegExp("^"+NUM+"\\s*([+−-])\\s*"+NUM+"(?:\\s*\\+\\s*"+NUM+")?$"));
   if(m){ const A=numOf(m[1]), B=numOf(m[3]), C=m[4]?numOf(m[4]):null; const op=m[2]==="+"?"+":"−";
@@ -3096,7 +3283,11 @@ function parseHomework(text){
     if((oo.match(/[+−×÷]/g)||[]).length>6) return {err:"Up to 6 operations in one expression, please."};
     if(!validTokens(tokens)) return {err:"Somewhere in that expression a step does not come out a whole number (a fraction, a negative, or dividing by 0). The app's order of operations stays with whole numbers."};
     return {skill:"orderops", focus:{fixed:{tokens}, variant:"evaluate"}, level:hasGroup(tokens)?2:1, label:tokStr(tokens)}; }
-  return {err:"I did not recognize that. Type just the numbers and the sign, like 16 × 24. Shapes the app knows: 148 × 19, 3,660 ÷ 30, 3.45 + 2.7, 8 × 10^5 × 6, 4.5 × 1,000, 2 + 3 × 4, or round 2.98 to the nearest tenth."};
+  // v9.17: extra words around one problem ("review multiplying using the standard algorithm 126 x 8"): find the one problem and read it.
+  if(!depth){ const found=t.match(/(?:\d[\d,]*(?:\.\d+)?|[(\[{])[\d\s,.+\-−×x*·÷\/()\[\]{}^]*\d[)\]}]?/g)||[]; const cands=found.map(x=>x.trim()).filter(x=>/[+\-−×x*·÷\/^]/.test(x));
+    const rest=cands.length===1 ? t.replace(found.find(x=>x.trim()===cands[0]),"") : ""; // the words around the one problem must not change it: no other numbers, no operation words
+    if(cands.length===1 && !/\d/.test(rest) && !/\b(?:half|twice|double|triple|more|less|fewer|from|to|sum|product|difference|quotient|then|plus|minus|times|divided|of|than|each|left|total|altogether)\b/.test(rest)){ const r=parseHomework(cands[0]+(method==="area"?" area model":method==="distributive"?" distributive":divMethod==="area"?" using an area model":""), 1); if(!r.err) return r; } }
+  return {err:"I did not recognize that. Type just the problem, like 16 × 24. Shapes the app knows: 148 × 19, 1,144 ÷ 11 or 40)8,760, 6,426 ÷ 9 area model, 3.45 + 2.7, 8 × 10^5 × 6, 4.5 × 1,000, 49 ÷ (34 − 27) × 9, (24 ÷ 4) × 2 vs 12, half of the sum of 17 and 9, six and four tenths, or round 2.98 to the nearest tenth."};
 }
 const hwMode=()=>HW_MODES[hwId(mode)]||null;
 const MUL_SHAPE_BY_LEVEL={1:"2-digit × 1-digit",2:"3-digit × 1-digit",3:"2-digit × 2-digit",4:"3-digit × 2-digit",5:"3-digit × 2-digit with larger numbers"};
@@ -3160,7 +3351,7 @@ function hwEntry(prefill, err){
       <input class="ans text" id="hwq" type="text" inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="like 148 × 19" value="${esc(prefill||"")}">
       <div class="inline-err" id="hwerr" role="status" aria-live="polite">${esc(err||"")}</div>
       <div class="actions"><button class="btn primary" id="hwgo">Set it up</button></div>
-      <p class="muted" style="font-size:14px;margin:14px 0 0">Shapes the app knows: <b>148 × 19</b> (standard algorithm), <b>3,660 ÷ 30</b> (place value strategy), <b>8 × 10^5 × 6</b> or <b>47 × 10^6</b> (powers of ten), <b>4.5 × 1,000</b> or <b>36.5 ÷ 10^2</b> (moving the decimal point), <b>round 2.98 to the nearest tenth</b>, <b>3.45 + 2.7</b> or <b>12.5 − 3.75</b> (adding and subtracting decimals), <b>3.4 × 6</b>, <b>2.5 × 1.2</b> or <b>4.8 ÷ 0.6</b> (multiplying and dividing decimals), <b>2 + 3 × 4</b> or <b>12 ÷ (8 − 4) × 2</b> (order of operations). Use x or × for times, ÷ or / for divide, ^ for the exponent. Add <b>area model</b> after a multiplication to walk through it as an area model instead of the standard algorithm.</p>
+      <p class="muted" style="font-size:14px;margin:14px 0 0">Shapes the app knows: <b>148 × 19</b> (standard algorithm), <b>3,660 ÷ 30</b> (place value strategy), <b>8 × 10^5 × 6</b> or <b>47 × 10^6</b> (powers of ten), <b>4.5 × 1,000</b> or <b>36.5 ÷ 10^2</b> (moving the decimal point), <b>round 2.98 to the nearest tenth</b>, <b>3.45 + 2.7</b> or <b>12.5 − 3.75</b> (adding and subtracting decimals), <b>3.4 × 6</b>, <b>2.5 × 1.2</b> or <b>4.8 ÷ 0.6</b> (multiplying and dividing decimals), <b>2 + 3 × 4</b> or <b>49 ÷ (34 − 27) × 9</b> (order of operations), <b>1,144 ÷ 11</b> or <b>40)8,760</b> (dividing; add <b>area model</b> for the area model), <b>(24 ÷ 4) × 2 vs 12</b> (less than, equal to, or greater than), <b>A: 8 + 4 B: (8 + 4) ÷ 2</b> (the relationship), <b>half of the sum of 17 and 9</b> (write the expression), <b>six hundred forty-seven and eight hundred ninety-two thousandths</b> (standard form). Use x or × for times, ÷ or / for divide, ^ for the exponent. Add <b>area model</b> after a multiplication or division to walk through it as an area model. For a story problem, type the expression you wrote, like <b>3 × 12 − 2</b>.</p>
     </div>`;
   const q=id=>app.querySelector("#"+id); const inp=q("hwq");
   q("back").onclick=home;
