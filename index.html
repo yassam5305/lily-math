@@ -142,6 +142,15 @@ pre.stack .cr{color:#B45309;font-weight:600}
 .ws-wrap{text-align:center;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .ws .cell{width:54px;height:52px;border:2px solid var(--line);border-radius:9px;background:#fff;font-size:26px;font-weight:800;text-align:center;line-height:48px;padding:0;color:var(--ink);cursor:pointer;font-family:Menlo,Consolas,"Courier New",monospace}
 .ws .cell.sel{border-color:#1762A6;background:#E9F4FF;box-shadow:0 0 0 3px #B9DCFC;position:relative;z-index:1}
+/* v9.16: a small arrow in the blue box shows which way it will move after a digit; a resting box (done) is dashed with no arrow */
+.ws .cell.sel.dir-l::after,.ws .cell.sel.dir-r::after{position:absolute;bottom:2px;font-size:13px;line-height:1;font-weight:800;color:#1762A6;font-family:inherit;pointer-events:none}
+.ws .cell.sel.dir-l::after{content:"\2190";left:4px}
+.ws .cell.sel.dir-r::after{content:"\2192";right:4px}
+.ws .cell.sel.held{border-style:dashed;box-shadow:none;background:#F4F9FE}
+.ws .cell.flag{border-color:#E0A33A;background:#FFF7E6}
+.ws-direction.nudge{animation:wsnudge .35s ease-in-out;border-color:#E0A33A;background:#FFF7E6}
+@keyframes wsnudge{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@media (prefers-reduced-motion:reduce){.ws-direction.nudge{animation:none}}
 .ws-direction{max-width:420px;margin:0 auto 10px;padding:10px 12px;border:2px solid #D6E5F4;border-radius:10px;background:#F1F7FC;text-align:left;font-size:15px;line-height:1.35}
 .ws-direction b{display:block;font-size:17px;margin-bottom:2px}
 .ws-direction .ws-current{display:block;margin-top:4px;color:var(--hi-ink);font-weight:700}
@@ -1408,7 +1417,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.15.1 · September 25, 2026";
+const BUILD="v9.16 · September 25, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -3241,11 +3250,22 @@ function wsSpec(p){
 }
 // The worksheet boxes are the input. A digit stays in the selected place, then selection moves one place left.
 // ws.rows is a readback for engagement/reporting; the keyed cells in ws.vals are the grading source of truth.
-function wsInit(){ if(ws) return; const sp=wsSpec(cur); const rowKeys=sp.two?["r0","r1","t"]:["t"]; ws={rows:{}, carries:{}, vals:{}, sel:`${rowKeys[0]}-0`, rowKeys, locked:{}, marks:null, edge:false}; if(wsSup()>=3 && sp.two){ ws.locked["r1-0"]=true; ws.vals["r1-0"]="0"; } wsSync(); }
+// v9.16: ws.dir is the way the blue box walks after a digit: "l" (the algorithm's right-to-left order, the default) or "r" (she tapped a box
+// on the left of an empty row, so she is writing the number the way it reads). ws.edge means the blue box is resting: the box it is on is
+// done, and a digit does nothing until she taps a box. Auto-advance never lands on a filled box, so a double tap cannot overwrite a neighbor.
+function wsInit(){ if(ws) return; const sp=wsSpec(cur); const rowKeys=sp.two?["r0","r1","t"]:["t"]; ws={rows:{}, carries:{}, vals:{}, sel:`${rowKeys[0]}-0`, rowKeys, locked:{}, marks:null, edge:false, dir:"l", nudge:false}; if(wsSup()>=3 && sp.two){ ws.locked["r1-0"]=true; ws.vals["r1-0"]="0"; } wsSync(); }
 function wsSync(){ const sp=wsSpec(cur); for(const row of ws.rowKeys){ let high=-1; for(let p=sp.cols-1;p>=0;p--) if(ws.vals[`${row}-${p}`]!==undefined){ high=p; break; } ws.rows[row]=high<0?"":Array.from({length:high+1},(_,i)=>ws.vals[`${row}-${high-i}`]??" ").join(""); } if(S && S.pendingQ && !S.pendingQ.typed && Object.keys(ws.vals).some(k=>!ws.locked[k] && ws.vals[k]!=="")){ S.pendingQ.typed=true; S.pendingQ.at=Date.now(); save(); } }
 function wsRowLabel(k, sp){ return ({r0:"ones row (top partial product)",r1:"tens row",t:sp.two?"total (bottom row)":"answer"})[k]||"answer"; }
-function wsRowPrompt(k, sp){ if(k==="r1" && ws.locked["r1-0"]) return "The 0 is written for you. Start just left of it; each digit moves one box left."; return "Start at the ones box on the right. Each digit moves one box left."; }
-function wsActiveRow(){ const row=(ws.sel||"").split("-")[0]; return wsIsRow(row)?row:(wsIsRow(ws.retRow)?ws.retRow:ws.rowKeys[0]); }
+function wsRowPrompt(k, sp){ if(k==="r1" && ws.locked["r1-0"]) return "The 0 is already written. Start in the tens box. After each digit, the blue box moves one place left."; return "Start in the ones box. After each digit, the blue box moves one place left."; }
+// Which way the blue box should walk from box k. Starting on the left of an empty row (past the place the algorithm starts in) means she is
+// writing the number the way it reads, so it walks right. The tens row may start in the ones or the tens place, so only a tap further left counts.
+function wsDirFor(k){ const [row,p0]=String(k).split("-"); const p=+p0; if(!wsIsRow(row) || (ws.vals[k]!==undefined && ws.vals[k]!=="")) return "l";
+  const natural = row==="r1" ? 1 : 0; if(p<=natural) return "l";
+  for(let q=0;q<p;q++){ const kk=`${row}-${q}`; if(ws.locked[kk]) continue; if(ws.vals[kk]!==undefined && ws.vals[kk]!=="") return "l"; }
+  return "r"; }
+function wsAdj(k, dir){ const [row,p0]=String(k).split("-"); const p=+p0+(dir==="r"?-1:1); if(p<0 || p>=wsSpec(cur).cols) return null; const nk=`${row}-${p}`; return ws.locked[nk]?null:nk; }
+const wsFilled=k=>ws.vals[k]!==undefined && ws.vals[k]!=="";
+function wsActiveRow(){ const row=(ws.sel||"").split("-")[0]; return wsIsRow(row)?row:wsRetCell().split("-")[0]; } // v9.16: while a carry box is selected, the active row is the one she came from (it used to fall back to the first row)
 function wsFirstCell(row){ return `${row}-${ws.locked[`${row}-0`]?1:0}`; }
 function wsHTML(readonly, marks){
   const sp=wsSpec(cur); const sup=wsSup(); const cellW = window.innerWidth>=700 ? 62 : 54;
@@ -3260,37 +3280,48 @@ function wsHTML(readonly, marks){
   else { g+=`<div class="op"></div>`+cellsRow("t"); }
   g+=`</div>`;
   const active=wsActiveRow(), carryMode=(ws.sel||"").startsWith("c"), lastRow=active===ws.rowKeys[ws.rowKeys.length-1];
-  const direction = readonly ? "" : `<div class="ws-direction" role="status" aria-live="polite"><b id="wsrowlbl">${wsRowLabel(active,sp)}</b><span id="wsinstruction">${carryMode?"Carry box selected. Type one digit.":wsRowPrompt(active,sp)}</span><span class="ws-current" id="wscurrent"></span></div>`;
-  const pad = readonly ? "" : `<div class="pad" role="group" aria-label="Number pad">${[1,2,3,4,5,6,7,8,9,0].map(d=>`<button type="button" class="btn" data-d="${d}">${d}</button>`).join("")}<button type="button" class="btn" data-d="bs" aria-label="Erase the selected or last digit">⌫</button><button type="button" class="btn small-txt" data-d="clr" aria-label="Clear this row" title="Clear this row">clear row</button><button type="button" class="btn wide" id="wsnext" data-d="nx" aria-label="${lastRow?"Check this answer":"Move to the next row"}">${lastRow?"check answer ↵":"next row ↵"}</button></div><p class="ws-howto muted">Tap a box to change just that digit. Use the number pad or your keyboard. Tap a carry box above when needed.</p>`;
-  const supNames=[sup>=2?"column labels":"", sup>=1?"carry boxes":"", sup>=3&&sp.two?"tens-row 0 written in":"", sup>=3?"coach line":""].filter(Boolean);
+  const direction = readonly ? "" : `<div class="ws-direction" role="status" aria-live="polite"><b id="wsrowlbl">${wsRowLabel(active,sp)}</b><span id="wsinstruction">${wsInstruction(active,sp,carryMode)}</span><span class="ws-current" id="wscurrent"></span></div>`;
+  const pad = readonly ? "" : `<div class="pad" role="group" aria-label="Number pad">${[1,2,3,4,5,6,7,8,9,0].map(d=>`<button type="button" class="btn" data-d="${d}">${d}</button>`).join("")}<button type="button" class="btn" data-d="bs" aria-label="Erase the selected or last digit">⌫</button><button type="button" class="btn small-txt" data-d="clr" aria-label="Clear this row" title="Clear this row">clear row</button><button type="button" class="btn wide" id="wsnext" data-d="nx" aria-label="${lastRow?"Check this answer":"Move to the next row"}">${lastRow?"check answer ↵":"next row ↵"}</button></div><p class="ws-howto muted">Tap any box to change just that digit.${sup>=1?" Carry boxes are above the problem.":""}</p>`;
+  const supNames=[sup>=2?"column labels":"", sup>=1?"carry boxes":"", sup>=3&&sp.two&&ws.locked["r1-0"]?"tens-row 0 written in":"", sup>=3?"coach line":""].filter(Boolean);
   const supLine = readonly ? "" : `<p class="supports">${supNames.length?`Supports on: <b>${supNames.join(" · ")}</b> <span class="muted">(they come off one at a time as you get these right)</span>`:`No supports: this is the bare page, like the worksheet.`}${sup<3?` <button type="button" class="btn quiet small" id="toolsback" title="Bring one support back for now; it fades again as you get these right">Bring a tool back</button>`:""}</p>`;
   const coach = (!readonly && sup>=3 && cur.hints && cur.hints[0]) ? `<div class="hints"><div class="step"><span class="n">Coach.</span>${cur.hints[0].t}</div></div>` : "";
   return `<div class="ws">${direction}<div class="ws-wrap">${g}</div>${pad}${supLine}${coach}</div>`;
 }
 function wsRowCap(k){ const sp=wsSpec(cur); return sp.cols - ((k==="r1" && ws.locked["r1-0"])?1:0); }
 function wsIsRow(k){ return ws.rowKeys.includes(k); }
-function wsNextRow(){ const i=ws.rowKeys.indexOf(wsActiveRow()); if(i<ws.rowKeys.length-1){ ws.sel=wsFirstCell(ws.rowKeys[i+1]); ws.edge=false; return false; } return true; }
-function wsPrevRow(){ const i=ws.rowKeys.indexOf(wsActiveRow()); ws.sel=wsFirstCell(ws.rowKeys[Math.max(0,i-1)]); ws.edge=false; }
+function wsNextRow(){ const i=ws.rowKeys.indexOf(wsActiveRow()); ws.nudge=false; if(i<ws.rowKeys.length-1){ ws.sel=wsFirstCell(ws.rowKeys[i+1]); ws.edge=false; ws.dir="l"; return false; } return true; }
+function wsPrevRow(){ const i=ws.rowKeys.indexOf(wsActiveRow()); ws.sel=wsFirstCell(ws.rowKeys[Math.max(0,i-1)]); ws.edge=false; ws.dir="l"; ws.nudge=false; }
+function wsRetCell(){ const r=ws.retCell; return (r && wsIsRow(String(r).split("-")[0])) ? r : wsFirstCell(ws.rowKeys[0]); } // a carry box never becomes the place a carry returns to
+function wsSelect(k){ if(String(k).startsWith("c")){ if(!(ws.sel||"").startsWith("c")) ws.retCell=ws.sel; } else { ws.edge=false; ws.dir=wsDirFor(k); } ws.sel=k; ws.nudge=false; }
 function wsType(d){ d=String(d); if(!/^[0-9]$/.test(d)) return; if(!ws.sel) ws.sel=wsFirstCell(ws.rowKeys[0]);
-  if(ws.sel.startsWith("c")){ ws.vals[ws.sel]=d; ws.carries[ws.sel]=d; ws.sel=ws.retCell||wsFirstCell(ws.rowKeys[0]); wsSync(); wsPaint(); return; }
-  if(ws.edge) return;
-  if(ws.locked[ws.sel]) return; const [row,p0]=ws.sel.split("-"); const p=+p0; ws.vals[ws.sel]=d;
-  ws.edge=true; for(let next=p+1;next<wsSpec(cur).cols;next++){ if(!ws.locked[`${row}-${next}`]){ ws.sel=`${row}-${next}`; ws.edge=false; break; } }
+  if(ws.sel.startsWith("c")){ ws.vals[ws.sel]=d; ws.carries[ws.sel]=d; ws.sel=wsRetCell(); ws.nudge=false; wsSync(); wsPaint(); return; }
+  if(ws.edge || ws.locked[ws.sel]){ ws.nudge=true; wsPaint(); return; } // the box is done: say so instead of silently ignoring her
+  const wasFilled=wsFilled(ws.sel); ws.vals[ws.sel]=d; ws.nudge=false; if(ws.flag) delete ws.flag[ws.sel];
+  const nk=wasFilled ? null : wsAdj(ws.sel, ws.dir||"l");
+  if(nk && !wsFilled(nk)){ ws.sel=nk; ws.edge=false; } else ws.edge=true; // move on only into an empty box; a changed digit (a box she tapped to fix) rests where it is
   wsSync(); wsPaint(); }
-function wsBack(){ if(!ws.sel) return; if(ws.sel.startsWith("c")){ delete ws.vals[ws.sel]; delete ws.carries[ws.sel]; ws.sel=ws.retCell||wsFirstCell(ws.rowKeys[0]); wsSync(); wsPaint(); return; }
-  let k=ws.sel; if(ws.vals[k]===undefined){ const [row,p0]=k.split("-"); for(let p=+p0-1;p>=0;p--){ const prev=`${row}-${p}`; if(!ws.locked[prev] && ws.vals[prev]!==undefined){ k=prev; break; } } }
-  if(!ws.locked[k]){ delete ws.vals[k]; ws.sel=k; ws.edge=false; } wsSync(); wsPaint(); }
-function wsClearRow(){ const row=wsActiveRow(); for(let p=0;p<wsSpec(cur).cols;p++){ const k=`${row}-${p}`; if(!ws.locked[k]) delete ws.vals[k]; } ws.sel=wsFirstCell(row); ws.edge=false; wsSync(); wsPaint(); }
+function wsBack(){ if(!ws.sel) return; ws.nudge=false; if(ws.sel.startsWith("c")){ delete ws.vals[ws.sel]; delete ws.carries[ws.sel]; ws.sel=wsRetCell(); wsSync(); wsPaint(); return; }
+  let k=ws.sel; if(!wsFilled(k)){ const [row,p0]=k.split("-"); const step=ws.dir==="r"?1:-1; let found=false; for(const st of [step,-step]){ for(let p=+p0+st;p>=0&&p<wsSpec(cur).cols;p+=st){ const prev=`${row}-${p}`; if(!ws.locked[prev] && wsFilled(prev)){ k=prev; found=true; break; } } if(found) break; } } // the most recent digit is behind the blue box; if nothing is behind it, the nearest digit on the other side
+  if(!ws.locked[k]){ delete ws.vals[k]; if(ws.flag) delete ws.flag[k]; ws.sel=k; ws.edge=false; } wsSync(); wsPaint(); }
+function wsClearRow(){ const row=wsActiveRow(); for(let p=0;p<wsSpec(cur).cols;p++){ const k=`${row}-${p}`; if(!ws.locked[k]) delete ws.vals[k]; if(ws.flag) delete ws.flag[k]; } ws.sel=wsFirstCell(row); ws.edge=false; ws.dir="l"; ws.nudge=false; wsSync(); wsPaint(); }
 function wsPaint(){ const sp=wsSpec(cur);
   app.querySelectorAll(".ws .cell[data-k]").forEach(el=>{ const k=el.dataset.k; el.textContent=ws.vals[k]||""; const row=k.split("-")[0]; const p=+k.split("-")[1];
-    el.classList.toggle("sel", k===ws.sel);
+    const isSel=k===ws.sel, isCarry=row.startsWith("c"); el.classList.toggle("sel", isSel);
+    el.classList.toggle("held", isSel && !isCarry && !!ws.edge); el.classList.toggle("dir-l", isSel && !isCarry && !ws.edge && ws.dir!=="r"); el.classList.toggle("dir-r", isSel && !isCarry && !ws.edge && ws.dir==="r"); el.classList.toggle("flag", !!(ws.flag && ws.flag[k]));
     const role=row==="t"?"answer":row.startsWith("c")?"carry":"partial product"; el.setAttribute("aria-label",`${role} ${WHOLE_PLACES[p]||""} place, ${el.textContent?"digit "+el.textContent:"empty"}`); });
   const active=wsActiveRow(), carryMode=(ws.sel||"").startsWith("c"), rl=app.querySelector("#wsrowlbl"), instruction=app.querySelector("#wsinstruction"), current=app.querySelector("#wscurrent");
   if(rl) rl.textContent=wsRowLabel(active,sp);
-  if(instruction) instruction.textContent=carryMode?"Carry box selected. Type one digit.":ws.edge?"No more boxes to the left. Tap a box to change it, or choose Next row.":wsRowPrompt(active,sp);
-  if(current){ const place=+(ws.sel||"0-0").split("-")[1]; current.textContent=carryMode?`Selected: carry into ${WHOLE_PLACES[place]||""}.`:`Selected: ${WHOLE_PLACES[place]||""} box${ws.vals[ws.sel]!==undefined?". Type to replace its digit":""}.`; }
+  if(instruction) instruction.textContent=wsInstruction(active,sp,carryMode);
+  const dirBox=app.querySelector(".ws-direction"); if(dirBox){ dirBox.classList.remove("nudge"); if(ws.nudge){ void dirBox.offsetWidth; dirBox.classList.add("nudge"); } }
+  if(current){ const place=+(ws.sel||"0-0").split("-")[1]; current.textContent=carryMode?`Blue box: carry into the ${WHOLE_PLACES[place]||""} place.`:`Blue box: ${WHOLE_PLACES[place]||""} place${wsFilled(ws.sel)&&!ws.edge?". A new digit replaces this one":""}.`; }
   const nx=app.querySelector("#wsnext"); if(nx){ const last=active===ws.rowKeys[ws.rowKeys.length-1]; nx.textContent=last?"check answer ↵":"next row ↵"; nx.setAttribute("aria-label",last?"Check this answer":"Move to the next row"); }
 }
+function wsInstruction(active, sp, carryMode){ const last=active===ws.rowKeys[ws.rowKeys.length-1]; const go=last?"Check answer":"Next row";
+  if(carryMode) return "Carry box: type one digit. Then the blue box goes back to where you were.";
+  if(ws.nudge) return `That box is done. Tap a box to change it, or tap ${go}.`;
+  if(ws.edge) return `Done with this box. Tap any box to change it, or tap ${go}.`;
+  if(ws.dir==="r") return "You started on the left, so after each digit the blue box moves one place right.";
+  return wsRowPrompt(active,sp); }
 function wsFocusCell(){ const cell=app.querySelector(`.ws .cell[data-k="${ws.sel}"]`); if(cell && !cell.disabled) cell.focus({preventScroll:true}); }
 // Which cell the next hint should be about: the first empty box in algorithm order; if none is empty, the first box that does not match the
 // steps; a cell whose mini-ladder is used up is passed over. Returns null when every box is filled and matches.
@@ -3305,9 +3336,9 @@ function wsNextHint(){ cur.hintUsed=cur.hintUsed||{}; cur.hintLog=cur.hintLog||[
   if(!c){ if(!cur.hintLog.some(h=>h.done)) cur.hintLog.push({t:`Every box is filled in and matches the steps. Press <b>Check</b>.`, done:true}); return; }
   const idx=cur.hintUsed[c.key]||0; cur.hintLog.push({t:c.hints[idx], key:c.key}); cur.hintUsed[c.key]=idx+1; }
 function bindWS(){
-  app.querySelectorAll(".ws .cell[data-k]:not([disabled])").forEach(el=>el.onclick=()=>{ const k=el.dataset.k; if(k.startsWith("c")) ws.retCell=ws.sel; else ws.edge=false; ws.sel=k; wsPaint(); });
+  app.querySelectorAll(".ws .cell[data-k]:not([disabled])").forEach(el=>el.onclick=()=>{ wsSelect(el.dataset.k); wsPaint(); });
   app.querySelectorAll(".pad .btn").forEach(b=>b.onclick=()=>{ const d=b.dataset.d; if(d==="bs") wsBack(); else if(d==="nx"){ if(wsNextRow()) submit(); else wsPaint(); } else if(d==="clr") wsClearRow(); else wsType(d); });
-  const tb=app.querySelector("#toolsback"); if(tb) tb.onclick=()=>{ if(cur.placement){ cur.toolsOn=true; } else { S.support.multiply=Math.min(3,(S.support.multiply||0)+1); S.supportWins.multiply=0; } /* on a quick check the tools come back for this problem only; the answer then counts as supported, and nothing is lost */ const keep=ws?{vals:{...ws.vals},sel:ws.sel,carries:{...ws.carries}}:null; ws=null; wsInit(); if(keep){ ws.vals={...keep.vals,...ws.vals}; ws.carries=keep.carries; const keepRow=keep.sel.split("-")[0]; ws.sel=ws.locked[keep.sel]?wsFirstCell(keepRow):keep.sel; wsSync(); } save(); render(); }; // her call; a right answer with it on counts as supported
+  const tb=app.querySelector("#toolsback"); if(tb) tb.onclick=()=>{ if(cur.placement){ cur.toolsOn=true; } else { S.support.multiply=Math.min(3,(S.support.multiply||0)+1); S.supportWins.multiply=0; } /* on a quick check the tools come back for this problem only; the answer then counts as supported, and nothing is lost */ const keep=ws?{vals:{...ws.vals},sel:ws.sel,carries:{...ws.carries}}:null; ws=null; wsInit(); if(keep){ const hers=keep.vals["r1-0"]; ws.vals={...keep.vals,...ws.vals}; if(hers!==undefined && hers!=="" && hers!=="0" && ws.locked["r1-0"]){ delete ws.locked["r1-0"]; ws.vals["r1-0"]=hers; } /* v9.16: bringing the written 0 back never replaces a digit she wrote there */ ws.carries=keep.carries; const keepRow=keep.sel.split("-")[0]; ws.sel=ws.locked[keep.sel]?wsFirstCell(keepRow):keep.sel; if(wsIsRow(ws.sel.split("-")[0])) ws.dir=wsDirFor(ws.sel); wsSync(); } save(); render(); }; // her call; a right answer with it on counts as supported
   wsPaint();
 }
 // The first wrong cell in the order the algorithm works: row r0, then r1, then the total; within a row, the lowest place. A wrong carry box
@@ -3329,7 +3360,39 @@ function gradeWS(){
   const wrong=[]; const comps=[]; const tally={}; const marks={};
   // An empty box inside a number is almost always an unfinished entry, so it is sent back to be filled, with one exception: the tens row's
   // ones box. Leaving that one blank is the classic skipped-zero mistake, so it is graded as one rather than hinted away.
-  const gapKeys=Object.keys(gaps).filter(k=>k!=="r1-0"); if(gapKeys.length) return {err:`There is an empty box inside a number (${gapKeys.map(k=>{ const [row,p]=k.split("-"); return `${row==="t"?"answer":row==="r0"?"ones row":"tens row"}, ${WHOLE_PLACES[+p]}`; }).join("; ")}). Fill every place.`};
+  const gapKeys=Object.keys(gaps).filter(k=>k!=="r1-0");
+  // v9.16: empty boxes only at the right end of a row mean the whole number sits too far left (she started in a box further left than the
+  // number needs). Say that plainly and light up the empty boxes, instead of "fill every place", which would turn the slip into a wrong digit.
+  if(gapKeys.length){ const byRow={}; gapKeys.forEach(k=>{ const [row,p]=k.split("-"); (byRow[row]=byRow[row]||[]).push(+p); });
+    if(byRow.r1 && gaps["r1-0"] && !ws.locked["r1-0"]) byRow.r1.push(0); // with no written 0, an empty ones box is part of the empty right end (a lone empty r1-0 is still graded as the skipped zero)
+    const lowOnly=Object.keys(byRow).every(row=>{ const ps=byRow[row].sort((x,y)=>x-y); const base=(row==="r1" && ws.locked["r1-0"])?1:0; return ps.every((p,i)=>p===base+i); });
+    if(lowOnly){ ws.flag={}; Object.keys(byRow).forEach(row=>byRow[row].forEach(p=>{ ws.flag[`${row}-${p}`]=1; })); const nm=k=>k==="t"?(sp.two?"bottom row":"answer"):k==="r0"?"top row":"tens row";
+      const startBox=row=>row==="r1"?(ws.locked["r1-0"]?"tens box, next to the 0":"ones box"):"ones box";
+      return {err:Object.keys(byRow).map(row=>`The number in the ${nm(row)} sits too far left. It should end in the ${startBox(row)}.`).join(" ")+` Tap a box in that row, tap clear row, and start again in that box. The orange boxes are the empty ones.`}; } }
+  if(gapKeys.length) return {err:`There is an empty box inside a number (${gapKeys.map(k=>{ const [row,p]=k.split("-"); return `${row==="t"?"answer":row==="r0"?"ones row":"tens row"}, ${WHOLE_PLACES[+p]}`; }).join("; ")}). Fill every place.`};
+  // v9.16: a step that makes a two-digit number (9 × 1 + 4 = 13, or a last column that adds up to 13) is the one place right-to-left entry
+  // trips her: she types 1 then 3 and the row's two left digits come out swapped. That is an entry slip, not a math mistake, so the first
+  // time it is sent back like an empty box. It fires only when (a) the last step of that row really makes a two-digit number, (b) the two
+  // left digits are exactly reversed, and (c) every other digit in the row is right, so the note never gives away digits she got wrong.
+  // The bottom row of a two-row problem is judged against the sum of HER rows. If she checks the same digits again, they are graded as written.
+  cur.swapSeen=cur.swapSeen||{}; ws.flag={};
+  const aTop=String(sp.a).length-1;
+  const topPlace=(expRow)=>{ let L=-1; for(let p=sp.cols-1;p>=0;p--) if(expRow[p]!==undefined){ L=p; break; } return L; };
+  const swaps=[];
+  const rowExp=key=>{ const e={}; for(let p=0;p<sp.cols;p++){ const v=sp.exp[`${key}-${p}`]; if(v!==undefined) e[p]=v; } return e; };
+  const trySwap=(key, e, lastCol, kind)=>{ const L=topPlace(e); if(L<1 || L<=lastCol) return; // the last step did not make a two-digit number
+    const hi=`${key}-${L}`, lo=`${key}-${L-1}`; if(ws.locked[lo]) return; const a=V[hi], b=V[lo]; if(!a || !b || a===b || a!==e[L-1] || b!==e[L]) return;
+    for(let p=L+1;p<sp.cols;p++) if(V[`${key}-${p}`]!==undefined && V[`${key}-${p}`]!=="") return; // she wrote past the answer's width
+    for(let p=0;p<L-1;p++){ const k=`${key}-${p}`; if(ws.locked[k]) continue; if((V[k]||"")!==(e[p]||"")) return; } // anything else wrong: grade it normally
+    const sig=`${key}:${a}${b}`; if(cur.swapSeen[sig]) return; swaps.push({key,hi,lo,a,b,kind,sig}); };
+  if(sp.two){ trySwap("r0", rowExp("r0"), aTop, "step"); trySwap("r1", rowExp("r1"), aTop+1, "step");
+    const r0=readRow("r0"), r1=readRow("r1"); if(r0!==null && r1!==null && !Object.keys(gaps).some(k=>k!=="r1-0")){ const own=String(r0+r1); const e={}; own.split("").reverse().forEach((ch,k)=>{ e[k]=ch; });
+      trySwap("t", e, Math.max(String(r0).length, String(r1).length)-1, "column"); } }
+  else trySwap("t", rowExp("t"), aTop, "step");
+  if(swaps.length){ swaps.forEach(x=>{ cur.swapSeen[x.sig]=1; ws.flag[x.hi]=1; ws.flag[x.lo]=1; }); cur.swapCaught=(cur.swapCaught||0)+1; ws.nudge=false;
+    const nm=k=>k==="t"?(sp.two?"bottom row":"answer"):k==="r0"?"top row":"tens row";
+    const one=x=>`In the ${nm(x.key)}, the two digits on the left read ${x.a} ${x.b}. Did the ${x.kind==="column"?"last column add up to":"last step make"} ${x.b}${x.a}? A two-digit number goes in ones digit first: the ${x.a}, then the ${x.b} in the box to its left.`;
+    return {err:`${swaps.map(one).join(" ")} Tap a box to fix it. To keep it as it is, tap Check answer again.`, swap:true}; }
   const note=(k,comp)=>{ wrong.push(k); marks[k]="bad"; if(comp){ comps.push(comp); tally[comp]=tally[comp]||{ok:0,miss:0}; tally[comp].miss++; } };
   const digitOK=(k)=>{ const e=sp.exp[k]; const v=V[k]; if(e===undefined) return v===undefined||v===""||v==="0"; return v===e; };
   for(const r of sp.rowsDef){ const rowVal=rows[r.key];
@@ -3459,7 +3522,7 @@ function render(){
   if(S.scratch) body+=scratchHTML();
   const card = right ? `<div class="card two"><div class="left">${body}</div><div class="right">${right}</div></div>` : `<div class="card">${body}</div>`;
   app.innerHTML=top+card+`<p class="streak" style="margin-top:12px">${S.today.c ? `${S.today.c} right today` : "Just getting started today"}${S.run>=2?` · ${S.run} in a row`:""}</p>`; // v9.12: no "0 right today" scoreboard
-  bind(); if(S.scratch) bindScratch(); armIdle();
+  bind(); if(S.scratch) bindScratch(); armIdle(); noteScreen();
 }
 // v9.13 long-pause signal: after 75 seconds with no typing, tapping, or new screen, one calm line points at the help that is already there.
 // It changes nothing in the records. Any touch or key restarts the clock; a new screen clears the line.
@@ -3534,6 +3597,7 @@ function checkCtlHTML(c){ // the entry control for a check, driven by sc. In con
 function focusFirst(){
   const el = [".ws .cell.sel:not([disabled])","#ans:not([disabled])","#cans:not([disabled])","#check","#cstep","#xcheck","#wopts .opt","#step","#retry","#next"].map(s=>app.querySelector(s)).find(Boolean);
   if(el) el.focus({preventScroll:true});
+  if(el && el.tagName==="INPUT"){ try{ const n=el.value.length; el.setSelectionRange(n,n); }catch(e){} } // v9.16: after a re-render (a "take out the space" note, a hint) the caret goes back to the end of what she typed, not the front
 }
 function beginWalkthrough(){
   if(phase!=="q" || !cur || !cur.steps || !cur.steps.length) return;
@@ -3604,19 +3668,29 @@ function activeGroup(){ // the MC radiogroup the keyboard should drive right now
 function wsKey(e){
   if(!cur || !cur.ws || phase!=="q" || !ws) return false; const tg=e.target, tag=tg&&tg.tagName; if(tag==="INPUT"||tag==="TEXTAREA"||e.altKey||e.ctrlKey||e.metaKey) return false;
   if(e.key==="Tab" || (tag==="BUTTON" && !(tg.closest&&tg.closest(".ws")) && e.key==="Enter")) return false;
+  if(tg && tg.id==="toolsback" && (e.key==="Enter"||e.key===" ")) return false; // v9.16: Enter on "Bring a tool back" presses that button, not Check
+  if(e.repeat && (/^[0-9]$/.test(e.key) || e.key==="Enter")){ e.preventDefault(); return true; } // v9.16: holding a digit key types it once, not a row of them
   if(/^[0-9]$/.test(e.key)){ e.preventDefault(); wsType(e.key); if(tag==="BUTTON" && tg.closest(".ws")) wsFocusCell(); return true; }
   if(e.key==="Backspace"||e.key==="Delete"){ e.preventDefault(); wsBack(); if(tag==="BUTTON" && tg.closest(".ws")) wsFocusCell(); return true; }
   if(e.key==="Enter"||e.key==="ArrowDown"){ e.preventDefault(); if(wsNextRow()){ if(e.key==="Enter") submit(); else wsPaint(); } else wsPaint(); if(e.key!=="Enter") wsFocusCell(); return true; }
   if(e.key==="ArrowUp"){ e.preventDefault(); wsPrevRow(); wsPaint(); wsFocusCell(); return true; }
-  if(e.key==="ArrowLeft"||e.key==="ArrowRight"){ e.preventDefault(); const [row,p0]=(ws.sel||wsFirstCell(ws.rowKeys[0])).split("-"); const p=Math.max(0,Math.min(wsSpec(cur).cols-1,+p0+(e.key==="ArrowLeft"?1:-1))); if(!ws.locked[`${row}-${p}`]){ ws.sel=`${row}-${p}`; ws.edge=false; } wsPaint(); wsFocusCell(); return true; }
-  if(e.key==="Escape"){ e.preventDefault(); wsClearRow(); return true; }
+  if(e.key==="ArrowLeft"||e.key==="ArrowRight"){ e.preventDefault(); const [row,p0]=((ws.sel||"").startsWith("c")?wsRetCell():(ws.sel||wsFirstCell(ws.rowKeys[0]))).split("-"); const p=Math.max(0,Math.min(wsSpec(cur).cols-1,+p0+(e.key==="ArrowLeft"?1:-1))); if(!ws.locked[`${row}-${p}`]){ wsSelect(`${row}-${p}`); } wsPaint(); wsFocusCell(); return true; }
   return false;
 }
 window.addEventListener("keydown", e=>{ if(e.defaultPrevented) return; if(app.contains(e.target)) return; wsKey(e); }); // keys that did not start inside the app (focus on body) still reach the workspace
+// v9.16: ghost taps. touch-action:manipulation makes a quick double tap two real taps, and a held Enter sends a second press. When a tap
+// changes the screen (Check → feedback, Next → a new problem), the second tap would land on whatever button now sits under her finger and
+// could skip the feedback or pick an answer. For a moment after the screen changes, real taps and Enter presses on those buttons are ignored.
+// Script clicks (tests) are not affected: only trusted events are held back. Digit and erase buttons are never held back.
+var GHOST_MS=450, GHOST_SEL="#next,#retry,#step,#check,#cstep,#xcheck,#xskip,#wcheck,#workthrough,#stepbreak,#onemore,#ortry,#orhelp,#orshow,#stephelp,#showhint,#toolsback,.opt,#wsnext";
+var screenKey="", screenAt=0; // var: render() can run before this line during start-up
+function noteScreen(){ const k=[phase, stepIdx, cur&&cur.prompt, sc&&sc.state, whyState&&whyState.done, mode].join("|"); if(k!==screenKey){ screenKey=k; screenAt=Date.now(); } }
+app.addEventListener("click", e=>{ if(!e.isTrusted || Date.now()-screenAt>=GHOST_MS) return; const b=e.target&&e.target.closest&&e.target.closest(GHOST_SEL); if(!b) return; e.preventDefault(); e.stopImmediatePropagation(); }, true);
 app.addEventListener("keydown", e=>{ // keyboard for the practice screen: Enter checks, 1-4 / a-d pick, arrows move
   if(!cur) return;
   const tg=e.target, tag=tg.tagName, isOpt=tg.classList&&tg.classList.contains("opt");
   if(tag==="TEXTAREA"||e.altKey||e.ctrlKey||e.metaKey) return;
+  if(e.repeat && e.key==="Enter"){ e.preventDefault(); return; } // v9.16: a held Enter checks once, not check-then-next
   if(cur.ws && phase==="q" && ws && tag!=="INPUT"){ if(wsKey(e)) return; } // hardware keyboard on the workspace
   const g=activeGroup();
   if(e.key==="Enter"){
@@ -3647,7 +3721,7 @@ function submit(){
   let ok, yours, raw, wsGrade=null;
   let twoPoints=false;
   let preRes=null; if(cur.pre){ preRes=gradePre(); if(preRes.missing){ inlineErr=preRes.issue||`First, do the first step: ${plain(cur.pre.check.q)}`; render(); const f=app.querySelector("#preans")||app.querySelector("#preopts .opt"); if(f) f.focus(); return; } }
-  if(cur.ws){ const g=gradeWS(); if(g.err){ cur.unfinished=(cur.unfinished||0)+1; inlineErr=g.err; render(); return; } wsGrade=g; ok=g.ok; yours=g.yours; raw=g.product; } // an incomplete grid is sent back, not graded: unfinished is not the same as wrong
+  if(cur.ws){ const g=gradeWS(); if(g.err){ if(!g.swap) cur.unfinished=(cur.unfinished||0)+1; inlineErr=g.err; render(); return; } wsGrade=g; ok=g.ok; yours=g.yours; raw=g.product; } // an incomplete grid is sent back, not graded: unfinished is not the same as wrong
   else if(cur.type==="input"){ const inp=app.querySelector("#ans"); const v=inp.value; lastAnswer=v; if(!v.trim()){ inp.focus(); return; }
     twoPoints = !!(cur.meta && cur.meta.open) && (v.match(/\./g)||[]).length>1; // "0.05.0" on a write-a-decimal problem: a real mistake, walk it through
     const issue=twoPoints ? "" : issueFor(cur,v); if(issue){ inlineErr=issue; render(); return; } // not a countable attempt yet
@@ -3669,7 +3743,7 @@ function submit(){
   const entry={t:Date.now(), sk, lvl:cur.level, q:plain(cur.prompt), yours:String(yours), ans:cur.display, ok:ok?1:0, stage, hints:hintIdx, independent:(ok&&independent)?1:0, tag: cur.mistake ? cur.mistake.tag : (cur.focusTag||"")};
   if(cur.hw) entry.hw=1; if(cur.fixed) entry.page=1; if(cur.studied) entry.studied=1; if(mode==="today" && todayPlan && stage==="fresh"){ entry.today=todaySid; if(cur.todaySlot) entry.todaySlot=cur.todaySlot; } /* a primary problem of this planned sitting; a follow-up or walkthrough is help attached to the miss, not another problem */ entry.hintsOf=(cur.hintTotal||(cur.hints||[]).length)-((coachOn()||nudgeAvailable())?1:0); if(cur.ws){ entry.ws=1; entry.support=wsSup(); } if(supported) entry.supported=1; if(prompted) entry.prompted=1; if(coachVisible) entry.cues="coach line"; if(cur.transferCheck) entry.freshAfterHelp=1; if(mode==="miss"&&cur.focusKey) entry.focus=cur.focusKey; /* every support visible before she answered is logged; a fresh transfer item after help is marked */ const eck=ctxKey(ctxOf(cur)); if(eck) entry.ctx=eck;
   if(cur.pre && preRes){ entry.pre={comp:cur.pre.comp, ok:preRes.ok?1:0, yours:preRes.yours, ans:String(cur.pre.check.display), q:plain(cur.pre.check.q||"")}; cur.comps=cur.comps||{}; cur.comps[cur.pre.comp]={ok:preRes.ok?1:0, miss:preRes.ok?0:1}; entry.comps=cur.comps; if(!preRes.ok){ noteComp(sk, cur.pre.comp, false, {lvl:cur.level, ctx:ctxOf(cur)}); cur.preMiss=true; } }
-  if(wsGrade){ entry.rows=wsGrade.yours; if(!ok) entry.wrong=wsGrade.wrongText; if(wsGrade.comps) entry.comps=wsGrade.compsTally; if(cur.unfinished) entry.unfinished=cur.unfinished;
+  if(wsGrade){ entry.rows=wsGrade.yours; if(!ok) entry.wrong=wsGrade.wrongText; if(wsGrade.comps) entry.comps=wsGrade.compsTally; if(cur.unfinished) entry.unfinished=cur.unfinished; if(cur.swapCaught) entry.swapCaught=cur.swapCaught; /* v9.16: two left digits typed in reverse, sent back once */
     const cues=[]; if(ws&&ws.locked["r1-0"]) cues.push("zero written in"); if(coachOn()) cues.push("coach line"); if(wsSup()>=2) cues.push("column labels"); if(wsSup()>=1) cues.push("carry boxes"); if(cues.length) entry.cues=cues.join(", "); } // the assistance that was actually visible, not just whether Hint was tapped
   lastChange=0; lastPraise=[];
   // Homework practice is level-neutral: the shape was chosen from the worksheet, not earned, so it moves nothing up or down.
@@ -4101,7 +4175,7 @@ function grownups(){
   const weekAgo=Date.now()-7*864e5; const week=log.filter(e=>Number.isFinite(e.t)&&e.t>=weekAgo&&!e.guided);
   const days=new Set(week.map(e=>new Date(e.t).toDateString())).size;
   const skillName=k=>SKILLS[k]?SKILLS[k].name:esc(str(k)||"?");
-  const missMeta=e=>`${Number.isFinite(e.t)?fmtDate(e.t):"unknown time"} · ${skillName(e.sk)}${e.lvl!=null?` · level ${esc(str(e.lvl))}`:""} · ${e.stage?esc(str(e.stage)):(e.retry?"retry":"fresh")}${e.page?" · from the page":e.hw?" · homework":""}${e.shown?" · answer shown":""}${+e.hints>0?" · "+(+e.hints)+" hint"+(+e.hints>1?"s":"")+(e.hintsOf?" of "+e.hintsOf:""):""}${typeof e.tag==="string"&&e.tag?` · <span class="tag">${esc(e.tag)}</span>`:""}${e.revealed!==undefined?` · walkthrough: ${+e.passed||0} step${+e.passed===1?"":"s"} right, ${+e.revealed||0} shown${e.explainAsked?`, reasons ${+e.explainOk||0} of ${+e.explainAsked}`:""}${+e.explainSkipped?`, ${+e.explainSkipped} reason${+e.explainSkipped===1?"":"s"} just shown`:""}${+e.helpTaps?`, ${+e.helpTaps} help tap${+e.helpTaps===1?"":"s"}`:""}`:""}${e.comps&&typeof e.comps==="object"?(()=>{ const m=Object.keys(e.comps).filter(c=>e.comps[c]&&e.comps[c].miss); return m.length?` · missed: ${m.map(c=>esc(compName(e.sk,c))).join(", ")}`:""; })():""}${e.support!==undefined?` · supports ${esc(str(e.support))} of 3`:""}${e.cues?` · visible: ${esc(str(e.cues))}`:""}${e.pre?` · step (${esc(compName(e.sk,e.pre.comp))}): ${e.pre.ok?"shown ✓":`answered ${esc(str(e.pre.yours))}, is ${esc(str(e.pre.ans))}`}`:""}${e.unfinished?` · sent back ${+e.unfinished} time${+e.unfinished===1?"":"s"} for empty boxes before this`:""}${e.proved?` · proved: ${esc(str(e.proved)).replace(/,/g,", ")}`:""}`;
+  const missMeta=e=>`${Number.isFinite(e.t)?fmtDate(e.t):"unknown time"} · ${skillName(e.sk)}${e.lvl!=null?` · level ${esc(str(e.lvl))}`:""} · ${e.stage?esc(str(e.stage)):(e.retry?"retry":"fresh")}${e.page?" · from the page":e.hw?" · homework":""}${e.shown?" · answer shown":""}${+e.hints>0?" · "+(+e.hints)+" hint"+(+e.hints>1?"s":"")+(e.hintsOf?" of "+e.hintsOf:""):""}${typeof e.tag==="string"&&e.tag?` · <span class="tag">${esc(e.tag)}</span>`:""}${e.revealed!==undefined?` · walkthrough: ${+e.passed||0} step${+e.passed===1?"":"s"} right, ${+e.revealed||0} shown${e.explainAsked?`, reasons ${+e.explainOk||0} of ${+e.explainAsked}`:""}${+e.explainSkipped?`, ${+e.explainSkipped} reason${+e.explainSkipped===1?"":"s"} just shown`:""}${+e.helpTaps?`, ${+e.helpTaps} help tap${+e.helpTaps===1?"":"s"}`:""}`:""}${e.comps&&typeof e.comps==="object"?(()=>{ const m=Object.keys(e.comps).filter(c=>e.comps[c]&&e.comps[c].miss); return m.length?` · missed: ${m.map(c=>esc(compName(e.sk,c))).join(", ")}`:""; })():""}${e.support!==undefined?` · supports ${esc(str(e.support))} of 3`:""}${e.cues?` · visible: ${esc(str(e.cues))}`:""}${e.pre?` · step (${esc(compName(e.sk,e.pre.comp))}): ${e.pre.ok?"shown ✓":`answered ${esc(str(e.pre.yours))}, is ${esc(str(e.pre.ans))}`}`:""}${e.unfinished?` · sent back ${+e.unfinished} time${+e.unfinished===1?"":"s"} for empty boxes before this`:""}${e.swapCaught?` · two digits typed in reverse were caught before grading`:""}${e.proved?` · proved: ${esc(str(e.proved)).replace(/,/g,", ")}`:""}`;
   const exportText=JSON.stringify(DB); const nPlayers=Object.keys(DB.profiles).length;
   // Class position: the district calendar's estimate, or a lesson pinned here from the homework header
   const L=lessonList(), classId=effectiveClassAt(), calId=calendarClassAt();
