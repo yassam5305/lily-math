@@ -148,10 +148,13 @@ pre.stack .cr{color:#B45309;font-weight:600}
 .ws .cell.sel.dir-r::after{content:"\2192";right:4px}
 .ws .cell.sel.held{border-style:dashed;box-shadow:none;background:#F4F9FE}
 .ws .cell.flag{border-color:#E0A33A;background:#FFF7E6}
+.ghost-held{animation:ghostheld .35s ease-in-out}
+@keyframes ghostheld{50%{box-shadow:0 0 0 4px #B9DCFC}}
+@media (prefers-reduced-motion:reduce){.ghost-held{animation:none;outline:3px solid #B9DCFC}}
 .ws-direction.nudge{animation:wsnudge .35s ease-in-out;border-color:#E0A33A;background:#FFF7E6}
 @keyframes wsnudge{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 @media (prefers-reduced-motion:reduce){.ws-direction.nudge{animation:none}}
-.ws-direction{max-width:420px;margin:0 auto 10px;padding:10px 12px;border:2px solid #D6E5F4;border-radius:10px;background:#F1F7FC;text-align:left;font-size:15px;line-height:1.35}
+.ws-direction{max-width:420px;margin:12px auto 0;padding:10px 12px;border:2px solid #D6E5F4;border-radius:10px;background:#F1F7FC;text-align:left;font-size:15px;line-height:1.35}
 .ws-direction b{display:block;font-size:17px;margin-bottom:2px}
 .ws-direction .ws-current{display:block;margin-top:4px;color:var(--hi-ink);font-weight:700}
 .ws-howto{font-size:13px;color:var(--graphite);text-align:center;margin:8px 0 0}
@@ -1417,7 +1420,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.16 · September 25, 2026";
+const BUILD="v9.16.1 · September 25, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -3285,7 +3288,7 @@ function wsHTML(readonly, marks){
   const supNames=[sup>=2?"column labels":"", sup>=1?"carry boxes":"", sup>=3&&sp.two&&ws.locked["r1-0"]?"tens-row 0 written in":"", sup>=3?"coach line":""].filter(Boolean);
   const supLine = readonly ? "" : `<p class="supports">${supNames.length?`Supports on: <b>${supNames.join(" · ")}</b> <span class="muted">(they come off one at a time as you get these right)</span>`:`No supports: this is the bare page, like the worksheet.`}${sup<3?` <button type="button" class="btn quiet small" id="toolsback" title="Bring one support back for now; it fades again as you get these right">Bring a tool back</button>`:""}</p>`;
   const coach = (!readonly && sup>=3 && cur.hints && cur.hints[0]) ? `<div class="hints"><div class="step"><span class="n">Coach.</span>${cur.hints[0].t}</div></div>` : "";
-  return `<div class="ws">${direction}<div class="ws-wrap">${g}</div>${pad}${supLine}${coach}</div>`;
+  return `<div class="ws"><div class="ws-wrap">${g}</div>${direction}${pad}${supLine}${coach}</div>`;
 }
 function wsRowCap(k){ const sp=wsSpec(cur); return sp.cols - ((k==="r1" && ws.locked["r1-0"])?1:0); }
 function wsIsRow(k){ return ws.rowKeys.includes(k); }
@@ -3313,7 +3316,7 @@ function wsPaint(){ const sp=wsSpec(cur);
   if(rl) rl.textContent=wsRowLabel(active,sp);
   if(instruction) instruction.textContent=wsInstruction(active,sp,carryMode);
   const dirBox=app.querySelector(".ws-direction"); if(dirBox){ dirBox.classList.remove("nudge"); if(ws.nudge){ void dirBox.offsetWidth; dirBox.classList.add("nudge"); } }
-  if(current){ const place=+(ws.sel||"0-0").split("-")[1]; current.textContent=carryMode?`Blue box: carry into the ${WHOLE_PLACES[place]||""} place.`:`Blue box: ${WHOLE_PLACES[place]||""} place${wsFilled(ws.sel)&&!ws.edge?". A new digit replaces this one":""}.`; }
+  if(current){ const place=+(ws.sel||"0-0").split("-")[1]; current.textContent=carryMode?`Blue box: carry into the ${WHOLE_PLACES[place]||""} place.`:ws.edge?`Blue box: ${WHOLE_PLACES[place]||""} place (done).`:`Blue box: ${WHOLE_PLACES[place]||""} place, next move ${ws.dir==="r"?"→ right":"← left"}${wsFilled(ws.sel)?". A new digit replaces this one":""}.`; }
   const nx=app.querySelector("#wsnext"); if(nx){ const last=active===ws.rowKeys[ws.rowKeys.length-1]; nx.textContent=last?"check answer ↵":"next row ↵"; nx.setAttribute("aria-label",last?"Check this answer":"Move to the next row"); }
 }
 function wsInstruction(active, sp, carryMode){ const last=active===ws.rowKeys[ws.rowKeys.length-1]; const go=last?"Check answer":"Next row";
@@ -3678,14 +3681,24 @@ function wsKey(e){
   return false;
 }
 window.addEventListener("keydown", e=>{ if(e.defaultPrevented) return; if(app.contains(e.target)) return; wsKey(e); }); // keys that did not start inside the app (focus on body) still reach the workspace
-// v9.16: ghost taps. touch-action:manipulation makes a quick double tap two real taps, and a held Enter sends a second press. When a tap
-// changes the screen (Check → feedback, Next → a new problem), the second tap would land on whatever button now sits under her finger and
-// could skip the feedback or pick an answer. For a moment after the screen changes, real taps and Enter presses on those buttons are ignored.
-// Script clicks (tests) are not affected: only trusted events are held back. Digit and erase buttons are never held back.
-var GHOST_MS=450, GHOST_SEL="#next,#retry,#step,#check,#cstep,#xcheck,#xskip,#wcheck,#workthrough,#stepbreak,#onemore,#ortry,#orhelp,#orshow,#stephelp,#showhint,#toolsback,.opt,#wsnext";
-var screenKey="", screenAt=0; // var: render() can run before this line during start-up
-function noteScreen(){ const k=[phase, stepIdx, cur&&cur.prompt, sc&&sc.state, whyState&&whyState.done, mode].join("|"); if(k!==screenKey){ screenKey=k; screenAt=Date.now(); } }
-app.addEventListener("click", e=>{ if(!e.isTrusted || Date.now()-screenAt>=GHOST_MS) return; const b=e.target&&e.target.closest&&e.target.closest(GHOST_SEL); if(!b) return; e.preventDefault(); e.stopImmediatePropagation(); }, true);
+// v9.16: ghost taps. touch-action:manipulation makes a quick double tap two real taps. When a tap changes the screen (Check → feedback,
+// Next → a new problem), the second tap would land on whatever button now sits under her finger and could skip the feedback or pick an answer.
+// v9.16.1 (review): the v9.16 guard held back EVERY tap on those buttons for 450 ms after any screen change, so a quick, deliberate tap on
+// "Work through this problem" right after setting up a page problem was silently dropped. Now only the accidental case is held back:
+//   - a tap within 450 ms of a tap that changed the screen AND on the same spot (within 44 px): a double tap, not a new choice; or
+//   - an Enter/Space within 450 ms of an Enter/Space that changed the screen (a fast second press; a held key is handled by e.repeat).
+// A held-back tap makes the button pulse, so it is not silently dead. Script clicks (tests) are never held back; digit/erase buttons are never held back.
+var GHOST_MS=450, GHOST_PX=44, GHOST_SEL="#next,#retry,#step,#check,#cstep,#xcheck,#xskip,#wcheck,#workthrough,#stepbreak,#onemore,#ortry,#orhelp,#orshow,#stephelp,#showhint,.opt,#wsnext";
+var screenKey="", screenAt=0, screenCause=null, lastAct=null; // var: render() can run before this line during start-up
+function noteScreen(){ const k=[phase, stepIdx, cur&&cur.prompt, sc&&sc.state, whyState&&whyState.done, mode].join("|"); if(k!==screenKey){ screenKey=k; screenAt=Date.now(); screenCause=(lastAct && screenAt-lastAct.t<1000)?lastAct:null; } }
+function ghostBlocks(a, now){ if(!screenCause || now-screenAt>=GHOST_MS) return false;
+  if(a.key) return !!screenCause.key; if(screenCause.key) return false;
+  return Math.hypot((a.x||0)-(screenCause.x||0), (a.y||0)-(screenCause.y||0)) < GHOST_PX; }
+window.addEventListener("keydown", e=>{ if(e.isTrusted && !e.repeat && (e.key==="Enter"||e.key===" ")) lastAct={t:Date.now(), key:true}; }, true);
+app.addEventListener("click", e=>{ if(!e.isTrusted) return; const now=Date.now(); const a={key:e.detail===0, x:e.clientX, y:e.clientY};
+  const b=e.target&&e.target.closest&&e.target.closest(GHOST_SEL);
+  if(b && ghostBlocks(a, now)){ e.preventDefault(); e.stopImmediatePropagation(); b.classList.remove("ghost-held"); void b.offsetWidth; b.classList.add("ghost-held"); return; }
+  lastAct={t:now, key:a.key, x:a.x, y:a.y}; }, true);
 app.addEventListener("keydown", e=>{ // keyboard for the practice screen: Enter checks, 1-4 / a-d pick, arrows move
   if(!cur) return;
   const tg=e.target, tag=tg.tagName, isOpt=tg.classList&&tg.classList.contains("opt");
