@@ -140,7 +140,7 @@ pre.stack .cr{color:#B45309;font-weight:600}
 .ws{margin:8px 0 4px}
 .ws-grid{display:inline-grid;gap:4px 3px;margin:0 auto;padding:12px 14px 12px 8px;background:#F7F9FC;border:2px solid var(--line);border-radius:12px;font-variant-numeric:tabular-nums}
 .ws-wrap{text-align:center;overflow-x:auto;-webkit-overflow-scrolling:touch}
-.ws .cell{width:46px;height:52px;border:2px solid var(--line);border-radius:9px;background:#fff;font-size:26px;font-weight:800;text-align:center;line-height:48px;padding:0;color:var(--ink);cursor:pointer;font-family:Menlo,Consolas,"Courier New",monospace}
+.ws .cell{width:54px;height:52px;border:2px solid var(--line);border-radius:9px;background:#fff;font-size:26px;font-weight:800;text-align:center;line-height:48px;padding:0;color:var(--ink);cursor:pointer;font-family:Menlo,Consolas,"Courier New",monospace}
 .ws .cell.sel{border-color:#1762A6;background:#E9F4FF;box-shadow:0 0 0 3px #B9DCFC;position:relative;z-index:1}
 .ws-direction{max-width:420px;margin:0 auto 10px;padding:10px 12px;border:2px solid #D6E5F4;border-radius:10px;background:#F1F7FC;text-align:left;font-size:15px;line-height:1.35}
 .ws-direction b{display:block;font-size:17px;margin-bottom:2px}
@@ -149,7 +149,7 @@ pre.stack .cr{color:#B45309;font-weight:600}
 .pad .btn.small-txt{font-family:inherit;font-size:15px}
 .ws .cell.fixed{border-color:transparent;background:transparent;cursor:default;font-size:28px}
 .ws .cell.locked{background:#F0F3F7;color:var(--graphite);cursor:default;border-style:dashed}
-.ws .cell.carry{width:46px;height:40px;line-height:36px;font-size:17px;border-radius:7px;color:#B45309;border-color:#E9D8B5;background:#FFFBEF}
+.ws .cell.carry{width:54px;height:40px;line-height:36px;font-size:17px;border-radius:7px;color:#B45309;border-color:#E9D8B5;background:#FFFBEF}
 .ws .cell.carry:empty::before{content:"";}
 .ws .cell.bad{border-color:var(--no);background:var(--no-bg);color:var(--no)}
 .ws .cell.good{border-color:var(--ok);background:var(--ok-bg)}
@@ -165,7 +165,7 @@ pre.stack .cr{color:#B45309;font-weight:600}
 .pad .btn.go{grid-column:span 2;font-family:inherit;font-size:18px}
 .supports{font-size:13px;color:var(--graphite);margin:8px 0 0;text-align:center}
 .supports .tag{margin-right:4px}
-@media (min-width:700px){ .ws .cell{width:54px;height:60px;line-height:56px;font-size:30px} .ws .cell.carry{height:42px;line-height:38px;font-size:18px} .ws .op{line-height:60px;font-size:30px} }
+@media (min-width:700px){ .ws .cell{width:62px;height:60px;line-height:56px;font-size:30px} .ws .cell.carry{width:62px;height:42px;line-height:38px;font-size:18px} .ws .op{line-height:60px;font-size:30px} }
 
 /* praise, session stop, parent tiers */
 .praise{margin-top:8px;display:flex;flex-direction:column;gap:6px}
@@ -1401,7 +1401,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.14 · September 25, 2026";
+const BUILD="v9.14.1 · September 25, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -3182,7 +3182,7 @@ function wsRowPrompt(k, sp){ if(k==="r1" && ws.locked["r1-0"]) return "The 0 is 
 function wsActiveRow(){ const row=(ws.sel||"").split("-")[0]; return wsIsRow(row)?row:(wsIsRow(ws.retRow)?ws.retRow:ws.rowKeys[0]); }
 function wsFirstCell(row){ return `${row}-${ws.locked[`${row}-0`]?1:0}`; }
 function wsHTML(readonly, marks){
-  const sp=wsSpec(cur); const sup=wsSup(); const cellW = window.innerWidth>=700 ? 54 : 46;
+  const sp=wsSpec(cur); const sup=wsSup(); const cellW = window.innerWidth>=700 ? 62 : 54;
   const cellsRow=(key, cls, locked)=>{ let h=""; for(let p=sp.cols-1;p>=0;p--){ const k=`${key}-${p}`; const v=ws.vals[k]||""; const lk=!!ws.locked[k]; const m=marks&&marks[k]; const role=key==="t"?"answer": "partial product"; h+=`<button type="button" class="cell ${cls||""}${k===ws.sel&&!readonly?" sel":""}${lk?" locked":""}${m?" "+m:""}" data-k="${k}" ${readonly||lk?"disabled":""} aria-label="${role} ${WHOLE_PLACES[p]||""} place, ${v?"digit "+esc(v):"empty"}">${esc(v)}</button>`; } return h; };
   let g=`<div class="ws-grid" style="grid-template-columns:30px repeat(${sp.cols},${cellW}px)">`;
   if(sup>=2){ g+=`<div></div>`; for(let p=sp.cols-1;p>=0;p--) g+=`<div class="lbl">${WHOLE_PLACES[p]||""}</div>`; }
