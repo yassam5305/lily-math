@@ -812,7 +812,7 @@ function genComparePair(level, focus){
     }
     if(sym==="=") steps.push({t:`Every place is equal. <b>${fmt(a)}</b> and <b>${fmt(b)}</b> are <b>equivalent decimals</b>, the same value written with a different number of zeros on the end.`});
   }
-  steps.push({cues:[`The open side of the symbol faces the greater number.`, `You found which is greater: point the open side at it. Use = only if every digit matches.`], t:`Write the symbol. The open side faces the greater number.${a.d.length!==b.d.length && sym!=="=" ? " Notice: the longer number was "+((cmpV(a,b)<0 && a.d.length>b.d.length) || (cmpV(a,b)>0 && b.d.length>a.d.length) ? "the lesser one. More digits does not mean greater." : "greater this time, but only because of its digits, not its length.") : ""}`, check:finalCheck(p)});
+  steps.push({cues:[`The open side of the symbol faces the greater number.`, `You found which is greater: point the open side at it. Use = only if every digit matches.`], t:`Write the symbol. The open side faces the greater number.${a.d.length!==b.d.length && sym!=="=" ? " Notice: the longer number was "+((cmpV(a,b)<0 && a.d.length>b.d.length) || (cmpV(a,b)>0 && b.d.length>a.d.length) ? "the lesser one. More digits does not mean greater." : "greater this time, but only because of its digits, not its length.") : ""}`, check:finalCheck(p), vis:cmpLineHTML([a,b]), visAfter:true /* v9.19: the two numbers on a number line, once she has answered */});
   p.steps=steps;
   const diffPlace=(()=>{ const A=padTo(a,k), B=padTo(b,k); const sa=String(A.w)+A.d, sb=String(B.w)+B.d; const L=Math.max(sa.length,sb.length); const pa=sa.padStart(L,"0"), pb=sb.padStart(L,"0"); let i=0; while(i<L && pa[i]===pb[i]) i++; if(i>=L) return null; const wl=String(Math.max(A.w,B.w)).length; return {name: i<wl ? WHOLE_PLACES[wl-1-i] : DEC_PLACES[i-wl], da:pa[i], db:pb[i]}; })();
   p.hints=[
@@ -849,7 +849,7 @@ function genOrder(level, focus){
       cues:[`Which decimal part is the ${desc?"biggest":"smallest"} number of ${DEC_PLACES[k-1]}?`, `As whole numbers the decimal parts are ${padded.map(x=>parseInt(x.d,10)).join(", ")}. Which is ${desc?"biggest":"smallest"}?`],
       check:cm(`Which number goes <b>first</b>?`, nums.map(fmt), nums.indexOf(sorted[0])),
       after:`In order: ${sorted.map(x=>parseInt(padTo(x,k).d,10)).join(", ")}.`},
-    {t:`Order the rest the same way, then swap the original numbers back in.`, cues:[`Order the whole-number readings, then write the original decimals back in that order.`, `${desc?"Biggest":"Smallest"} count of ${DEC_PLACES[k-1]} first; each count belongs to one original number.`], check:finalCheck(p)}
+    {t:`Order the rest the same way, then swap the original numbers back in.`, cues:[`Order the whole-number readings, then write the original decimals back in that order.`, `${desc?"Biggest":"Smallest"} count of ${DEC_PLACES[k-1]} first; each count belongs to one original number.`], check:finalCheck(p), vis:cmpLineHTML(nums), visAfter:true /* v9.19: the numbers on a number line, once she has answered */}
   ];
   p.hints=[
     {t:`Give every number the same number of decimal digits first.`},
@@ -868,7 +868,7 @@ function genWhichLarger(level, focus){
   const opts=[fmt(a),fmt(b)]; const ans=opts.indexOf(fmt(win));
   const tags=opts.map((o,i)=> i===ans ? "correct" : (a.d.length!==b.d.length ? "length" : "other"));
   const p={...base, prompt:`Which number is <b>${larger?"larger":"smaller"}</b>, ${fmt(a)} or ${fmt(b)}?`, options:opts, optionTags:tags, answer:ans, display:fmt(win), meta:{...base.meta, which:larger?"larger":"smaller"}};
-  p.steps=base.steps.slice(0,-1).concat([{t:`Say both numbers. In the first place where the digits differ, the greater digit belongs to the greater number.`, cues:[`Find the first place, reading left to right, where the digits differ.`, `The greater digit in that first differing place belongs to the greater number.`], check:finalCheck(p)}]);
+  p.steps=base.steps.slice(0,-1).concat([{t:`Say both numbers. In the first place where the digits differ, the greater digit belongs to the greater number.`, cues:[`Find the first place, reading left to right, where the digits differ.`, `The greater digit in that first differing place belongs to the greater number.`], check:finalCheck(p), vis:cmpLineHTML([a,b]), visAfter:true /* v9.19 */}]);
   { const G=cmpV(a,b)>0?a:b; // v9.18.1 review: hint 4 answers this question in its own words, not with a symbol it never asks for
     p.hints=base.hints.slice(0,3).concat([{t:`<b>${fmt(G)}</b> has the greater digit in that place, so it is the larger number. The question asks for the <b>${larger?"larger":"smaller"}</b> one.`}]); }
   return p;
@@ -1100,14 +1100,14 @@ const NOTES={
   "regroup":"That is what you get when a place adds up past 9 (or comes up short) and the regrouping gets lost. Watch the place that needs regrouping.",
   "alignment":"That is what you get when you line up the <b>ends</b> of the numbers instead of the <b>decimal points</b>.",
   "chop":"That is the number with its extra digits dropped, not rounded. When the circled digit is 5 or greater, the underlined digit goes up.",
-  "direction":"You rounded the wrong way. Look at the circled digit: 5 or greater goes up, 4 or less stays.",
+  "direction":"That one rounded the other way. Look at the circled digit: 5 or greater goes up, 4 or less stays.",
   "place":"You rounded to a different place than the one asked for. Underline the rounding place first.",
   "half-up":"That one looks close, but its circled digit is 5, so it rounds up, not down.",
   "below":"That one rounds down to the number below the target.",
   "above":"That one rounds to the number above the target.",
-  "count":"The decimal point moved the wrong number of places. Count the zeros in the power of ten: one place per zero.",
+  "count":"The decimal point moved a different number of places than it should. Count the zeros in the power of ten: one place per zero.",
   "trailing-zeros":"The number already ended in zeros. Keep those and add one more zero for each place the decimal point moves.",
-  "shift-dir":"The decimal point moved the wrong way. Multiplying makes a number greater, so the decimal point moves right; dividing makes it less, so the decimal point moves left.",
+  "shift-dir":"The decimal point moved the other way. Multiplying makes a number greater, so the decimal point moves right; dividing makes it less, so the decimal point moves left.",
   "length":"Longer is not greater with decimals. Line up the decimal points and compare place by place from the left.",
   "equal":"Those are not equivalent decimals. Line up the decimal points and compare place by place.",
   "ignore-place":"You compared the decimal digits as if they were whole numbers without giving them the same number of places first.",
@@ -1118,11 +1118,11 @@ const NOTES={
   "dropped-digit":"A digit went missing. Read all the digits after the decimal point as one number.",
   "whole":"The whole number part slipped. Everything before the decimal point (or before the word 'and') is the whole number part.",
   "skip-zero":"You skipped the zero and moved the next digit into its place. A zero has no value to write, but it still holds its place.",
-  "shift":"One value is in the wrong place. Match each digit to the place it is in.",
+  "shift":"One value does not match its digit's place. Match each digit to the place it is in.",
   "missing-piece":"An addend is missing. Every digit that is not zero has a value to write.",
-  "whole-value":"A whole number addend has the wrong value. Check which place that digit is in.",
+  "whole-value":"A whole number addend needs a different value. Check which place that digit is in.",
   "dec-as-whole":"Decimal digits were treated like whole numbers. Digits after the decimal point are worth 1/10, 1/100, 1/1000.",
-  "zeros":"The digits are right but they are in the wrong places. Count the zeros you need right after the decimal point.",
+  "zeros":"The digits are right, but they need to sit in different places. Count the zeros you need right after the decimal point.",
   "no-whole":"There is no word 'and', so there is no whole number part. Start with 0 and the decimal point.",
   "two-points":"A number has only <b>one</b> decimal point. Adding a 0 on the end does not make a number greater: 0.05 and 0.050 are equivalent decimals. To change the value, change a digit.",
   "other":""
@@ -1586,7 +1586,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.18 · September 25, 2026";
+const BUILD="v9.19 · September 26, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -2416,7 +2416,7 @@ function diagnoseDecMul(prob, v){
   if(tag==="other" && m.kind==="whole" && Math.abs(v - m.a.w*m.b.w)<1e-9 && m.a.d) tag="whole-only";
   if(tag==="other" && m.sections.length>1){ for(let i=0;i<m.sections.length;i++){ const s=m.sections.reduce((a,b,j)=>a+(j===i?0:b),0)/1000; if(Math.abs(v-s)<1e-9){ tag="sections"; break; } } }
   if(tag==="other"){ const digitsOnly = String(fmt(m.a)).replace(/[.,]/g,"")*String(fmt(m.b)).replace(/[.,]/g,""); if(Math.abs(v-digitsOnly)<1e-9) tag="point"; }
-  return {tag, note: tag==="point" ? "The digits are right; the decimal point landed in the wrong place. Compare with your estimate: is the answer about the right size?"
+  return {tag, note: tag==="point" ? "The digits are right; the decimal point needs to land somewhere else. Compare with your estimate: is the answer about the right size?"
     : tag==="whole-only" ? "Only the whole-number part was multiplied. The decimal part is a section too: multiply it and add it in."
     : tag==="sections" ? "One section of the model was left out. Every part of one number times every part of the other, then add them all." : ""};
 }
@@ -2751,7 +2751,7 @@ Object.assign(SKILLS, {
   fractions:{name:"Fractions: simplify, mixed numbers, estimate", gen:safeGen(genFractions), blurb:"6/8 → 3/4; 7/4 → 1 3/4; 3/8 + 5/6 ≈ 1", std:"5.NF.1 5.NF.2 (foundations only)", lessons:["U5L1","U5L2","U5L3","U5L4"]}
 });
 SKILL_ORDER.push("decmul","decdiv","fractions");
-Object.assign(NOTES, {"point":"The digits are right; the decimal point is in the wrong place. Estimate first: about how big should the answer be?", "whole-only":"Only the whole-number part was multiplied. The decimal part is a section too.", "sections":"One section of the model is missing.", "groups":"That multiplied instead of counting how many groups fit.", "unit":"The unit count was right, but it was not written back as a decimal.", "not-simplest":"Equal, but not yet in simplest form.", "one-side":"Only one of the numerator or denominator was divided.", "structure":"The operation did not match the relationship in the story.", "keyword":"That followed a word like \"more\" or \"each\" instead of the relationship between the amounts.", "benchmark":"Compare each fraction to 0, 1/2, and 1 first.", "common-denominator":"Different denominators mean different piece sizes; make them the same before comparing.", "model":"The model's rows are the algorithm's partial products."});
+Object.assign(NOTES, {"point":"The digits are right; the decimal point needs to move. Estimate first: about how big should the answer be?", "whole-only":"Only the whole-number part was multiplied. The decimal part is a section too.", "sections":"One section of the model is missing.", "groups":"That multiplied instead of counting how many groups fit.", "unit":"The unit count was right, but it was not written back as a decimal.", "not-simplest":"Equal, but not yet in simplest form.", "one-side":"Only one of the numerator or denominator was divided.", "structure":"The operation did not match the relationship in the story.", "keyword":"That followed a word like \"more\" or \"each\" instead of the relationship between the amounts.", "benchmark":"Compare each fraction to 0, 1/2, and 1 first.", "common-denominator":"Different denominators mean different piece sizes; make them the same before comparing.", "model":"The model's rows are the algorithm's partial products."});
 const _diagnose3=diagnose;
 diagnose=function(prob, yours){
   if(prob.skill==="decmul" && prob.type==="input") return diagnoseDecMul(prob, parseAnswer(yours));
@@ -2765,7 +2765,7 @@ const _whyFor3=whyFor;
 whyFor=function(p){ const m=p.meta||{}; let out=null;
   if(p.skill==="decmul" && m.a){ const q=`Why does the product have ${plural(m.places,"decimal place")}${m.places?"":" (none)"}?`;
     const shownPl=decPlaces(fromThousandths(m.V)); const dropped = shownPl<m.places; // v9.12: 2.5 × 4 = 10 shows no decimal places, so the question cannot claim it has one
-    if(dropped){ const full=fixedFrom(m.V, m.places); const qD=`${fmt(m.a)} × ${fmt(m.b)} = ${fmt(fromThousandths(m.V))}. Why is that the same as ${fmt(full)}?`; const rightD=`${fmt(full)} and ${fmt(fromThousandths(m.V))} are equal: zeros at the end, after the decimal point, can be dropped.`; const wrongD=[`The zeros after the decimal point were a mistake, so the digits had to be erased.`, `Multiplying by a whole number always takes away the decimal places.`, `They are not the same; ${fmt(full)} is ten times bigger than ${fmt(fromThousandths(m.V))}.`]; const oD=buildOptions(rightD, wrongD.map(text=>({text, tag:"why-wrong"}))); out={q:qD, options:oD.options, answer:oD.answer, display:rightD}; }
+    if(dropped){ const full=fixedFrom(m.V, m.places); const qD=`${fmt(m.a)} × ${fmt(m.b)} = ${fmt(fromThousandths(m.V))}. Why is that the same as ${fmt(full)}?`; const rightD=`${fmt(full)} and ${fmt(fromThousandths(m.V))} are equal: zeros at the end, after the decimal point, can be dropped.`; const wrongD=[`The zeros after the decimal point did not belong, so the digits had to be erased.`, `Multiplying by a whole number always takes away the decimal places.`, `They are not the same; ${fmt(full)} is ten times bigger than ${fmt(fromThousandths(m.V))}.`]; const oD=buildOptions(rightD, wrongD.map(text=>({text, tag:"why-wrong"}))); out={q:qD, options:oD.options, answer:oD.answer, display:rightD}; }
     else { const right = m.kind==="whole" ? `${fmt(m.a)} has ${plural(decPlaces(m.a),"decimal place")} and ${fmt(m.b)} is whole: ${placeWord(decPlaces(m.a))} times ones are still ${placeWord(decPlaces(m.a))}.` : `${placeWord(decPlaces(m.a))} times ${placeWord(decPlaces(m.b))} make ${placeWord(m.places)}, so the product has ${plural(m.places,"decimal place")}.`;
     const wrong=[`Multiplying makes a number bigger, so the decimal point always moves to the right.`, `The answer to a multiplication is always a whole number, so the point goes at the very end.`, `You count all the digits in both numbers, not just the digits after the decimal point.`];
     const o=buildOptions(right, wrong.map(text=>({text, tag:"why-wrong"}))); out={q, options:o.options, answer:o.answer, display:right}; } }
@@ -2799,8 +2799,8 @@ const NOTES2={
   "no-parens":"Without parentheses the order of operations gives a different answer. The question needs parentheses somewhere.",
   "other-expr":"That expression evaluates to a different number. Evaluate both before choosing.",
   "order":"The order got flipped. 'Subtract A from B' means B − A, and 'divide by A' puts A last.",
-  "operation":"The wrong operation was chosen for one of the words. Sum is +, product is ×, difference is −, quotient is ÷.",
-  "grouping":"The parentheses are around the wrong part. The group word (sum, product, difference) tells you what goes inside.",
+  "operation":"One of the words needs a different operation. Sum is +, product is ×, difference is −, quotient is ÷.",
+  "grouping":"The parentheses need to go around a different part. The group word (sum, product, difference) tells you what goes inside.",
   "wrong-sentence":"That sentence describes a different expression. Match the group word to what is inside the parentheses.",
   "relation":"Look for A inside B, then name the one extra thing B does to it.",
   "shift-partial":"The second partial product was not placed correctly. Multiplying by the tens digit means multiplying by tens, so it needs a 0 in the ones place.",
@@ -2959,7 +2959,7 @@ function parseWeakKey(key){ const [head,ck=""]=key.split("|"); const [sk,comp]=h
 // The focus a generator needs to produce a problem in this context (the same fields focusFor() uses for follow-ups).
 const checkinCtx=p=>{ const c={...ctxOf(p)}; delete c.p; delete c.dec; return c; }; // check-ins are keyed by task form (operation, representation, kind, direction), not by the exact rounding place
 function focusFromCtx(sk, ctx){ const f={}; if(!ctx) return f; if(ctx.op) f.op=ctx.op; if(ctx.variant) f.variant=ctx.variant; if(ctx.kind) f.kind=ctx.kind; if(ctx.dir) f.dir=ctx.dir; if(sk==="rounding"){ if(ctx.p!==undefined) f.p=+ctx.p; else if(ctx.dec==="y") f.p=pick([-1,-2]); else if(ctx.dec==="n") f.p=pick([0,2,3,4,5]); if(ctx.which!==undefined) f.which=ctx.which==="y"; } return f; }
-const compName=(sk,comp)=> comp==="why" ? "explaining the reason" : comp==="alignment" ? "lining up the decimal points" : (sk==="multiply" && COMP_NAMES[comp]) ? COMP_NAMES[comp] : (comp && comp!=="*" && comp!=="other" ? comp.replace(/-/g," ") : (SKILLS[sk]?SKILLS[sk].name.toLowerCase():"the whole skill"));
+const compName=(sk,comp)=> (comp==="why"||comp==="why-wrong") ? "explaining the reason" : comp==="wrong-product" ? "factors that multiply back to the number" : comp==="wrong-sentence" ? "matching words to an expression" /* v9.19 review: these names reach kid screens ("Next up"), so no "wrong" */ : comp==="alignment" ? "lining up the decimal points" : (sk==="multiply" && COMP_NAMES[comp]) ? COMP_NAMES[comp] : (comp && comp!=="*" && comp!=="other" ? comp.replace(/-/g," ") : (SKILLS[sk]?SKILLS[sk].name.toLowerCase():"the whole skill"));
 const ctxLabel=(sk,ctx)=>{ if(!ctx) return ""; const parts=[]; if(ctx.op) parts.push(ctx.op==="×"?"multiplying":ctx.op==="÷"?"dividing":ctx.op==="+"?"adding":(ctx.op==="−"||ctx.op==="-")?"subtracting":ctx.op); if(ctx.variant) parts.push(ctx.variant==="repeated"?"repeated × 10":ctx.variant==="threefactor"?"three factors":ctx.variant); if(sk==="rounding"){ if(ctx.p!==undefined && typeof placeSing==="function") parts.push(`nearest ${placeSing(+ctx.p)}`); else if(ctx.dec==="y") parts.push("decimal places"); else if(ctx.dec==="n") parts.push("whole-number places"); if(ctx.which==="y") parts.push("which-number form"); } return parts.join(", "); };
 const weakLabel=key=>{ const {sk,comp,ctx}=parseWeakKey(key); const k=ctxLabel(sk,ctx); return esc(compName(sk,comp)+(k?` (${k})`:"")); }; // v9.12: keys can come from an imported backup, so escape
 const compsOfMiss=(sk,tag)=>{ const t=(!tag||tag==="other"||tag==="correct")?"*":tag; return sk==="multiply" ? [TAG_TO_COMP[t]||"*"] : [t]; }; // which component a graded miss with this tag points at ("other" = the skill as a whole)
@@ -3017,7 +3017,8 @@ function recoveryTarget(o){
   const focus={...focusFromCtx(sk,ctx)}; if(comp!=="*") focus.tag = sk==="multiply" ? (COMP_TO_TAG[comp]||comp) : comp;
   const nm=weakLabel(key);
   const why = e.state==="review" ? `${nm} · review ${e.stage} of 2` : `${nm} · ${e.wins} of 2 on your own${e.wins>=1 && level>(e.lvl||1)?", a notch harder":""}`; // v9.12: only when it really is harder
-  return {key, sk, comp, ctx, level, focus, harder, state:e.state, wins:e.wins, why};
+  const kid = e.state==="review" ? `${nm} · a check-in` : `${nm}${e.wins>=1 && level>(e.lvl||1)?" · a notch harder":""}`; // v9.19 review: what kid screens show. No "0 of 2" counts (they read as a score); `why` keeps the detail for tests and grown-ups
+  return {key, sk, comp, ctx, level, focus, harder, state:e.state, wins:e.wins, why, kid};
 }
 // Generate a problem for the target and make sure it really is eligible evidence for it; otherwise try again. Selection and grading
 // share eligible(), so what Focus serves is exactly what can count. If the generator cannot hit it in 12 tries, the miss level is used as is.
@@ -3043,7 +3044,7 @@ function load(){
     let kept=false; try{ const raw=localStorage.getItem(KEY); if(raw){ let dup=false; for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && k.startsWith(KEY+".unreadable") && localStorage.getItem(k)===raw){ dup=true; break; } } if(!dup){ const k2=localStorage.getItem(KEY+".unreadable") ? KEY+".unreadable."+Date.now() : KEY+".unreadable"; localStorage.setItem(k2, raw); } kept=true; } }catch(e2){}
     loadProblem = kept ? "The saved progress on this device could not be read. A copy of it was kept on this device (under the name "+KEY+".unreadable) so a grown-up or a tech helper can try to recover it. New progress starts fresh." : "The saved progress on this device could not be read, and this device would not let the app keep a copy. New progress starts fresh.";
     DB={profiles:{}, current:null}; }
-  if(!DB.profiles || typeof DB.profiles!=="object" || Array.isArray(DB.profiles)){ DB.profiles={}; loadProblem=loadProblem||"Part of the saved progress was in the wrong shape and was skipped."; }
+  if(!DB.profiles || typeof DB.profiles!=="object" || Array.isArray(DB.profiles)){ DB.profiles={}; loadProblem=loadProblem||"Part of the saved progress could not be read and was skipped."; }
   for(const n of Object.keys(DB.profiles)){ const pr=DB.profiles[n]; if(!pr || typeof pr!=="object" || Array.isArray(pr)){ delete DB.profiles[n]; continue; } try{ DB.profiles[n]=normalize({...pr, name:pr.name||n}); }catch(e){ delete DB.profiles[n]; } }
   if(DB.current && !DB.profiles[DB.current]) DB.current=null;
   S = DB.current ? DB.profiles[DB.current] : null;
@@ -3120,7 +3121,7 @@ function buildTodayPlan(){ const plan=[]; const now=Date.now(); const W=S.weak||
   if(Object.keys(weekWeights()).length){ plan.push("week"); plan.push("week"); } else plan.push("mix");
   if(openWeak) plan.push("focus");
   plan.push("mix"); while(plan.length<5) plan.push("mix"); if(plan.length>6) plan.length=6; return plan; }
-const todayLabel=k=>({review:"a check-in on something you have shown before", week:"this week's lesson", focus:"your weakest spot", mix:"mixed practice"})[k]||k;
+const todayLabel=k=>({review:"a check-in on something you have shown before", week:"this week's lesson", focus:"one from your practice list", mix:"mixed practice"})[k]||k; // v9.19 review: kid-facing, so no labels ("weakest" is not a word she sees)
 function todaySummaryHTML(){ const done=S.log.filter(e=>e.today===todaySid && isFresh(e) && !(e.placement && !e.ok)); const n=done.length; const right=done.filter(e=>e.ok).length, ind=done.filter(e=>classifyEntry(e)==="independent").length; const last=done[done.length-1]; const endedSolo=!!(last && classifyEntry(last)==="independent"); const t=recoveryTarget(); /* the sitting's own primary problems, by session id; a missed quick check is not scored */
   return `<div class="stop" role="status"><b>That is today.</b> ${n} problem${n===1?"":"s"}: ${right} right, ${ind} on your own.${endedSolo?"":" The last ones took some help, and that is fine: next time starts fresh."} ${t?(()=>{ const nm=t.why.split(" · ")[0], skn=SKILLS[t.sk].name.toLowerCase(); return `Next time: ${esc(nm.toLowerCase().startsWith(skn)?nm:`${skn}, ${nm}`)}.`; })():"Nothing on the watch list right now."}<div class="actions" style="margin-top:8px"><button class="btn primary" id="stopnow">Done for today</button><button class="btn quiet" id="onemore">One more anyway</button></div></div>`; } // fresh problems answered since the app opened; the last count at which the stopping point was offered; she tapped "Done for today"
 let ws=null;         // multiplication workspace state for the current problem: {vals:{cellKey:digit}, sel:cellKey}
@@ -3254,7 +3255,7 @@ function home(){
   const mw=missWeights().w, missSkills=Object.keys(mw).sort((a,b)=>mw[b]-mw[a]);
   const wsum=weakSummary(), target=recoveryTarget();
   const nextDue = wsum.review.length ? Math.min(...wsum.review.map(w=>w.due)) : 0;
-  const focusLine = target ? `Next up: <b>${esc(SKILLS[target.sk].name)}</b>, ${esc(target.why)}${wsum.weak.length>1?`; ${wsum.weak.length-1} more on the list`:""}${wsum.review.length?`; ${wsum.review.length} in review`:""}.` : wsum.review.length ? `Nothing to focus on right now: ${wsum.review.length} thing${wsum.review.length===1?"":"s"} in review. Next check-in ${new Date(nextDue).toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}.` : "";
+  const focusLine = target ? `Next up: <b>${esc(SKILLS[target.sk].name)}</b>, ${esc(target.kid||target.why)}${/* v9.19 review: no "0 of 2 on your own" and no "N more on the list" on her screen */""}${wsum.review.length?`; ${wsum.review.length} in review`:""}.` : wsum.review.length ? `Nothing to focus on right now: ${wsum.review.length} thing${wsum.review.length===1?"":"s"} in review. Next check-in ${new Date(nextDue).toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}.` : "";
   const showFocus = !!target; // with nothing open or due, Focus would just be Mix; the note below says when the next check-in is
   const doneLine = sessionDone ? `<p class="muted week-note" style="margin:0 0 10px"><b>Nice stopping point.</b> ${S.today.c ? `${S.today.c} right today${S.today.a?` of ${S.today.a}`:""}.` : `You worked on ${S.today.a||"some"} problem${S.today.a===1?"":"s"} today. Hard ones are how brains grow.`} Come back tomorrow, or pick something below if you want more.</p>` : "";
   app.innerHTML=`
@@ -3263,6 +3264,7 @@ function home(){
     ${doneLine}<div class="card" style="margin-top:0;border-color:var(--ink)"><div class="week-head"><h2 style="margin:0">Start today</h2><span class="std" title="The app plans it">Planned for you</span></div>
       <p class="muted" style="font-size:14px;margin:6px 0 10px">About six problems, chosen for you: ${buildTodayPlan().map(todayLabel).filter((v,i,a)=>a.indexOf(v)===i).join(", ")}. It tries to end on one you get right on your own: after the plan, a couple more if needed.</p>
       <div class="actions" style="margin-top:0"><button class="btn primary mix" data-skill="today" style="margin-top:0">Start today</button></div></div>
+    ${nsHomeTile()}
     ${weekHTML}
     <div class="card hw">
       <div class="week-head"><h2 style="margin:0">Homework practice</h2><span class="std" title="Problem shapes from the worksheet, not from your level">Worksheet shapes</span></div>
@@ -3480,6 +3482,7 @@ function pickSkill(){
   else if(mode==="hw:check") return (pendingHW && pendingHW.skill) || "multiply";
   else if(hwMode()) return hwMode().skill;
   else if(eff!=="mix" && eff!=="week" && eff!=="miss") return eff;
+  if(slot==="mix" && todayPlan && todayPlan.indexOf("mix")===todayIdx && typeof nsUnit1Pick==="function"){ const u1=nsUnit1Pick(); if(u1) return u1; } // v9.19 (check-up): a school note naming Number Sense → for 4 weeks, the first "mix" slot of Start today draws from the Unit 1 skills only; no note → unchanged
   return drawWeighted(SKILL_ORDER, SKILL_ORDER.map(k=>(MAX_LEVEL+1-S.levels[k])*2+1)); // mix (and week with nothing to draw from)
 }
 // v9.12: leaving a problem after working on it (typing, a hint, the nudge, the example) is recorded, and counts as a miss for the level.
@@ -3497,7 +3500,199 @@ function resetProblemState(){ // everything that must not leak from one problem 
   sc=null; stepRes=[]; revealed=0; passed=0; expanded=0; wtSignals=0; missEntry=null; whyState=null; okEntry=null; scratchStrokes=[]; ws=null; lastPraise=[]; exampleOpen=false; exStep=0; exAll=false; exSub={}; preVal=""; preSel=-1;
 }
 let pendingHW=null; // the parsed problem waiting to be served by next() in "hw:check" mode
-function start(m){ mode=m; if(m==="hw:check"){ pendingHW=null; hwEntry(); return; } if(m==="today"){ todayPlan=buildTodayPlan(); todayIdx=0; todayExtra=0; todaySid=Date.now(); } next(); }
+// ===== v9.19 hooks: the "show what you know" check-up (number sense profile) and the start-of-sitting quick look =====
+// Stubs; the real versions are defined in the v9.19 blocks below and replace these.
+// ===== v9.19 habits (NS-SPEC Part 3): the start-of-sitting quick look, estimate first / check after, and number line pictures =====
+// Kid-facing text in this block never uses labels: it shows what she can do and names what comes next.
+(function(){ try{ const st=document.createElement("style"); st.textContent=[
+  ".est{margin:0 0 12px;padding:10px 12px;border:2px dashed var(--line);border-radius:12px;background:#F7F9FC;color:var(--ink)}",
+  ".est .cq{font-weight:600;margin-bottom:8px;font-size:16px}",
+  ".est-opts{display:flex;flex-wrap:wrap;gap:8px}",
+  ".est-opts .btn.estopt{min-height:44px;padding:8px 14px;font-size:15px;color:var(--ink)}",
+  ".estopt:disabled{opacity:.6}.estopt.right:disabled,.estopt.picked:disabled{opacity:1}",
+  ".estopt.picked{border-color:var(--ink);background:#F0F3F7}",
+  ".estopt.right{border-color:var(--ok);background:var(--ok-bg)}.estopt.right::after{content:\" \\2713\";font-weight:800;color:#1E6B47}",
+  ".est .est-msg{margin-top:8px;font-weight:600;font-size:15px}.est .est-msg:empty{display:none}",
+  ".chart.nl{color:var(--ink)} .nl-cap{font-size:14px;color:var(--graphite);text-align:center;margin:2px 0 0}"
+  ].join("\n"); document.head.appendChild(st); }catch(e){} })();
+
+// --- 3c. A number line picture: numberLineSVG({min, max, ticks, points:[{v, label}], labels, aria}) ---
+// ticks = number of equal intervals (default 10). labels: "all" | "ends" | "ends+mid" (default: all when they fit). Colors come from the
+// page's CSS variables, the text is sized for an iPad, and the picture carries an accessible label (point labels only, never hidden values).
+function nlFmt(v){ const r=Math.round(v*10000)/10000; return r.toLocaleString("en-US",{maximumFractionDigits:4}); }
+function numberLineSVG(o){
+  o=o||{}; const min=+(o.min||0), max=(o.max===undefined?1:+o.max); if(!Number.isFinite(min) || !Number.isFinite(max) || !(max>min)) return "";
+  const n=Math.max(1, Math.min(20, Math.round(+o.ticks||10))); const pts=(Array.isArray(o.points)?o.points:[]).filter(p=>p && Number.isFinite(+p.v));
+  const W=560, x0=44, x1=W-44, axisY=92, H=axisY+40; const X=v=>Math.round((x0+(Math.max(min,Math.min(max,v))-min)/(max-min)*(x1-x0))*10)/10;
+  const tickV=i=>min+(max-min)*i/n, tickTxt=[...Array(n+1).keys()].map(i=>nlFmt(tickV(i))); const gap=(x1-x0)/n;
+  const mode=o.labels || (tickTxt.every(t=>t.length*9 < gap-4) ? "all" : "ends+mid");
+  const showTick=i=>mode==="all" || i===0 || i===n || (mode==="ends+mid" && n%2===0 && i===n/2);
+  const COLORS=["var(--nl-1,#B45309)","var(--nl-2,#2F6FB0)","var(--nl-3,#2F9E6B)","var(--nl-4,#7A4EB0)"];
+  const aria=o.aria || `Number line from ${nlFmt(min)} to ${nlFmt(max)}${pts.length?`, with ${pts.map(p=>String(p.label)).join(", ")} marked`:""}`;
+  let svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;display:block;margin:8px auto" role="img" aria-label="${esc(aria)}">`;
+  svg+=`<line x1="${x0-14}" y1="${axisY}" x2="${x1+14}" y2="${axisY}" style="stroke:var(--ink)" stroke-width="2.5"/>`;
+  for(let i=0;i<=n;i++){ const x=X(tickV(i)), big=showTick(i); svg+=`<line x1="${x}" y1="${axisY-(big?10:7)}" x2="${x}" y2="${axisY+(big?10:7)}" style="stroke:var(--ink)" stroke-width="${big?2:1.5}"/>`; if(big) svg+=`<text x="${x}" y="${axisY+30}" font-size="15" text-anchor="middle" style="fill:var(--graphite)">${esc(tickTxt[i])}</text>`; }
+  const placed=pts.map((p,i)=>({label:String(p.label), x:X(+p.v), c:COLORS[i%COLORS.length]})).sort((a,b)=>a.x-b.x);
+  placed.forEach((p,i)=>{ const prev=placed[i-1]; p.lvl = prev && (p.x-prev.x) < Math.max(40, 9*(p.label.length+prev.label.length)/2+8) ? (prev.lvl+1)%3 : 0; });
+  placed.forEach(p=>{ const ly=axisY-20-p.lvl*22; if(p.lvl) svg+=`<line x1="${p.x}" y1="${ly+4}" x2="${p.x}" y2="${axisY-8}" style="stroke:${p.c}" stroke-width="1.5"/>`;
+    svg+=`<circle cx="${p.x}" cy="${axisY}" r="7.5" style="fill:${p.c}"/><text x="${p.x}" y="${ly}" font-size="17" font-weight="700" text-anchor="middle" style="fill:${p.c}">${esc(p.label)}</text>`; });
+  svg+=`</svg>`; return `<div class="chart nl">${svg}</div>`;
+}
+// A zoom that holds every value (in thousandths): a tenth-of-a-unit window like 0.4 to 0.5 when the values share it, else up to ten
+// equal steps of one place value, padded a step on each side when there is room. u0 = the smallest place the numbers use.
+function nlZoom(vals, u0){
+  const lo=Math.min(...vals), hi=Math.max(...vals);
+  for(let u=Math.max(1,u0||1); u<=1e6; u*=10){ const U=u*10, a=Math.floor(lo/U)*U; if(hi<=a+U) return {min:a/1000, max:(a+U)/1000, ticks:10};
+    const A=Math.floor(lo/u), B=Math.max(Math.ceil(hi/u), A+2); if(B-A<=10){ let a2=A, b2=B; if(a2>0 && b2-a2<10) a2--; if(b2-a2<10) b2++; return {min:a2*u/1000, max:b2*u/1000, ticks:b2-a2}; } }
+  return null;
+}
+// The compare / order walkthroughs: the numbers plotted, shown after she answers the last step (visAfter), with one line on why it helps.
+// Two different numbers closer than 8px on the line (like 47.39 and 47.4 on a 47-to-48 line) get a second, zoomed-in line of their own
+// (at most two), holding every number that falls inside that window. NL_SPAN = the drawn width numberLineSVG uses (560 - 2 × 44).
+const NL_SPAN=472, NL_MIN_GAP=8;
+function cmpLineHTML(nums){ try{ const k=Math.max(1, ...nums.map(x=>String(x.d||"").length)); const z=nlZoom(nums.map(toThousandths), Math.pow(10, 3-Math.min(3,k))); if(!z) return "";
+    let out=numberLineSVG({...z, points:nums.map(x=>({v:toThousandths(x)/1000, label:fmt(x)})), aria:`Number line from ${nlFmt(z.min)} to ${nlFmt(z.max)} with ${nums.map(fmt).join(", ")} marked. Farther right is greater.`})+`<p class="nl-cap">On the number line, farther right means greater.</p>`;
+    const px=(w,dv)=>dv/(w.max*1000-w.min*1000)*NL_SPAN; const srt=nums.map(x=>({x, v:toThousandths(x)})).sort((a,b)=>a.v-b.v); const wins=[];
+    for(let i=1;i<srt.length && wins.length<2;i++){ const a=srt[i-1], b=srt[i], dv=b.v-a.v; if(!(dv>0) || px(z,dv)>=NL_MIN_GAP) continue;
+      if(wins.some(w=>a.v>=w.min*1000-1e-6 && b.v<=w.max*1000+1e-6 && px(w,dv)>=NL_MIN_GAP)) continue; // already drawn up close
+      const kk=Math.max(1, String(a.x.d||"").length, String(b.x.d||"").length); const w=nlZoom([a.v,b.v], Math.pow(10, 3-Math.min(3,kk))); if(!w || px(w,dv)<NL_MIN_GAP) continue; wins.push(w);
+      const inside=srt.filter(s=>s.v>=w.min*1000-1e-6 && s.v<=w.max*1000+1e-6).map(s=>s.x);
+      out+=numberLineSVG({...w, points:inside.map(x=>({v:toThousandths(x)/1000, label:fmt(x)})), aria:`Zoomed-in number line from ${nlFmt(w.min)} to ${nlFmt(w.max)} with ${inside.map(fmt).join(", ")} marked.`})+`<p class="nl-cap">Up close: ${esc(fmt(a.x))} and ${esc(fmt(b.x))} are very near each other, so here is ${nlFmt(w.min)} to ${nlFmt(w.max)} zoomed in.</p>`; }
+    return out; }catch(e){ return ""; } }
+
+// --- 3a. Quick look: one tiny warm-up item the first time she starts Today each calendar day. No levels, no score, nothing in S.log. ---
+function qlDay(){ const d=new Date(); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; }
+function qlInit(){ if(!S) return null; if(!S.quick || typeof S.quick!=="object" || Array.isArray(S.quick)) S.quick={}; if(typeof S.quick.lastDay!=="string") S.quick.lastDay=""; if(!Array.isArray(S.quick.history)) S.quick.history=[]; return S.quick; }
+function quickLookDue(){ const qk=qlInit(); return !!qk && qk.lastDay!==qlDay(); }
+const QL_KINDS=["closer1","where","bigger","make1000","tentimes","estimate","friendly","round"];
+const QL_NAMES={closer1:"closer to 1", where:"find it on a number line", bigger:"which is bigger", make1000:"make 1,000", tentimes:"10 times as much", estimate:"about how big", friendly:"friendly part for dividing", round:"round to a tenth"};
+let qlItem=null, qlPick=-1;
+function qlBuild(kind){
+  const tenthsTxt=(s,only)=>{ const v=parseFloat(s); if(v<0.1) return "less than 1 tenth"; const d=(s.split(".")[1]||"").length; const t=Math.round(v*10); return (only?"only ":"")+(d<=1 ? `${t} tenth${t===1?"":"s"}` : `about ${t} tenth${t===1?"":"s"}`); };
+  const L=L$d;
+  if(kind==="closer1"){ const [A,B]=pick([["0.9","0.19"],["0.6","0.06"],["0.8","0.08"],["0.7","0.17"],["0.9","0.09"],["0.8","0.28"]]); const options=shuffle([A,B]);
+    return {kind, q:`Which is closer to <b>1</b>?`, options, answer:options.indexOf(A), why:`Yes. ${A} is ${tenthsTxt(A)}; ${B} is ${tenthsTxt(B,true)}. So ${A} is closer to 1.`, model:()=>`Not quite. ${A} is ${tenthsTxt(A)}; ${B} is ${tenthsTxt(B,true)}. So ${A} is closer to 1.`,
+      after:numberLineSVG({min:0, max:1, ticks:10, labels:"ends+mid", points:[{v:+A,label:A},{v:+B,label:B}]}) }; }
+  if(kind==="where"){ const ab=pick([47,38,62,29,83,57,36,64,73,58,26,85]); const t=ab/100, rev=(ab%10)*10+Math.floor(ab/10), vals=[t, rev/100, ab/1000].sort((x,y)=>x-y); const lab=shuffle(["A","B","C"]); /* the letters are shuffled across the points, so the right one is A, B, or C about equally often */ const names=["A","B","C"]; const answer=names.indexOf(lab[vals.indexOf(t)]); const T=nlFmt(t), lo=Math.floor(ab/10)/10;
+    const spot=t<0.34?"in the first third of the line":t<0.67?"near the middle of the line":"closer to 1 than to 0";
+    return {kind, q:`Where is <b>${T}</b> on the number line?`, vis:numberLineSVG({min:0, max:1, ticks:10, labels:"ends", points:vals.map((v,i)=>({v, label:lab[i]})), aria:"Number line from 0 to 1 with points A, B, and C marked"}), options:names, answer,
+      why:`Yes. ${T} is between ${nlFmt(lo)} and ${nlFmt(lo+0.1)}, ${spot}.`, model:()=>`Not quite. ${T} is ${Math.floor(ab/10)} tenths and ${ab%10} hundredths, so it is between ${nlFmt(lo)} and ${nlFmt(lo+0.1)}, ${spot}. That is point ${names[answer]}.`,
+      after:numberLineSVG({min:0, max:1, ticks:10, labels:"all", points:[{v:t, label:T}]}) }; }
+  if(kind==="bigger"){ const [A,B]=pick([["0.5","0.45"],["0.7","0.65"],["0.3","0.25"],["0.8","0.75"],["0.4","0.38"],["0.6","0.59"],["0.3","0.275"],["0.9","0.89"]]); const k=B.split(".")[1].length; const unit=k===3?"thousandths":"hundredths"; const Ap=A.padEnd(2+k,"0"), n=s=>parseInt(s.padEnd(2+k,"0").split(".")[1],10); const options=shuffle([A,B]);
+    const z=nlZoom([Math.round(parseFloat(A)*1000), Math.round(parseFloat(B)*1000)], Math.pow(10,3-k));
+    return {kind, q:`Which is bigger: <b>${A}</b> or <b>${B}</b>?`, options, answer:options.indexOf(A), why:`Yes. ${A} is the same as ${Ap}, which is ${n(A)} ${unit}. ${B} is ${n(B)} ${unit}.`, model:()=>`Not quite. ${A} is the same as ${Ap}: ${n(A)} ${unit}. ${B} is ${n(B)} ${unit}. More digits does not mean bigger.`,
+      after:z?numberLineSVG({...z, points:[{v:+A,label:A},{v:+B,label:B}]}):"" }; }
+  if(kind==="make1000"){ const x=ri(11,98)*10, right=1000-x, up=x%100?100-x%100:0; const options=shuffle([L(right), L(right+100), L(x+1000)]);
+    const path = up ? `${L(x)} + ${up} = ${L(x+up)}, then ${L(right-up)} more makes 1,000` : `${L(x)} + ${L(right)} = 1,000`;
+    return {kind, q:`<b>${L(x)}</b> + ? = <b>1,000</b>. What number makes 1,000 with ${L(x)}?`, options, answer:options.indexOf(L(right)), why:`Yes. ${up?`Count up: ${path}. That is ${L(right)} in all.`:`${path}.`}`, model:()=>`Not quite. Count up from ${L(x)}: ${up?`${path}. That is ${L(right)} in all.`:`${L(right)} more makes 1,000.`}` }; }
+  if(kind==="tentimes"){ const s=pick(["0.4","0.03","0.7","2.5","0.06","0.8","1.2","0.09"]); const v=parseFloat(s); const R=nlFmt(v*10), big=nlFmt(v*100), small=nlFmt(v/10); const options=shuffle([R,big,small]);
+    return {kind, q:`10 times as much as <b>${s}</b> is ___.`, options, answer:options.indexOf(R), why:`Yes. 10 times as much moves every digit one place to the left: ${s} becomes ${R}.`,
+      model:(pk)=>`Not quite. 10 times as much moves every digit one place to the left, so ${s} becomes ${R}.${options[pk]===small?` (${small} is 1/10 of ${s}.)`:options[pk]===big?` (${big} is 100 times as much.)`:""}` }; }
+  if(kind==="estimate"){ const lead=n=>{ const m=Math.pow(10,String(n).length-1); return Math.round(n/m)*m; }; const P=Math.random()<0.6?1000:10000; let a=48, b=21, g=0;
+    do{ a = P===1000 ? ri(31,89) : ri(210,490); b=ri(12,29); g++; }while(g<200 && !(a*b>=0.6*P && a*b<=1.7*P && lead(a)*lead(b)>=0.6*P && lead(a)*lead(b)<=1.2*P && b%10!==0)); // the rounded product is plainly "about" P
+    if(g>=200){ a = P===1000 ? 48 : 312; b = P===1000 ? 21 : 29; }
+    const set=pick([[P/10,P,P*10],[P/100,P/10,P],[P,P*10,P*100]]); /* v9.19 review: the right size is not always the middle choice */ const options=set.map(v=>`about ${L(v)}`); const line=`Round first: ${L(lead(a))} × ${L(lead(b))} = ${L(lead(a)*lead(b))}, so ${L(a)} × ${b} is about ${L(P)}.`;
+    return {kind, q:`About how big is <b>${L(a)} × ${b}</b>?`, options, answer:set.indexOf(P), why:`Yes. ${line}`, model:()=>`Not quite. ${line}` }; }
+  if(kind==="friendly"){ let d=11, q=104, N=1144, opts=null, g=0;
+    do{ d=ri(11,15); q=ri(102,106); N=d*q; /* small leftovers (like 44 ÷ 11) keep it a warm-up */ const right=d*100, th=Math.floor(N/1000)*1000, tens=N%10 ? N-N%10 : N-10; const c=[...new Set([right, th, tens])]; if(c.length===3 && th%d!==0 && tens%d!==0) opts=c; }while(!opts && g++<100);
+    if(!opts){ d=11; q=104; N=1144; opts=[1100,1000,1140]; }
+    const options=shuffle(opts.map(L)); const left=N-d*100;
+    return {kind, q:`You are dividing <b>${L(N)} ÷ ${d}</b>. Which part of ${L(N)} is friendly to divide by ${d} first?`, options, answer:options.indexOf(L(d*100)),
+      why:`Yes. ${d} × 100 = ${L(d*100)}, so ${L(d*100)} ÷ ${d} = 100. What is left is ${left}, and ${left} ÷ ${d} = ${q-100}.`, model:()=>`Not quite. Look for a part that ${d} goes into evenly: ${d} × 100 = ${L(d*100)}. What is left is ${left}, and ${left} ÷ ${d} = ${q-100}. So ${L(N)} ÷ ${d} = ${q}.` }; }
+  // round (the default)
+  const w=ri(1,9), t=ri(1,8), h=pick([1,2,3,4,6,7,8,9]); const s=`${w}.${t}${h}`, up=h>=5, lo=`${w}.${t}`, hi=`${w}.${t+1}`, R=up?hi:lo; const options=shuffle([R, up?lo:hi, String(Math.round(parseFloat(s)))]);
+  return {kind:"round", q:`Round <b>${s}</b> to the nearest tenth.`, options, answer:options.indexOf(R), why:`Yes. ${s} is between ${lo} and ${hi}. The hundredths digit is ${h}, so it rounds ${up?"up":"down"} to ${R}.`,
+    model:()=>`Not quite. ${s} is between ${lo} and ${hi}. The hundredths digit is ${h}: ${up?"5 or more, so round up":"less than 5, so round down"} to ${R}.`};
+}
+function quickLookStart(kind){
+  const qk=qlInit(); if(!qk){ next(); return; }
+  qk.lastDay=qlDay(); save(); // once per calendar day, even if she goes Home without answering
+  const last=(qk.history[qk.history.length-1]||{}).kind; const pool=QL_KINDS.filter(k=>k!==last);
+  const tg=qlTargets(), tpool=tg.filter(k=>k!==last).length ? tg.filter(k=>k!==last) : tg; // v9.19: weighted toward what the last check-up put on the practice list
+  qlItem=qlBuild(QL_KINDS.includes(kind)?kind:(tpool.length && Math.random()<QL_TARGET_SHARE ? pick(tpool) : pick(pool))); qlPick=-1; qlRender(); toProblemTop();
+}
+// The check-up's number-sense items have no app skill, so the quick look is where they get practice. A miss or "Not sure yet" on the last
+// check-up makes its matching kinds likely (QL_TARGET_SHARE of the picks) until she has two right quick looks of that kind since then.
+// Reads S.nsChecks only (never writes it); a component with no match here (a renamed or replaced item) is simply skipped.
+const QL_FROM_CHECK={magnitude:["closer1","where","bigger"], estimate:["estimate"], decompose:["friendly","make1000"], reasonable:["tentimes"]};
+var QL_TARGET_SHARE=0.7;
+function qlTargets(){ try{
+  const list=(S && Array.isArray(S.nsChecks)) ? S.nsChecks.filter(c=>c && typeof c==="object" && Array.isArray(c.items) && c.items.length) : []; const lastCk=list[list.length-1]; if(!lastCk) return [];
+  const t0=Number.isFinite(+lastCk.t) ? +lastCk.t : 0, hist=(S.quick && Array.isArray(S.quick.history)) ? S.quick.history : []; const kinds=new Set();
+  lastCk.items.forEach(it=>{ if(it && (it.result==="miss" || it.result==="unsure") && typeof it.comp==="string" && Object.prototype.hasOwnProperty.call(QL_FROM_CHECK, it.comp)) QL_FROM_CHECK[it.comp].forEach(k=>kinds.add(k)); });
+  return [...kinds].filter(k=>QL_KINDS.includes(k) && hist.filter(h=>h && h.kind===k && h.ok && +h.t>=t0).length<2);
+}catch(e){ return []; } }
+function qlRender(){
+  const it=qlItem; if(!it){ next(); return; } const done=qlPick>=0, ok=done && qlPick===it.answer;
+  phase = done ? "quick-done" : "quick"; // never "q": the practice screen's keyboard and Check handlers stay out of the quick look
+  const fb = !done ? "" : `<div class="banner ${ok?"ok":"learn"}" role="status" aria-live="polite">${ok?`<span class="mark" aria-hidden="true">✓</span>`:""}<div>${ok?it.why:(typeof it.model==="function"?it.model(qlPick):it.model)}</div></div>${it.after||""}`;
+  app.innerHTML=`
+    <div class="topbar"><button class="btn quiet" id="back">Home</button><div class="row"><span class="pill week">Today</span></div></div>${warnHTML()}
+    <div class="card" id="quicklook">
+      <h2 style="margin:0 0 2px">Quick look</h2>
+      <p class="muted" style="margin:0 0 12px">One quick one to warm up your brain.</p>
+      <p class="prompt">${it.q}</p>${it.vis||""}
+      <div class="opts" id="qlopts" role="group" aria-label="Choices">${it.options.map((o,i)=>{ let c="opt qlopt"; if(done){ if(i===it.answer) c+=" right"; else if(i===qlPick) c+=" sel"; } return `<button type="button" class="${c}" data-i="${i}" aria-pressed="${i===qlPick}" ${done?"disabled":""}><b aria-hidden="true">${"abc"[i]}.</b>&nbsp; ${esc(o)}</button>`; }).join("")}</div>
+      ${fb}
+      <div class="actions">${done?`<button class="btn primary" id="qlgo">Let's go</button>`:`<button class="btn quiet" id="qlgo">Skip for today</button>`}</div>
+    </div>`;
+  const q=id=>app.querySelector("#"+id);
+  q("back").onclick=home;
+  app.querySelectorAll("#qlopts .qlopt:not([disabled])").forEach(b=>b.onclick=()=>qlAnswer(+b.dataset.i));
+  q("qlgo").onclick=()=>{ qlItem=null; qlPick=-1; next(); };
+  noteScreen(); // a quick double tap on a choice must not also press "Let's go" (#qlgo is in GHOST_SEL)
+  if(done){ const g=q("qlgo"); if(g) g.focus({preventScroll:true}); }
+}
+function qlAnswer(i){ if(!qlItem || qlPick>=0 || !(i>=0 && i<qlItem.options.length)) return; qlPick=i; const qk=qlInit();
+  if(qk){ qk.history.push({t:Date.now(), kind:qlItem.kind, ok:i===qlItem.answer?1:0}); while(qk.history.length>60) qk.history.shift(); save(); } qlRender(); }
+function quickGrownupsHTML(){
+  if(!S) return ""; const qk=S.quick; const h=(qk && Array.isArray(qk.history) ? qk.history : []).filter(x=>x && Number.isFinite(x.t));
+  const now=new Date(), m0=new Date(now.getFullYear(), now.getMonth(), 1).getTime(); const mo=h.filter(x=>x.t>=m0); const by={}; mo.forEach(x=>{ const k=QL_NAMES[x.kind]||String(x.kind); by[k]=by[k]||{n:0,ok:0}; by[k].n++; if(x.ok) by[k].ok++; });
+  const log=Array.isArray(S.log)?S.log:[]; const est=log.filter(e=>e.est===0||e.est===1), estOk=est.filter(e=>e.est===1).length, caught=log.filter(e=>e.reasonCaught).length, caughtOk=log.filter(e=>e.reasonCaught && e.ok).length;
+  return `<div class="card"><h2 style="margin-top:0">Warm-ups and estimates</h2>
+    <p style="margin:0">${mo.length?`Quick looks: ${mo.length} this month, ${mo.filter(x=>x.ok).length} right, by kind: ${Object.keys(by).map(k=>`${esc(k)} ${by[k].ok} of ${by[k].n}`).join(", ")}.`:`Quick looks: none yet this month.`} <span class="muted">One tiny warm-up at the first Today sitting of each day; not scored, no levels.</span></p>
+    <p style="margin:8px 0 0">${est.length?`Estimate first: ${est.length} made on multiplication and division, ${estOk} the right size.`:`Estimate first: none made yet (offered on about 1 in 3 multiplication and division problems).`}${caught?` The "does that make sense?" check caught an answer far from the estimate ${caught} time${caught===1?"":"s"}; ${caughtOk} of those ended right (a fix after that note counts as prompted: not on her own, not help, and it moves no level).`:""}</p></div>`;
+}
+
+// --- 3b. Estimate first, check after (whole-number multiplication and division on the practice screen; never homework, page problems, or the on-ramp) ---
+var EST_RATE=3; // about 1 in EST_RATE eligible problems get the estimate row; the choice is fixed per problem (a hash of its prompt, stored on cur.est)
+const EST_PLACE=["ones","tens","hundreds","thousands","ten thousands","hundred thousands","millions","ten millions"];
+const estDigits=n=>String(Math.floor(Math.abs(n))).length;
+function estHash(s){ let h=2166136261; s=String(s); for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+function estEligible(p){ return !!p && (p.skill==="multiply"||p.skill==="divide") && !!p.meta && Number.isInteger(+p.answer) && !p.hw && !p.fixed && !p.onramp && !p.placement && mode!=="hw:check"; }
+// The choices name a place by its digit count, with an example: "in the hundreds (like 400)". The key is the answer's own digit count, so
+// the choice, the model, and the "does that make sense?" note all use the same yardstick. p = place index (1 = tens, 2 = hundreds, ...).
+const estOpt=p=>`in the ${EST_PLACE[p]} (like ${L$d(4*Math.pow(10,p))})`;
+function estBuild(p){ // the three choices by size, the right one, and a one-line model. null when rounding would point to a different place than the answer.
+  const h=estHash(plain(p.prompt));
+  if(p.skill==="multiply"){ const a=+p.meta.a, b=+p.meta.b, ans=a*b; if(!(ans>0)) return null; const lead=n=>{ const m=Math.pow(10,String(n).length-1); return Math.round(n/m)*m; }; const ra=lead(a), rb=lead(b), re=ra*rb;
+    const k=estDigits(ans)-1; if(k<1 || k>EST_PLACE.length-1 || estDigits(re)-1!==k) return null; // rounding the factors lands in a different place than the true answer: skip the row (the model would read as off)
+    const lows=[k-2,k-1,k].filter(x=>x>=1 && x+2<=EST_PLACE.length-1); if(!lows.length) return null; const low=lows[(h>>>4)%lows.length]; const places=[low,low+1,low+2];
+    const opts=places.map(estOpt), right=places.indexOf(k);
+    return {kind:"mul", opts, places, right, said:`in the ${EST_PLACE[k]}`, model:`Round: ${L$d(ra)} × ${L$d(rb)} = ${L$d(re)}, so the answer is in the ${EST_PLACE[k]}.`, pick:-1}; }
+  if(p.skill==="divide"){ const N=+p.meta.N, d=+p.meta.d, q=+p.meta.q; const nd=estDigits(q); if(!(d>0) || nd<2 || nd>4) return null; const k=nd-1, lo=d*Math.pow(10,k), hi=d*Math.pow(10,k+1);
+    const places=[1,2,3], opts=places.map(estOpt), right=nd-2;
+    return {kind:"div", opts, places, right, said:`in the ${EST_PLACE[k]}`, model:`${d} × ${L$d(Math.pow(10,k))} = ${L$d(lo)} and ${d} × ${L$d(Math.pow(10,k+1))} = ${L$d(hi)}. ${L$d(N)} is between them, so the answer is in the ${EST_PLACE[k]}.`, pick:-1}; }
+  return null;
+}
+function estAttach(p){ if(!p || p.est!==undefined) return; p.est = (estEligible(p) && estHash(plain(p.prompt))%Math.max(1,EST_RATE)===0) ? estBuild(p) : null; }
+function estRowHTML(){ const e=cur && cur.est; if(!e) return ""; const done=e.pick>=0, good=done && e.pick===e.right;
+  const msg = !done ? "" : good ? "Good estimate." : `${Math.abs(e.pick-e.right)===1?"Close.":"Here is a quick way."} ${e.model}`;
+  return `<div class="est" id="estrow"><div class="cq" id="estq">About how big will the answer be?</div><div class="est-opts" role="group" aria-labelledby="estq">${e.opts.map((o,i)=>{ let c="btn quiet small estopt"; if(done){ if(i===e.right) c+=" right"; else if(i===e.pick) c+=" picked"; } return `<button type="button" class="${c}" data-i="${i}" aria-pressed="${i===e.pick}" ${done?"disabled":""}>${esc(o)}</button>`; }).join("")}</div><div class="est-msg" role="status" aria-live="polite">${esc(msg)}</div></div>`; }
+// A tap updates the row in place (no re-render), so her typed answer, the worksheet's blue box, and the keyboard handling are untouched.
+function estPick(i){ const e=cur && cur.est; if(!e || e.pick>=0 || phase!=="q" || !(i>=0 && i<e.opts.length)) return; e.pick=i;
+  const row=app.querySelector("#estrow"); if(row) row.outerHTML=estRowHTML();
+  if(cur.ws && ws) wsFocusCell(); else { const inp=app.querySelector("#ans:not([disabled])"); if(inp) inp.focus({preventScroll:true}); } }
+app.addEventListener("click", e=>{ const b=e.target && e.target.closest && e.target.closest(".estopt"); if(!b || b.disabled || !cur || !cur.est) return; estPick(+b.dataset.i); });
+// At Check: an estimate was made and her answer has a different number of digits and is at least 5 times too big or too small (about a
+// factor of 10, allowing for rounding). Sent back once with a gentle note, like an empty box: no attempt counted, no help recorded. Both sides
+// of the note are places by digit count ("Your estimate was in the hundreds, and your answer is in the thousands"), so it cannot contradict
+// itself. If she then answers right, submit() logs it as prompted: not on her own and not help; it never moves a level up or down.
+function estReasonNote(val){ const e=cur && cur.est; if(!e || e.pick<0 || cur.reasonSeen || !Number.isFinite(val) || val<=0) return ""; const ans=+cur.answer; if(!(ans>0)) return "";
+  if(estDigits(val)===estDigits(ans) || Math.max(val/ans, ans/val)<5) return "";
+  cur.reasonSeen=1; cur.reasonCaught=1;
+  return `Does that make sense? ${e.pick===e.right?"Your":"The"} estimate was ${e.said}, and your answer is in the ${EST_PLACE[estDigits(val)-1]||"millions"}. Check it once more.`; }
+function start(m){ mode=m; if(m==="nscheck"){ nsStart(); return; } if(m==="hw:check"){ pendingHW=null; hwEntry(); return; } if(m==="today"){ todayPlan=buildTodayPlan(); todayIdx=0; todayExtra=0; todaySid=Date.now(); if(quickLookDue()){ quickLookStart(); return; } } next(); }
 // "Check my homework": type the problem from the page, then answer it like any other problem; a miss walks through that exact problem.
 function hwEntry(prefill, err){
   mode="hw:check"; cur=null; pendingHW=null;
@@ -3539,7 +3734,7 @@ function next(){ // a fresh problem: new help chain
   let transfer=false; if(pendingTransfer && SKILLS[pendingTransfer] && !hw && mode!=="hw:check" && !checkinSk){ if(!target){ sk=pendingTransfer; transfer=true; focus=undefined; } else if(target.sk===pendingTransfer) transfer=true; pendingTransfer=null; } /* coached → guided → now a fresh one of the same kind, supports hidden */
   if(mode==="hw:check"){ if(!pendingHW){ hwEntry(); return; } cur=SKILLS[pendingHW.skill].gen(pendingHW.level, pendingHW.focus); cur.hw=true; cur.fixed=true; cur.hwLabel=pendingHW.label; pendingHW=null; }
   else if(hw){ const shape=pick(hw.shapes); cur=SKILLS[sk].gen(shapeLevel(shape), {shape, variant:hw.variant}); cur.hw=true; }
-  else if(target){ cur=genForTarget(target); if(cur.notEligible){ cur.focusWhy=`could not build a problem for ${target.why.split(" · ")[0]}; this one is ordinary practice`; } else { cur.focusKey=target.key; cur.focusWhy=target.why; cur.harder=target.harder&&target.state==="weak"; if(STEP_COMPS[target.sk] && STEP_COMPS[target.sk].has(target.comp)) attachPre(cur, target.comp); } }
+  else if(target){ cur=genForTarget(target); if(cur.notEligible){ cur.focusWhy=`could not build a problem for ${target.why.split(" · ")[0]}; this one is ordinary practice`; } else { cur.focusKey=target.key; cur.focusWhy=target.why; cur.focusKid=target.kid; cur.focusState=target.state; /* v9.19 review: the problem-screen tags show focusKid, and "Review:" only for a spot in review */ cur.harder=target.harder&&target.state==="weak"; if(STEP_COMPS[target.sk] && STEP_COMPS[target.sk].has(target.comp)) attachPre(cur, target.comp); } }
   else if(checkinSk){ const ck=S.checkins[checkinSk]; const cf=focusFromCtx(sk, ck.ctx||{}); let g=0; do{ cur=SKILLS[sk].gen(S.levels[sk], Object.keys(cf).length?cf:undefined); }while(g++<20 && ck.ctx && ctxKey(checkinCtx(cur))!==ctxKey(ck.ctx)); cur.checkin=checkinSk; } // the same kind of problem she showed, with new numbers
   else { cur = focus!==undefined ? SKILLS[sk].gen(S.levels[sk], focus) : SKILLS[sk].gen(S.levels[sk]); if(transfer){ let g=0; while(g++<20 && helpPrompts.includes(plain(cur.prompt))) cur=SKILLS[sk].gen(S.levels[sk]); } } /* the transfer item must not repeat the coached problem, the example, or the follow-up */
   if(transfer && !cur.hw) cur.transferCheck=true;
@@ -3746,6 +3941,7 @@ function gradeWS(){
     const nm=k=>k==="t"?(sp.two?"bottom row":"answer"):k==="r0"?"top row":"tens row";
     const one=x=>`In the ${nm(x.key)}, the two digits on the left read ${x.a} ${x.b}. Did the ${x.kind==="column"?"last column add up to":"last step make"} ${x.b}${x.a}? A two-digit number goes in ones digit first: the ${x.a}, then the ${x.b} in the box to its left.`;
     return {err:`${swaps.map(one).join(" ")} Tap a box to fix it. To keep it as it is, tap Check answer again.`, swap:true}; }
+  { const rn=estReasonNote(rows.t); if(rn) return {err:rn, reason:true}; } // v9.19: an estimate was made and the total is far from it: sent back once, like the swap note, then graded as written
   const note=(k,comp)=>{ wrong.push(k); marks[k]="bad"; if(comp){ comps.push(comp); tally[comp]=tally[comp]||{ok:0,miss:0}; tally[comp].miss++; } };
   const digitOK=(k)=>{ const e=sp.exp[k]; const v=V[k]; if(e===undefined) return v===undefined||v===""||v==="0"; return v===e; };
   for(const r of sp.rowsDef){ const rowVal=rows[r.key];
@@ -3788,7 +3984,7 @@ function render(){
   const sk=cur.skill; const lvl = stage==="followup" ? cur.level : S.levels[sk]; // a follow-up stays at the level of the problem she missed
   const top=`
     <div class="topbar"><button class="btn quiet" id="back">Home</button>
-      <div class="row"><button class="btn quiet small" id="scratchtoggle" aria-pressed="${S.scratch?"true":"false"}" title="Scratch paper for working it out with the pencil">${S.scratch?"Hide scratch paper":"Scratch paper"}</button><span class="pill">${SKILLS[sk].name}</span>${mode==="week"?`<span class="pill week">${Object.keys(weekWeights()).length?"This week":"Mixed review"}</span>`:""}${mode==="today"&&todayPlan?`<span class="pill week" title="${esc(todayLabel(cur.todaySlot))}">Today ${Math.min(todayIdx,todayPlan.length)} of ${todayPlan.length}${cur.todaySlot&&cur.todaySlot!=="extra"?` · ${esc(todayLabel(cur.todaySlot))}`:" · one more"}</span>`:""}${mode==="miss"?`<span class="pill week" title="Chosen from your weakness profile, not the calendar">${cur.focusWhy?`Focus: ${esc(cur.focusWhy)}`:"Where I missed"}</span>`:""}${mode!=="miss"&&cur.focusKey?`<span class="pill week" title="A review that came due">Review: ${esc(cur.focusWhy||"")}</span>`:""}${cur.checkin?`<span class="pill week" title="A skill you have shown before; checking it still holds after a break">Check-in</span>`:""}${cur.hw?`<span class="pill week" title="${cur.fixed?"A problem typed from the page":"Worksheet shapes"}; does not change levels">${cur.fixed?"From the page":"Homework"}</span>`:""}${stage==="followup"?`<span class="pill">One like it</span>`:""}${cur.transferCheck?`<span class="pill week" title="Right after help: a fresh problem of the same kind, coach hidden, so the app can see what you do on your own">Fresh one</span>`:""}${cur.hw?"":dots(lvl)}</div></div>${warnHTML()}`;
+      <div class="row"><button class="btn quiet small" id="scratchtoggle" aria-pressed="${S.scratch?"true":"false"}" title="Scratch paper for working it out with the pencil">${S.scratch?"Hide scratch paper":"Scratch paper"}</button><span class="pill">${SKILLS[sk].name}</span>${mode==="week"?`<span class="pill week">${Object.keys(weekWeights()).length?"This week":"Mixed review"}</span>`:""}${mode==="today"&&todayPlan?`<span class="pill week" title="${esc(todayLabel(cur.todaySlot))}">Today ${Math.min(todayIdx,todayPlan.length)} of ${todayPlan.length}${cur.todaySlot&&cur.todaySlot!=="extra"?` · ${esc(todayLabel(cur.todaySlot))}`:" · one more"}</span>`:""}${mode==="miss"?`<span class="pill week" title="Chosen from your practice list, not the calendar">${cur.focusWhy?`Focus: ${esc(cur.focusKid||cur.focusWhy)}`:"Where I missed"}</span>`:""}${mode!=="miss"&&cur.focusKey&&cur.focusState==="review"?`<span class="pill week" title="A check-in on something you have shown before">Review: ${esc(cur.focusKid||cur.focusWhy||"")}</span>`:""}${cur.checkin?`<span class="pill week" title="A skill you have shown before; checking it still holds after a break">Check-in</span>`:""}${cur.hw?`<span class="pill week" title="${cur.fixed?"A problem typed from the page":"Worksheet shapes"}; does not change levels">${cur.fixed?"From the page":"Homework"}</span>`:""}${stage==="followup"?`<span class="pill">One like it</span>`:""}${cur.transferCheck?`<span class="pill week" title="Right after help: a fresh problem of the same kind, coach hidden, so the app can see what you do on your own">Fresh one</span>`:""}${cur.hw?"":dots(lvl)}</div></div>${warnHTML()}`;
   let body=`<p class="prompt">${cur.prompt}</p>${phase==="q"&&walkthroughBtn()?`<div class="actions" style="margin:0 0 10px">${walkthroughBtn()}</div>`:""}`; let right="";
   const showChart = cur.show ? chartHTML(cur.show, null, cur.minCols) : "";
   const m=cur.mistake;
@@ -3803,6 +3999,7 @@ function render(){
       if(lv>=2) body+=`<div class="hints"><div class="step"><span class="n">Coach.</span>${cur.hints[0].t} <span class="muted">${cur.hw&&cur.fixed ? (walkthroughBtn()?`Want help now? Tap <b>Work through this problem</b> above.`:`Want another clue? Tap <b>Next hint</b> below.`) : `New to this? <b>Show me one first</b> below walks through one like it.`}</span></div></div>`;
       else body+=`<div class="hints"><div class="step"><span class="n">Nudge.</span>${cur.hints[0].t} <span class="muted">(Opened: this one counts as prompted, not on your own.)</span></div></div>`; } /* level 1: the reminder is there if she wants it, and the log says whether she used it */
     else if(phase==="q" && !cur.ws && cur.transferCheck) body+=`<div class="hints"><div class="step"><span class="n">Fresh one.</span>Same kind as the one you just worked through, new numbers, no coach. Show what you can do on your own.</div></div>`;
+    if(phase==="q"){ estAttach(cur); body+=estRowHTML(); } // v9.19: estimate first (optional one-tap row, about 1 in 3 whole-number × and ÷ problems)
     body+=preHTML();
     if(cur.ws){ wsInit(); body+=wsHTML(phase!=="q", phase==="q"?null:(ws.marks||{})); if(phase==="q") body+=`<div class="inline-err" id="ierr" role="status" aria-live="polite">${esc(inlineErr)}</div>`; }
     else if(cur.type==="input"){
@@ -3823,7 +4020,8 @@ function render(){
       const independent = okEntry ? !!okEntry.independent : (stage==="fresh" && hintIdx===0);
       let msg;
       if(independent) msg=pick(["Correct.","Yes.","Nailed it.","That's right."])+(S.run>=3?`<small>${S.run} in a row.</small>`:"")+(lastChange>0 && !cur.placement?`<span class="lvl">Level up! ${SKILLS[sk].name} is now level ${lvl}${lvl===MAX_LEVEL?", the top":""}.</span>`:"")+(cur.hw?`<small>Homework practice: the dots stay put; this counts on the grown-ups page.</small>`:"");
-      else if(stage==="fresh" && hintIdx===0 && cur.studied) msg=`Right.<small>You studied an example first, so this counts as help. Level-ups and clearing a weakness come from problems done without the example.</small>`;
+      else if(stage==="fresh" && hintIdx===0 && cur.studied) msg=`Right.<small>You studied an example first, so this counts as help. Level-ups and checking things off your practice list come from problems done without the example.</small>`;
+      else if(stage==="fresh" && hintIdx===0 && cur.reasonCaught && !(okEntry && okEntry.supported)) msg=`Right.<small>You checked your answer against your estimate and fixed it. That is a great habit. This one counts as prompted, since the note pointed you back to it.</small>`; // v9.19: fixed after the "does that make sense?" note
       else if(stage==="fresh" && hintIdx===0 && cur.ws) msg=`Right.<small>The supports were on for this one, so it counts as a supported success: it fades the supports, and level-ups come once they are mostly off.</small>`;
       else if(stage==="fresh" && hintIdx===0 && cur.preMiss) msg=`Right answer.<small>The step you showed first was not right, so this one counts as worked with help. Level-ups come from problems where the step and the answer are both yours.</small>`;
       else if(stage==="fresh" && hintIdx===0) msg=`Right.<small>The coach line or a reminder was on the screen, so this one counts as prompted, not on your own. It comes off as you get more right.</small>`; // v9.12: no "with a hint" when no hint was opened
@@ -3860,7 +4058,7 @@ function render(){
     if(cur.ws){ wsInit(); body+=`<div class="yours">${cur.voluntaryWalkthrough?"Your work so far":"Your work (red cells are the ones to look at)"}</div>`+wsHTML(true, ws.marks||{}); }
     else if(cur.type==="input"){ if(!cur.voluntaryWalkthrough || lastAnswer) body+=`<div class="yours" id="yourslbl">${cur.voluntaryWalkthrough?"Your work so far":"Your answer"}</div><input class="ans" disabled aria-labelledby="yourslbl" value="${esc(lastAnswer)}">`; }
     else body+=optsHTML("opts", cur.options, selected, -1, true, "opt");
-    const head = cur.voluntaryWalkthrough ? "Let's work through this exact problem together. Nothing was marked wrong." : chain>=2 ? "Still not there. One more walk through, then another try." : (stage==="fresh" && cur.onramp) ? "Not yet, and that is OK. It was a warm-up, so it is not scored. Let's walk through it together." : (stage==="fresh" && cur.stretch) ? "Not yet, and that is OK. That was a stretch, so it is not scored and your level stays. Let's look at it together." : (cur.skippedTo ? "Not yet. What you had right stays; we start at the first mistake." : "Not yet. Let's walk through it.");
+    const head = cur.voluntaryWalkthrough ? "Let's work through this exact problem together. Nothing is scored." : chain>=2 ? "Still not there. One more walk through, then another try." : (stage==="fresh" && cur.onramp) ? "Not yet, and that is OK. It was a warm-up, so it is not scored. Let's walk through it together." : (stage==="fresh" && cur.stretch) ? "Not yet, and that is OK. That was a stretch, so it is not scored and your level stays. Let's look at it together." : (cur.skippedTo ? "Not yet. What you had right stays; we start at the first spot to fix." : "Not yet. Let's walk through it.");
     // A break is offered during sustained struggle, not only after success: three fresh misses in a row this sitting, or three shown answers inside one walkthrough.
     // v9.13: the offer comes earlier. Two tough ones in a row, two shown answers, or four struggle signals (help taps and wrong step entries) in this walkthrough.
     const struggling = !wtKeepGoing && ((sessionMissRun>=2 && breakOfferedAt!==sessionMissRun) || revealed>=2 || wtSignals>=4); // one "keep going" answers every condition for this walkthrough
@@ -3937,7 +4135,7 @@ function stepHTML(s,i,dim,withCheck){
       const helpLbl = stepHelpLabel(s, c); const twoMisses = open && sc.state==="open" && (sc.tries||0)>=2; /* v9.13: help without a wrong answer first; after two misses on one step, an explicit choice */
       sub=`<div class="substep ${sc.state==="ok"?"ok":sc.state==="revealed"?"bad":sc.state==="confirm"||sc.state==="explain"?"confirm":""}"><div class="cq">${c.q}</div>${checkCtlHTML(c)}
         <div class="inline-msg" id="cmsg" role="status" aria-live="polite">${sc.msg}</div>${settled && s.after && !sc.xdone?`<div class="res after">${s.after}</div>`:""}${explainHTML}
-        ${open?`<div class="actions" style="margin-top:10px"><button class="btn primary" id="cstep">Check step</button>${sc.state==="open"?`<button class="btn quiet" id="stephelp" title="Get the next clue for this step. You do not have to get it wrong first.">${helpLbl}</button>`:""}${twoMisses?`<button class="btn quiet" id="stepbreak">Take a break</button>`:""}</div>`:""}</div>`;
+        ${open?`<div class="actions" style="margin-top:10px"><button class="btn primary" id="cstep">Check step</button>${sc.state==="open"?`<button class="btn quiet" id="stephelp" title="Get the next clue for this step. You can ask before you try.">${helpLbl}</button>`:""}${twoMisses?`<button class="btn quiet" id="stepbreak">Take a break</button>`:""}</div>`:""}</div>`;
     }
   }
   // v9.18: a step's picture (chart, or any HTML in s.vis) can wait until she has answered that step (s.visAfter), so a drawing never hands over the answer it asks for.
@@ -4042,7 +4240,7 @@ window.addEventListener("keydown", e=>{ if(e.defaultPrevented) return; if(app.co
 //   - a tap within 450 ms of a tap that changed the screen AND on the same spot (within 44 px): a double tap, not a new choice; or
 //   - an Enter/Space within 450 ms of an Enter/Space that changed the screen (a fast second press; a held key is handled by e.repeat).
 // A held-back tap makes the button pulse, so it is not silently dead. Script clicks (tests) are never held back; digit/erase buttons are never held back.
-var GHOST_MS=450, GHOST_PX=44, GHOST_SEL="#next,#retry,#step,#check,#cstep,#xcheck,#xskip,#wcheck,#workthrough,#stepbreak,#onemore,#ortry,#orhelp,#orshow,#stephelp,#showhint,.opt,#wsnext";
+var GHOST_MS=450, GHOST_PX=44, GHOST_SEL="#next,#retry,#step,#check,#cstep,#xcheck,#xskip,#wcheck,#workthrough,#stepbreak,#onemore,#ortry,#orhelp,#orshow,#stephelp,#showhint,.opt,#wsnext,#qlgo"; // v9.19: #qlgo = the quick look's "Let's go" (its choices are .opt)
 var screenKey="", screenAt=0, screenCause=null, lastAct=null; // var: render() can run before this line during start-up
 function noteScreen(){ const k=[phase, stepIdx, cur&&cur.prompt, sc&&sc.state, whyState&&whyState.done, mode].join("|"); if(k!==screenKey){ screenKey=k; screenAt=Date.now(); screenCause=(lastAct && screenAt-lastAct.t<1000)?lastAct:null; } }
 function ghostBlocks(a, now){ if(!screenCause || now-screenAt>=GHOST_MS) return false;
@@ -4088,10 +4286,11 @@ function submit(){
   let ok, yours, raw, wsGrade=null;
   let twoPoints=false;
   let preRes=null; if(cur.pre){ preRes=gradePre(); if(preRes.missing){ inlineErr=preRes.issue||`First, do the first step: ${plain(cur.pre.check.q)}`; render(); const f=app.querySelector("#preans")||app.querySelector("#preopts .opt"); if(f) f.focus(); return; } }
-  if(cur.ws){ const g=gradeWS(); if(g.err){ if(!g.swap) cur.unfinished=(cur.unfinished||0)+1; inlineErr=g.err; render(); return; } wsGrade=g; ok=g.ok; yours=g.yours; raw=g.product; } // an incomplete grid is sent back, not graded: unfinished is not the same as wrong
+  if(cur.ws){ const g=gradeWS(); if(g.err){ if(!g.swap && !g.reason) cur.unfinished=(cur.unfinished||0)+1; inlineErr=g.err; render(); return; } wsGrade=g; ok=g.ok; yours=g.yours; raw=g.product; } // an incomplete grid is sent back, not graded: unfinished is not the same as wrong
   else if(cur.type==="input"){ const inp=app.querySelector("#ans"); const v=inp.value; lastAnswer=v; if(!v.trim()){ inp.focus(); return; }
     twoPoints = !!(cur.meta && cur.meta.open) && (v.match(/\./g)||[]).length>1; // "0.05.0" on a write-a-decimal problem: a real mistake, walk it through
     const issue=twoPoints ? "" : issueFor(cur,v); if(issue){ inlineErr=issue; render(); return; } // not a countable attempt yet
+    { const rn=twoPoints ? "" : estReasonNote(parseAnswer(v)); if(rn){ inlineErr=rn; render(); return; } } // v9.19: far from her estimate: one gentle note, no attempt counted; a second Check grades it
     ok=twoPoints ? false : !!checkInput(cur,v); yours=v.trim(); raw=v; }
   else { if(selected<0){ inlineErr=""; const f=app.querySelector("#opts .opt"); if(f) f.focus(); return; } ok=(selected===cur.answer); yours=cur.options[selected]; raw=selected; }
   inlineErr=""; if(S) S.pendingQ=null; // answered: nothing pending
@@ -4104,7 +4303,7 @@ function submit(){
   // column labels still on, a right answer is a supported success, which fades the supports but does not move the level.
   const coachVisible = (cur.onramp && !cur.ws) ? !!cur.nudgeOpen : !cur.ws && !cur.placement && !cur.transferCheck && !!(cur.hints&&cur.hints[0]) && (coachLevel(sk)>=2 || !!cur.nudgeOpen); // a strategy line she could read before answering
   const supported = (!!cur.ws && wsSup()>=2) || (!cur.ws && !cur.onramp && !cur.placement && !cur.transferCheck && coachLevel(sk)>=2 && !!(cur.hints&&cur.hints[0])); // tools on, or full coaching (line + example offer) on screen
-  const prompted = (!cur.ws && !supported && coachVisible) || (!!cur.ws && wsSup()===1); // the level-1 reminder, opened by her, or the carry boxes alone on the multiplication page: prompted, not independent
+  const prompted = (!cur.ws && !supported && coachVisible) || (!!cur.ws && wsSup()===1) || (!supported && !!cur.reasonCaught); // the level-1 reminder, opened by her, or the carry boxes alone on the multiplication page: prompted, not independent. v9.19: so is an answer checked again after the "does that make sense?" note (not help either; like any prompted attempt it moves no level up or down)
   const stepWrong = !!(cur.pre && preRes && !preRes.ok); // the required step was wrong: the calculation may be right, but the attempt did not show the skill cleanly
   const independent = stage==="fresh" && hintIdx===0 && !supported && !prompted && !cur.studied && !stepWrong; // a worked example seen first is help, like a hint; an opened nudge is a prompt
   const entry={t:Date.now(), sk, lvl:cur.level, q:plain(cur.prompt), yours:String(yours), ans:cur.display, ok:ok?1:0, stage, hints:hintIdx, independent:(ok&&independent)?1:0, tag: cur.mistake ? cur.mistake.tag : (cur.focusTag||"")};
@@ -4112,6 +4311,7 @@ function submit(){
   if(cur.pre && preRes){ entry.pre={comp:cur.pre.comp, ok:preRes.ok?1:0, yours:preRes.yours, ans:String(cur.pre.check.display), q:plain(cur.pre.check.q||"")}; cur.comps=cur.comps||{}; cur.comps[cur.pre.comp]={ok:preRes.ok?1:0, miss:preRes.ok?0:1}; entry.comps=cur.comps; if(!preRes.ok){ noteComp(sk, cur.pre.comp, false, {lvl:cur.level, ctx:ctxOf(cur)}); cur.preMiss=true; } }
   if(wsGrade){ entry.rows=wsGrade.yours; if(!ok) entry.wrong=wsGrade.wrongText; if(wsGrade.comps) entry.comps=wsGrade.compsTally; if(cur.unfinished) entry.unfinished=cur.unfinished; if(cur.swapCaught) entry.swapCaught=cur.swapCaught; /* v9.16: two left digits typed in reverse, sent back once */
     const cues=[]; if(ws&&ws.locked["r1-0"]) cues.push("zero written in"); if(coachOn()) cues.push("coach line"); if(wsSup()>=2) cues.push("column labels"); if(wsSup()>=1) cues.push("carry boxes"); if(cues.length) entry.cues=cues.join(", "); } // the assistance that was actually visible, not just whether Hint was tapped
+  if(cur.reasonCaught) entry.reasonCaught=1; if(cur.est && cur.est.pick>=0) entry.est=cur.est.pick===cur.est.right?1:0; // v9.19: the estimate she made (1 = right size) and whether the "does that make sense?" note fired; neither is help
   lastChange=0; lastPraise=[];
   // Homework practice is level-neutral: the shape was chosen from the worksheet, not earned, so it moves nothing up or down.
   // Focus problems are chosen by the recovery system, often a notch above her ordinary level, so like homework they are level-neutral: they move the weakness state, never the dots.
@@ -4119,7 +4319,7 @@ function submit(){
   if((independent || levelMiss) && !cur.hw && !cur.focusKey && !cur.checkin && !cur.placement && !(cur.onramp && !ok)){ const res=applyResult(S.hist[sk], S.levels[sk], ok, cur.type==="mc" && !cur.ws); S.levels[sk]=res.level; S.hist[sk]=res.hist; lastChange=res.change; }
   // Coach fading (every non-workspace skill): two distinct clean successes while the coach is on fade it one level; a fresh miss brings it back one level.
   if(!cur.ws && stage==="fresh" && !cur.placement && !cur.hw){ S.coach=S.coach||{}; /* v9.12: homework self-checks do not fade the coach */ S.coachWins=S.coachWins||{}; const lv=coachLevel(sk);
-    if(ok && hintIdx===0 && !cur.studied && !cur.nudgeOpen && lv>0){ const qtext=plain(cur.prompt); /* at level 1 only an unopened nudge counts toward switching the coach off */ S.coachRecent=Array.isArray(S.coachRecent)?S.coachRecent:[]; if(!S.coachRecent.includes(qtext)){ S.coachRecent.push(qtext); while(S.coachRecent.length>12) S.coachRecent.shift(); S.coachWins[sk]=(S.coachWins[sk]||0)+1; if(S.coachWins[sk]>=2){ S.coach[sk]=lv-1; S.coachWins[sk]=0; lastPraise.push({big:true, t: lv-1===0 ? `The coach line is off for ${SKILLS[sk].name.toLowerCase()}: you have this one.` : `Two right with the coach on: from here ${SKILLS[sk].name.toLowerCase()} gets a one-line reminder only, and your right answers count as your own.`}); } } }
+    if(ok && hintIdx===0 && !cur.studied && !cur.nudgeOpen && !cur.reasonCaught && lv>0){ const qtext=plain(cur.prompt); /* at level 1 only an unopened nudge counts toward switching the coach off; v9.19: an answer fixed after the "does that make sense?" note is not a clean success */ S.coachRecent=Array.isArray(S.coachRecent)?S.coachRecent:[]; if(!S.coachRecent.includes(qtext)){ S.coachRecent.push(qtext); while(S.coachRecent.length>12) S.coachRecent.shift(); S.coachWins[sk]=(S.coachWins[sk]||0)+1; if(S.coachWins[sk]>=2){ S.coach[sk]=lv-1; S.coachWins[sk]=0; lastPraise.push({big:true, t: lv-1===0 ? `The coach line is off for ${SKILLS[sk].name.toLowerCase()}: you have this one.` : `Two right with the coach on: from here ${SKILLS[sk].name.toLowerCase()} gets a one-line reminder only, and your right answers count as your own.`}); } } }
     else if(!ok){ const shownBefore=S.log.some(e=>e.sk===sk && e.ok && e.independent); S.coach[sk]=Math.min(shownBefore?1:2, lv+1); S.coachWins[sk]=0; } }
   // Quick placement check: right on her own → start at level 3; wrong → level 1 and no penalty.
   if(cur.placement && ok && independent && cur.type==="mc" && !cur.ws){ S.levels[sk]=2; S.hist[sk]=[0.75]; lastChange=+1; S.coach=S.coach||{}; S.coach[sk]=1; lastPraise.push({big:true, t:`Nice pick. One right choice could be a lucky guess, so ${SKILLS[sk].name.toLowerCase()} starts at level 2 with a one-line reminder you can open.`}); entry.placement=1; } // v9.12: a multiple-choice quick check cannot skip two levels on one tap
@@ -4128,7 +4328,7 @@ function submit(){
   // Fading supports (multiplication workspace): two clean successes in a row at this support level remove the next support; a fresh miss brings one back.
   if(cur.ws && stage==="fresh" && !cur.placement){ const sp=S.support, sw=S.supportWins;
     const qtext=plain(cur.prompt); S.supportRecent=Array.isArray(S.supportRecent)?S.supportRecent:[]; const distinct = !S.supportRecent.includes(qtext); // a problem seen in the last several is not new evidence for taking a tool away (alternating two memorized ones included)
-    if(ok && hintIdx===0 && distinct){ S.supportRecent.push(qtext); while(S.supportRecent.length>8) S.supportRecent.shift(); sw.multiply=(sw.multiply||0)+1;
+    if(ok && hintIdx===0 && distinct && !cur.reasonCaught){ S.supportRecent.push(qtext); /* v9.19: a total fixed after the "does that make sense?" note is not a clean success */ while(S.supportRecent.length>8) S.supportRecent.shift(); sw.multiply=(sw.multiply||0)+1;
       // each tool comes off only after successes that exercised what it is for: the written-in 0 and labels need a two-row problem; the carry boxes need regrouping in a two-row problem
       const regroups = !!(cur.meta && cur.meta.regroup); const need = sp.multiply===1 ? regroups : true; // the coach line and labels fade on any two distinct clean successes; the carry boxes only after problems that actually regroup
       if(sw.multiply>=2 && sp.multiply>0 && need){ sp.multiply--; sw.multiply=0; lastPraise.push({big:true, t:`You have not needed ${SUPPORT_NAMES[sp.multiply+1]} lately, so next time it comes off. The page is getting closer to the real worksheet.`}); }
@@ -4156,7 +4356,7 @@ function submit(){
         else if(tr==="recovered") lastPraise.push({big:true, t:`${ucfirst(nm)}: recovered. It stayed solid across review, so it is off the list.`}); }
       if(!lastPraise.length && before.length===0 && hintIdx===0 && prevNeededHelp(sk)) lastPraise.push({t:`No hints, no walkthrough this time. That one was all yours.`}); }
     if(supported && ok) lastPraise.push({t:`Right, with the supports on. Keep it up and they start coming off.`});
-    if(wsGrade && wsGrade.comps && wsGrade.comps.includes("regroup") && ok){ noteComp(sk, "regroup", false, {lvl:cur.level, ctx:ctxOf(cur)}); lastPraise.push({t:`The product is right. A carry box has the wrong number in it, so regrouping stays on the watch list.`}); }
+    if(wsGrade && wsGrade.comps && wsGrade.comps.includes("regroup") && ok){ noteComp(sk, "regroup", false, {lvl:cur.level, ctx:ctxOf(cur)}); lastPraise.push({t:`The product is right. One carry box needs a different number, so regrouping stays on your practice list.`}); }
   } else {
     S.run=0; if(cur.checkin && S.checkins){ delete S.checkins[cur.checkin]; entry.delayedMiss=1; } // a missed check-in: the weakness machinery takes over from here
     const d=twoPoints ? {tag:"two-points", note:NOTES["two-points"]} : wsGrade ? {tag:COMP_TO_TAG[wsGrade.main]||wsGrade.main, note:NOTES[COMP_TO_TAG[wsGrade.main]]||""} : diag(raw); cur.mistake=d; entry.tag=d.tag;
@@ -4239,7 +4439,7 @@ const EXPLAIN_BY_COMP={
   jump:{q:`Why jump by the parts of the number instead of all at once?`, opts:[`each part is an easy jump, and the parts add up to the whole number`, `jumps on a number line must be whole numbers`, `small jumps are always exact and big ones are not`]},
   chart:{q:`Why give both numbers the same number of decimal digits?`, opts:[`so every column holds the same place in both numbers`, `so the two numbers look the same length and fit neatly in the chart`, `to make both numbers bigger`]},
   unit:{q:`Why rename the decimal as a count of tenths or hundredths?`, opts:[`then it is a whole-number count you can share or measure`, `decimals cannot be divided, so they must be changed first`, `to make the number smaller`]},
-  point:{q:`Why check the decimal point against the estimate?`, opts:[`the digits can be right while the point is in the wrong place`, `an estimate is always the exact answer, so the two must match digit for digit`, `the decimal point always goes at the very end of the answer in multiplication`]},
+  point:{q:`Why check the decimal point against the estimate?`, opts:[`the digits can be right while the point is off`, `an estimate is always the exact answer, so the two must match digit for digit`, `the decimal point always goes at the very end of the answer in multiplication`]},
   partition:{q:`Why break each number into place-value parts?`, opts:[`each small product is easy, and the parts add back to the whole`, `smaller numbers always give the right answer, so we only need the small ones`, `the rectangle must always have exactly four boxes`]},
   sections:{q:`Why add all the sections?`, opts:[`together the sections cover the whole rectangle: the whole product`, `the biggest section is the real answer, and the other sections are extra work`, `adding them is only a way to check the estimate you made first`]},
   groups:{q:`Why can the answer be bigger than the dividend when dividing by a decimal?`, opts:[`each group is smaller than 1, so more groups fit`, `division always makes numbers bigger`, `decimals add zeros to the answer`]},
@@ -4416,6 +4616,205 @@ function finishStepCheck(c, last){
   save(); render();
 }
 
+// ===== v9.19 "Show what you know" check-up (Agent A) =====
+// A short, low-stakes check of the Unit 1 place-value ideas (5.NBT.1–4; since the v9.19 review also expanded form and exponents, see NS_ORDER) plus number-sense items (a number line, estimating, breaking a
+// number apart, does-it-make-sense). Kid-facing words never label her: she sees what she showed and what comes next. Self-contained: it does
+// not use next()/submit()/render(), levels, the Today plan counters, S.attempted/S.correct, or S.log. A miss or "Not sure yet" on a
+// skill-backed item opens a weak spot through noteComp(), which the Today plan's focus slot and recoveryTarget() already serve.
+// Recorded in S.nsChecks (last 12): {t, done, items:[{comp, sk, q, ans, yours, result:"ok"|"miss"|"unsure"}]}. School notes: S.schoolNotes.
+// 10 questions per check-up (the tile promises 10): the two place-value-relationship items (tenfold, digit-value) take turns between check-ups.
+const NS_COMPS={
+  "read-write":{sk:"standard", name:"Read and write decimals (words → standard form)", kid:"write a number from its words", std:"5.NBT.3a"},
+  compare:{sk:"compare", name:"Compare two decimals", kid:"compare two decimals", std:"5.NBT.3b"},
+  tenfold:{sk:"placevalue", name:"10 times as much / 1/10 of", kid:"tell when a digit is worth 10 times as much, or 1/10 as much", std:"5.NBT.1"},
+  "digit-value":{sk:"placevalue", name:"Value of a digit", kid:"find what a digit is worth", std:"5.NBT.1"},
+  powers:{sk:"shift", name:"Multiply and divide by 10 and 100", kid:"multiply and divide by 10 and 100", std:"5.NBT.2"},
+  exponents:{sk:"powers", name:"Powers of ten with exponents", kid:"multiply by a power of ten, like 10³", std:"5.NBT.2"},
+  expanded:{sk:"expanded", name:"Expanded form", kid:"write a decimal in expanded form", std:"5.NBT.3a"},
+  order:{sk:"compare", name:"Order decimals", kid:"put decimals in order", std:"5.NBT.3b"},
+  round:{sk:"rounding", name:"Round decimals to a place", kid:"round to a place", std:"5.NBT.4"},
+  magnitude:{sk:null, name:"How big a decimal is (0 to 1)", kid:"find where a decimal sits between 0 and 1", std:"5.NBT.3"},
+  estimate:{sk:null, name:"Estimate the size of an answer", kid:"estimate how big an answer will be", std:"5.NBT.5–6"},
+  decompose:{sk:null, name:"Break a number into place-value parts", kid:"break a number into place-value parts", std:"5.NBT.6"},
+  reasonable:{sk:null, name:"Does the answer make sense?", kid:"check if an answer makes sense", std:"5.NBT.2"}
+};
+const NS_ORDER=["read-write","compare","pv","powers","order","round","magnitude","estimate","expanded","alt"]; // "pv" = tenfold or digit-value, taking turns; "alt" = exponents or reasonable, taking turns
+// v9.19 review #4: expanded form (lessons 3–4) replaces the decompose item, and powers of ten with exponents (lessons 7–8) takes turns with
+// "does it make sense", so every Unit 1 lesson is covered and it stays 10 questions. "decompose" stays in NS_COMPS for older records.
+const NS_KEEP=12, NS_RETAKE_DAYS=21, NS_BOOST_DAYS=28;
+let nsRun=null; // the check-up in progress: {t, plan, off, items, idx, sel, val, fb, fbAt, err}; off = items already answered before a "Finish it"
+function nsChecks(){ if(!S) return []; if(!Array.isArray(S.nsChecks)) S.nsChecks=[]; const ok=S.nsChecks.filter(c=>c&&typeof c==="object"&&!Array.isArray(c)&&Array.isArray(c.items)&&Number.isFinite(+c.t)); if(ok.length!==S.nsChecks.length) S.nsChecks=ok; return S.nsChecks; }
+function nsNotes(){ if(!S) return []; if(!Array.isArray(S.schoolNotes)) S.schoolNotes=[]; const ok=S.schoolNotes.filter(n=>n&&typeof n==="object"&&!Array.isArray(n)&&typeof n.note==="string"); if(ok.length!==S.schoolNotes.length) S.schoolNotes=ok; return S.schoolNotes; }
+const nsLast=()=>{ const c=nsChecks().filter(x=>x.items.length); return c[c.length-1]||null; };
+const nsLastDone=()=>{ const c=nsChecks().filter(x=>x.items.length && x.done); return c[c.length-1]||null; }; // v9.19 review #7: only a finished check-up is "last time"
+const nsOpen=()=>{ const l=nsLast(); return (l && !l.done && l.items.length<NS_ORDER.length && Date.now()-l.t<NS_RETAKE_DAYS*DAY) ? l : null; }; // a stopped check-up she can finish
+function nsPlan(prev){ const has=c=>!!prev && prev.items.some(i=>i&&i.comp===c); const pv=has("tenfold")?"digit-value":"tenfold", alt=has("exponents")?"reasonable":"exponents";
+  return NS_ORDER.map(c=>c==="pv"?pv:c==="alt"?alt:c); }
+const nsPlain=h=>plain(String(h).replace(/<sup>([^<]*)<\/sup>/gi,"^$1").replace(/<span class="big-num">([\s\S]*?)<\/span>/gi," $1 ")); // the grown-ups table text: "10^5", and a space where the big number was its own line
+const nsDay=ts=>{ const d=new Date(ts); return d.toLocaleDateString(undefined,{month:"short",day:"numeric",...(d.getFullYear()!==new Date().getFullYear()?{year:"numeric"}:{})}); };
+const nsN=n=>Number(n).toLocaleString("en-US");
+const nsDec=(x,places)=>{ const s=Number(x).toFixed(places); return s.includes(".")?s.replace(/0+$/,"").replace(/\.$/,""):s; };
+const nsHas=(o,k)=>typeof k==="string" && Object.prototype.hasOwnProperty.call(o,k);
+// A 0-to-1 number line with tenth ticks and lettered points (theme-safe: currentColor and CSS variables). The label never gives the values away.
+function nsLineSVG(points){ const X=v=>30+v*540; let ticks=""; for(let i=0;i<=10;i++){ const x=X(i/10), big=i%5===0; ticks+=`<line x1="${x}" y1="${big?56:62}" x2="${x}" y2="${big?84:78}" stroke="currentColor" stroke-width="${big?3:2}"/>`; }
+  const labels=[0,0.5,1].map(v=>`<text x="${X(v)}" y="106" text-anchor="middle" font-size="18" fill="currentColor">${v}</text>`).join("");
+  const pts=points.map(p=>`<circle cx="${X(p.v)}" cy="70" r="7" fill="var(--hi)" stroke="currentColor" stroke-width="2"/><text x="${X(p.v)}" y="42" text-anchor="middle" font-size="20" font-weight="700" fill="currentColor">${esc(p.label)}</text>`).join("");
+  return `<svg class="nsline" viewBox="0 0 600 114" role="img" aria-label="A number line from 0 to 1 with points ${points.map(p=>esc(p.label)).join(", ")}" style="width:100%;max-width:600px;height:auto;color:var(--ink);display:block;margin:10px 0"><line x1="${X(0)}" y1="70" x2="${X(1)}" y2="70" stroke="currentColor" stroke-width="3"/>${ticks}${labels}${pts}</svg>`; }
+// One item per component. Skill-backed items come from the app's own generators at level 3 (grade level); the rest are small new items.
+function nsItem(comp){
+  const it={comp, sk:NS_COMPS[comp].sk, vis:"", p:null};
+  const gen=(p, why, model)=>Object.assign(it,{p, kind:p.type==="mc"?"mc":"input", prompt:p.prompt, options:p.options||[], answer:p.answer, ans:String(p.display), q:nsPlain(p.prompt), why, model});
+  const mc=(prompt, options, answer, why, model, q)=>Object.assign(it,{kind:"mc", prompt, options, answer, ans:String(options[answer]), q:q||nsPlain(prompt), why, model});
+  if(comp==="tenfold"){ const p=SKILLS.placevalue.gen(3,{variant:"times"}); return gen(p, "One place to the left is worth 10 times as much; one place to the right is worth 1/10 as much.", `The answer: “${esc(p.display)}”. Count the places between the two digits: to the left means 10 times, to the right means 1/10.`); }
+  if(comp==="digit-value"){ const p=SKILLS.placevalue.gen(3,{variant:"value"}); const m=p.meta||{}; const line=`The ${esc(m.digit)} is in the ${esc(m.place)} place, so it is worth ${esc(p.display)}.`; return gen(p, line, line); }
+  if(comp==="read-write"){ const p=SKILLS.standard.gen(3); return gen(p, "“And” is the decimal point, and the last word names the last place.", `It is ${esc(p.display)}. “And” is the decimal point; the last word names the last place.`); }
+  if(comp==="compare"){ let p, g=0; do{ p=SKILLS.compare.gen(3,{order:false}); }while(g++<12 && p.meta && p.meta.a && p.meta.b && cmpV(p.meta.a,p.meta.b)===0); return gen(p, "Line up the decimal points and compare place by place from the left.", `The answer: ${esc(p.display)}. Line up the decimal points, then compare from the left.`); }
+  if(comp==="order"){ const p=SKILLS.compare.gen(3,{order:true}); return gen(p, "Same whole number, so compare the tenths first, then the hundredths.", `In order: ${esc(p.display)}. Same whole number, so compare the tenths first, then the hundredths.`); }
+  if(comp==="round"){ const pl=pick([-1,-2]); const p=SKILLS.rounding.gen(3,{which:false, p:pl}); const place=placeSing((p.meta&&p.meta.p!==undefined)?p.meta.p:pl); return gen(p, `Look one place to the right of the ${place}s place: 5 or more rounds up, 4 or less stays.`, `It rounds to ${esc(p.display)}. Look one place to the right of the ${place}s place: 5 or more rounds up.`); }
+  if(comp==="powers"){ const p=SKILLS.shift.gen(3); const m=p.meta||{}; const f=m.factor||10, n=m.n||Math.round(Math.log10(f)); const why=`${m.op==="÷"?"Dividing":"Multiplying"} by ${nsN(f)} moves each digit ${n===1?"one place":n+" places"} to the ${m.op==="÷"?"right, so the number gets smaller":"left, so the number gets bigger"}.`; return gen(p, why, `It is ${esc(p.display)}. ${why}`); }
+  if(comp==="exponents"){ const p=SKILLS.powers.gen(3,{variant:pick(["plain","threefactor"])}); const m=p.meta||{}; const e=+m.e||2, n=(+m.V||0)/1000, z=`10<sup>${e}</sup> is ${nsN(Math.pow(10,e))}: a 1 with ${e} zeros`;
+    const why = m.variant==="threefactor" ? `${nsN(n)} × ${m.other} = ${nsN(n*m.other)}, and ${z}, so write ${e} zeros after ${nsN(n*m.other)}.` : `${z}, so write ${e} zeros after ${nsN(n)}.`;
+    return gen(p, why, `It is ${esc(p.display)}. ${why}`); }
+  if(comp==="expanded"){ const p=SKILLS.expanded.gen(3); return gen(p, "Each part is one digit times the value of its place, and zeros get no part.", `It is ${esc(p.display)}. Each part is one digit times the value of its place (tens, ones, tenths, hundredths, thousandths), and zeros get no part.`); }
+  if(comp==="magnitude"){
+    if(Math.random()<0.5){ const d=ri(5,9), a=`0.${d}`, e=ri(1,9), b=Math.random()<0.5?`0.1${e}`:`0.0${e}`; const t=Math.round(parseFloat(b)*10); const opts=shuffle([a,b]);
+      const bLine=b.startsWith("0.0")?`${b} is less than 1 tenth`:`${b} is only about ${t} tenth${t>1?"s":""}`;
+      return mc(`Which is closer to <b>1</b>?`, opts, opts.indexOf(a), `${a} is ${d} tenths; ${bLine}.`, `${a} is ${d} tenths; ${bLine}. So ${a} is closer to 1.`, `Which is closer to 1: ${opts.join(" or ")}?`); }
+    const T=pick([47,38,62,29,83,74]), t=T/100, sw=(T%10)*10+Math.floor(T/10); const tS=nsDec(t,2);
+    const pts=[{v:t,s:tS},{v:sw/100,s:nsDec(sw/100,2)},{v:T/1000,s:nsDec(T/1000,3)}].sort((x,y)=>x.v-y.v); const lab=shuffle(["A","B","C"]); pts.forEach((p,i)=>{ p.label=lab[i]; }); pts.sort((x,y)=>x.label<y.label?-1:1); /* v9.19 review: the letters are shuffled along the line, so the answer is not always B or C */ const ai=pts.findIndex(p=>p.v===t); it.vis=nsLineSVG(pts);
+    const line=`${tS} is ${Math.floor(T/10)} tenths and ${T%10} hundredths, so it sits between 0.${Math.floor(T/10)} and 0.${Math.floor(T/10)+1}.`;
+    return mc(`Which point on the number line shows <b>${tS}</b>?`, pts.map(p=>`Point ${p.label}`), ai, line, `It is point ${pts[ai].label}. ${line}`, `Which point shows ${tS}? (${pts.map(p=>`${p.label} = ${p.s}`).join(", ")})`); }
+  if(comp==="estimate"){
+    if(Math.random()<0.5){ const d=pick([11,12,21,22,31,32,41]), mag=pick([10,100]); const n=d*(mag===10?ri(9,12):ri(95,112)); const line=`${d} × ${nsN(mag)} = ${nsN(d*mag)}, and ${nsN(n)} is close to that`;
+      return mc(`About how big is <b>${nsN(n)} ÷ ${d}</b>?`, ["about 10","about 100","about 1,000"], mag===10?0:1, `${line}.`, `${line}, so it is about ${nsN(mag)}.`); }
+    const two=(lo,hi)=>{ let x; do{ x=ri(lo,hi); }while(x%10===0||x%10===5); return x; }; const a=two(12,98), b=two(12,49); const ra=Math.round(a/10)*10, rb=Math.round(b/10)*10, P=ra*rb;
+    const set=pick([[P/100,P/10,P],[P/10,P,P*10],[P,P*10,P*100]]); const line=`${a} is about ${ra} and ${b} is about ${rb}. ${ra} × ${rb} = ${nsN(P)}`;
+    return mc(`Which is a reasonable answer for <b>${a} × ${b}</b>?`, set.map(nsN), set.indexOf(P), `${line}.`, `${line}, so about ${nsN(P)}.`); }
+  if(comp==="decompose"){
+    if(Math.random()<0.5){ const d=pick([11,12,21,31]), k=ri(2,9), n=d*100+d*k; const right=`${nsN(d*100)} + ${d*k}`, w1=`1,000 + ${nsN(n-1000)}`, r=n%10, w2=r?`${nsN(n-r)} + ${r}`:`${nsN(n-100)} + 100`;
+      const both=s=>{ const [x,y]=s.split(" + ").map(v=>+v.replace(/,/g,"")); return x%d===0&&y%d===0; };
+      if(!both(w1) && !both(w2) && w1!==w2 && w1!==right && w2!==right){ const opts=shuffle([right,w1,w2]); return mc(`Which way of breaking up <b>${nsN(n)}</b> makes it easy to divide by <b>${d}</b>?`, opts, opts.indexOf(right), `${d} goes into ${nsN(d*100)} and into ${d*k} evenly (${d} × 100 and ${d} × ${k}).`, `${right}: ${d} goes into both parts evenly, so ${nsN(n)} ÷ ${d} = 100 + ${k} = ${100+k}.`); } }
+    const a=ri(1,9), b=ri(1,9), c=ri(1,9), n=a*1000+b*100+c*10; const right=`${nsN(a*1000)} + ${b*100} + ${c*10}`; const opts=shuffle([right, `${nsN(a*1000)} + ${10*b+c}`, `${a*100} + ${b*10} + ${c}`]);
+    const line=`${nsN(n)} is ${a} thousands, ${b} hundreds, and ${c} tens`;
+    return mc(`Which equals <b>${nsN(n)}</b>?`, opts, opts.indexOf(right), `${line}.`, `${line}: ${right}.`); }
+  // reasonable: someone's answer moved the wrong way
+  const who=pick(["Maya","Leo","Sam","Ava","Noah","Zoe"]), f=pick([10,100]);
+  if(Math.random()<0.5){ const x=nsDec(ri(1,9)+ri(1,9)/10,1), claim=nsDec(+x/f, f===10?2:3), right=nsDec(+x*f,1); const good=`No: × ${f} makes it bigger, not smaller`; const opts=["Yes", ...shuffle([good,`No: it should be ${x}00`])];
+    return mc(`${who} says <b>${x} × ${f} = ${claim}</b>. Does that make sense?`, opts, opts.indexOf(good), `Multiplying by ${f} makes a number bigger: ${x} × ${f} = ${right}.`, `${x} × ${f} = ${right}. Multiplying by ${f} makes a number bigger, not smaller.`); }
+  const x=ri(12,98), claim=nsN(x*f), right=nsDec(x/f, f===10?1:2); const good=`No: ÷ ${f} makes it smaller, not bigger`; const opts=["Yes", ...shuffle([good,`No: it should be ${x}.0`])];
+  return mc(`${who} says <b>${x} ÷ ${f} = ${claim}</b>. Does that make sense?`, opts, opts.indexOf(good), `Dividing by ${f} makes a number smaller: ${x} ÷ ${f} = ${right}.`, `${x} ÷ ${f} = ${right}. Dividing by ${f} makes a number smaller, not bigger.`);
+}
+function nsBuildItems(comps){
+  return comps.map(c=>{ try{ return nsItem(c); }catch(e){ return null; } }).filter(it=>it && it.prompt && (it.kind==="input" ? !!it.p : (Array.isArray(it.options) && it.options.length>1 && it.answer>=0))); }
+function nsHomeTile(){ if(!S) return ""; const last=nsLastDone(), open=nsOpen(); const again=!!last && (Date.now()-last.t)>=NS_RETAKE_DAYS*DAY;
+  return `<div class="card nstile" id="nstile"><div class="week-head"><h2 style="margin:0">Show what you know</h2><span class="std">No score</span></div>
+      <p class="muted" style="font-size:14px;margin:6px 0 10px">10 quick questions, about 8 minutes. Not a test: it helps the app pick what to practice next. “Not sure yet” is a fine answer.</p>
+      ${open?`<p class="muted nsopen" style="font-size:14px;margin:0 0 10px">You started one on ${esc(nsDay(open.t))}. Pick up where you left off.</p>`:last?`<p class="muted" style="font-size:14px;margin:0 0 10px">Last time: ${esc(nsDay(last.t))}. ${again?"It has been a few weeks, so this is a good time to see how you've grown.":"Try it again after a few weeks to see how you've grown."}</p>`:""}
+      <div class="actions" style="margin-top:0"><button class="btn" data-skill="nscheck" style="margin-top:0">${open?"Finish it":last?"Try it again":"Start"}</button></div></div>`; }
+// v9.19 review #7: a check-up stopped partway (Home or a reload) is not "done". Starting again within a few weeks finishes it: the questions she
+// has not answered yet, recorded into the same check-up, then the end screen. An old stopped one is left as is and a new check-up starts.
+function nsStart(){ if(!S){ home(); return; } cur=null; mode="nscheck"; const open=nsOpen(); let t=Date.now(), plan, off=0, comps;
+  if(open){ const list=nsChecks(), prev=list.slice(0, list.indexOf(open)).filter(x=>x.items.length).pop()||null; plan=Array.isArray(open.plan)?open.plan.filter(c=>nsHas(NS_COMPS,c)):nsPlan(prev); const got=new Set(open.items.map(i=>i&&i.comp)); t=open.t; off=open.items.length; comps=plan.filter(c=>!got.has(c)).slice(0, Math.max(0, NS_ORDER.length-off)); }
+  else { plan=nsPlan(nsLast()); comps=plan; }
+  nsRun={t, plan, off, items:nsBuildItems(comps), idx:0, sel:-1, val:"", fb:null, fbAt:0, err:""}; nsRender(); try{ window.scrollTo(0,0); }catch(e){} }
+function nsRender(){ if(!nsRun){ home(); return; } if(nsRun.idx>=nsRun.items.length){ nsEnd(); return; }
+  const it=nsRun.items[nsRun.idx], n=nsRun.items.length, fb=nsRun.fb, done=!!fb, off=nsRun.off||0;
+  const answerHTML = it.kind==="mc"
+    ? `<div class="opts${it.options.some(o=>String(o).length>34)?" long":""}" id="nsopts" role="radiogroup" aria-label="Answer choices">${it.options.map((o,i)=>{ let c="opt"; if(i===nsRun.sel) c+=" sel"; if(done && i===it.answer) c+=" right"; return `<button type="button" class="${c}" role="radio" aria-checked="${i===nsRun.sel}" data-i="${i}" ${done?"disabled":""}><b aria-hidden="true">${"abcd"[i]}.</b>&nbsp; ${esc(o)}</button>`; }).join("")}</div>`
+    : `<label class="vh" for="nsans">Your answer</label><input class="ans" id="nsans" type="text" inputmode="decimal" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type your answer" value="${esc(nsRun.val)}" ${done?"disabled":""}>`;
+  const fbHTML = done ? `<div class="nsfb" role="status" aria-live="polite" style="margin-top:12px;padding:10px 12px;border-radius:12px;border:2px solid ${fb.ok?"var(--ok)":"var(--line)"};background:${fb.ok?"var(--ok-bg)":"#F7F9FC"}">${fb.html}</div>` : "";
+  const actions = done ? `<div class="actions"><button class="btn primary" id="nsnext">${nsRun.idx+1>=n?"See what you showed":"Next"}</button></div>`
+    : `<div class="actions"><button class="btn primary" id="nsgo">Check</button><button class="btn quiet" id="nsunsure">Not sure yet</button></div>`;
+  app.innerHTML=`<div class="topbar"><button class="btn quiet" id="nshome">Home</button><div class="row"><span class="pill">Show what you know</span></div></div>${warnHTML()}
+    <div class="card"><p class="muted nsprog" style="font-size:14px;margin:0">${off+nsRun.idx+1} of ${off+n}</p><div class="progress" aria-hidden="true"><i style="width:${Math.round(100*(off+nsRun.idx+(done?1:0))/(off+n))}%"></i></div>
+      <div class="nsq" style="font-size:20px;margin:14px 0 6px">${it.prompt}</div>${it.vis||""}${answerHTML}
+      <div class="inline-err" id="nserr" role="status" aria-live="polite">${esc(nsRun.err||"")}</div>${fbHTML}${actions}</div>`;
+  nsBind(); }
+function nsBind(){ const q=id=>app.querySelector("#"+id);
+  q("nshome").onclick=()=>{ nsRun=null; home(); };
+  app.querySelectorAll("#nsopts .opt").forEach(b=>b.onclick=()=>nsSelect(+b.dataset.i));
+  const inp=q("nsans"); if(inp && !nsRun.fb){ inp.addEventListener("input",()=>{ nsRun.val=inp.value; }); inp.focus({preventScroll:true}); } // Enter: nsKey below
+  if(q("nsgo")) q("nsgo").onclick=()=>nsAnswer(false);
+  if(q("nsunsure")) q("nsunsure").onclick=()=>nsAnswer(true);
+  if(q("nsnext")){ q("nsnext").onclick=e=>{ if(e && e.isTrusted && nsRun && Date.now()-nsRun.fbAt<400) return; /* a double tap on Check must not skip the feedback */ nsNext(); }; q("nsnext").focus({preventScroll:true}); }
+}
+function nsSelect(i){ if(!nsRun || nsRun.fb) return; const it=nsRun.items[nsRun.idx]; if(!it || it.kind!=="mc" || !(i>=0 && i<it.options.length)) return; nsRun.sel=i; nsRun.err="";
+  app.querySelectorAll("#nsopts .opt").forEach(x=>{ const on=+x.dataset.i===nsRun.sel; x.classList.toggle("sel",on); x.setAttribute("aria-checked",String(on)); }); const el=app.querySelector("#nserr"); if(el) el.textContent=""; }
+function nsNext(){ if(!nsRun || !nsRun.fb) return; nsRun.idx++; nsRun.sel=-1; nsRun.val=""; nsRun.fb=null; nsRun.err=""; nsRender(); try{ window.scrollTo(0,0); }catch(x){} }
+// v9.19 review: the check-up keyboard. 1–4 or a–d pick a choice, Enter checks, and Enter on the feedback goes on. A held Enter (e.repeat) does
+// nothing, and a fresh Enter within 400 ms of the feedback appearing is ignored, so one long press can never check and then skip the feedback.
+// The practice screen's own keyboard handler stays out of the way (cur is null during the check-up).
+function nsKey(e){ if(mode!=="nscheck" || !nsRun || !app.querySelector(".nsq") || e.altKey || e.ctrlKey || e.metaKey) return; const tg=e.target;
+  if(tg && tg.id==="nshome") return; // Enter on "Home" presses Home
+  if(e.key==="Enter"){ if(tg && tg.id==="nsunsure" && !e.repeat && !nsRun.fb) return; /* Enter on "Not sure yet" presses it */ e.preventDefault(); if(e.repeat) return;
+    if(!nsRun.fb && tg && tg.classList && tg.classList.contains("opt") && tg.closest("#nsopts") && +tg.dataset.i!==nsRun.sel){ nsSelect(+tg.dataset.i); return; } // Enter on a choice picks it; the next Enter checks
+    if(nsRun.fb){ if(Date.now()-nsRun.fbAt>=400) nsNext(); } else nsAnswer(false); return; }
+  if(nsRun.fb || e.repeat || tg && tg.tagName==="INPUT") return; const k=String(e.key||"").toLowerCase(); if(k.length!==1) return;
+  const i = "1234".includes(k) ? "1234".indexOf(k) : "abcd".includes(k) ? "abcd".indexOf(k) : -1; if(i<0) return; const it=nsRun.items[nsRun.idx]; if(!it || it.kind!=="mc" || i>=it.options.length) return;
+  e.preventDefault(); nsSelect(i); }
+try{ window.addEventListener("keydown", nsKey); }catch(e){}
+function nsAnswer(unsure){ if(!nsRun || nsRun.fb) return; const it=nsRun.items[nsRun.idx]; let ok=false, yours="(not sure yet)", raw=null; const err=m=>{ nsRun.err=m; const el=app.querySelector("#nserr"); if(el) el.textContent=m; };
+  if(!unsure){
+    if(it.kind==="mc"){ if(nsRun.sel<0){ err("Tap an answer first, or tap “Not sure yet”."); return; } raw=nsRun.sel; yours=String(it.options[raw]); ok=raw===it.answer; }
+    else { const inp=app.querySelector("#nsans"); const v=inp?inp.value:nsRun.val; nsRun.val=v; const iss=issueFor(it.p, v); if(iss){ err(iss); if(inp) inp.focus(); return; } raw=v; yours=String(v).trim(); ok=!!checkInput(it.p, v); } // an unreadable entry is a note, never a miss
+  }
+  nsRecord(it, unsure?"unsure":ok?"ok":"miss", yours, raw);
+  const k=(nsRun.off||0)+nsRun.idx, lead = ok ? "Yes." : unsure ? NS_UNSURE[k%NS_UNSURE.length] : NS_MISS[k%NS_MISS.length]; // v9.19 review: a miss and "Not sure yet" get different, varied lines
+  nsRun.fb={ok, html:`<b>${lead}</b> ${ok?it.why:it.model}`}; nsRun.fbAt=Date.now(); nsRun.err=""; nsRender(); }
+const NS_MISS=["Good try. Here is how it works.", "Not this time. Here is the idea.", "Nice effort. Here is one way to see it.", "That one goes on your practice list."];
+const NS_UNSURE=["Thanks for being honest. We'll practice that one.", "Thanks for telling me. We'll practice that one.", "Good to know. It goes on your practice list.", "Thanks for saying so. We'll work on that one."];
+function nsRecord(it, result, yours, raw){ const list=nsChecks(); let e=list.find(x=>x.t===nsRun.t); if(!e){ e={t:nsRun.t, done:0, plan:Array.isArray(nsRun.plan)?nsRun.plan.slice():undefined, items:[]}; list.push(e); while(list.length>NS_KEEP) list.shift(); }
+  e.items.push({comp:it.comp, sk:it.sk||null, q:it.q, ans:it.ans, yours, result});
+  if(result!=="ok" && it.sk && it.p && SKILLS[it.sk]){ // open (or re-open) the weak spot that the Today plan's focus slot serves; levels never move
+    let tag="*"; if(result==="miss"){ try{ const d=diagnose(it.p, raw); if(d && d.tag) tag=d.tag; }catch(x){} }
+    const lvl=Math.min(3, Math.max(1, +S.levels[it.sk]||1)); // v9.19 review: practice opens at her level in that skill, never above the check-up's level 3
+    try{ for(const c of compsOfMiss(it.sk, tag)) noteComp(it.sk, c, false, {lvl, ctx:ctxOf(it.p)}); }catch(x){} }
+  save(); }
+function nsEnd(){ const e=nsChecks().find(x=>nsRun && x.t===nsRun.t); if(e){ e.done=1; save(); }
+  const items=e?e.items:[]; const kid=c=>nsHas(NS_COMPS,c)?NS_COMPS[c].kid:String(c);
+  const shown=[...new Set(items.filter(i=>i.result==="ok").map(i=>i.comp))], allNext=[...new Set(items.filter(i=>i.result!=="ok").map(i=>i.comp))], next=allNext.slice(0,3);
+  nsRun=null; // v9.19 review: at most 3 are named, and when there are more the line says so without a count (home no longer counts the list either)
+  app.innerHTML=`<div class="topbar"><button class="btn quiet" id="nshome2">Home</button><div class="row"><span class="pill">Show what you know</span></div></div>${warnHTML()}
+    <h1 style="margin:10px 0 4px">Thanks, ${esc(S.name)}.</h1><p class="muted" style="margin:0 0 6px">Here is what you showed today.</p>
+    <div class="card nsshown"><h2 style="margin-top:0">You showed you can:</h2><ul>${shown.length?shown.map(c=>`<li>${esc(kid(c))}</li>`).join(""):`<li>stick with ${items.length||10} new questions from start to finish</li>`}</ul></div>
+    <div class="card nsnextup"><h2 style="margin-top:0">Coming up in practice:</h2>${next.length?`<ul>${next.map(c=>`<li>${esc(kid(c))}</li>`).join("")}</ul><p class="muted" style="font-size:14px;margin:6px 0 0">The app mixes ${allNext.length>next.length?"these and a few others":"these"} into your practice, one at a time.</p>`:`<p class="muted" style="margin:0">Nothing new to add. Your regular practice keeps these fresh.</p>`}</div>
+    <div class="actions"><button class="btn primary" id="nsdone">Home</button></div>`;
+  app.querySelector("#nshome2").onclick=home; app.querySelector("#nsdone").onclick=home; app.querySelector("#nsdone").focus({preventScroll:true}); }
+// School note → Unit 1 weighting. A note whose area or text names Number Sense makes the first "mix" slot of "Start today" draw from the
+// Unit 1 skills for 4 weeks after the note's date (see the one-line hook in pickSkill()). Nothing else about the plan changes.
+function nsUnit1Skills(){ const out=[]; for(const l of lessonList()){ if(l && +l.unit===1) for(const k of lessonSkills(l)) if(!out.includes(k) && SKILL_ORDER.includes(k)) out.push(k); } return out; }
+const nsNoteDate=n=>{ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String((n&&n.date)||"")); return m ? new Date(+m[1], +m[2]-1, +m[3]).getTime() : (+(n&&n.t)||0); };
+function nsUnit1Active(now){ now=now||Date.now(); let best=null; for(const n of nsNotes()){ if(!/number\s*sense/i.test(String(n.area||"")+" "+String(n.note||""))) continue; const d=nsNoteDate(n), until=d+NS_BOOST_DAYS*DAY; if(!(d<=now && now<until)) continue; if(!best || until>best.until) best={note:n, until}; } return best; }
+function nsUnit1Pick(){ if(!S || !nsUnit1Active()) return null; const ks=nsUnit1Skills(); if(!ks.length) return null; return drawWeighted(ks, ks.map(k=>(MAX_LEVEL+1-(S.levels[k]||1))*2+1)); }
+// v9.19 review #6: the grown-ups page is one tap from home, so this card reads safely if Lily wanders in: "Check-up results", results as
+// Showed it / Practicing / Not sure yet, and the school notes (the only place the report's wording appears) folded into a closed <details>.
+function nsGrownupsHTML(openNotes){ if(!S) return ""; const checks=nsChecks().filter(c=>c.items.length); const last=checks[checks.length-1], prev=checks[checks.length-2]; const notes=nsNotes(); const boost=nsUnit1Active();
+  const RES={ok:"Showed it", miss:"Practicing", unsure:"Not sure yet"}; const nm=c=>nsHas(NS_COMPS,c)?NS_COMPS[c].name:String(c); const s=v=>v==null?"":String(v);
+  const skn=it=>nsHas(SKILLS,it.sk) ? esc(SKILLS[it.sk].name) : `<span class="muted">none; the quick look and estimate-first practice cover it</span>`;
+  const rows = last ? last.items.filter(it=>it&&typeof it==="object").map(it=>`<tr><td><b>${esc(nm(it.comp))}</b>${nsHas(NS_COMPS,it.comp)?` <span class="muted">${esc(NS_COMPS[it.comp].std)}</span>`:""}</td><td>${esc(s(it.q))}${it.result!=="ok"?`<br><span class="muted">${it.result==="unsure"?"tapped “Not sure yet”":`answered ${esc(s(it.yours))||"—"}`}; answer ${esc(s(it.ans))}</span>`:""}</td><td>${esc(nsHas(RES,it.result)?RES[it.result]:s(it.result))}</td><td>${skn(it)}</td></tr>`).join("") : "";
+  let changed=""; if(last && prev){ const r=c=>{ const m=Object.create(null); for(const i of c.items) if(i&&typeof i==="object") m[i.comp]=i.result; return m; }; const a=r(last), b=r(prev); const both=Object.keys(a).filter(k=>k in b);
+    const newly=both.filter(k=>a[k]==="ok"&&b[k]!=="ok"), slipped=both.filter(k=>a[k]!=="ok"&&b[k]==="ok");
+    changed=`<p class="nschanged" style="font-size:14px;margin:8px 0 0"><b>Since ${esc(nsDay(prev.t))}:</b> ${newly.length?`Newly shown: ${newly.map(k=>esc(nm(k))).join(", ")}.`:"Nothing newly shown."}${slipped.length?` Shown last time, not this time: ${slipped.map(k=>esc(nm(k))).join(", ")}.`:""}</p>`; }
+  const intro=`<p class="muted" style="font-size:14px;margin:0 0 8px">Ten short questions (about 8 minutes) on the Unit 1 place-value ideas (5.NBT.1–4, including expanded form and powers of ten with exponents) plus a few items on the size of numbers: where a decimal sits between 0 and 1, estimating an answer, and, every other check-up, whether an answer makes sense. ${esc(S.name)} sees it as “Show what you know”: no score and no labels, only what she showed and what comes next. A miss opens a practice spot that “Start today” serves; it never changes levels. Worth repeating after about 3 weeks.</p>`;
+  const left = last ? `<p class="muted" style="font-size:14px;margin:0 0 6px">Last check-up: <b>${esc(fmtDate(last.t))}</b>${last.done?"":` (stopped after ${last.items.length} of 10; the home tile offers “Finish it”)`}.${checks.length>1?` ${checks.length} check-ups saved.`:""}</p>
+      <div style="overflow-x:auto"><table class="report nstable"><tr><th>Component</th><th>Question</th><th>Result</th><th>App skill</th></tr>${rows}</table></div>${changed}`
+    : `<p class="muted" style="font-size:14px;margin:0">No check-up yet.</p>`;
+  const noteList=notes.map((n,i)=>({n,i})).reverse().map(({n,i})=>`<div class="nsnote" style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:0 0 8px;background:#FFFEF8"><div class="muted" style="font-size:13px">${esc(s(n.date)||nsDay(+n.t||Date.now()))} · ${esc(s(n.area))}</div><div>${esc(n.note)}</div><button class="btn quiet small nsdel" data-i="${i}" style="margin-top:6px">Remove</button></div>`).join("");
+  const right=`<details class="nsschool"${openNotes?" open":""}><summary style="font-weight:700;cursor:pointer;margin:0 0 6px">School notes (for grown-ups)</summary>${noteList}
+      ${notes.length?`<p class="nsask" style="font-size:14px;margin:0 0 8px"><b>Worth asking the teacher:</b> which problems on the unit test were missed? Is there a re-assessment?</p>`:""}
+      ${boost?`<p class="muted nsboost" style="font-size:14px;margin:0 0 8px"><b>Practice effect:</b> until ${esc(nsDay(boost.until))}, the first mixed-practice problem in each “Start today” goes to a Unit 1 skill (${nsUnit1Skills().map(k=>esc(SKILLS[k].name)).join(", ")}).</p>`:(notes.length?`<p class="muted" style="font-size:13px;margin:0 0 8px">A note that names Number Sense gives Unit 1 skills extra weight in “Start today” for 4 weeks after its date.</p>`:"")}
+      <div class="nsform"><div class="row" style="margin-bottom:6px"><label class="row" style="gap:6px;font-size:14px">Date <input type="date" id="nsdate" value="${esc(todayStr())}" style="font-size:16px;padding:6px 8px"></label><label class="row" style="gap:6px;font-size:14px;flex:1 1 180px">Area <input type="text" id="nsarea" value="Number Sense" maxlength="60" style="font-size:16px;padding:6px 8px;flex:1"></label></div>
+        <label class="vh" for="nsnote">Note from school</label><textarea id="nsnote" rows="3" maxlength="500" style="width:100%;font-size:15px;min-height:70px;padding:8px 10px;border:2px solid var(--line);border-radius:10px;font-family:inherit" placeholder="What the report or the teacher said, and what it was based on"></textarea>
+        <div class="actions" style="margin-top:6px"><button class="btn" id="nssave">Save note</button><span class="muted" id="nsmsg" style="font-size:13px;align-self:center" role="status" aria-live="polite"></span></div></div></details>`;
+  return `<div class="card two nscard" id="nscard"><div class="left"><h2 style="margin-top:0">Check-up results</h2>${intro}${left}<div class="actions" style="margin-top:10px"><button class="btn" id="nsstart">Start check-up</button></div></div><div class="right">${right}</div></div>`; }
+function bindNsGrownups(){ const q=id=>app.querySelector("#"+id); if(!q("nscard")) return;
+  const rerender=msg=>{ const c=q("nscard"); if(!c) return; c.outerHTML=nsGrownupsHTML(true); bindNsGrownups(); if(msg && q("nsmsg")) q("nsmsg").textContent=msg; };
+  q("nsstart").onclick=()=>start("nscheck");
+  q("nssave").onclick=()=>{ const note=String(q("nsnote").value||"").trim(); if(!note){ q("nsmsg").textContent="Type the note first."; return; } const dv=String(q("nsdate").value||"").trim(); const date=/^\d{4}-\d{2}-\d{2}$/.test(dv)?dv:todayStr(); const area=String(q("nsarea").value||"").trim().slice(0,60)||"Number Sense";
+    const list=nsNotes(); list.push({t:Date.now(), date, area, note:note.slice(0,500)}); while(list.length>20) list.shift(); const okSave=save(); rerender(okSave?"Saved.":"Saved for now, but this device would not store it."); };
+  app.querySelectorAll("#nscard .nsdel").forEach(b=>b.onclick=()=>{ const i=+b.dataset.i; const list=nsNotes(); if(!list[i]) return; if(!confirm("Remove this note from school?")) return; list.splice(i,1); save(); rerender("Removed."); });
+}
+
 // ===== Grown-ups =====
 function fmtDate(ts){ const d=new Date(ts); return d.toLocaleDateString(undefined,{month:"short",day:"numeric", ...(d.getFullYear()!==new Date().getFullYear()?{year:"numeric"}:{})})+" "+d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}); }
 const isFresh=e=>e.stage?e.stage==="fresh":!e.retry; // older entries have retry instead of stage
@@ -4424,7 +4823,8 @@ const indep=e=>e.independent!==undefined?e.independent:((isFresh(e)&&!e.hints)?1
 //   independent  fresh, no hints, supports off (or not a workspace problem), answered right
 //   indep-miss   the same conditions, answered wrong (an independent attempt that missed)
 //   supported    fresh, no hints, right, but with the multiplication supports on (level 2 or 3) or the full coach card (line + example offer)
-//   prompted     fresh, no hints, right, with a one-line strategy reminder opened before answering (the level-1 nudge)
+//   prompted     fresh, no hints, right, with a one-line strategy reminder opened before answering (the level-1 nudge), or fixed after the
+//                v9.19 "does that make sense?" estimate note (entry.reasonCaught): not independent, not help; moves no level
 //   copied       the answer was shown and typed in
 //   guided       everything else that ended right (hints, follow-up, walkthrough completion)
 //   miss         everything else that ended wrong
@@ -4512,7 +4912,7 @@ function tiersHTML(log){
         ${row("Independent calculation", distinct?`${distinct} different problem${distinct===1?"":"s"} right without hints, examples, an opened nudge, the full coach card, or answer cues`:"none yet")}
         ${row("Supported completion", sup?`${sup} right with supports on (the multiplication tools, or the full coach card)`:"none")}
         ${(()=>{ const asked=log.reduce((a,e)=>a+(+e.explainAsked||0),0), okX=log.reduce((a,e)=>a+(+e.explainOk||0),0); const skipped=log.reduce((a,e)=>a+(+e.explainSkipped||0),0), helps=log.reduce((a,e)=>a+(+e.helpTaps||0),0), breaks=log.filter(e=>e.breakTaken).length; return row("Reason after a shown step", asked||skipped?`${asked?`${okX} of ${asked} right reasons picked after a walkthrough step had to be shown`:"no reasons picked yet"}${skipped?`; ${skipped} time${skipped===1?"":"s"} she tapped “Just tell me why” instead`:""}`:"none yet")+row("Asked for help in a walkthrough", helps||breaks?`${helps} “Help me” tap${helps===1?"":"s"}${breaks?`; took a break from a walkthrough ${breaks} time${breaks===1?"":"s"}`:""}. Asking counts like a miss on that step, so the evidence stays honest.`:"none yet"); })()}
-        ${(()=>{ const pr=log.filter(e=>cls(e)==="prompted").length; return row("Prompted", pr?`${pr} right after opening the one-line nudge`:"none"); })()}
+        ${(()=>{ const pr=log.filter(e=>cls(e)==="prompted").length; return row("Prompted", pr?`${pr} right after a nudge: the one-line reminder she opened, or the “does that make sense?” check against her estimate`:"none"); })()}
         ${(()=>{ const ft=log.filter(e=>e.freshAfterHelp); const fr=ft.filter(e=>cls(e)==="independent").length; return row("Fresh problem right after help", ft.length?`${fr} of ${ft.length} right on her own, new numbers, coach hidden (immediate transfer)`:"none yet"); })()}
         ${row("Studied first", studied?`${studied} right after looking at a worked example`:"none")}
         ${row("Explanation", whyAll?`recognized the correct reason on ${whyOk} of ${whyAll} "say why" questions`:"not asked yet")}
@@ -4594,6 +4994,7 @@ function grownups(){
       const c={}; for(const e of log){ const k=cls(e); c[k]=(c[k]||0)+1; } let lastCopied=-1; log.forEach((e,i)=>{ if(cls(e)==="copied") lastCopied=i; }); const sinceCopied=log.slice(lastCopied+1).filter(e=>cls(e)==="guided").length;
       return `Last 7 days: ${wk.filter(e=>isFresh(e)&&!e.abandoned).length} problems${wk.filter(e=>e.abandoned).length?` (plus ${wk.filter(e=>e.abandoned).length} left before answering)`:""} on ${days} day${days===1?"":"s"}: independent ${wi.length?`${wiR} right of ${wi.length} (${Math.round(100*wiR/wi.length)}%)`:"none yet"}, ${wHelp} finished with help${wCopied?`, ${wCopied} with the answer shown`:""}. ${S.logTrimmed?`Saved history (the most recent ${log.length} records)`:"All time"}: independent ${c.independent||0} right of ${(c.independent||0)+(c["indep-miss"]||0)}; supported (tools or full coach on) ${c.supported||0}; prompted (a nudge opened) ${c.prompted||0}; guided ${c.guided||0}; copied (answer shown) ${c.copied||0}${c["placement-miss"]?`; quick checks or warm-ups on new skills missed (not scored) ${c["placement-miss"]}`:""}. Guided completions since the answer was last shown: ${sinceCopied}.`; })()}${(()=>{ const w=log.filter(e=>e.why!==undefined); return w.length?` "Say why" questions: ${w.filter(e=>e.why).length} of ${w.length} right.`:""; })()}</p>
     ${tiersHTML(log)}
+    ${nsGrownupsHTML()}${quickGrownupsHTML()}
     ${classHTML}
     <div class="card">
       <h2 style="margin-top:0">By skill</h2>
@@ -4641,6 +5042,7 @@ function grownups(){
   const q=id=>app.querySelector("#"+id);
   q("back").onclick=home; q("back").focus({preventScroll:true});
   const setClassMode=()=>{ const m=q("classmode"); if(m) m.innerHTML=classModeHTML(); };
+  bindNsGrownups();
   if(q("paperSave")) q("paperSave").onclick=()=>{ const sk=q("paperSk").value; const qtxt=String(q("paperQ").value||"").trim(); const okv=(app.querySelector("input[name=paperOk]:checked")||{}).value==="1"; const helped=q("paperHelp").checked; const changedForm=q("paperForm").checked;
     if(!SKILLS[sk]) return; pushLog({t:Date.now(), sk, q: qtxt?`paper: ${qtxt}`:"paper problem", yours:"", ans:"", ok:okv?1:0, stage:"paper", hints:0, independent:0, transfer:1, parentScored:1, helped:helped?1:0, changedForm:changedForm?1:0, lvl:S.levels[sk]});
     if(!okv){ noteComp(sk, "*", false, {lvl:S.levels[sk]}); } // a paper miss opens the skill for Focus, like any miss
