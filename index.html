@@ -1586,7 +1586,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.21 · September 26, 2026";
+const BUILD="v9.21.1 · September 26, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -2003,7 +2003,7 @@ function genDivide(level, focus){
   const p={skill:"divide", level, prompt:`<span class="big-num">${N.toLocaleString("en-US")} ÷ ${d} = ?</span>`, type:"input", answer:q, display:q.toLocaleString("en-US"), show:null, meta:{N,d,q,variant,parts}};
   if(variant==="placevalue") return divPlaceLesson(p,parts);
   const steps=[];
-  // v9.10 coaching: Lily produces every chunk. The card asks; the result is explained only after she answers (step.after).
+  // v9.10 coaching: the learner produces every chunk. The card asks; the result is explained only after the answer (step.after).
   // Sequence: orient → bound (tens / hundreds / thousands) → fact (how many d's fit in the front of the number) → scale it → take it away → next chunk → combine → name the method.
   const L$=n=>n.toLocaleString("en-US"); const area = variant==="area";
   const unitOf=x=>Math.pow(10,String(x.qpart).length-1); const unitWord=u=>u>=1000?"thousands":u===100?"hundreds":u===10?"tens":"ones";
@@ -2350,7 +2350,7 @@ function genDecMul(level, focus){
   const fig=areaSVG(pa.map(v=>({label:fmtV(v), size:v})), pb.map(v=>({label:fmtV(v), size:v})), (i,j)=>`${fmtV(pa[i])} × ${fmtV(pb[j])}`); // drawn to scale
   const steps=[];
   const smallA = dV(A)<1000, smallB = kind==="decimal" && dV(B)<1000;
-  // v9.10: the card sets up the estimate; Lily multiplies the benchmarks herself. The result of each step is explained only after she answers (step.after).
+  // v9.10: the card sets up the estimate; the learner multiplies the benchmarks. The result of each step is explained only after the answer (step.after).
   const biggerF = dV(A)>=dV(B) ? A : B;
   const abt=(X,eX,Y,eY)=>{ const c=[[X,eX],[Y,eY]].filter(([n,e])=>n&&dV(n)!==e).map(([n,e])=>`${fmt(n)} is about ${fmtV(e)}`); return c.length?c.join(" and ")+". ":""; }; // v9.18: never "0.4 is about 0.4"
   const estSetup = estIsExact ?`${smallA&&smallB?`Both factors are less than 1, so the answer is <b>smaller than either of them</b>, less than ${fmtV(Math.min(dV(A),dV(B)))}.`:(smallA||smallB)?`One factor is less than 1, so the answer is <b>less than ${fmt(bound===dV(A)?A:B)}</b>.`:`Neither factor is less than 1, so the answer is <b>more than ${fmt(biggerF)}</b>.`}`
@@ -2993,7 +2993,7 @@ focusFor=function(prob, tag){
 };
 
 // ===================== v9.21 (Agent P): foundations: place value with big numbers (4.NBT.1–3), factors and multiples (4.OA.4), tenths and hundredths (4.NF.5–7) =====================
-// Three skills Lily sees only under "Build your foundations" on Home (SKILLS[k].foundation). Kid-facing text names the math, never a grade;
+// Three skills the learner sees only under "Build your foundations" on Home (SKILLS[k].foundation). Kid-facing text names the math, never a grade;
 // std and grade are for the grown-ups page only. Walkthroughs follow the middle-ground rubric: the first card models on a different number,
 // each key decision (the place, the digit, the value, the pair, the step size) is asked before it is told, cues go from a nudge to a narrower
 // hint, and pictures (place-value charts, number lines, the hundredths square) wait until she has answered (visAfter).
@@ -3814,6 +3814,7 @@ function homeEffortHTML(){ try{
   return parts.join(" ");
 }catch(e){ return "The dots fill in as you level up; gold means maxed out."; } }
 function home(){
+  if(typeof reportRelease==="function") reportRelease(); // a viewed school document never follows a grown-up back to Home or another player
   if(cur && phase==="q") leaveProblem(); else resolvePending();
   pendingTransfer=null; // v9.12: a queued "fresh one" belongs to that sitting and skill; it never follows her to another skill or player
   mode=null; cur=null;
@@ -4297,7 +4298,7 @@ function estReasonNote(val){ const e=cur && cur.est; if(!e || e.pick<0 || cur.re
   if(estDigits(val)===estDigits(ans) || Math.max(val/ans, ans/val)<5) return "";
   cur.reasonSeen=1; cur.reasonCaught=1;
   return `Does that make sense? ${e.pick===e.right?"Your":"The"} estimate was ${e.said}, and your answer is in the ${EST_PLACE[estDigits(val)-1]||"millions"}. Check it once more.`; }
-// ===== v9.21 hooks: foundations from the 3rd and 4th grade report cards (stubs; real versions replace these) =====
+// ===== v9.21 foundations =====
 // v9.21 (Agent P): the Home card "Build your foundations": the foundation skills in this build, as skill buttons with level dots, in a fixed
 // order. Kid-facing: the math is named, never a grade. home() leaves foundation skills out of the main list, so this is their only button.
 const FOUND_HOME_ORDER=["facts","wholepv","tenths","factors","twostep"];
@@ -4309,24 +4310,30 @@ function foundationsHomeHTML(){ if(!S) return ""; const ks=FOUND_HOME_ORDER.filt
 { const _ctxOfP=ctxOf; ctxOf=function(p){ const c=_ctxOfP(p); if(p && ["wholepv","factors","tenths"].includes(p.skill) && p.meta && p.meta.variant) c.variant=p.meta.variant; return c; }; }
 // ===== v9.21 (Agent M): foundations to keep practicing (grown-ups setting), the Today plan's foundation slot, and the practice-spot nudge =====
 // S.foundations = {facts, wholepv, tenths, factors, twostep: true|false, updated}. All off by default; only a grown-up turns one on, on the
-// grown-ups page (behind the optional PIN). No report-card text is stored: the "why suggested" lines are fixed wording in the page.
+// grown-ups page (behind the optional PIN). A selected school document is only previewed in this tab; its bytes and name are not saved.
 // Any on → each "Start today" gets one slot labeled "a foundation builder" (kid-safe), taking turns among the chosen foundations
 // (S.foundLast); multiplication facts come as a round of 3 inside that one slot (todayPlan.factsLeft). A miss in a 5th-grade skill with a
 // matching foundation that is on may add one more foundation problem to the next sitting: at most one per sitting, and S.foundNudgeAt
 // marks the last nudge served so the same miss does not ask again. A foundation that is not in this build is skipped everywhere.
 const FOUND_KEYS=["facts","wholepv","tenths","factors","twostep"], FACTS_ROUND=3;
 const FOUND_INFO={
-  facts:{name:"Multiplication and division facts", std:"3.OA.7", rel:"Multiply (5.NBT.5) and Divide (5.NBT.6): every partial product and partial quotient",
-    why:"3rd grade: “Multiply and divide within 100” was progressing (2) in T1 and meets (3) in T2. 4th grade T2: the teacher asked for continued practice with multiplication facts."},
-  wholepv:{name:"Place value with big numbers", std:"4.NBT.1–3", rel:"Unit 1 place value and decimals (5.NBT.1–4) and the check-up's place-value items",
-    why:"4th grade: both place-value lines were “progressing” (2) in both trimesters, after “meets” (3) in 3rd grade."},
-  tenths:{name:"Tenths and hundredths", std:"4.NF.5–7", rel:"Unit 1 decimals: read, write, compare, round (5.NBT.3–4), and adding and subtracting decimals (5.NBT.7)",
-    why:"4th grade: “Understand decimal notation for fractions, and compare decimal fractions” was “progressing” (2) in T2."},
-  factors:{name:"Factors and multiples", std:"4.OA.4", rel:"Prime factorization (5.OA.2.1, California) and simplifying fractions (Unit 5)",
-    why:"4th grade: “Gain familiarity with factors and multiples” was “progressing” (2) in both trimesters."},
-  twostep:{name:"Two-step stories", std:"4.OA.3", rel:"Expressions and story problems (5.OA.1–2, Unit 2)",
-    why:"4th grade T2: the teacher's comment named multi-step problems as the next thing to work on; “Use the four operations with whole numbers to solve problems” went from progressing (2) to meets (3)."}
+  facts:{name:"Multiplication and division facts", std:"3.OA.7", rel:"Multiply (5.NBT.5) and Divide (5.NBT.6): every partial product and partial quotient", look:"Multiplication and division facts within 100"},
+  wholepv:{name:"Place value with big numbers", std:"4.NBT.1–3", rel:"Unit 1 place value and decimals (5.NBT.1–4) and the check-up's place-value items", look:"Whole-number place value, multi-digit arithmetic, and rounding"},
+  tenths:{name:"Tenths and hundredths", std:"4.NF.5–7", rel:"Unit 1 decimals: read, write, compare, round (5.NBT.3–4), and adding and subtracting decimals (5.NBT.7)", look:"Tenths, hundredths, decimal fractions, and comparing decimals"},
+  factors:{name:"Factors and multiples", std:"4.OA.4", rel:"Prime factorization (5.OA.2.1, California) and simplifying fractions (Unit 5)", look:"Factors, multiples, and prime or composite numbers"},
+  twostep:{name:"Two-step stories", std:"4.OA.3", rel:"Expressions and story problems (5.OA.1–2, Unit 2)", look:"Problems that need more than one step"}
 };
+let reportPreview=null; // {url, name, kind}; a temporary object URL, never copied into S, DB, or a backup
+function reportRelease(){ if(reportPreview){ try{ URL.revokeObjectURL(reportPreview.url); }catch(e){} reportPreview=null; } }
+function reportPreviewHTML(){ if(!reportPreview) return `<p class="muted" style="font-size:13px;margin:8px 0 0">No document selected. The photo or PDF is never saved in this app.</p>`;
+  const r=reportPreview, view=r.kind==="image" ? `<img src="${esc(r.url)}" alt="Selected report card preview" style="display:block;max-width:100%;max-height:430px;object-fit:contain;margin:8px 0;border:1px solid var(--line);border-radius:8px">`
+    : `<a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">Open this PDF for review</a>`;
+  return `<p style="font-size:13px;margin:8px 0 0"><b>Selected:</b> ${esc(r.name)}. This preview lasts only until you leave this page or reload the app.</p>${view}<button type="button" class="btn quiet small" id="fdremove">Remove preview</button>`; }
+function reportFileOK(file){ const name=String(file&&file.name||"").toLowerCase(), type=String(file&&file.type||"").toLowerCase();
+  if(type) return type==="application/pdf" ? "pdf" : /^image\/(jpeg|png|webp|heic|heif)$/.test(type) ? "image" : null;
+  if(/\.pdf$/.test(name)) return "pdf";
+  if(/\.(jpe?g|png|webp|heic|heif)$/.test(name)) return "image";
+  return null; }
 function foundNorm(v){ const keys=["facts","wholepv","tenths","factors","twostep"]; /* local copy: normalize() runs at load, before this script's constants exist */ const src=(v && typeof v==="object" && !Array.isArray(v)) ? v : {}; const o={}; for(const k of keys) o[k]=src[k]===true; o.updated=(Number.isFinite(+src.updated) && +src.updated>0) ? +src.updated : 0; return o; }
 const foundOK=k=>!!(SKILLS[k] && typeof SKILLS[k].gen==="function" && SKILL_ORDER.includes(k)); // in this build
 function foundActive(){ if(!S) return []; const f=S.foundations||{}; return FOUND_KEYS.filter(k=>f[k]===true && foundOK(k)); }
@@ -4375,17 +4382,30 @@ function todayAdvance(){ const P=todayPlan; // replaces the old inline "cur.toda
 function foundationsGrownupsHTML(){ if(!S) return ""; const f=foundNorm(S.foundations), act=foundActive();
   const gradeTxt=k=>{ const g=SKILLS[k] && SKILLS[k].grade; return g ? (/grade/i.test(String(g)) ? String(g) : `grade ${g}`) : ""; };
   const rows=FOUND_KEYS.map(k=>{ const I=FOUND_INFO[k], have=foundOK(k), nm=have?SKILLS[k].name:I.name, gt=gradeTxt(k);
-    return `<li style="list-style:none;margin:0 0 10px"><label style="display:flex;gap:8px;align-items:flex-start;font-size:15px"><input type="checkbox" id="fd-${k}" data-fd="${k}"${f[k]?" checked":""} style="margin-top:4px"><span><b>${esc(nm)}</b> <span class="muted" style="font-size:13px">${esc(I.std)}${gt?` · ${esc(gt)}`:""}</span><br><span class="muted" style="font-size:13px">Feeds: ${esc(I.rel)}${have?"":". Not in this build yet, so it is skipped."}</span><span class="fdwhy" data-why="${k}" hidden><br><span style="font-size:13px"><b>Why suggested:</b> ${esc(I.why)}</span></span></span></label></li>`; }).join("");
+    return `<li style="list-style:none;margin:0 0 10px"><label style="display:flex;gap:8px;align-items:flex-start;font-size:15px"><input type="checkbox" id="fd-${k}" data-fd="${k}"${f[k]?" checked":""} style="margin-top:4px"><span><b>${esc(nm)}</b> <span class="muted" style="font-size:13px">${esc(I.std)}${gt?` · ${esc(gt)}`:""}</span><br><span class="muted" style="font-size:13px">Look for: ${esc(I.look)}.</span><br><span class="muted" style="font-size:13px">Feeds: ${esc(I.rel)}${have?"":". Not in this build yet, so it is skipped."}</span></span></label></li>`; }).join("");
   const status = act.length ? `On. Each “Start today” has one foundation builder, taking turns among ${act.map(k=>esc(SKILLS[k].name)).join(", ")}${act.includes("facts")?"; multiplication facts come as a short round of 3 in that one slot":""}. A miss in a matching fifth-grade skill can add one more foundation problem to the next sitting (at most one per sitting).`
     : FOUND_KEYS.some(k=>f[k]) ? `The chosen foundations are not in this build yet, so nothing changes.` : `Off. Nothing changes until a box is checked and saved.`;
   return `<div class="card fdcard" id="fdcard"><h2 style="margin-top:0">Foundations to keep practicing</h2>
-    <p class="muted" style="font-size:14px;margin:0 0 8px">Short practice on earlier skills that the fifth-grade work stands on. The suggestions read the 3rd- and 4th-grade report cards: a pattern across report cards, not a diagnosis. ${esc(S.name)} sees these only as “Build your foundations” and “a foundation builder”, with no grade labels. Nothing is on until you choose and save.</p>
+    <p class="muted" style="font-size:14px;margin:0 0 8px">Short practice on earlier skills that the fifth-grade work stands on. Choose areas from your own school information or from what you see while practicing. Check only the areas you want to add to “Start today.” Nothing changes until you save.</p>
+    <details id="fdreport" style="margin:12px 0;padding:10px;border:1px solid var(--line);border-radius:8px"><summary style="cursor:pointer;font-weight:700">Review a report card here</summary>
+      <p class="muted" style="font-size:13px;margin:8px 0">Choose a photo or PDF, or take a picture. Use the preview to compare the topics below with your child's card, then check the practice areas you want. Schools use different score scales. This app does not read or diagnose the document automatically. The file stays on this device, is not sent anywhere, and is not saved in progress or backups.</p>
+      <div class="actions" style="margin-top:4px"><button type="button" class="btn" id="fdpick">Choose photo or PDF</button><input class="vh" type="file" id="fdfile" aria-label="Choose a report card photo or PDF" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf,.pdf,.heic,.heif"><button type="button" class="btn" id="fdshoot">Take a picture</button><input class="vh" type="file" id="fdcamera" aria-label="Take a report card picture" accept="image/*" capture="environment"></div>
+      <div id="fdfilemsg" role="status" aria-live="polite" class="muted" style="font-size:13px"></div><div id="fdpreview">${reportPreviewHTML()}</div>
+    </details>
     <ul style="margin:0 0 6px;padding:0">${rows}</ul>
     <p class="fdstatus" style="font-size:14px;margin:0 0 8px"><b>Practice effect:</b> ${status}${f.updated?` <span class="muted">Last saved ${esc(fmtDate(f.updated))}.</span>`:""}</p>
-    <div class="actions" style="margin-top:6px"><button class="btn" id="fdsuggest">Suggested from the report cards</button><button class="btn primary" id="fdsave">Save</button><span class="muted" id="fdmsg" style="font-size:13px;align-self:center" role="status" aria-live="polite"></span></div></div>`; }
+    <div class="actions" style="margin-top:6px"><button class="btn primary" id="fdsave">Save practice choices</button><span class="muted" id="fdmsg" style="font-size:13px;align-self:center" role="status" aria-live="polite"></span></div></div>`; }
 function bindFoundations(){ const q=id=>app.querySelector("#"+id); if(!q("fdcard")) return;
-  const rerender=msg=>{ const c=q("fdcard"); if(!c) return; c.outerHTML=foundationsGrownupsHTML(); bindFoundations(); if(msg && q("fdmsg")) q("fdmsg").textContent=msg; };
-  q("fdsuggest").onclick=()=>{ for(const k of FOUND_KEYS){ const cb=q("fd-"+k); if(cb) cb.checked=true; const w=app.querySelector(`.fdwhy[data-why="${k}"]`); if(w) w.hidden=false; } const m=q("fdmsg"); if(m) m.textContent="All five suggested ones are checked. Tap Save to keep them."; };
+  const rerender=msg=>{ const c=q("fdcard"); if(!c) return; const wasOpen=!!q("fdreport")?.open; c.outerHTML=foundationsGrownupsHTML(); bindFoundations(); if(q("fdreport")) q("fdreport").open=wasOpen; if(msg && q("fdmsg")) q("fdmsg").textContent=msg; };
+  const showPreview=()=>{ if(q("fdpreview")) q("fdpreview").innerHTML=reportPreviewHTML(); if(q("fdremove")) q("fdremove").onclick=()=>{ reportRelease(); showPreview(); if(q("fdfilemsg")) q("fdfilemsg").textContent="Preview removed."; }; };
+  const chooseFile=ev=>{ const file=ev.target.files && ev.target.files[0]; ev.target.value=""; if(!file) return; const kind=reportFileOK(file), msg=q("fdfilemsg");
+    if(!kind){ if(msg) msg.textContent="Choose a PDF, JPG, PNG, WebP, or HEIC photo."; return; }
+    if(file.size>25*1024*1024){ if(msg) msg.textContent="That file is over 25 MB. Choose a smaller copy."; return; }
+    if(typeof URL.createObjectURL!=="function"){ if(msg) msg.textContent="This browser cannot preview the file. Open it in your device's photo or PDF app while choosing practice areas here."; return; }
+    reportRelease(); try{ reportPreview={url:URL.createObjectURL(file),name:file.name||"Report card",kind}; showPreview(); if(q("fdreport")) q("fdreport").open=true; if(msg) msg.textContent="Ready to review. The file has not been uploaded or saved."; }
+    catch(e){ reportRelease(); if(msg) msg.textContent="This browser could not open that file. Try a smaller photo or PDF."; } };
+  q("fdpick").onclick=()=>q("fdfile").click(); q("fdshoot").onclick=()=>q("fdcamera").click();
+  q("fdfile").onchange=chooseFile; q("fdcamera").onchange=chooseFile; showPreview();
   q("fdsave").onclick=()=>{ const o={}; for(const k of FOUND_KEYS){ const cb=q("fd-"+k); o[k]=!!(cb && cb.checked); } o.updated=Date.now(); S.foundations=o; const ok=save(); rerender(ok?"Saved.":"Saved for now, but this device would not store it."); }; }
 // ===== v9.21 (Agent F): multiplication and division facts, skill "facts" (grown-ups page only: 3.OA.7) =====
 // Facts 2–10 × 2–10. Levels: L1 ×2, 5, 10 · L2 adds ×3, 4 · L3 adds ×6, 9 · L4 adds ×7, 8 (every fact) · L5 every fact plus division.
@@ -4584,7 +4604,7 @@ function factsGrownupsHTML(){ if(!S) return "";
     <p class="facts-count" style="margin:0 0 8px"><b>Known well: ${n.known}</b> · Getting there: ${n.getting} · Practicing: ${n.practicing} · Not yet seen: ${n.unseen} <span class="muted">(45 facts from 2 × 2 to 10 × 10; 7 × 8 and 8 × 7 are one fact, and 56 ÷ 8 counts toward it)</span></p>
     <div style="overflow-x:auto"><table class="facts-grid" style="border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums"><tr><th style="${bd}">×</th>${F.map(b=>`<th style="${bd}">${b}</th>`).join("")}</tr>${F.map(a=>`<tr><th style="${bd}">${a}</th>${F.map(b=>cell(a,b)).join("")}</tr>`).join("")}</table></div>
     <p class="muted" style="margin:8px 0 0;font-size:13px">Key: ${Object.values(CAT).map(c=>`<span style="display:inline-block;border:1px solid var(--line);background:${c[1]};padding:0 6px;margin-right:4px">${c[2]||"&nbsp;"}</span>${c[0]}`).join(" · ")}</p>
-    <p class="muted" style="margin:8px 0 0;font-size:13px">Level ${lv} of 5: ${LV[lv-1]}. Standard 3.OA.7 (fluently multiply and divide within 100). Report cards: 3rd grade "Multiply and divide within 100" was 2, then 3; the 4th grade T2 comment asks to continue practicing multiplication facts. Facts carry every multi-digit multiplication and partial-quotient step.</p>
+    <p class="muted" style="margin:8px 0 0;font-size:13px">Level ${lv} of 5: ${LV[lv-1]}. Standard 3.OA.7 (fluently multiply and divide within 100). Facts support multi-digit multiplication and partial-quotient steps.</p>
     <p class="muted" style="margin:8px 0 0;font-size:13px">How it works: each fact sits in a box from 0 to 3. A miss (on a facts problem, or on a fact step inside a multiplication or division walkthrough) puts it back to practicing; a right answer on her own moves it up one box, and so does one with only the strategy line on screen (no hint taps), but only as far as "getting there"; "known well" needs one more right answer on her own at least 12 hours after she last saw it. Practice picks mostly practicing and not-yet-seen facts and facts not seen lately, with about 1 in 4 known facts so she stays confident. There is no timer, and speed is not measured. Her screen shows only "Facts you know well: N".</p></div>`; }
 Object.assign(SKILLS, {facts:{name:"Multiplication facts", gen:safeGen(genFacts), blurb:"7 × 8 → 56 and 56 ÷ 8 → 7, built from facts you know", std:"3.OA.7", grade:"3", foundation:true, lessons:[]}});
 SKILL_ORDER.push("facts");
@@ -6047,7 +6067,7 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
     </div>
     <div class="card">
       <h2 style="margin-top:0">Move to a new iPad</h2>
-      <p class="muted" style="font-size:14px;margin:0 0 8px">Progress lives only inside the copy of the app it was made in. The <b>Home Screen icon</b> and <b>Safari</b> each keep their own copy, so do both steps inside the copy Lily actually uses.</p>
+      <p class="muted" style="font-size:14px;margin:0 0 8px">Progress lives only inside the copy of the app it was made in. The <b>Home Screen icon</b> and <b>Safari</b> each keep their own copy, so do both steps inside the copy your child actually uses.</p>
       <ol class="muted" style="font-size:14px;margin:0 0 10px 18px;padding:0;line-height:1.5">
         <li><b>On this iPad:</b> tap <b>Copy transfer code</b> (or <b>Share</b> it to the new iPad with AirDrop).</li>
         <li><b>On the new iPad:</b> open the app the same way (Home Screen icon), tap <b>For grown-ups</b>, paste the code into <b>Restore</b> below, and tap Restore. Same iCloud account? Copy on one iPad and paste on the other; the clipboard carries over on its own.</li>
