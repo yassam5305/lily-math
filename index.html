@@ -1586,7 +1586,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.23 · September 27, 2026";
+const BUILD="v9.24 · September 27, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -4633,30 +4633,37 @@ function bindFoundations(){ const q=id=>app.querySelector("#"+id); if(!q("fdcard
     catch(e){ reportRelease(); if(msg) msg.textContent="This browser could not open that file. Try a smaller photo or PDF."; } };
   q("fdpick").onclick=()=>{ rhAwayMark(); q("fdfile").click(); }; q("fdshoot").onclick=()=>{ rhAwayMark(); q("fdcamera").click(); }; // a phone's picker or camera hides the page; that is not walking away
   q("fdfile").onchange=chooseFile; q("fdcamera").onchange=chooseFile; q("fdfile").oncancel=q("fdcamera").oncancel=()=>{ rhAwayAt=0; }; showPreview();
-  q("fdstarter").onclick=()=>{ for(const k of FOUND_KEYS){ const cb=q("fd-"+k); if(cb) cb.checked=true; } q("fdmsg").textContent=`All ${["zero","one","two","three","four","five","six","seven","eight"][FOUND_KEYS.length]||FOUND_KEYS.length} selected for this learner. Save to add them to Start today.`; };
-  q("fdclear").onclick=()=>{ for(const k of FOUND_KEYS){ const cb=q("fd-"+k); if(cb) cb.checked=false; } q("fdmsg").textContent="Choices cleared. Save to remove them from Start today."; };
+  const refreshPlan=()=>{ if(q("rhplan")) q("rhplan").innerHTML=rhPlanHTML(); };
+  q("fdcard").addEventListener("change", ev=>{ if(ev.target && ev.target.matches("input[data-fd]")) refreshPlan(); });
+  q("fdstarter").onclick=()=>{ for(const k of FOUND_KEYS){ const cb=q("fd-"+k); if(cb) cb.checked=true; } refreshPlan(); q("fdmsg").textContent=`All ${["zero","one","two","three","four","five","six","seven","eight"][FOUND_KEYS.length]||FOUND_KEYS.length} selected for this learner. Save to add them to Start today.`; };
+  q("fdclear").onclick=()=>{ for(const k of FOUND_KEYS){ const cb=q("fd-"+k); if(cb) cb.checked=false; } refreshPlan(); q("fdmsg").textContent="Choices cleared. Save to remove them from Start today."; };
   q("fdsave").onclick=()=>{ const o={}; for(const k of FOUND_KEYS){ const cb=q("fd-"+k); o[k]=!!(cb && cb.checked); } o.updated=Date.now(); S.foundations=o; const ok=save(); rerender(ok?"Saved.":"Saved for now, but this device would not store it."); };
   rhBind(); rhIdleArm(); }
 // ===== v9.23 (Agent R): the report-card helper, inside "Review a report card here" (grown-ups page, behind the optional PIN) =====
-// The grown-up reads the card; the app only maps what they mark. Pick the grade printed on the card (3, 4, or 5), mark each math line
-// (the Common Core math cluster headings, which standards-based report cards commonly print) as Meets or above / Progressing / Below /
-// Not marked, and optionally tap comment themes. Progressing or Below lines and chosen themes become practice candidates through RH_LINES
-// and RH_THEMES, each with a reason naming what was marked. "Use these" only pre-checks matching foundation boxes; the existing Save still
-// decides, and it stores only the on/off choices. Privacy: rhState lives in memory only. It is never copied into S, DB, a backup,
+// The grown-up reads each card; the app only maps what they mark. Each temporary card slot has its own grade, term, cluster marks, and
+// optional teacher-comment themes. Progressing or Below lines and chosen themes become practice candidates through RH_LINES and RH_THEMES.
+// The recent card alone drives starter picks; the editable plan labels evidence from both cards and can change foundation checkboxes.
+// The existing Save stores only the on/off choices. Privacy: rhState and rhCards live in memory only and are never copied into S, DB, a backup,
 // localStorage, or the log; nothing here uses the network or reads the document. Clear wipes it, home() wipes it, and so does entering
 // the grown-ups page fresh (foundationsGrownupsHTML). A target that is not registered in this build (e.g. "fracbasics") is skipped.
-// v9.23 review: suggestions are ranked (#3: a Below line before a Progressing one, then more reasons first); "Use these" checks only the
-// top two or three foundations (rhTopFound) and names them, and "Check all candidates" checks the rest. A line's or theme's optional last
+// v9.23 review: suggestions are ranked (#3: a Below line before a Progressing one, then more reasons first); the starter button checks
+// the top two or three foundations (rhTopFound) on the recent card, while the editable plan lets the parent select the rest. A line's or theme's optional last
 // field {note:{key:text}, gap:text} keeps partial matches honest (#4: "building blocks for this") and lists the part with no practice here.
 // Walking away (#5): hiding the page (another app or tab) or pagehide releases the preview and wipes the marks (rhAway), except for the
 // grown-up's own picker, camera, or PDF tab (rhAwayMark, cleared on return); with a PIN set, 5 idle minutes on the grown-ups page return
 // to the PIN screen (rhIdleArm / rhIdleTick). Each domain heading has a "mark all lines" control (#7).
-let rhState=null; // {grade:3|4|5|null, marks:{lineId:"meets"|"prog"|"below"}, themes:[themeId]}; memory only, never saved
-function rhReset(){ rhState=null; }
+// v9.24: two independent, temporary card slots. The recent card drives starter picks; the earlier card supplies labeled context.
+// A slot has {grade, term, marks, themes}. Nothing here is copied into S, DB, storage, a transfer code, or a log.
+let rhCards={recent:null, earlier:null}, rhSlot="recent", rhState=null;
+function rhReset(){ rhCards={recent:null, earlier:null}; rhSlot="recent"; rhState=null; }
+function rhActive(){ if(!rhState) rhState={grade:null, term:"latest", marks:{}, themes:[]}; rhCards[rhSlot]=rhState; return rhState; }
+function rhCardLabel(slot){ const c=rhCards[slot], label=slot==="recent"?"Recent card":"Earlier card";
+  return c&&c.grade ? `${label}: grade ${c.grade}, ${c.term==="latest"?"latest marked term":c.term}` : `${label}: no grade chosen`; }
+function rhCardHasEvidence(c){ return !!(c && (Object.keys(c.marks||{}).length || (c.themes||[]).length)); }
 let rhAwayAt=0; const RH_AWAY_MS=2*60*1000; // set when the grown-up opens the picker, camera, or the PDF tab; cleared on return (at most 2 min)
 function rhAwayMark(){ rhAwayAt=Date.now(); }
 function rhAway(type){ if(type==="hidden" && rhAwayAt && Date.now()-rhAwayAt<RH_AWAY_MS) return; rhAwayAt=0;
-  const had=!!(reportPreview||rhState); reportRelease(); rhReset(); if(!had) return;
+  const had=!!(reportPreview||rhState||rhCards.recent||rhCards.earlier); reportRelease(); rhReset(); if(!had) return;
   const p=app.querySelector("#fdpreview"), h=app.querySelector("#rhhelp"), m=app.querySelector("#fdfilemsg");
   if(p) p.innerHTML=reportPreviewHTML(); if(h) h.innerHTML=rhHTML(); if(m) m.textContent="The preview and marks were cleared when this page was hidden."; }
 const RH_IDLE_MS=5*60*1000; let rhIdleT=null, rhIdleAt=0; // rhIdleAt: the last tap, key, or scroll anywhere
@@ -4742,14 +4749,44 @@ function rhSuggest(st){ st=st||rhState||{}; const out={found:[], skills:[], u1:n
 function rhTier(e){ return e.below ? 0 : e.prog ? 1 : 2; }
 // "Use these": the top two ranked foundations, plus a third only when it ties the second (same tier, same number of reasons).
 function rhTopFound(found){ const f=found.slice(0,3); if(f.length===3 && (rhTier(f[2])!==rhTier(f[1]) || f[2].reasons.length!==f[1].reasons.length)) f.pop(); return f; }
-function rhSuggestHTML(){ const r=rhSuggest(), items=[...r.ranked, ...r.habits], top=r.top.map(e=>e.k);
+function rhSuggestHTML(){ const r=rhSuggest(), items=[...r.ranked, ...r.habits], top=rhSlot==="recent"?r.top.map(e=>e.k):[];
   if(!items.length && !r.uncovered.length) return `<p class="muted" style="font-size:13px;margin:0">Mark a line as Progressing or Below, or tap a comment theme, to see practice candidates here.</p>`;
   const kindTxt={found:"foundation box", skill:"practice on Home", u1:"setting in the check-up card on this page, with its own Save"};
-  const li=e=>`<li class="rhitem${top.includes(e.k)?" rhtop":""}" data-rhk="${esc(e.k)}"><b>${esc(e.name)}</b> <span class="muted" style="font-size:12px">${e.tip?"habit tip":esc(kindTxt[e.kind]||"")}</span> <span class="rhn" style="font-size:12px">· ${e.reasons.length} reason${e.reasons.length===1?"":"s"}</span>${top.includes(e.k)?` <span class="rhpick">top pick: “Use these” checks it</span>`:""}${e.tip?`<br><span style="font-size:13px">${esc(e.tip)}</span>`:""}${e.reasons.map(t=>`<br><span class="muted rhreason">${esc(t)}</span>`).join("")}</li>`;
+  const li=e=>`<li class="rhitem${top.includes(e.k)?" rhtop":""}" data-rhk="${esc(e.k)}"><b>${esc(e.name)}</b> <span class="muted" style="font-size:12px">${e.tip?"habit tip":esc(kindTxt[e.kind]||"")}</span> <span class="rhn" style="font-size:12px">· ${e.reasons.length} reason${e.reasons.length===1?"":"s"}</span>${top.includes(e.k)?` <span class="rhpick">starter pick; review the full plan below</span>`:""}${e.tip?`<br><span style="font-size:13px">${esc(e.tip)}</span>`:""}${e.reasons.map(t=>`<br><span class="muted rhreason">${esc(t)}</span>`).join("")}</li>`;
   return `<p class="rhlabel" style="font-size:13px;margin:0 0 6px"><b>Practice candidates, not a diagnosis.</b> Ask the teacher which of these to start with.</p>${items.length?`<p class="muted" style="font-size:12px;margin:0 0 4px">Ranked: lines marked Below first, then Progressing, then comment themes; more reasons rank higher.</p><ul>${items.map(li).join("")}</ul>`:""}
     ${r.uncovered.length?`<p class="muted rhnone" style="font-size:13px;margin:6px 0 0">No practice in this app for: ${r.uncovered.map(t=>`“${esc(t)}”`).join(", ")}. The teacher can suggest practice for these.</p>`:""}`; }
+// Both slots are shown together for choosing a plan. Evidence from an earlier card is context, never an automatic starter pick.
+function rhPlanHTML(){ const rows=new Map(), others=[], settings=[], habits=[], gaps=[];
+  for(const slot of ["recent","earlier"]){ const card=rhCards[slot]; if(!rhCardHasEvidence(card)) continue; const r=rhSuggest(card);
+    for(const e of r.found){ let row=rows.get(e.k); if(!row){ row={k:e.k,name:e.name,recent:false,earlier:false,teacher:false}; rows.set(e.k,row); }
+      row[slot]=true; if(slot==="recent" && e.reasons.some(t=>t.includes("comment theme"))) row.teacher=true; }
+    for(const e of r.skills) others.push({slot,name:e.name}); if(r.u1) settings.push({slot,name:r.u1.name});
+    for(const e of r.habits) habits.push({slot,name:e.name,tip:e.tip}); for(const name of r.uncovered) gaps.push({slot,name}); }
+  // A prior saved choice or an earlier click can remain checked after the marks change. Keep it visible for deliberate removal.
+  for(const k of FOUND_KEYS){ const box=app.querySelector("#fd-"+k), checked=box?box.checked:!!(S&&S.foundations&&S.foundations[k]);
+    if(checked && !rows.has(k)) rows.set(k,{k,name:SKILLS[k].name,recent:false,earlier:false,teacher:false,savedOnly:true}); }
+  const meets=["recent","earlier"].map(slot=>{ const c=rhCards[slot]; if(!c || !c.grade) return "";
+    const lines=(RH_LINES[c.grade]||[]).filter(([id])=>(c.marks||{})[id]==="meets").map(([, ,title])=>`<li>${esc(title)}</li>`);
+    return lines.length?`<p style="margin:6px 0 2px"><b>${slot==="recent"?"Recent":"Earlier"} card marked Meets or above:</b></p><ul style="margin:3px 0">${lines.join("")}</ul>`:""; }).filter(Boolean);
+  const meetsHTML=meets.length?`<details class="rhmet" style="margin-top:8px"><summary>See lines marked Meets or above</summary>${meets.join("")}<p class="muted" style="font-size:12px">A broad Meets mark can coexist with a teacher comment about a narrower skill. Different grades use different standards, so these are not direct before-and-after scores.</p></details>`:"";
+  if(!rows.size && !others.length && !settings.length && !habits.length && !gaps.length) return `<p class="muted" style="font-size:13px;margin:0">${meets.length?"No Progressing or Below lines or comment themes were entered, so there are no new practice candidates.":"Mark a math line or a teacher-comment theme to build an editable plan. Start with the recent card; an earlier card is optional."}</p>${meetsHTML}`;
+  const order=[...rows.values()].sort((a,b)=>Number(b.recent)-Number(a.recent) || Number(b.teacher)-Number(a.teacher) || FOUND_KEYS.indexOf(a.k)-FOUND_KEYS.indexOf(b.k));
+  const chosen=k=>{ const box=app.querySelector("#fd-"+k); return box ? box.checked : !!(S&&S.foundations&&S.foundations[k]); };
+  const item=x=>`<label class="rhplanrow"><input type="checkbox" data-rhplan="${esc(x.k)}"${chosen(x.k)?" checked":""}><span><b>${esc(x.name)}</b><br><span class="muted">${x.savedOnly?"Already selected; no match on the entered cards — review whether to keep it":x.recent?"Recent card":"Earlier card only — check current work first"}${x.earlier&&x.recent?" · also on earlier card":""}${x.teacher?" · teacher comment on recent card":""}</span></span></label>`;
+  const otherNames=[...new Set(others.map(x=>`${x.slot==="recent"?"Recent":"Earlier"}: ${x.name}`))];
+  const settingNames=[...new Set(settings.map(x=>`${x.slot==="recent"?"Recent":"Earlier"}: ${x.name}`))];
+  const habitNames=[...new Set(habits.map(x=>`${x.slot==="recent"?"Recent":"Earlier"}: ${x.name} — ${x.tip}`))];
+  return `<p class="muted" style="font-size:13px;margin:0 0 7px">${esc(rhCardLabel("recent"))}${rhCardHasEvidence(rhCards.earlier)?` · ${esc(rhCardLabel("earlier"))}`:""}. Older cards add context; they do not override recent marks. Check the areas you want, then press “Save practice choices” below. Only the on/off choices are saved with this learner's progress; the card marks and comment themes are not.</p>
+    ${order.map(item).join("")}${otherNames.length?`<p class="muted" style="font-size:12px;margin:7px 0 0">Also available on Home: ${otherNames.map(esc).join("; ")}.</p>`:""}
+    ${settingNames.length?`<p class="muted" style="font-size:12px;margin:7px 0 0">Separate grown-up setting, with its own Save: ${settingNames.map(esc).join("; ")}.</p>`:""}
+    ${habitNames.length?`<p class="muted" style="font-size:12px;margin:7px 0 0">Habit tips: ${habitNames.map(esc).join("; ")}.</p>`:""}
+    ${gaps.length?`<p class="muted" style="font-size:12px;margin:7px 0 0"><b>No matching activity here:</b> ${gaps.map(x=>`${x.slot==="recent"?"Recent":"Earlier"}: ${esc(x.name)}`).join("; ")}. Ask the teacher which part to practice.</p>`:""}
+    ${meetsHTML}`; }
 function rhHTML(){ const st=rhState||{}, g=st.grade||null, marks=st.marks||{}, themes=Array.isArray(st.themes)?st.themes:[];
   const grades=[3,4,5].map(n=>`<button type="button" class="btn quiet small rhgrade${g===n?" on":""}" data-rhgrade="${n}" aria-pressed="${g===n}">Grade ${n}</button>`).join("");
+  const slots=[["recent","Recent card"],["earlier","Earlier card (optional)"]].map(([k,t])=>`<button type="button" class="btn quiet small rhslot${rhSlot===k?" on":""}" data-rhslot="${k}" aria-pressed="${rhSlot===k}">${t}</button>`).join("");
+  const terms=[["latest","Latest marked term"],["T1","Term 1"],["T2","Term 2"],["T3","Term 3"],["other","Other / no term"]];
+  const term=g?`<div class="rhterm"><label for="rhterm">Term on this card</label><select id="rhterm" data-rhterm="1">${terms.map(([k,t])=>`<option value="${k}"${(st.term||"latest")===k?" selected":""}>${t}</option>`).join("")}</select></div><p class="muted" style="font-size:12px;margin:4px 0 0">Use one marked column at a time, preferably the latest. A blank cell means “Not marked,” not a low score. Changing grade or term clears this card's marks and comment themes.</p>`:"";
   const lines=!g ? `<p class="muted" style="font-size:13px;margin:0">Pick the grade printed on the card to see its math lines.</p>`
     : `<p class="muted rhkey" style="font-size:13px;margin:0 0 4px">Match the words on the card; marks are often 4 = exceeds, 3 = meets, 2 = progressing, 1 = below — check your card's key.</p>`
       + Object.keys(RH_DOMAINS).map(dm=>{ const ls=(RH_LINES[g]||[]).filter(l=>l[0].split(".")[1]===dm); if(!ls.length) return "";
@@ -4759,27 +4796,34 @@ function rhHTML(){ const st=rhState||{}, g=st.grade||null, marks=st.marks||{}, t
   const chips=RH_THEMES.map(([id,label])=>{ const on=themes.includes(id); return `<button type="button" class="btn quiet small rhchip${on?" on":""}" data-rhtheme="${id}" aria-pressed="${on}">${esc(label)}</button>`; }).join("");
   return `<h3 style="margin:0 0 4px">Report-card helper</h3>
       <p class="muted rhnote" style="font-size:13px;margin:0 0 6px">The app does not read or upload your document. You read the card and mark what it says here; the app suggests matching practice. Marks are kept only while this page is open and showing; leaving it or switching to another app or tab clears them (choosing or opening the document here does not).</p>
-      <p class="rhstep"><b>1. Grade on the card</b></p><div class="rhgrades" role="group" aria-label="Grade on the card">${grades}</div>
-      <p class="rhstep"><b>2. Mark each math line</b></p>${lines}
-      <p class="rhstep"><b>3. Comment themes (optional)</b> <span class="muted" style="font-size:13px;font-weight:400">Tap the ones the teacher's comment mentions.</span></p><div class="rhchips" role="group" aria-label="Comment themes">${chips}</div>
-      <p class="rhstep"><b>4. Practice candidates</b></p><div class="rhsugg" id="rhsugg">${rhSuggestHTML()}</div>
-      <div class="actions" style="margin-top:8px"><button type="button" class="btn" id="rhuse">Use these</button><button type="button" class="btn quiet small" id="rhall">Check all candidates</button><button type="button" class="btn quiet small" id="rhclear">Clear marks</button><span class="muted" id="rhmsg" style="font-size:13px;align-self:center" role="status" aria-live="polite"></span></div>`; }
-// Delegated handlers on #rhhelp: a mark or a theme redraws only the suggestions (focus stays put); a grade redraws the helper. Nothing
-// here touches S or storage; "Use these" sets checkboxes in the card and leaves saving to "Save practice choices".
+      <p class="rhstep"><b>1. Choose a card</b></p><div class="rhslots" role="group" aria-label="Card being reviewed">${slots}</div><p class="muted" style="font-size:12px;margin:4px 0 0">Put the newest card under Recent. Use Earlier for a prior year or term; each card keeps its own marks and comment themes until you leave this page.</p>
+      <p class="rhstep"><b>2. Grade and term on this card</b></p><div class="rhgrades" role="group" aria-label="Grade on the card">${grades}</div>${term}
+      <p class="rhstep"><b>3. Mark each math line</b></p>${lines}
+      <p class="rhstep"><b>4. Comment themes for this card (optional)</b> <span class="muted" style="font-size:13px;font-weight:400">Tap only the topics mentioned on this card.</span></p><div class="rhchips" role="group" aria-label="Comment themes">${chips}</div>
+      <p class="rhstep"><b>5. Candidates from this card</b></p><div class="rhsugg" id="rhsugg">${rhSuggestHTML()}</div>
+      <p class="rhstep"><b>6. Review the plan across cards</b></p><div class="rhplan" id="rhplan">${rhPlanHTML()}</div>
+      <div class="actions" style="margin-top:8px"><button type="button" class="btn" id="rhuse">Check recent-card starter picks</button><button type="button" class="btn quiet small" id="rhall">Check all candidates</button><button type="button" class="btn quiet small" id="rhclear">Clear both cards</button><span class="muted" id="rhmsg" style="font-size:13px;align-self:center" role="status" aria-live="polite"></span></div>`; }
+// Delegated handlers on #rhhelp: a mark or a theme redraws suggestions and the combined plan (focus stays put); a card, grade,
+// or term change redraws the helper. Nothing here touches S or storage; checking plan boxes leaves saving to "Save practice choices".
 function rhBind(){ const box=app.querySelector("#rhhelp"); if(!box) return;
-  const st=()=>rhState||(rhState={grade:null, marks:{}, themes:[]}), msg=t=>{ const m=box.querySelector("#rhmsg"); if(m) m.textContent=t; };
+  const st=()=>rhActive(), msg=t=>{ const m=box.querySelector("#rhmsg"); if(m) m.textContent=t; };
   const redraw=sel=>{ box.innerHTML=rhHTML(); const f=sel && box.querySelector(sel); if(f) f.focus({preventScroll:true}); };
-  const sugg=()=>{ const s=box.querySelector("#rhsugg"); if(s) s.innerHTML=rhSuggestHTML(); };
+  const sugg=()=>{ const s=box.querySelector("#rhsugg"), p=box.querySelector("#rhplan"); if(s) s.innerHTML=rhSuggestHTML(); if(p) p.innerHTML=rhPlanHTML(); };
   box.onclick=ev=>{ const b=ev.target && ev.target.closest && ev.target.closest("button"); if(!b || !box.contains(b)) return;
-    if(b.dataset.rhgrade){ const n=+b.dataset.rhgrade; if([3,4,5].includes(n)){ st().grade=n; redraw(`[data-rhgrade="${n}"]`); } return; }
+    if(b.dataset.rhslot){ const slot=b.dataset.rhslot; if(slot!=="recent" && slot!=="earlier") return; rhCards[rhSlot]=rhState; rhSlot=slot; rhState=rhCards[slot]; redraw(`[data-rhslot="${slot}"]`); return; }
+    if(b.dataset.rhgrade){ const n=+b.dataset.rhgrade; if([3,4,5].includes(n)){ const s=st(); if(s.grade!==n){ s.grade=n; s.term="latest"; s.marks={}; s.themes=[]; } redraw(`[data-rhgrade="${n}"]`); } return; }
     if(b.dataset.rhtheme){ const id=b.dataset.rhtheme, s=st(); if(!RH_THEMES.some(t=>t[0]===id)) return; s.themes=s.themes.includes(id)?s.themes.filter(x=>x!==id):s.themes.concat(id);
       const on=s.themes.includes(id); b.classList.toggle("on",on); b.setAttribute("aria-pressed",String(on)); sugg(); return; }
-    if(b.id==="rhuse" || b.id==="rhall"){ const r=rhSuggest(), all=b.id==="rhall", pick=all?r.found:r.top, done=[]; // other boxes are left as they are
-      for(const e of pick){ const cb=app.querySelector("#fd-"+e.k); if(cb){ cb.checked=true; done.push(e.name); } } const rest=r.found.length-done.length;
-      msg(!done.length ? "No foundation box matches yet. Mark a line as Progressing or Below, or tap a theme."
+    if(b.id==="rhuse" || b.id==="rhall"){ const all=b.id==="rhall", recent=rhSuggest(rhCards.recent||{grade:null,marks:{},themes:[]}), earlier=rhCardHasEvidence(rhCards.earlier)?rhSuggest(rhCards.earlier):null;
+      const candidates=all?[...recent.found, ...(earlier?earlier.found:[])]:recent.top, pick=[...new Map(candidates.map(e=>[e.k,e])).values()], done=[]; // other boxes are left as they are
+      for(const e of pick){ const cb=app.querySelector("#fd-"+e.k); if(cb){ cb.checked=true; done.push(e.name); } } const rest=recent.found.length-done.length;
+      sugg(); msg(!done.length ? "No foundation box matches yet. Mark a line as Progressing or Below, or tap a theme."
         : `${all?`Checked all ${done.length} foundation candidate${done.length===1?"":"s"}`:`Checked the top ${done.length===1?"one":done.length===2?"two":"three"}`}: ${done.join(", ")}.${!all && rest>0?` ${rest} more foundation candidate${rest===1?" is":"s are"} not checked; “Check all candidates” adds ${rest===1?"it":"them"}.`:""} Nothing is saved until you press “Save practice choices.”`); return; }
-    if(b.id==="rhclear"){ rhReset(); redraw('[data-rhgrade="3"]'); msg("Marks cleared."); } };
+    if(b.id==="rhclear"){ rhReset(); redraw('[data-rhslot="recent"]'); msg("Marks cleared from both cards."); } };
   box.onchange=ev=>{ const el=ev.target; if(!el || !el.dataset) return;
+    if(el.dataset.rhplan){ const k=el.dataset.rhplan, cb=app.querySelector("#fd-"+k); if(cb && FOUND_KEYS.includes(k)){ cb.checked=el.checked; msg(`${SKILLS[k].name} ${el.checked?"checked":"unchecked"}. Save practice choices below to keep this plan.`); } return; }
+    if(el.dataset.rhterm){ const v=String(el.value||""), s=st(); if(!["latest","T1","T2","T3","other"].includes(v)) return;
+      if(s.term!==v){ s.term=v; s.marks={}; s.themes=[]; redraw('#rhterm'); msg("Term changed. This card's marks and comment themes were cleared; the other card is untouched."); } return; }
     if(el.dataset.rhdom){ const dm=el.dataset.rhdom, raw=String(el.value||""), v=raw==="none"?"":raw, s=st(); el.value=""; if(!raw || !RH_MARKS.some(m=>m[0]===v)) return;
       const ls=(RH_LINES[s.grade]||[]).filter(l=>l[0].split(".")[1]===dm); for(const [id] of ls){ if(v) s.marks[id]=v; else delete s.marks[id]; const sel=box.querySelector(`select[data-rhline="${id}"]`); if(sel) sel.value=v; }
       sugg(); msg(`All ${ls.length} ${dm} line${ls.length===1?"":"s"} set to “${RH_MARKS.find(m=>m[0]===v)[1]}.”`); return; }
@@ -4789,9 +4833,10 @@ function rhBind(){ const box=app.querySelector("#rhhelp"); if(!box) return;
   ".rhwrap{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:flex-start}",
   ".rhwrap>.rhside{flex:1 1 280px;min-width:0;max-width:100%}",
   ".rhhelp h3{font-size:17px}.rhstep{margin:12px 0 4px;font-size:15px}",
-  ".rhgrades,.rhchips{display:flex;flex-wrap:wrap;gap:8px}",
-  ".rhgrades .btn,.rhchips .btn{margin:0;min-height:40px;padding:6px 12px;font-size:14px}",
-  ".rhgrade.on,.rhchip.on{border-color:var(--ink);background:#F0F3F7;color:var(--ink)}.rhchip.on::before{content:\"\\2713\\00a0\";font-weight:800}",
+  ".rhgrades,.rhchips,.rhslots{display:flex;flex-wrap:wrap;gap:8px}",
+  ".rhgrades .btn,.rhchips .btn,.rhslots .btn{margin:0;min-height:40px;padding:6px 12px;font-size:14px}",
+  ".rhgrade.on,.rhchip.on,.rhslot.on{border-color:var(--ink);background:#F0F3F7;color:var(--ink)}.rhchip.on::before{content:\"\\2713\\00a0\";font-weight:800}",
+  ".rhterm{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;font-size:14px}.rhterm select{font-size:16px;max-width:100%;padding:5px}",
   ".rhdom{border:1px solid var(--line);border-radius:8px;margin:8px 0;padding:4px 10px 6px;min-width:0}.rhdom legend{font-weight:700;font-size:14px;padding:0 4px}",
   ".rhline{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;justify-content:space-between;padding:6px 0;border-top:1px solid #E6EBF1;font-size:14px}",
   ".rhline:first-of-type{border-top:none}.rhline label{flex:1 1 180px;min-width:0}",
@@ -4800,6 +4845,7 @@ function rhBind(){ const box=app.querySelector("#rhhelp"); if(!box) return;
   ".rhdomall{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;justify-content:space-between;padding:4px 0 6px;font-size:13px;color:var(--muted,#555)}", // v9.23 review
   ".rhdomall label{flex:1 1 160px;min-width:0}.rhdomall select{flex:0 0 auto;font-size:16px;padding:4px 6px;max-width:100%}",
   ".rhpick{display:inline-block;font-size:12px;font-weight:700;padding:0 6px;border:1px solid var(--ink);border-radius:10px;margin-left:2px}",
+  ".rhplan{border:1px solid var(--line);border-radius:8px;padding:10px}.rhplanrow{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-top:1px solid #E6EBF1;font-size:14px}.rhplanrow:first-of-type{border-top:none}.rhplanrow input{margin-top:3px;flex:none;width:18px;height:18px}.rhplanrow span{min-width:0}",
   ".rhdoc .rhpdf{max-width:100%;min-height:320px}"
   ].join("\n"); document.head.appendChild(st); }catch(e){} })();
 // ===== v9.21 (Agent F): multiplication and division facts, skill "facts" (grown-ups page only: 3.OA.7) =====
