@@ -79,6 +79,36 @@ h2{font-size:20px;margin:18px 0 6px}
 .stats{margin-top:22px;font-size:14px}
 .footer{margin-top:18px;display:flex;gap:8px;flex-wrap:wrap}
 
+
+/* v9.35 home: one visible class step and one daily route, with optional choices in native disclosures. */
+.topbar h1[tabindex="-1"]:focus{outline:none} /* programmatic heading focus for screen readers; not a keyboard stop */
+#switch,.footer #grown{min-height:44px;font-size:14px;padding:8px 10px}
+.home-intro{color:var(--graphite);font-size:16px;margin:4px 0 14px}
+.home-lead{background:#FFFCF0;border-left:6px solid var(--ink);margin:0 0 12px}
+.home-lead .week-lesson{font-size:20px;line-height:1.3;margin:10px 0}
+.home-lead .lphome{margin-top:10px}
+.home-lead .lphome .btn{flex:1 1 100%}
+.home-lead .lpdue{width:100%}
+.home-lead .lpdue .btn{white-space:normal;text-align:left}
+.home-lead .btn.small,.home-fold .btn.small,.hw .btn.small{min-height:44px;font-size:15px;padding:9px 12px}
+.home-desc{font-size:15px!important;margin:8px 0 10px}
+.home-more{border-top:1px solid var(--line);margin-top:14px;padding-top:5px}
+.home-more summary,.home-fold summary{cursor:pointer;list-style:none;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:700;color:var(--ink)}
+.home-more summary::-webkit-details-marker,.home-fold summary::-webkit-details-marker{display:none}
+.home-more summary::after,.home-fold summary::after{content:"+";font-size:24px;line-height:1;flex-shrink:0}
+.home-more[open] summary::after,.home-fold[open] summary::after{content:"−"}
+.home-more summary:focus-visible,.home-fold summary:focus-visible{outline:3px solid var(--ink);outline-offset:2px;box-shadow:0 0 0 6px var(--hi);border-radius:8px}
+.home-more-body{padding:3px 0 4px}
+.home-fold{padding-top:7px;padding-bottom:7px}
+.home-fold>summary{font-size:20px;line-height:1.25}
+.home-fold[open]{padding-bottom:18px}
+.home-week-action{margin-top:12px}
+.home-week-action .btn{width:100%}
+.hw .skill{margin:9px 0 0}
+.home-extra .actions{margin-top:8px!important}
+.home-extra .mix{margin-top:0}
+@media (min-width:700px){.home-lead .lphome .btn{flex:1 1 220px}.home-intro{font-size:18px}}
+
 /* practice */
 .card{background:var(--card);border:2px solid var(--line);border-radius:var(--radius);padding:18px 18px 20px;margin-top:12px}
 .prompt{font-size:19px;margin:0 0 12px}
@@ -1593,7 +1623,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.33 · September 27, 2026";
+const BUILD="v9.35 · September 27, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -4070,20 +4100,25 @@ function home(){
   const t=S.today;
   // "This week in class": the lesson the class pacing calendar (or a grown-up's pin) puts the class on, plus the one before it for spiral review.
   // v9.24: shown only when a grown-up has the class pacing calendar on for this learner (classCalOn).
-  const calOn=classCalOn(), L=lessonList(), ci=calOn?lessonIdx(effectiveClassAt()):-1, curL=ci>=0?L[ci]:null, prevL=ci>0?L[ci-1]:null, nextL=(ci>=0&&ci<L.length-1)?L[ci+1]:null;
+  const calOn=classCalOn(), L=lessonList(), ci=calOn?lessonIdx(effectiveClassAt()):-1, curL=ci>=0?L[ci]:null, prevL=ci>0?L[ci-1]:null;
   const unit=curL?unitById(curL.unit):null;
   const lessonLine=(l,withUnit)=>[withUnit?`Unit ${esc(l.unit)}`:"", `Lesson ${esc(l.lesson)}`, esc(l.name)].filter(Boolean).join(" · "); // v9.12: standard codes and lesson types live on the grown-ups page; the kid screen names the lesson
+  const lessonRouteVisible=!!(curL && typeof LP_U2!=="undefined" && LP_U2[curL.id] && typeof lpReached==="function" && lpReached().length);
   const weekHTML = curL ? `
-    <div class="card week">
-      <div class="week-head"><h2 style="margin:0">This week in class</h2>${S.classPin?`<span class="std" title="Set on the grown-ups page">Pinned</span>`:`<span class="std" title="Estimated from the class pacing calendar">Calendar</span>`}</div>
-      <div class="week-unit muted">${unit?esc(unitTitle(unit.unit)):`Unit ${esc(curL.unit)}`}</div>
+    <div class="card week home-lead">
+      <div class="week-head"><h2 style="margin:0">This week in class</h2>${S.classPin?`<span class="std" title="Set on the grown-ups page">Pinned</span>`:`<span class="std" title="Estimated from the class pacing calendar">Estimate</span>`}</div>
       <div class="week-lesson">${lessonLine(curL,false)}${curL.inferred?` <span class="muted inferred">(inferred)</span>`:""}</div>
-      ${prevL?`<div class="week-prev muted">Spiral review: ${lessonLine(prevL, prevL.unit!==curL.unit)}</div>`:""}
-      ${unit&&unit.assess?`<div class="week-prev muted">Next assessment: Unit ${esc(unit.unit)} Assessment: ${esc(unit.assess)}</div>`:""}
-      ${lessonSkills(curL).length?"":(Object.keys(weekWeights()).length?`<p class="muted week-note">The app doesn't have this lesson yet. "Practice this week" uses the lessons just before it: ${[...new Set([ci-1,ci-2].filter(i=>i>=0).flatMap(i=>lessonSkills(L[i])))].map(k=>esc(SKILLS[k].name)).join(", ")}.</p>`:`<p class="muted week-note"><b>Nothing in the app yet for this lesson or the two before it.</b> The button below gives mixed review of everything the app does have; it is not this week's topic.</p>`)}
-      ${/number line/i.test(curL.name)&&lessonSkills(curL).length&&!(curL.focus&&Object.values(curL.focus).some(f=>f&&f.variant==="numberline"))?`<p class="muted week-note">This lesson uses the <b>number-line strategy</b>. The app practices the same problems by place value; the number-line picture is not in the app yet.</p>`:""}
-      ${typeof lpHomeHTML==="function"?lpHomeHTML(curL):""}<div class="actions" style="margin-top:12px"><button class="btn ${typeof lpHomeHTML==="function"&&lpReached().length?"quiet":"primary"}" data-skill="week" id="week">${Object.keys(weekWeights()).length?(typeof lpHomeHTML==="function"&&lpReached().length?"Mixed review: this week":"Practice this week"):"Mixed review instead"}</button>${nextL?`<button class="btn quiet small" id="moved" title="Advance to ${esc(lessonShort(nextL))}">Class moved on →</button>`:""}</div>
-      <p class="muted week-foot">${S.classPin?"A grown-up set this lesson.":"If your homework says a different lesson, a grown-up can change it."}</p>
+      ${lessonRouteVisible||lessonSkills(curL).length?"":(Object.keys(weekWeights()).length?`<p class="muted week-note">This lesson is not in the app yet. Mixed review uses earlier lessons: ${[...new Set([ci-1,ci-2].filter(i=>i>=0).flatMap(i=>lessonSkills(L[i])))].map(k=>esc(SKILLS[k].name)).join(", ")}.</p>`:`<p class="muted week-note"><b>This lesson is not in the app yet.</b> Mixed review draws from other topics, not this lesson.</p>`)}
+      ${/number line/i.test(curL.name)&&lessonSkills(curL).length&&!(curL.focus&&Object.values(curL.focus).some(f=>f&&f.variant==="numberline"))?`<p class="muted week-note">The app practices these problems by place value; this lesson's number-line picture is not here yet.</p>`:""}
+      ${typeof lpHomeHTML==="function"?lpHomeHTML(curL):""}
+      ${lessonRouteVisible?"":`<div class="actions home-week-action"><button class="btn primary" data-skill="week" id="week">${Object.keys(weekWeights()).length?"Practice this week":"Mixed review instead"}</button></div>`}
+      <details class="home-more"><summary>More class options</summary>
+        <div class="home-more-body"><div class="week-unit muted">${unit?esc(unitTitle(unit.unit)):`Unit ${esc(curL.unit)}`}</div>
+        ${prevL?`<div class="week-prev muted">Spiral review: ${lessonLine(prevL, prevL.unit!==curL.unit)}</div>`:""}
+        ${unit&&unit.assess?`<div class="week-prev muted">Next assessment: Unit ${esc(unit.unit)} Assessment: ${esc(unit.assess)}</div>`:""}
+        ${lessonRouteVisible?`<div class="actions home-week-action"><button class="btn quiet" data-skill="week" id="week">${Object.keys(weekWeights()).length?"Mixed review: this week":"Mixed review instead"}</button></div>`:""}
+        <p class="muted week-foot">${S.classPin?"A grown-up set this lesson.":"If your homework says a different lesson, a grown-up can change it."}</p></div>
+      </details>
     </div>` : "";
   const tagsHTML=k=>{ if(!calOn) return ""; // v9.24: lesson numbers belong to the class pacing calendar; with it off they would point at someone else's lessons
     let ids=L.filter(l=>l && Array.isArray(l.skills) && l.skills.includes(k)).map(l=>l.id); // derive from the lesson list, else the skill's own list
@@ -4097,32 +4132,38 @@ function home(){
   const showFocus = !!target; // with nothing open or due, Focus would just be Mix; the note below says when the next check-in is
   const doneLine = sessionDone ? `<p class="muted week-note" style="margin:0 0 10px"><b>Nice stopping point.</b> ${/* v9.20: effort, not "x right of y" */""}You worked on ${S.today.a||"some"} problem${S.today.a===1?"":"s"} today.${S.today.c ? "" : " Hard ones are how brains grow."} Come back tomorrow, or pick something below if you want more.</p>` : "";
   app.innerHTML=`
-    <div class="topbar"><h1 style="margin:0">Hi, ${esc(S.name)}.</h1><button class="btn quiet small" id="switch">Not ${esc(S.name)}?</button></div>${warnHTML()}
-    <p class="muted" style="margin:6px 0 16px">Pick something to practice. It gets harder as you get better, and if you miss one, we slow down and walk through it.</p>
-    ${doneLine}<div class="card" style="margin-top:0;border-color:var(--ink)"><div class="week-head"><h2 style="margin:0">Start today</h2><span class="std" title="The app plans it">Planned for you</span></div>
-      <p class="muted" style="font-size:14px;margin:6px 0 10px">${(()=>{ const P=buildTodayPlan(); return `About ${todayCountWords(P)} problems, chosen for you: ${P.map(todayLabel).filter((v,i,a)=>a.indexOf(v)===i).join(", ")}.`; })()} It tries to end on one you get right on your own: after the plan, a couple more if needed.</p>
-      <div class="actions" style="margin-top:0"><button class="btn primary mix" data-skill="today" style="margin-top:0">Start today</button></div></div>
+    <div class="topbar"><h1 style="margin:0" tabindex="-1">Hi, ${esc(S.name)}.</h1><button class="btn quiet small" id="switch">Not ${esc(S.name)}?</button></div>${warnHTML()}
+    <p class="home-intro">Pick one way to practice. You can ask for help along the way.</p>
+    ${doneLine}${weekHTML}
+    <div class="card home-today" style="margin-top:0"><div class="week-head"><h2 style="margin:0">Start today</h2><span class="std" title="The app plans it">Planned for you</span></div>
+      <p class="muted home-desc">${(()=>{ const P=buildTodayPlan(); return `About ${todayCountWords(P)} problems: ${P.map(todayLabel).filter((v,i,a)=>a.indexOf(v)===i).join(", ")}.`; })()}</p>
+      <div class="actions" style="margin-top:0"><button class="btn ${curL?"":"primary"} mix" data-skill="today" style="margin-top:0">Start today</button></div></div>
     ${nsHomeTile()}
-    ${weekHTML}
-    ${foundationsHomeHTML()}
     <div class="card hw">
-      <div class="week-head"><h2 style="margin:0">Homework practice</h2><span class="std" title="Problem shapes from the worksheet, not from your level">Worksheet shapes</span></div>
-      <p class="muted" style="font-size:14px;margin:6px 0 10px">Tonight's page, at tonight's size. These use the worksheet's problem shapes no matter what the dots say, and they never move a level up or down.</p>
-      <button class="skill" data-skill="hw:check"><div style="flex:1"><div class="name">Check a problem from the page</div><div class="blurb">Type the exact problem (148 × 19, 1,144 ÷ 11, 6,426 ÷ 9 area model, 49 ÷ (34 − 27) × 9, half of the sum of 17 and 9, round 2.98 to the nearest tenth). For multiplication and division, work through it together whenever you need to.</div></div></button>
-      ${Object.keys(HW_MODES).map(id=>{ const h=HW_MODES[id]; return `<button class="skill" data-skill="hw:${id}"><div style="flex:1"><div class="name">${esc(h.name)}</div><div class="blurb">${esc(h.blurb)}</div><div class="tags" aria-label="Standard"><span class="tag">${esc(h.std)}</span></div></div></button>`; }).join("")}
-      <p class="muted week-note" style="margin:10px 0 0"><b>Need to build up to it?</b> “${esc(SKILLS.multiply.name)}” below is the easier, step-up practice: it starts at your level (level ${S.levels.multiply}: ${MUL_SHAPE_BY_LEVEL[S.levels.multiply]||""}) and grows as you level up. That is prerequisite practice, not tonight's page.</p>
+      <div class="week-head"><h2 style="margin:0">Homework practice</h2></div>
+      <p class="muted home-desc">Have a problem from your page? Type it here to work through it.</p>
+      <button class="skill" data-skill="hw:check"><div style="flex:1"><div class="name">Check a problem from the page</div><div class="blurb">Use the exact numbers from your homework.</div></div></button>
+      <details class="home-more"><summary>More homework choices</summary><div class="home-more-body">
+        <p class="muted home-desc">Practice the same kinds of problems with new numbers. These do not change your level.</p>
+        ${Object.keys(HW_MODES).map(id=>{ const h=HW_MODES[id]; return `<button class="skill" data-skill="hw:${id}"><div style="flex:1"><div class="name">${esc(h.name)}</div><div class="blurb">${esc(h.blurb)}</div></div></button>`; }).join("")}
+        <p class="muted week-note">Want to build up to a homework problem? Choose a math topic below for practice that grows with you.</p>
+      </div></details>
     </div>
-    <div class="skills">${SKILL_ORDER.filter(k=>!SKILLS[k].foundation)/* v9.21: foundation skills live only in "Build your foundations" */.map(k=>`<button class="skill" data-skill="${k}"><div style="flex:1"><div class="name">${SKILLS[k].name}</div><div class="blurb">${esc(SKILLS[k].blurb)}</div>${tagsHTML(k)}</div>${dots(S.levels[k])}</button>`).join("")}</div>
-    <div class="actions" style="margin-top:0"><button class="btn primary mix" data-skill="mix">Mix it up</button>${showFocus?`<button class="btn mix" data-skill="miss" title="Works through what you have missed: a targeted problem, help if needed, a fresh try, a harder one, then a check-in a few days later. Ignores the class calendar.">Focus on where I missed</button>`:""}</div>
-    ${focusLine?`<p class="focus-note">${focusLine}</p>`:showFocus?`<p class="focus-note">Focus draws from: ${missSkills.map(k=>esc(SKILLS[k].name)).join(", ")}.</p>`:`<p class="muted week-note" style="margin:6px 0 0">“Focus on where I missed” appears here once a miss is logged.</p>`}
+    ${foundationsHomeHTML()}
+    <details class="card home-fold home-topics"><summary>Choose a math topic</summary><div class="home-more-body">
+      <p class="muted home-desc">Pick one thing you want to work on.</p>
+      <div class="skills">${SKILL_ORDER.filter(k=>!SKILLS[k].foundation)/* v9.21: foundation skills live only in "Build your foundations" */.map(k=>`<button class="skill" data-skill="${k}"><div style="flex:1"><div class="name">${SKILLS[k].name}</div><div class="blurb">${esc(SKILLS[k].blurb)}</div>${tagsHTML(k)}</div>${dots(S.levels[k])}</button>`).join("")}</div>
+    </div></details>
+    <div class="card home-extra"><h2 style="margin:0">More ways to practice</h2>
+      <div class="actions" style="margin-top:0"><button class="btn mix" data-skill="mix">Mix it up</button>${showFocus?`<button class="btn mix" data-skill="miss" title="Practice a spot that needs another try, then check it later with new numbers.">Focus on where I missed</button>`:""}</div>
+      ${focusLine?`<p class="focus-note">${focusLine}</p>`:showFocus?`<p class="focus-note">Focus draws from: ${missSkills.map(k=>esc(SKILLS[k].name)).join(", ")}.</p>`:""}
+    </div>
     <div class="stats muted">${homeEffortHTML()}</div>
     <div class="footer"><button class="btn quiet small" id="grown">For grown-ups</button><span class="muted build">Build ${esc(BUILD)}</span></div>`;
   app.querySelectorAll("[data-skill]").forEach(b=>b.onclick=()=>start(b.dataset.skill));
   app.querySelector("#switch").onclick=players;
   app.querySelector("#grown").onclick=grownups; if(typeof lpHomeBind==="function") lpHomeBind(); // v9.33: Unit 2 lesson practice
-  const mv=app.querySelector("#moved"); if(mv) mv.onclick=()=>{ if(!nextL) return;
-    if(confirm(`Move the class position to ${lessonShort(nextL)} · ${nextL.name}?`)){ S.classPin=nextL.id; save(); home(); } };
-  (app.querySelector("#week")||app.querySelector(".skill")).focus({preventScroll:true});
+  app.querySelector(".topbar h1").focus({preventScroll:true});
 }
 
 // Homework practice: the exact problem shapes on the worksheet, whatever the adaptive level says. Level-neutral (never moves the dots).
@@ -4565,9 +4606,9 @@ function estReasonNote(val){ const e=cur && cur.est; if(!e || e.pick<0 || cur.re
 // order. Kid-facing: the math is named, never a grade. home() leaves foundation skills out of the main list, so this is their only button.
 const FOUND_HOME_ORDER=["facts","wholepv","tenths","fracbasics","factors","twostep"]; // v9.23: fraction building blocks after tenths
 function foundationsHomeHTML(){ if(!S) return ""; const ks=FOUND_HOME_ORDER.filter(k=>SKILLS[k] && SKILLS[k].foundation && SKILL_ORDER.includes(k)); if(!ks.length) return "";
-  return `<div class="card found" id="foundations"><div class="week-head"><h2 style="margin:0">Build your foundations</h2></div>
+  return `<details class="card found home-fold" id="foundations"><summary>Build your foundations</summary><div class="home-more-body">
       <p class="muted" style="font-size:14px;margin:6px 0 10px">Short practice that makes the big problems easier.</p>
-      <div class="skills">${ks.map(k=>`<button class="skill" data-skill="${k}"><div style="flex:1"><div class="name">${esc(SKILLS[k].name)}${S.foundations&&S.foundations[k]?` <span class="std" title="Included in Start today">In your plan</span>`:""}</div><div class="blurb">${esc(SKILLS[k].blurb)}</div></div>${dots(S.levels[k]||1)}</button>`).join("")}</div></div>`; }
+      <div class="skills">${ks.map(k=>`<button class="skill" data-skill="${k}"><div style="flex:1"><div class="name">${esc(SKILLS[k].name)}${S.foundations&&S.foundations[k]?` <span class="std" title="Included in Start today">In your plan</span>`:""}</div><div class="blurb">${esc(SKILLS[k].blurb)}</div></div>${dots(S.levels[k]||1)}</button>`).join("")}</div></div></details>`; }
 // v9.21 (Agent P): a practice spot in a foundation skill is keyed by the kind of question (variant), so Focus serves that kind again.
 { const _ctxOfP=ctxOf; ctxOf=function(p){ const c=_ctxOfP(p); if(p && ["wholepv","factors","tenths","fracbasics"].includes(p.skill) && p.meta && p.meta.variant) c.variant=p.meta.variant; return c; }; }
 // ===== v9.21 (Agent M): foundations to keep practicing (grown-ups setting), the Today plan's foundation slot, and the practice-spot nudge =====
@@ -6715,7 +6756,7 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
   q("reset").onclick=()=>{ if(confirm(`Erase ${S.name}'s levels and history and start from level 1?`)){ const n=S.name, cal=S.classCal===true; S=normalize({...blankProfile(n), classCal:cal}); DB.profiles[n]=S; save(); home(); } }; // v9.24: the class pacing calendar choice is a setting, not progress, so it survives
   q("remove").onclick=()=>{ if(confirm(`Remove ${S.name} completely? This cannot be undone (unless you saved a backup).`)){ delete DB.profiles[S.name]; DB.current=null; S=null; save(); home(); } };
 }
-// ===== v9.33: Unit 2 lesson practice ("Practice Lesson N") =====
+// ===== v9.34: Unit 2 lesson practice ("Practice Lesson N") =====
 // A separate, explicit route for class calendar Unit 2 Lessons 1-14, apart from mixed review ("Practice this week" stays mixed review).
 // Each lesson is pinned to one method and representation, whatever the learner's level on the skill. A session runs:
 // goal and words -> a worked model (one decision at a time) -> two guided problems -> an optional "explain it" prompt -> a find-the-slip
@@ -6729,7 +6770,7 @@ const lpRnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const lpPick=a=>a[Math.floor(Math.random()*a.length)];
 const lpNum=s=>{ const t=String(s==null?"":s).replace(/[,\s]/g,""); if(!/^-?\d+(\.\d+)?$/.test(t)) return NaN; return +t; };
 const lpPlain=s=>String(s).replace(/<[^>]*>/g,"").replace(/\s+/g," ").trim();
-let lp=null; // the running session (memory only until an item finishes)
+let lp=null; // the running session; completed items are saved in the lesson log
 let lpUsed=new Set(); // numbers already used in this session (Lesson 3 draws without repeats)
 
 // ---- expression tools (tiles, rewrite, checks) ----
@@ -6757,16 +6798,16 @@ const lpShow=s=>String(s).replace(/\s*([+−×÷])\s*/g," $1 ").replace(/\(\s*/g
 // A spec: {title, prompt (HTML), init()->state, next(st)->step|null, visual(st,phase)->HTML, script:[values for the model], done(st)->HTML,
 // answer (final number, for the answer-only field), method (what "using the model" means, for the report)}.
 // A step: {id, prompt, short, input:{type, ...}, check(v, st)->{ok, msg, code, apply()}, help:[clues], why (model narration)}.
-function lpItemStart(item){ const sp=item.spec; item.st=Object.assign({k:0, helps:0, tries:0, codes:[], helpShown:[], msg:"", msgKind:"", done:false, answerOnly:null, skipped:false, videoOpened:false}, sp.init?sp.init():{}); item.step=sp.next(item.st); item.shown=0; }
+function lpItemStart(item){ const sp=item.spec; item.st=Object.assign({k:0, helps:0, tries:0, codes:[], helpShown:[], msg:"", msgKind:"", done:false, answerOnly:null, answerPreviewed:false, skipped:false, videoOpened:false, draft:null, badIndex:-1}, sp.init?sp.init():{}); item.step=sp.next(item.st); item.shown=0; }
 function lpApply(item, v){ const st=item.st, step=item.step; if(!step) return; const r=step.check(v, st)||{ok:false};
-  if(r.ok){ if(r.apply) r.apply(); st.k++; st.msg=r.msg||""; st.msgKind="ok"; st.helpShown=[]; item.step=item.spec.next(st); if(!item.step){ st.done=true; } return true; }
-  if(item.phase!=="model" && !r.fmt){ if(r.safe){ if(r.code) st.codes.push(r.code); } else { st.tries++; if(r.code) st.codes.push(r.code); } } st.msg=r.msg||"Not yet. Check that step and try again."; st.msgKind=r.safe?"":"no"; return false; }
+  if(r.ok){ if(r.apply) r.apply(); st.k++; st.draft=null; st.badIndex=-1; st.msg=r.msg||""; st.msgKind="ok"; st.helpShown=[]; item.step=item.spec.next(st); if(!item.step){ st.done=true; } return true; }
+  if(item.phase!=="model" && !r.fmt){ if(r.safe){ if(r.code) st.codes.push(r.code); } else { st.tries++; if(r.code) st.codes.push(r.code); } } st.badIndex=Number.isInteger(r.badIndex)?r.badIndex:-1; st.msg=r.msg||"Not yet. Check that step and try again."; st.msgKind=r.safe?"":"no"; return false; }
 
 // ---- input widgets ----
-function lpInputHTML(step, st, locked){ const I=step.input||{type:"num"}, dis=locked?" disabled":"";
-  if(I.type==="text") return `<label class="vh" for="lpin">${esc(lpPlain(step.short||step.prompt))}</label><input class="ans text lpans" id="lpin" inputmode="text" autocapitalize="off" spellcheck="false" autocomplete="off" placeholder="${esc(I.ph||"")}"${dis}>`;
-  if(I.type==="num") return `<label class="vh" for="lpin">${esc(lpPlain(step.short||step.prompt))}</label><input class="ans lpans" id="lpin" inputmode="decimal" autocomplete="off" placeholder="${esc(I.ph||"Type a number")}"${dis}>`;
-  if(I.type==="nums") return `<div class="lpnums">${I.labels.map((l,i)=>`<label class="lpnum"><span>${l}</span><input class="ans small lpans" data-lpi="${i}" inputmode="decimal" autocomplete="off"${dis}></label>`).join("")}</div>`;
+function lpInputHTML(step, st, locked){ const I=step.input||{type:"num"}, dis=locked?" disabled":"", draft=st.draft&&st.draft.k===st.k?st.draft.values:[];
+  if(I.type==="text") return `<label class="vh" for="lpin">${esc(lpPlain(step.short||step.prompt))}</label><input class="ans text lpans" id="lpin" inputmode="text" autocapitalize="off" spellcheck="false" autocomplete="off" placeholder="${esc(I.ph||"")}" value="${esc(draft[0]||"")}"${dis}>`;
+  if(I.type==="num") return `<label class="vh" for="lpin">${esc(lpPlain(step.short||step.prompt))}</label><input class="ans lpans" id="lpin" inputmode="decimal" autocomplete="off" placeholder="${esc(I.ph||"Type a number")}" value="${esc(draft[0]||"")}"${dis}>`;
+  if(I.type==="nums") return `<div class="lpnums">${I.labels.map((l,i)=>`<label class="lpnum"><span>${l}</span><input class="ans small lpans" data-lpi="${i}" inputmode="decimal" autocomplete="off" value="${esc(draft[i]||"")}"${dis}></label>`).join("")}</div>`;
   if(I.type==="mc") return `<div class="opts" role="radiogroup" aria-label="Choices">${I.options.map((o,i)=>`<button type="button" class="opt lpopt" role="radio" aria-checked="false" data-lpo="${i}"${dis}><b aria-hidden="true">${"abcdef"[i]}.</b>&nbsp; ${o}</button>`).join("")}</div>`;
   if(I.type==="multi") return `<div class="lpchips" role="group" aria-label="Choose all that fit">${I.options.map((o,i)=>`<button type="button" class="btn quiet small lpchip" aria-pressed="false" data-lpm="${i}"${dis}>${o}</button>`).join("")}</div>`;
   if(I.type==="group") return `<div class="lpgroup" role="group" aria-label="Tap the first and last number to put inside parentheses">${I.tokens.map((t,i)=>typeof t==="number"?`<button type="button" class="btn quiet small lptok" aria-pressed="false" data-lpt="${i}"${dis}>${lpN(t)}</button>`:`<span class="lpop">${t}</span>`).join("")}</div><p class="muted lptip">Tap the first number, then the last number, to go inside the parentheses.</p>`;
@@ -6789,38 +6830,51 @@ function lpBlueprint(id){ return LP_U2[id]||null; }
 // Saved lesson data may come from a restore or an older build: keep only well-formed entries and plain numbers.
 function lpSanitize(){ if(!S) return; const L=S.lessons&&typeof S.lessons==="object"&&!Array.isArray(S.lessons)?S.lessons:{}; const out={};
   for(const id of Object.keys(LP_U2)){ const o=L[id]; if(!o||typeof o!=="object") continue; out[id]={sessions:Math.max(0,Math.floor(+o.sessions||0)), load:Math.max(1,Math.min(3,Math.round(+o.load||1))), due:Math.max(0,+o.due||0), last:+o.last||0, checked:+o.checked||0, checkClean:o.checkClean?1:0}; }
-  S.lessons=out; S.lessonLog=(Array.isArray(S.lessonLog)?S.lessonLog:[]).filter(e=>e&&typeof e==="object"&&!Array.isArray(e)&&Number.isFinite(+e.t)&&LP_U2[e.id]).map(e=>({...e, codes:Array.isArray(e.codes)?e.codes.filter(c=>typeof c==="string"):[], text:typeof e.text==="string"?e.text.slice(0,280):undefined})).slice(-LP_LOG_CAP); }
+  S.lessons=out; S.lessonLog=(Array.isArray(S.lessonLog)?S.lessonLog:[]).filter(e=>e&&typeof e==="object"&&!Array.isArray(e)&&Number.isFinite(+e.t)&&LP_U2[e.id]).map(e=>{ const preview=e.answerPreviewed===1||(e.answerOnly===1&&e.methodOk===1); return {...e, answerPreviewed:preview?1:0, firstTry:preview?0:e.firstTry, codes:Array.isArray(e.codes)?e.codes.filter(c=>typeof c==="string"):[], text:typeof e.text==="string"?e.text.slice(0,280):undefined}; }).slice(-LP_LOG_CAP); }
 function lpReached(){ if(!classCalOn()) return []; const L=lessonList(), ci=lessonIdx(effectiveClassAt()); if(ci<0) return [];
   return Object.keys(LP_U2).filter(id=>{ const i=lessonIdx(id); return i>=0 && i<=ci; }); }
 function lpState(id){ S.lessons=S.lessons&&typeof S.lessons==="object"?S.lessons:{}; const o=S.lessons[id]=S.lessons[id]&&typeof S.lessons[id]==="object"?S.lessons[id]:{}; if(!Number.isFinite(+o.load)) o.load=1; return o; }
 function lpDue(){ const now=Date.now(); return lpReached().filter(id=>{ const o=(S.lessons||{})[id]; return o && +o.due>0 && +o.due<=now; }); }
 function lpLoadFor(id){ const o=lpState(id); return Math.max(1, Math.min(3, Math.round(+o.load)||1)); }
-function lpStart(id, delayed){ const bp=lpBlueprint(id); if(!bp || !S) return; if(typeof home==="function" && cur && phase==="q") leaveProblem(); cur=null; mode="lesson:"+id;
-  const load=lpLoadFor(id), items=[]; lpUsed=new Set();
-  if(delayed){ items.push({phase:"delayed", spec:bp.make(load, "independent", 0)});
-    const others=lpReached().filter(x=>x!==id && (S.lessons||{})[x] && +S.lessons[x].sessions>0); if(others.length){ const o=lpPick(others); items.push({phase:"mixed", lid:o, spec:LP_U2[o].make(lpLoadFor(o), "independent", 1)}); } }
-  else { items.push({phase:"intro"}); items.push({phase:"model", spec:bp.model()}); items.push({phase:"guided", spec:bp.make(load, "guided", 0)}); items.push({phase:"guided", spec:bp.make(load, "guided", 1)});
-    items.push({phase:"explain"}); items.push({phase:"repair", rspec:bp.repair(load)}); items.push({phase:"independent", spec:bp.make(load, "independent", 0)}); items.push({phase:"independent", spec:bp.make(load, "independent", 1)}); }
-  items.push({phase:"summary"});
-  lp={id, bp, items, i:0, delayed:!!delayed, t0:Date.now(), results:[]}; lpEnter(); }
+function lpSeeded(seed, work){ const old=Math.random; let state=seed>>>0; Math.random=()=>{ state=(Math.imul(1664525,state)+1013904223)>>>0; return state/4294967296; }; try{ return work(); } finally { Math.random=old; } }
+function lpSaveResume(){ if(!S||!lp||lp.items[lp.i].phase==="summary") return; const it=lp.items[lp.i], st=it.st||null;
+  S.lessonResume={v:1,id:lp.id,delayed:lp.delayed,seed:lp.seed,load:lp.load,i:lp.i,phase:it.phase,lid:it.lid||null,t:Date.now(),
+    st,rep:it.rep||null,recorded:!!it.recorded,results:lp.results}; save(); }
+function lpResumeReady(){ const r=S&&S.lessonResume; return !!(r&&r.v===1&&LP_U2[r.id]&&Number.isInteger(r.i)&&r.i>=0&&r.i<9&&Number.isInteger(r.seed)&&Number.isInteger(r.load)&&r.load>=1&&r.load<=3&&Number.isFinite(+r.t)&&Date.now()-r.t<30*864e5); }
+function lpResume(){ if(!lpResumeReady()) return; const id=S.lessonResume.id, delayed=!!S.lessonResume.delayed; try{ lpStart(id,delayed,S.lessonResume); }catch(e){ delete S.lessonResume; lp=null; save(); lpStart(id,delayed); } }
+function lpStart(id, delayed, resume){ const bp=lpBlueprint(id); if(!bp || !S) return; if(typeof home==="function" && cur && phase==="q") leaveProblem(); cur=null; mode="lesson:"+id;
+  const load=resume?resume.load:lpLoadFor(id), seed=resume?resume.seed:Math.floor(Math.random()*4294967296), items=[]; lpUsed=new Set();
+  lpSeeded(seed,()=>{ if(delayed){ items.push({phase:"delayed", spec:bp.make(load, "delayed", 0)});
+      const others=lpReached().filter(x=>x!==id && (S.lessons||{})[x] && +S.lessons[x].sessions>0); if(others.length){ const o=lpPick(others); items.push({phase:"mixed", lid:o, spec:LP_U2[o].make(lpLoadFor(o), "independent", 1)}); } }
+    else { items.push({phase:"intro"}); items.push({phase:"model", spec:bp.model()}); items.push({phase:"guided", spec:bp.make(load, "guided", 0)}); items.push({phase:"guided", spec:bp.make(load, "guided", 1)});
+      items.push({phase:"explain"}); items.push({phase:"repair", rspec:bp.repair(load)}); items.push({phase:"independent", spec:bp.make(load, "independent", 0)}); items.push({phase:"independent", spec:bp.make(load, "independent", 1)}); } });
+  items.push({phase:"summary"}); lp={id,bp,items,i:0,delayed:!!delayed,seed,load,t0:Date.now(),results:[]};
+  if(resume){ const it=items[resume.i]; if(!it||it.phase!==resume.phase||it.lid!==(resume.lid||undefined)){ delete S.lessonResume; lp=null; lpStart(id,delayed); return; }
+    lp.i=resume.i; lp.results=Array.isArray(resume.results)?resume.results:[]; if(it.phase==="repair"){ it.spec=it.rspec.fix; it.rep=resume.rep&&typeof resume.rep==="object"?resume.rep:{stage:"spot",picked:-1,tries:0}; }
+    if(it.spec){ if(it.phase==="model"){ lpItemStart(it); } else if(resume.st&&typeof resume.st==="object"&&!Array.isArray(resume.st)&&Number.isInteger(resume.st.k)&&resume.st.k>=0){
+        it.st=resume.st; const shown=Array.isArray(it.st.helpShown)?it.st.helpShown.length:0; it.st.msg=""; it.st.msgKind=""; it.st.codes=Array.isArray(it.st.codes)?it.st.codes.filter(x=>typeof x==="string"):[]; it.step=it.spec.next(it.st); it.st.helpShown=(it.step&&it.step.help||[]).slice(0,shown); it.recorded=!!resume.recorded;
+      } else lpItemStart(it); }
+    lpRender(); return; }
+  lpEnter(); }
 function lpEnter(){ const it=lp.items[lp.i]; if(it.phase==="repair"){ it.spec=it.rspec.fix; it.rep={stage:"spot", picked:-1, tries:0}; } if(it.spec) lpItemStart(it); lpRender(); try{ window.scrollTo(0,0); }catch(e){} }
 function lpNext(){ if(lp.i<lp.items.length-1){ lp.i++; lpEnter(); } }
 const LP_PHASE_NAME={intro:"The goal", model:"Watch one", guided:"Try it together", explain:"Explain it", repair:"Find the slip", independent:"On your own", delayed:"Check-in", mixed:"Check-in: a mixed one", summary:"Done"};
 function lpRecord(it, extra){ if(it.recorded) return null; it.recorded=true; const st=it.st||{}, sp=it.spec||{}, lid=it.lid||lp.id, oneShot=!!(st.done && sp.oneShot && sp.oneShot(st)), model=it.phase==="model";
   const method=st.done&&!st.skipped&&!oneShot&&!model?1:0;
   const e=Object.assign({t:Date.now(), id:lid, lesson:(LP_U2[lid]||lp.bp).lesson, phase:it.phase, kind:sp.kind||it.phase, q:it.spec?lpPlain(sp.title||""):"",
-    ok:st.done?1:0, methodOk:method, answerOnly:oneShot?1:(st.answerOnly===null||st.answerOnly===undefined?null:(st.answerOnly?1:0)), helps:+st.helps||0, tries:+st.tries||0, firstTry:method&&!st.tries&&!st.helps?1:0,
+    ok:st.done?1:0, methodOk:method, methodEvidence:sp.methodEvidence||sp.kind||it.phase, answerOnly:oneShot?1:(st.answerOnly===null||st.answerOnly===undefined?null:(st.answerOnly?1:0)), answerPreviewed:st.answerPreviewed?1:0,
+    helps:+st.helps||0, tries:+st.tries||0, firstTry:method&&!st.tries&&!st.helps&&!st.answerPreviewed?1:0,
     codes:[...new Set(st.codes||[])], video:st.videoOpened?1:0, steps:+st.k||0, route:sp.route&&st.done?sp.route(st):undefined}, extra||{});
-  S.lessonLog=Array.isArray(S.lessonLog)?S.lessonLog:[]; S.lessonLog.push(e); while(S.lessonLog.length>LP_LOG_CAP) S.lessonLog.shift(); lp.results.push(e); save(); return e; }
+  S.lessonLog=Array.isArray(S.lessonLog)?S.lessonLog:[]; S.lessonLog.push(e); while(S.lessonLog.length>LP_LOG_CAP) S.lessonLog.shift(); lp.results.push(e); lpSaveResume(); return e; }
 function lpFinish(){ const o=lpState(lp.id), own=lp.results.filter(e=>(e.phase==="independent"||e.phase==="delayed") && e.id===lp.id);
   o.sessions=(+o.sessions||0)+(lp.delayed?0:1); o.last=Date.now();
   if(own.length){ const clean=own.every(e=>e.firstTry&&e.methodOk); if(clean && o.load<3) o.load=(+o.load||1)+1; else if(!own.some(e=>e.ok) && o.load>1) o.load=o.load-1;
     o.due = lp.delayed ? (clean ? 0 : Date.now()+3*864e5) : Date.now()+LP_DELAY_MS; if(lp.delayed){ o.checked=Date.now(); o.checkClean=clean?1:0; } }
-  save(); }
+  delete S.lessonResume; save(); }
 
 // ---- rendering ----
 function lpRender(){ const it=lp.items[lp.i], bp=lp.bp, n=lp.items.length;
-  const head=`<div class="topbar"><button class="btn quiet" id="back">Home</button><div class="row"><span class="pill week">Unit 2 · Lesson ${it.lid&&LP_U2[it.lid]?LP_U2[it.lid].lesson:bp.lesson}</span></div></div>${warnHTML()}
+  const head=`<div class="topbar"><button class="btn quiet" id="back">${it.phase==="summary"?"Home":"Pause & Home"}</button><div class="row"><span class="pill week">Unit 2 · Lesson ${it.lid&&LP_U2[it.lid]?LP_U2[it.lid].lesson:bp.lesson}</span></div></div>${warnHTML()}
     <div class="lpprog" aria-label="Lesson steps">${lp.items.map((x,j)=>`<span class="lpdot${j<lp.i?" done":j===lp.i?" now":""}" title="${esc(LP_PHASE_NAME[x.phase])}"></span>`).join("")}<span class="muted lpprogtxt">${esc(LP_PHASE_NAME[it.phase])}${lp.delayed?"":` · ${lp.i+1} of ${n}`}</span></div>`;
   let body="";
   if(it.phase==="intro") body=lpIntroHTML();
@@ -6828,8 +6882,8 @@ function lpRender(){ const it=lp.items[lp.i], bp=lp.bp, n=lp.items.length;
   else if(it.phase==="summary") body=lpSummaryHTML();
   else if(it.phase==="repair") body=lpRepairHTML(it);
   else body=lpWorkHTML(it);
-  app.innerHTML=head+body; app.querySelector("#back").onclick=()=>{ const x=lp&&lp.items[lp.i]; if(x&&x.st&&!x.recorded&&(x.st.done||x.st.k>0||x.st.tries>0)) lpRecord(x, x.st.done?{}:{abandoned:1, ok:0, methodOk:0, firstTry:0}); lp=null; home(); };
-  lpBind(it); if(typeof noteScreen==="function") noteScreen(); }
+  app.innerHTML=head+body; app.querySelector("#back").onclick=()=>{ lpSaveResume(); lp=null; home(); };
+  lpBind(it); lpSaveResume(); if(typeof noteScreen==="function") noteScreen(); }
 function lpVideoHTML(){ const n=lp.bp.lesson; return (typeof U2_VIDEO_NAMES==="object" && U2_VIDEO_NAMES[n]) ? `<p class="lpvideo"><a class="video-link" id="lpvideo" href="https://videocdn.swunmath.com/lesson_videos/g5/G5_U2_L${n}.mp4" target="_blank" rel="noopener noreferrer">Watch the class video: Lesson ${n}</a> <span class="muted">(opens SWUN’s site in a new tab)</span></p>` : ""; }
 function lpIntroHTML(){ const bp=lp.bp; return `<div class="card lpcard"><h2 style="margin-top:0">Lesson ${bp.lesson}: ${esc(bp.name)}</h2><p class="lpgoal"><b>Today's goal:</b> ${bp.goal}</p>
   <div class="lpvocab"><b>Words we use</b><ul>${bp.vocab.map(([w,d])=>`<li><b>${esc(w)}</b>: ${d}</li>`).join("")}</ul></div>
@@ -6838,7 +6892,7 @@ function lpIntroHTML(){ const bp=lp.bp; return `<div class="card lpcard"><h2 sty
 function lpExplainHTML(){ const bp=lp.bp; return `<div class="card lpcard"><h2 style="margin-top:0">Explain it (optional)</h2><p>${bp.explain[0]}</p>
   <p class="muted" style="font-size:14px">Say it out loud to a grown-up, or type it. A sentence start: <i>${esc(bp.explain[1])}</i></p>
   <label class="vh" for="lpexp">Your explanation</label><textarea id="lpexp" class="lpexp" maxlength="280" rows="3" placeholder="${esc(bp.explain[1])}"></textarea>
-  <div class="actions"><button class="btn primary" id="lpexpsave">Save and go on</button><button class="btn quiet" id="lpexpskip">Skip</button></div></div>`; }
+  <div class="inline-err" id="lpexpmsg" role="status" aria-live="polite"></div><div class="actions"><button class="btn primary" id="lpexpsave">Save what I typed</button><button class="btn quiet" id="lpexpsaid">I said it aloud</button><button class="btn quiet" id="lpexpskip">Skip</button></div></div>`; }
 function lpWorkHTML(it){ const sp=it.spec, st=it.st, ph=it.phase, model=ph==="model", own=ph==="independent"||ph==="delayed"||ph==="mixed";
   const step=it.step; const visual=sp.visual?sp.visual(st, ph):"";
   const intro = ph==="repair" ? `<p class="lpmodel-note"><b>Fix it.</b> ${esc(lpPlain(it.rspec?it.rspec.story:""))} Clues are there if you want one.</p>` : model ? `<p class="lpmodel-note"><b>Watch one.</b> Each step shows what to do and why. Think about what you would do before you tap.</p>` : own ? `<p class="lpmodel-note"><b>On your own.</b> The steps get checked, but the clues are off unless you ask.</p>` : `<p class="lpmodel-note"><b>Together.</b> Do each step; ask for a clue any time.</p>`;
@@ -6866,9 +6920,9 @@ function lpSummaryHTML(){ const rs=lp.results, own=rs.filter(e=>e.phase==="indep
 
 // ---- binding ----
 function lpBind(it){ const q=s=>app.querySelector(s);
-  const vid=q("#lpvideo"); if(vid) vid.addEventListener("click", ()=>{ const cur2=lp.items[lp.i]; if(cur2.st && !cur2.st.done) cur2.st.videoOpened=true; });
+  const vid=q("#lpvideo"); if(vid) vid.addEventListener("click", ()=>{ lpRecord({phase:"video"}, {kind:"video-link-tap", video:1, ok:0, methodOk:0, firstTry:0}); });
   if(it.phase==="intro"){ q("#lpgo").onclick=lpNext; q("#lpgo").focus({preventScroll:true}); return; }
-  if(it.phase==="explain"){ q("#lpexpsave").onclick=()=>{ const t=String(q("#lpexp").value||"").trim().slice(0,280); lpRecord({phase:"explain"}, {kind:"explain", ok:t?1:0, text:t||undefined, skipped:t?0:1}); lpNext(); }; q("#lpexpskip").onclick=()=>{ lpRecord({phase:"explain"}, {kind:"explain", ok:0, skipped:1}); lpNext(); }; return; }
+  if(it.phase==="explain"){ q("#lpexpsave").onclick=()=>{ const t=String(q("#lpexp").value||"").trim().slice(0,280); if(!t){ q("#lpexpmsg").textContent="Type a thought, choose ‘I said it aloud,’ or skip."; return; } lpRecord(it, {kind:"explain", ok:1, text:t, mode:"typed", skipped:0}); lpNext(); }; q("#lpexpsaid").onclick=()=>{ lpRecord(it, {kind:"explain", ok:0, mode:"spoken", selfReported:1, skipped:0}); lpNext(); }; q("#lpexpskip").onclick=()=>{ lpRecord(it, {kind:"explain", ok:0, mode:"skipped", skipped:1}); lpNext(); }; return; }
   if(it.phase==="summary"){ q("#lphome").onclick=()=>{ lp=null; home(); }; q("#lpagain").onclick=()=>lpStart(lp.id, false); return; }
   if(it.phase==="repair" && it.rep.stage==="spot"){ app.querySelectorAll("[data-lpr]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.lpr, r=it.rspec, rp=it.rep; rp.picked=i;
       if(i===r.wrongAt){ rp.stage="fix"; if(rp.tries) it.st.tries+=rp.tries; it.st.msg=`Yes: step ${i+1} is where it goes off track. ${r.whyWrong}`; it.st.msgKind="ok"; lpRender(); }
@@ -6880,19 +6934,21 @@ function lpBind(it){ const q=s=>app.querySelector(s);
       const shown=esc(stp.showVal?stp.showVal(v):Array.isArray(v)?v.join(", "):(v&&v.prime)?"prime: circle it":String(v));
       it.narr.push(ok ? `${stp.prompt} <b class="good">→ ${shown}</b>${stp.why?`<br><span class="muted">${stp.why}</span>`:""}` : `${stp.prompt} Try <b>${shown}</b>: <span class="muted">${st.msg}</span>`); st.msg=""; lpRender(); const b=q("#lpshow")||q("#lpnext"); if(b) b.focus({preventScroll:true}); }; q("#lpshow").focus({preventScroll:true}); return; }
   const I=step.input||{type:"num"};
+  const keepDraft=()=>{ if(I.type==="num"||I.type==="text"||I.type==="nums"||I.type==="tree") st.draft={k:st.k, values:[...app.querySelectorAll("#lpwork .lpans")].map(x=>x.value)}; };
+  app.querySelectorAll("#lpwork .lpans").forEach(el=>el.addEventListener("input", keepDraft));
   app.querySelectorAll(".lpopt").forEach(b=>b.onclick=()=>{ app.querySelectorAll(".lpopt").forEach(x=>{ x.setAttribute("aria-checked", String(x===b)); x.classList.toggle("sel", x===b); }); });
   app.querySelectorAll(".lpchip").forEach(b=>b.onclick=()=>{ const on=b.getAttribute("aria-pressed")!=="true"; b.setAttribute("aria-pressed", String(on)); b.classList.toggle("on", on); });
   app.querySelectorAll(".lptok").forEach(b=>b.onclick=()=>{ st.grp=st.grp||[]; const i=+b.dataset.lpt; if(st.grp.length>=2) st.grp=[]; if(st.grp[0]===i) st.grp=[]; else st.grp.push(i); st.grp.sort((a,b2)=>a-b2);
     app.querySelectorAll(".lptok").forEach(x=>{ const on=st.grp.includes(+x.dataset.lpt); x.setAttribute("aria-pressed", String(on)); x.classList.toggle("on", on); }); });
   app.querySelectorAll(".lptile").forEach(b=>b.onclick=()=>{ st.tiles=st.tiles||[]; const t=b.dataset.lptile; if(t==="⌫") st.tiles.pop(); else if(t==="clear") st.tiles=[]; else st.tiles.push(t);
     const sh=q("#lptshow"); if(sh) sh.innerHTML=st.tiles.length?esc(lpShow(st.tiles.join(" "))):"<span class='muted'>Tap tiles to build it</span>"; });
-  const go=()=>{ const v=lpReadInput(step, st); const ok=lpApply(it, v); if(ok && I.type==="tiles") st.tiles=[]; if(ok) st.grp=[]; lpRender(); const f=q("#lpin")||q("[data-lpi]")||q(".lpopt")||q(".lpchip")||q(".lptok")||q(".lptile")||q("#lpnext"); if(f) f.focus({preventScroll:true}); };
+  const go=()=>{ keepDraft(); const v=lpReadInput(step, st); const ok=lpApply(it, v); if(ok && I.type==="tiles") st.tiles=[]; if(ok) st.grp=[]; lpRender(); const f=(!ok&&st.badIndex>=0?q(`[data-lpi="${st.badIndex}"]`):null)||q("#lpin")||q("[data-lpi]")||q(".lpopt")||q(".lpchip")||q(".lptok")||q(".lptile")||q("#lpnext"); if(f) f.focus({preventScroll:true}); };
   q("#lpcheck").onclick=go; const pb=q("#lpprime"); if(pb) pb.onclick=()=>{ const ok=lpApply(it, {prime:true}); lpRender(); const f=q("[data-lpi]")||q("#lpnext")||q("#lpcheck"); if(f) f.focus({preventScroll:true}); };
   app.querySelectorAll("#lpwork input.ans:not(#lpknowin)").forEach(el=>el.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); if(!e.repeat) go(); } }));
   const ki=q("#lpknowin"); if(ki) ki.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); if(!e.repeat){ const g2=q("#lpknowgo"); if(g2) g2.click(); } } });
-  const hb=q("#lphelp"); if(hb) hb.onclick=()=>{ st.helpShown=st.helpShown||[]; const h=(step.help||[])[st.helpShown.length]; if(h){ st.helpShown.push(h); st.helps++; } lpRender(); };
+  const hb=q("#lphelp"); if(hb) hb.onclick=()=>{ keepDraft(); st.helpShown=st.helpShown||[]; const h=(step.help||[])[st.helpShown.length]; if(h){ st.helpShown.push(h); st.helps++; } lpRender(); };
   const kb=q("#lpknow"); if(kb) kb.onclick=()=>{ q("#lpknowbox").hidden=false; q("#lpknowin").focus(); };
-  const kg=q("#lpknowgo"); if(kg) kg.onclick=()=>{ const v=lpNum(q("#lpknowin").value); if(isNaN(v)){ q("#lpmsg").textContent="Type a number."; return; } const right=Math.abs(v-it.spec.answer)<1e-9; st.answerOnly=right; if(!right){ st.tries++; st.codes.push("answer-only"); }
+  const kg=q("#lpknowgo"); if(kg) kg.onclick=()=>{ keepDraft(); const v=lpNum(q("#lpknowin").value); if(isNaN(v)){ q("#lpmsg").textContent="Type a number."; return; } const right=Math.abs(v-it.spec.answer)<1e-9; st.answerOnly=right; if(right) st.answerPreviewed=true; if(!right){ st.tries++; st.codes.push("answer-only"); }
     st.msg = right ? `That is the answer. This lesson is about the ${it.spec.methodName||"model"}, so build it too; or skip building it (that counts as the answer only).` : "Not that one. Build it step by step and you'll find it."; st.msgKind=right?"ok":"no"; lpRender(); };
   const sk=q("#lpskip"); if(sk) sk.onclick=()=>{ st.skipped=true; st.done=!!st.answerOnly; if(!st.done){ lpRender(); return; } lpRecord(it); if(lp.i+1>=lp.items.length-1) lpFinish(); lpNext(); };
   const f=q("#lpin")||q("[data-lpi]"); if(f) f.focus({preventScroll:true}); }
@@ -6910,7 +6966,7 @@ const lpPlaceName=v=>v>=1000?"thousands":v>=100?"hundreds":v>=10?"tens":"ones";
 
 // ---- area-model division (Lessons 11-14): divisor on top, partial quotients on the right, products inside, ledger beside ----
 function lpAreaDiv(o){ const d=o.d, N=o.N, Q=N/d, askWidth=!!o.askWidth, fewer=!!o.fewerClues;
-  const sp={kind:"areadiv", methodName:"area model", title:`${lpN(N)} ÷ ${d}`, prompt:o.prompt||`Build the area model: ${d} across the top, partial quotients down the right side, products inside, and subtract in the ledger.`, answer:Q, script:o.script||[],
+  const sp={kind:"areadiv", methodEvidence:askWidth?"area-width-vs-product":"area-bands-and-ledger", methodName:"area model", title:`${lpN(N)} ÷ ${d}`, prompt:o.prompt||`Build the area model: ${d} across the top, partial quotients down the right side, products inside, and subtract in the ledger.`, answer:Q, script:o.script||[],
     init:()=>({rem:N, bands:[], trials:[], stage:"q", pend:null, summed:false, askedW:{}}),
     next:st=>{ if(st.rem>0){
         if(st.stage==="q") return {prompt:`How many groups of <b>${d}</b> fit in <b>${lpN(st.rem)}</b> without going over? That partial quotient goes on the right side of the next band.`, short:`Next partial quotient (right side). Left to divide: ${lpN(st.rem)}.`, input:{type:"num", ph:"partial quotient"},
@@ -6944,7 +7000,7 @@ function lpAreaDiv(o){ const d=o.d, N=o.N, Q=N/d, askWidth=!!o.askWidth, fewer=!
 
 // ---- compatible parts (Lessons 9-10): split the dividend into parts the divisor divides evenly, divide each part, add ----
 function lpCompat(o){ const d=o.d, N=o.N, Q=N/d;
-  const sp={kind:"compat", methodName:"place-value split", title:`${lpN(N)} ÷ ${d}`, prompt:o.prompt||`Split ${lpN(N)} into parts that ${d} divides evenly. Divide each part. Add the answers.`, answer:Q, script:o.script||[], modelSplitWhy:o.splitWhy,
+  const sp={kind:"compat", methodEvidence:o.mode==="combine"?"expanded-recombination":"compatible-parts", methodName:"place-value split", title:`${lpN(N)} ÷ ${d}`, prompt:o.prompt||`Split ${lpN(N)} into parts that ${d} divides evenly. Divide each part. Add the answers.`, answer:Q, script:o.script||[], modelSplitWhy:o.splitWhy,
     init:()=>({parts:[], left:N, stage:"split", combine:o.mode==="combine", chips:o.mode==="combine"?lpPlaceParts(N):null, qs:[], summed:false}),
     next:st=>{
       if(st.stage==="split"){
@@ -6962,7 +7018,7 @@ function lpCompat(o){ const d=o.d, N=o.N, Q=N/d;
         : `<p class="lpeq">${lpN(N)} = ${st.parts.length?st.parts.map(lpN).join(" + "):"?"}${st.stage==="split"&&st.parts.length?" + …":""}</p>`;
       const divs=st.parts.length&&st.stage!=="split"?`<div class="lpdivs">${st.parts.map((p,i)=>`<div class="lpdivrow">${lpN(p)} ÷ ${d} = <b>${st.qs[i]!==undefined?lpN(st.qs[i]):"?"}</b></div>`).join("")}</div>`:"";
       const sum=st.summed?`<p class="lpsum">${st.qs.map(lpN).join(" + ")} = <b>${lpN(Q)}</b></p>`:"";
-      const sw=st.stage==="split"&&!st.parts.length ? (st.combine?`<button type="button" class="btn quiet small" id="lpfree">Choose my own parts instead</button>`:`<button type="button" class="btn quiet small" id="lpcombine">Start from expanded form</button>`) : "";
+      const sw=st.stage==="split"&&!st.parts.length ? (st.combine?(o.requireCombine?"":`<button type="button" class="btn quiet small" id="lpfree">Choose my own parts instead</button>`):`<button type="button" class="btn quiet small" id="lpcombine">Start from expanded form</button>`) : "";
       return `<div class="lpcompat">${parts}${divs}${sum}</div>${sw}`; },
     bind:(it, rer)=>{ const st=it.st;
       app.querySelectorAll("[data-lpp]").forEach(b=>b.onclick=()=>{ st.sel=st.sel||[]; const i=+b.dataset.lpp; if(st.sel.includes(i)) st.sel=st.sel.filter(x=>x!==i); else st.sel.push(i);
@@ -6984,13 +7040,13 @@ function lpPartialMul(o){ const a=o.a, b=o.b, view=o.view, A=lpPlaceParts(a), B=
   const onesRow=cells.filter(c=>c.y===bOnes), tensRow=cells.filter(c=>c.y===bTens), R1=a*bOnes, R2=a*bTens;
   const cellLab=c=>`${lpN(c.x)} × ${lpN(c.y)}`;
   const steps=[
-    {prompt:`Split <b>${lpN(a)}</b> by place value.`, short:`${lpN(a)} = ? + ?`, input:{type:"nums", labels:A.map(v=>lpPlaceName(v))}, auto:A.map(String), why:`${lpN(a)} = ${A.map(lpN).join(" + ")}.`, help:[`${lpN(a)} has ${A.length} nonzero places. Write each place's value, like ${A.map(lpN).join(" and ")}.`], showVal:v=>v.join(" + "),
+    {prompt:`Split <b>${lpN(a)}</b> by place value.`, short:`${lpN(a)} = ? + ?`, input:{type:"nums", labels:A.map(v=>lpPlaceName(v))}, auto:A.map(String), why:`${lpN(a)} = ${A.map(lpN).join(" + ")}.`, help:[`Use each place once. A digit in the tens place counts groups of ten; a digit in the ones place counts single ones.`], showVal:v=>v.join(" + "),
      check:v=>{ const ns=v.map(lpNum); if(ns.some(isNaN)) return {ok:false, fmt:true, msg:"Fill in each box with a number."}; if(ns.every((n,i)=>n===A[i])) return {ok:true, msg:""}; if(ns.reduce((s,n)=>s+n,0)===a) return {ok:false, code:"not-place", msg:"Those add up, but split by place value: tens in one box, ones in the other."}; return {ok:false, msg:`Those don't make ${lpN(a)} by place value.`}; }},
-    {prompt:`Split <b>${lpN(b)}</b> by place value.`, short:`${lpN(b)} = ? + ?`, input:{type:"nums", labels:B.map(v=>lpPlaceName(v))}, auto:B.map(String), why:`${lpN(b)} = ${B.map(lpN).join(" + ")}.`, help:[`Tens, then ones: ${lpN(bTens)} and …?`], showVal:v=>v.join(" + "),
+    {prompt:`Split <b>${lpN(b)}</b> by place value.`, short:`${lpN(b)} = ? + ?`, input:{type:"nums", labels:B.map(v=>lpPlaceName(v))}, auto:B.map(String), why:`${lpN(b)} = ${B.map(lpN).join(" + ")}.`, help:[`The first box is tens, the next box is ones. What is each digit worth in its own place?`], showVal:v=>v.join(" + "),
      check:v=>{ const ns=v.map(lpNum); if(ns.some(isNaN)) return {ok:false, fmt:true, msg:"Fill in each box."}; if(ns.every((n,i)=>n===B[i])) return {ok:true}; return {ok:false, code:"not-place", msg:`Split ${lpN(b)} by place value.`}; }},
     {prompt: view==="grid" ? `Fill in every cell of the grid: each cell is its column × its row.` : `Multiply every part by every part (${cells.length} products).`, short:"Each partial product", input:{type:"nums", labels:cells.map(cellLab)}, auto:cells.map(c=>String(c.p)), why:"Every part of one factor meets every part of the other.", help:[`Multiply the front digits, then attach the zeros: ${cellLab(cells[0])} → ${String(cells[0].x).replace(/0+$/,"")} × ${String(cells[0].y).replace(/0+$/,"")} with the zeros added back.`], showVal:v=>v.map(x=>lpN(lpNum(x))).join(", "),
-     check:v=>{ const ns=v.map(lpNum); if(ns.some(isNaN)) return {ok:false, fmt:true, msg:"Fill in every product."}; const bad=cells.findIndex((c,i)=>ns[i]!==c.p); if(bad<0) return {ok:true, msg:"All the partial products are right."};
-       const c=cells[bad], n=ns[bad]; return {ok:false, code:(n*10===c.p||n===c.p*10)?"place":"product", msg:`Check ${cellLab(c)}.${(n*10===c.p||n===c.p*10)?" Count the zeros.":""}`}; }},
+     check:v=>{ const ns=v.map(lpNum); const empty=ns.findIndex(isNaN); if(empty>=0) return {ok:false, fmt:true, badIndex:empty, msg:"Fill in every product."}; const bad=cells.findIndex((c,i)=>ns[i]!==c.p); if(bad<0) return {ok:true, msg:"All the partial products are right."};
+       const c=cells[bad], n=ns[bad]; return {ok:false, badIndex:bad, code:(n*10===c.p||n===c.p*10)?"place":"product", msg:`Check ${cellLab(c)}.${(n*10===c.p||n===c.p*10)?" Count the zeros.":""}`}; }},
     {prompt:`The first row of the algorithm is <b>${lpN(a)} × ${bOnes}</b>. Which partial products make it?`, short:`Which products make ${lpN(a)} × ${bOnes}?`, input:{type:"multi", options:cells.map(c=>`${cellLab(c)} = ${lpN(c.p)}`)}, auto:cells.map((c,i)=>c.y===bOnes?i:-1).filter(i=>i>=0), why:`The ${bOnes} row: ${onesRow.map(c=>lpN(c.p)).join(" + ")}.`, help:[`Look for the products that use ${bOnes}.`], showVal:v=>v.map(i=>lpN(cells[i].p)).join(" + "),
      check:v=>{ const want=cells.map((c,i)=>c.y===bOnes?i:-1).filter(i=>i>=0); if(v.length===want.length && want.every(i=>v.includes(i))) return {ok:true}; return {ok:false, code:"row-match", msg:`Choose every product that uses ${bOnes}, and only those.`}; }},
     null, // row 1 value (below)
@@ -7000,7 +7056,8 @@ function lpPartialMul(o){ const a=o.a, b=o.b, view=o.view, A=lpPlaceParts(a), B=
   steps[4]=lpNumStep({prompt:`Add them: ${onesRow.map(c=>lpN(c.p)).join(" + ")}. That is the first row.`, short:`First row: ${lpN(a)} × ${bOnes}`, ans:R1, why:`Row 1 of the algorithm: ${lpN(R1)}.`});
   steps[6]=lpNumStep({prompt:`Add them: ${tensRow.map(c=>lpN(c.p)).join(" + ")}. That is the second row.`, short:`Second row: ${lpN(a)} × ${lpN(bTens)}`, ans:R2, why:`Row 2 of the algorithm: ${lpN(R2)}. It ends in 0 because it is ${lpN(a)} × tens.`, diag:n=>n*10===R2?{code:"tens-row-zero", msg:`That is ${lpN(a)} × ${bTens/10}. This row is ${lpN(a)} × ${lpN(bTens)} (tens), so it is ten times as much.`}:null});
   steps[7]=lpNumStep({prompt:`Add the two rows: ${lpN(R1)} + ${lpN(R2)}.`, short:"Total", ans:a*b, why:`${lpN(a)} × ${lpN(b)} = ${lpN(a*b)}.`});
-  const sp={kind:view==="grid"?"areamul":"distmul", methodName:view==="grid"?"area model":"distributive property", title:`${lpN(a)} × ${lpN(b)}`, answer:a*b, prompt:o.prompt, script:o.script||[],
+  if(o.bridge){ const product=(a%10)*bOnes; steps.push({prompt:`Now connect the expansion to the stacked algorithm. In the ones column, <b>${a%10} × ${bOnes}</b>: what digit do you write, and what ten do you carry to the next column?`, short:"Ones-column digit and regroup", input:{type:"nums", labels:["Write in ones", "Carry to tens"]}, auto:[String(product%10),String(Math.floor(product/10))], why:`${a%10} × ${bOnes} = ${product}; write ${product%10} and regroup ${Math.floor(product/10)} ten${Math.floor(product/10)===1?"":"s"}.`, help:["Multiply the ones digits first. The ones digit stays in the ones column; any whole tens are regrouped into the next column."], check:v=>{ const n=v.map(lpNum); if(n.some(isNaN)) return {ok:false,fmt:true,msg:"Fill in the written digit and the carry."}; if(n[0]===product%10&&n[1]===Math.floor(product/10)) return {ok:true}; return {ok:false,code:"regroup",badIndex:n[0]!==product%10?0:1,msg:"Check the ones-column product. Write its ones digit here and carry its tens to the next column."}; }}); }
+  const sp={kind:view==="grid"?"areamul":"distmul", methodEvidence:o.bridge?"expansion-to-column-bridge":view==="grid"?"area-cells-to-rows":"distributive-cells-to-rows", methodName:view==="grid"?"area model":"distributive property", title:`${lpN(a)} × ${lpN(b)}`, answer:a*b, prompt:o.prompt, script:o.script||[],
     init:()=>({vals:{}}),
     next:st=>steps[st.k]||null,
     visual:st=>{ const k=st.k, showA=k>0, showB=k>1, showP=k>2, r1=k>4, r2=k>6, tot=k>7;
@@ -7021,8 +7078,28 @@ function lpRows(o){ const a=o.a, b=o.b, ones=b%10, tens=b-ones, R1=a*ones, R2=a*
     lpNumStep({prompt:`Second row: <b>${lpN(a)} × ${lpN(tens)}</b>. Start the row with a 0 in the ones place.`, short:`${lpN(a)} × ${lpN(tens)}`, ans:R2, why:`${lpN(a)} × ${lpN(tens)} = ${lpN(R2)}; the 0 holds the ones place because this row is tens.`, help:[`${lpN(a)} × ${tens/10} = ${lpN(a*tens/10)}. Now remember it is tens.`],
       diag:n=>n===a*tens/10?{code:"tens-as-ones", msg:`That is ${lpN(a)} × ${tens/10}. The ${tens/10} means ${tens/10} tens, so the row is ten times as big.`}:null}),
     lpNumStep({prompt:`Add the rows: ${lpN(R1)} + ${lpN(R2)}.`, short:"Total", ans:T, why:`${lpN(a)} × ${lpN(b)} = ${lpN(T)}. Compare with the estimate.`})];
-  return {kind:"rows", methodName:"standard algorithm", title:`${lpN(a)} × ${lpN(b)}`, answer:T, script:o.script||[], init:()=>({}), next:st=>steps[st.k]||null,
+  return {kind:"rows", methodEvidence:"row-totals-and-size", methodName:"partial-product rows", title:`${lpN(a)} × ${lpN(b)}`, answer:T, script:o.script||[], init:()=>({}), next:st=>steps[st.k]||null,
     visual:st=>lpStack(a,b,st.k>1?R1:null,st.k>2?R2:null,st.k>3?T:null), done:()=>`${lpN(a)} × ${lpN(b)} = <b>${lpN(T)}</b>.`}; }
+// Lesson 8: record the actual digits written and regrouped in both algorithm rows, then add by column.
+function lpAlgorithm(o){ const a=o.a, b=o.b, ones=b%10, tens=Math.floor(b/10), R1=a*ones, R2=a*tens*10, T=R1+R2;
+  const digits=String(a).split("").reverse().map(Number), places=["ones","tens","hundreds","thousands","ten-thousands"], steps=[];
+  const row=(mult,which)=>{ let carry=0; digits.forEach((digit,j)=>{ const incoming=carry, total=digit*mult+incoming, last=j===digits.length-1, written=last?total:total%10, shift=which==="tens"?1:0, place=places[j+shift]; carry=last?0:Math.floor(total/10);
+    const expected=last?[written]:[written,carry], labels=last?[`Write remaining digits in ${place}`]:[`Write in ${place}`,`Carry to ${places[j+shift+1]}`];
+    steps.push({prompt:`${which} row, ${place} column: <b>${digit} × ${mult}${incoming?` + ${incoming} regrouped`:""}</b>. What do you write${last?"":" and carry"}?`, short:`${which} row: ${place} column`, input:{type:"nums",labels}, auto:expected.map(String), why:`${digit} × ${mult}${incoming?` + ${incoming}`:""} = ${total}. Write ${written}${last?".":` here and carry ${expected[1]}.`}`, help:[`Multiply ${digit} by ${mult}${incoming?`, then add the ${incoming} you carried`:""}. Write the ones digit of this product in the ${place} column; move any full tens one column left.`],
+      check:(v,st)=>{ const n=v.map(lpNum); const missing=n.findIndex(isNaN); if(missing>=0) return {ok:false,fmt:true,badIndex:missing,msg:"Fill in this column before checking."}; const bad=n.findIndex((x,i)=>x!==expected[i]); if(bad>=0) return {ok:false,badIndex:bad,code:bad===1?"regroup":"column-digit",msg:bad===1?"Check the full tens you carry into the next column.":"Check the digit written in this column; include any carry from the previous column."}; return {ok:true,apply:()=>st.trace.push(`${which} row · ${place}: write ${written}${last?"":`, carry ${expected[1]}`}`)}; }}); }); };
+  // The estimate checks magnitude before the digit work; the rows remain hidden until their columns are complete.
+  const est=Math.round(R2/Math.pow(10,String(R2).length-1))*Math.pow(10,String(R2).length-1), opts=[lpN(est/10),lpN(est),lpN(est*10)].sort(()=>Math.random()-.5);
+  steps.push(lpMcStep({prompt:`Before multiplying: about how big should the tens row, <b>${lpN(a)} × ${tens*10}</b>, be?`, short:"Estimate the tens row",options:opts,right:opts.indexOf(lpN(est)),why:"The tens row is ten times the row for the tens digit alone.",help:[`Round ${lpN(a)}, then multiply by ${tens*10}.`],diag:()=>({code:"row-size",msg:"The multiplier digit is tens, so the row is ten times the ones-sized calculation."})}));
+  row(ones,"ones"); const row1End=steps.length;
+  steps.push(lpNumStep({prompt:`Before the ${tens} tens row, what digit holds the <b>ones place</b>?`,short:"Tens row: ones-place placeholder",ans:0,why:"A row for tens starts with 0 in the ones place.",help:["There are no single ones in a tens row. Which digit marks that place?"],diag:()=>({code:"tens-row-zero",msg:"The tens row starts one place left, with 0 in the ones place."})}));
+  row(tens,"tens"); const row2End=steps.length;
+  let addCarry=0; const width=Math.max(String(R1).length,String(R2).length);
+  for(let j=0;j<width;j++){ const x=Math.floor(R1/10**j)%10,y=Math.floor(R2/10**j)%10,inc=addCarry,sum=x+y+inc,last=j===width-1,written=last?sum:sum%10; addCarry=last?0:Math.floor(sum/10); const expected=last?[written]:[written,addCarry];
+    steps.push({prompt:`Add the ${places[j]} column: <b>${x} + ${y}${inc?` + ${inc} carried`:""}</b>. What do you write${last?"":" and carry"}?`,short:`Add ${places[j]} column`,input:{type:"nums",labels:last?[`Write in ${places[j]}`]:[`Write in ${places[j]}`,`Carry to ${places[j+1]}`]},auto:expected.map(String),why:`The column totals ${sum}. Write ${written}${last?".":` and carry ${expected[1]}.`}`,help:["Add the two row digits in this column, plus any carried ten from the column to the right."],
+      check:(v,st)=>{ const n=v.map(lpNum), missing=n.findIndex(isNaN); if(missing>=0) return {ok:false,fmt:true,badIndex:missing,msg:"Fill in this column before checking."}; const bad=n.findIndex((z,i)=>z!==expected[i]); if(bad>=0) return {ok:false,badIndex:bad,code:bad===1?"regroup":"column-add",msg:"Check this column's sum and any ten carried left."}; return {ok:true,apply:()=>st.trace.push(`Sum · ${places[j]}: write ${written}${last?"":`, carry ${expected[1]}`}`)}; }}); }
+  return {kind:"algorithm",methodEvidence:"column-digits-regroup-and-sum",methodName:"standard algorithm",title:`${lpN(a)} × ${lpN(b)}`,answer:T,init:()=>({trace:[]}),next:st=>steps[st.k]||null,
+    visual:st=>`<p class="muted" style="font-size:14px">Work from right to left. Write each digit in its column and carry full tens to the next.</p>${lpStack(a,b,st.k>=row1End?R1:null,st.k>=row2End?R2:null,st.k>=steps.length?T:null)}${st.trace&&st.trace.length?`<p class="muted" style="font-size:14px">Checked: ${esc(st.trace.slice(-3).join(" · "))}</p>`:""}`,
+    done:()=>`${lpN(a)} × ${lpN(b)} = <b>${lpN(T)}</b>. Both rows were built by column and then added.`}; }
 // ---- expressions ----
 const lpV=s=>{ const e=lpEval(s); return e.ok?e.val:NaN; };
 const lpIsWhole=x=>Number.isFinite(x)&&x>=0&&Math.abs(x-Math.round(x))<1e-9;
@@ -7172,7 +7249,7 @@ const LP_REPAIR={
       fix:lpSeq({title:"Fix the expression", answer:k*m+j, init:()=>({tiles:[]}), steps:[{prompt:"Build the right expression.", input:{type:"tiles", tiles:[...new Set([k,m,j]),"+","−","×","÷","(",")"]}, auto:`(${k} × ${m}) + ${j}`, check:s=>{ const r=lpTilesCheck(s, `(${k} × ${m}) + ${j}`, [k,m,j], `(${k} + ${m}) + ${j}`); if(!r.ok&&r.code==="order-from") return {ok:false, code:"groups-vs-add", msg:"Equal groups means multiply."}; return r; }}, lpNumStep({prompt:"Its value:", ans:k*m+j})], done:()=>`(${k} × ${m}) + ${j} = <b>${k*m+j}</b>.`})}; },
   5:()=>{ let f, g1, v1, op, g2, v2, flip, V, W; for(let g=0;g<200;g++){ f=lpOrderGen(2); [[g1,v1],op,[g2,v2]]=f; flip={"−":"+","+":"−","×":"÷","÷":"×"}[op]; V=lpV(`(${g1}) ${op} (${g2})`); W=lpV(`${v1} ${flip} ${v2}`); if(lpIsWhole(W)&&W!==V) break; }
     return {story:`Here is someone's work for <b>${lpShow(`(${g1}) ${op} (${g2})`)}</b>.`, steps:[`${lpShow(`(${g1}) ${op} (${g2})`)}`, `= ${v1} ${op} (${lpShow(g2)})`, `= ${v1} ${flip} ${v2}`, `= ${lpIsWhole(W)?W:"…"}`], wrongAt:2, whyWrong:`The sign between the groups changed from ${op} to ${flip}. It has to be copied exactly.`, clue:"Compare each line with the one above it. What changed that shouldn't have?",
-      fix:lpSeq({title:"Fix the line", answer:V, steps:[lpNumStep({prompt:`What should the value be? ${v1} ${op} ${v2} = ?`, ans:V})], done:()=>`${v1} ${op} ${v2} = <b>${lpN(V)}</b>.`})}; },
+      fix:lpSeq({title:"Fix the line", answer:V, steps:[lpMcStep({prompt:`Which line copies the sign correctly after both groups are worked out?`,options:[`${v1} ${op} ${v2}`,`${v1} ${flip} ${v2}`],right:0,why:`The sign stays ${op} in the next line.`,diag:()=>({code:"copied-sign",msg:"Compare the sign between the groups with the original line."})}),lpNumStep({prompt:`Now find the value: ${v1} ${op} ${v2} = ?`,ans:V})], done:()=>`${v1} ${op} ${v2} = <b>${lpN(V)}</b>.`})}; },
   6:()=>{ const a=lpRnd(12,49), bt=lpRnd(1,4)*10, bo=lpRnd(2,9), b=bt+bo;
     return {story:`Here is someone's work for <b>${a} × ${b}</b> using the rows of the algorithm.`, steps:[`Row for × ${bo}: ${a} × ${bo} = ${lpN(a*bo)}`, `Row for × ${bt}: ${lpN(a*bt/10)}`, `Total: ${lpN(a*bo+a*bt/10)}`], wrongAt:1, whyWrong:`That row is ${a} × ${bt}, and ${bt} is tens, so the row can't be that small.`, clue:`What does the ${bt/10} in ${b} stand for?`,
       fix:lpSeq({title:`Fix: ${a} × ${b}`, answer:a*b, steps:[lpNumStep({prompt:`What is the row for × ${bt}? ${a} × ${bt} = ?`, ans:a*bt}), lpNumStep({prompt:`Total: ${lpN(a*bo)} + ${lpN(a*bt)} = ?`, ans:a*b})], done:()=>`${a} × ${b} = <b>${lpN(a*b)}</b>.`})}; },
@@ -7194,7 +7271,7 @@ const LP_REPAIR={
       fix:lpSeq({title:`Fix: ${lpN(N)} ÷ ${d}`, answer:q, steps:[lpNumStep({prompt:`How many groups of ${d} fit in the ${lpN(d*u)} that is left?`, ans:u}), lpNumStep({prompt:`Now add all the partial quotients: ${lpN(H)} + ${t*10} + ${u} = ?`, ans:q})], done:()=>`${lpN(N)} ÷ ${d} = <b>${lpN(q)}</b>.`})}; },
   12:()=>{ const d=lpRnd(4,9), h=lpRnd(1,Math.floor(9999/d/100)>9?9:Math.floor(9999/d/100)), t=lpRnd(1,9), u=lpRnd(2,9), q=h*100+t*10+u, N=d*q;
     return {story:`Here is someone's area model for <b>${lpN(N)} ÷ ${d}</b>.`, steps:[`${d} × ${h*100} = ${lpN(d*h*100)}`, `${d} × ${t*10} = ${lpN(d*t*10)}`, `${d} × ${u} = ${lpN(d*u)}`, `Quotient: ${h*100} + ${t*10} + ${lpN(d*u)} = ${lpN(h*100+t*10+d*u)}`], wrongAt:3, whyWrong:`The last number in that sum is a product from inside a band, not a number from the right side.`, clue:"Which numbers belong on the right side: the partial quotients or the products?",
-      fix:lpSeq({title:`Fix: ${lpN(N)} ÷ ${d}`, answer:q, steps:[lpNumStep({prompt:`Add the right-side numbers: ${h*100} + ${t*10} + ${u} = ?`, ans:q})], done:()=>`${lpN(N)} ÷ ${d} = <b>${lpN(q)}</b>.`})}; },
+      fix:lpSeq({title:`Fix: ${lpN(N)} ÷ ${d}`, answer:q, steps:[lpNumStep({prompt:`First repair the last band: ${d} × ? = ${lpN(d*u)}. What partial quotient belongs on its right side?`,ans:u,diag:n=>n===d*u?{code:"product-as-quotient",msg:"That is the product inside the band. Divide by the number on top to find the right-side width."}:null}),lpNumStep({prompt:`Now add the right-side numbers: ${h*100} + ${t*10} + ${u} = ?`, ans:q})], done:()=>`${lpN(N)} ÷ ${d} = <b>${lpN(q)}</b>.`})}; },
   13:()=>{ const d=lpPick([30,40,60,70]), u=lpRnd(1,9), q=50+u, N=d*q; // not 50: the divisor would print the fix's answer
     return {story:`Here is someone's area model for <b>${lpN(N)} ÷ ${d}</b>.`, steps:[`First band: product ${lpN(d*50)}, right side 5`, `Left: ${lpN(N)} − ${lpN(d*50)} = ${lpN(d*u)}`, `Second band: ${d} × ${u} = ${lpN(d*u)}, right side ${u}`, `Quotient: 5 + ${u} = ${5+u}`], wrongAt:0, whyWrong:`Check: does ${d} × 5 make ${lpN(d*50)}? The right side and the product don't match.`, clue:`Compare ${d} × 5 with ${d} × 50.`,
       fix:lpSeq({title:`Fix: ${lpN(N)} ÷ ${d}`, answer:q, steps:[lpNumStep({prompt:`What goes on the right side of the first band? ${d} × ? = ${lpN(d*50)}`, ans:50}), lpNumStep({prompt:`Quotient: 50 + ${u} = ?`, ans:q})], done:()=>`${lpN(N)} ÷ ${d} = <b>${q}</b>.`})}; },
@@ -7205,7 +7282,7 @@ const LP_REPAIR={
 
 // ---- the Unit 2 lessons ----
 const LP_TREE_POOL=[[12,18,20,28,30,36],[24,40,42,44,45,48,50],[36,40,44,45,48,50]];
-function lpTeen(){ for(let g=0;g<100;g++){ const d=lpRnd(11,19), r=lpRnd(1,9), N=d*(100+r); if(lpPlaceParts(N).some(p=>p%d!==0)) return {d,N}; } return {d:12, N:1260}; }
+function lpTeen(){ for(let g=0;g<100;g++){ const d=lpRnd(11,19), r=lpRnd(1,Math.floor(99/d)), N=d*(100+r); if(lpPlaceParts(N).some(p=>p%d!==0)) return {d,N}; } return {d:12, N:1260}; }
 const LP_U2={
   U2L1:{lesson:1, skill:"orderops", goal:"See how parentheses change which step comes first, and place parentheses to reach a target value.", vocab:[["expression","numbers joined by operation signs, like 18 − 6 + 3"],["parentheses","( ) around the part to do first"],["evaluate","find the value"]],
     explain:["Why can the same numbers give two different values?","The parentheses tell me to…"], talk:"Ask which step the parentheses moved to the front, and why the value changed.",
@@ -7230,19 +7307,19 @@ const LP_U2={
   U2L6:{lesson:6, skill:"multiply", goal:"Use an area model, then see how its cells make the rows of the multiplication algorithm.", vocab:[["area model","a rectangle split by place value"],["partial product","the product in one cell"],["row","one line of the algorithm, like 42 × 1"]],
     explain:["Which cells made the second row, and why does that row end in 0?","The second row is… because…"], talk:"Point to one row of the algorithm and ask which cells of the rectangle made it.",
     model:()=>{ const s=lpPartialMul({a:53, b:21, view:"grid"}); s.script=[["50","3"],["20","1"],["1000","60","50","3"],[2,3],"@",[0,1],"@","@"]; return s; },
-    make:(load,ph,i)=>{ const a=lpMulA(load), b=lpRnd(1,9)*10+lpRnd(1,9); return (ph==="guided"&&i===1)||(ph==="independent"&&i===0) ? lpRows({a, b:b<20?b+10:b}) : lpPartialMul({a, b, view:"grid"}); }, repair:()=>LP_REPAIR[6]()},
+    make:(load,ph,i)=>{ const a=lpMulA(load), b=lpRnd(1,9)*10+lpRnd(1,9); return ph==="delayed" ? lpPartialMul({a,b,view:"grid"}) : (ph==="guided"&&i===1)||(ph==="independent"&&i===0) ? lpRows({a,b}) : lpPartialMul({a,b,view:"grid"}); }, repair:()=>LP_REPAIR[6]()},
   U2L7:{lesson:7, skill:"multiply", goal:"Split both factors, multiply every part by every part, and match the products to the algorithm's rows.", vocab:[["distributive property","multiply each part, then add: (40 + 3) × 6 = 40 × 6 + 3 × 6"],["partial product","one part times one part"]],
     explain:["Why are there four partial products when both factors have two parts?","Each part of… meets…"], talk:"Ask the learner to count the partial products before finding them.",
     model:()=>{ const s=lpPartialMul({a:43, b:36, view:"expand"}); s.script=[["40","3"],["30","6"],["1200","90","240","18"],[2,3],"@",[0,1],"@","@"]; return s; },
-    make:(load)=>lpPartialMul({a:lpMulA(load), b:lpRnd(1,9)*10+lpRnd(1,9), view:"expand"}), repair:()=>LP_REPAIR[7]()},
+    make:(load,ph,i)=>lpPartialMul({a:lpMulA(load), b:lpRnd(1,9)*10+lpRnd(1,9), view:"expand", bridge:(ph==="guided"&&i===1)||(ph==="independent"&&i===1)||ph==="delayed"}), repair:()=>LP_REPAIR[7]()},
   U2L8:{lesson:8, skill:"multiply", goal:"Use the standard algorithm and check that each row is the right size.", vocab:[["standard algorithm","the stacked rows method"],["regroup","carry a ten into the next place"],["estimate","a close, easy number to check with"]],
     explain:["How do you know the second row should end in 0?","The second row is… tens, so…"], talk:"Before they multiply, ask about how big the answer should be.",
     model:()=>{ const s=lpRows({a:27, b:34}); s.script=["@","@","@","@"]; return s; },
-    make:(load)=>lpRows({a:load<=1?lpRnd(12,98):lpRnd(102,489), b:lpRnd(2,6)*10+lpRnd(1,9)}), repair:()=>LP_REPAIR[8]()},
+    make:(load,ph,i)=>{ const o={a:load<=1?lpRnd(12,98):lpRnd(102,489),b:lpRnd(2,6)*10+lpRnd(1,9)}; return ph==="guided"&&i===0?lpRows(o):lpAlgorithm(o); }, repair:()=>LP_REPAIR[8]()},
   U2L9:{lesson:9, skill:"divide", goal:"Split the dividend into parts the divisor divides evenly, divide each part, and add the answers.", vocab:[["dividend, divisor","in 1,260 ÷ 12, 1,260 is the dividend and 12 is the divisor"],["compatible part","a part the divisor divides evenly"],["partial quotient","the answer for one part"]],
     explain:["Why did some place-value parts need to be put together?","The divisor didn't divide… so I…"], talk:"Ask the learner to check one part's answer by multiplying back.",
     model:()=>{ const s=lpCompat({d:12, N:1260, mode:"free", splitWhy:"The usual split 1,000 + 200 + 60 doesn't work: 12 doesn't divide 1,000 or 200 evenly. Put them together: 12 divides 1,200 evenly."}); s.script=[1200,60,"@","@","@"]; return s; },
-    make:(load,ph,i)=>{ if(ph==="guided"&&i===0){ const t=lpTeen(); return lpCompat({d:t.d, N:t.N, mode:"combine"}); } if(i===1||load>=2){ const t=lpTeen(); return lpCompat({d:t.d, N:t.N, mode:"free"}); } const d=lpPick([20,30,40,50]); return lpCompat({d, N:d*lpRnd(Math.ceil(1000/d),99), mode:"free"}); }, repair:()=>LP_REPAIR[9]()},
+    make:(load,ph,i)=>{ if((ph==="guided"&&i===0)||(ph==="independent"&&i===0)||ph==="delayed"){ const t=lpTeen(); return lpCompat({d:t.d,N:t.N,mode:"combine",requireCombine:ph!=="guided"}); } if(i===1||load>=2){ const t=lpTeen(); return lpCompat({d:t.d, N:t.N, mode:"free"}); } const d=lpPick([20,30,40,50]); return lpCompat({d, N:d*lpRnd(Math.ceil(1000/d),99), mode:"free"}); }, repair:()=>LP_REPAIR[9]()},
   U2L10:{lesson:10, skill:"divide", goal:"Practice the place-value split with bigger numbers: every part gets divided and added.", vocab:[["compatible part","a part the divisor divides evenly"],["partial quotient","the answer for one part"]],
     explain:["How do you make sure no part gets left out?","I check that…"], talk:"Ask the learner to point to each part and its answer before adding.",
     model:()=>{ const s=lpCompat({d:40, N:4560, mode:"free"}); s.script=[4000,560,"@","@","@"]; return s; },
@@ -7254,7 +7331,7 @@ const LP_U2={
   U2L12:{lesson:12, skill:"divide", goal:"Practice the area model and keep the right side (partial quotients) apart from the products inside.", vocab:[["partial quotient","the right side of a band"],["product","inside the band"]],
     explain:["What is the difference between the number on the right side and the number inside?","The right side tells… and the inside tells…"], talk:"Point to a band and ask: how many groups, and how much is inside?",
     model:()=>{ const s=lpAreaDiv({d:6, N:2418, askWidth:true}); s.script=[400,"@","@","@",3,"@","@","@","@"]; return s; },
-    make:(load,ph)=>{ const d=lpRnd(2,9), maxq=Math.floor(9999/d), hMax=Math.floor((maxq-1090)/100); let q; if(load>=2 && hMax>=1) q=1000+lpRnd(1,Math.min(9,hMax))*100+lpRnd(1,9)*10; else q=lpRnd(1,Math.min(9,Math.floor((maxq-9)/100)))*100+lpRnd(1,9); return lpAreaDiv({d, N:d*q, askWidth:ph==="guided"}); }, repair:()=>LP_REPAIR[12]()},
+    make:(load,ph)=>{ const d=lpRnd(2,9), maxq=Math.floor(9999/d), hMax=Math.floor((maxq-1090)/100); let q; if(load>=2 && hMax>=1) q=1000+lpRnd(1,Math.min(9,hMax))*100+lpRnd(1,9)*10; else q=lpRnd(1,Math.min(9,Math.floor((maxq-9)/100)))*100+lpRnd(1,9); return lpAreaDiv({d, N:d*q, askWidth:true}); }, repair:()=>LP_REPAIR[12]()},
   U2L13:{lesson:13, skill:"divide", goal:"Use the area model with a two-digit divisor, trying a band and changing it if it is too big.", vocab:[["trial","a band you test before you use it"],["partial quotient","the right side of a band"]],
     explain:["What do you do when a trial band is too big?","If the product is more than what's left, I…"], talk:"Ask the learner to say the trial multiplication out loud before writing a band.",
     model:()=>{ const s=lpAreaDiv({d:30, N:5460}); s.script=[200,100,"@","@",80,"@","@",2,"@","@","@"]; return s; },
@@ -7271,9 +7348,10 @@ for(const id of Object.keys(LP_U2)){ const l=typeof lessonById==="function"?less
 // reached, and any lesson check-ins that are due. "Practice this week" keeps its job as mixed review and says so.
 function lpHomeHTML(curL){ const reached=lpReached(); if(!reached.length) return ""; lpSanitize(); const due=lpDue();
   const here=curL && LP_U2[curL.id] ? curL.id : null;
-  return `<div class="lphome">${here?`<button class="btn primary" id="lpnow" data-lp="${here}">Practice Lesson ${LP_U2[here].lesson} step by step</button>`:""}<button class="btn quiet small" id="lppick">${here?"Other Unit 2 lessons":"Unit 2 lessons, step by step"}</button>
+  const paused=lpResumeReady()?S.lessonResume:null;
+  return `<div class="lphome">${paused?`<button class="btn primary" id="lpresume">Resume Lesson ${LP_U2[paused.id].lesson}</button>`:""}${here?`<button class="btn ${paused?"quiet":"primary"}" id="lpnow" data-lp="${here}">Practice Lesson ${LP_U2[here].lesson} step by step</button>`:""}<button class="btn quiet small" id="lppick">${here?"Other Unit 2 lessons":"Unit 2 lessons, step by step"}</button>
     ${due.length?`<div class="lpdue">${due.map(id=>`<button class="btn quiet small lpcheckin" data-lpcheck="${id}">Lesson ${LP_U2[id].lesson} check-in: new numbers, on your own</button>`).join("")}</div>`:""}</div>`; }
-function lpHomeBind(){ const q=s=>app.querySelector(s); const b=q("#lpnow"); if(b) b.onclick=()=>lpStart(b.dataset.lp, false); const p=q("#lppick"); if(p) p.onclick=lpPicker;
+function lpHomeBind(){ const q=s=>app.querySelector(s); const b=q("#lpnow"); if(b) b.onclick=()=>lpStart(b.dataset.lp, false); const r=q("#lpresume"); if(r) r.onclick=lpResume; const p=q("#lppick"); if(p) p.onclick=lpPicker;
   app.querySelectorAll("[data-lpcheck]").forEach(x=>x.onclick=()=>lpStart(x.dataset.lpcheck, true)); }
 function lpPicker(){ if(!S) return; mode="lesson"; cur=null; lpSanitize(); const reached=lpReached(), due=lpDue(), L=LP_U2;
   app.innerHTML=`<div class="topbar"><button class="btn quiet" id="back">Home</button><div class="row"><span class="pill week">Unit 2</span></div></div>${warnHTML()}
@@ -7284,17 +7362,19 @@ function lpPicker(){ if(!S) return; mode="lesson"; cur=null; lpSanitize(); const
 // Grown-ups: process evidence kept apart from answer evidence, per lesson.
 function lpGrownupsHTML(){ lpSanitize(); const log=S.lessonLog; if(!log.length && !lpReached().length) return "";
   const rows=Object.keys(LP_U2).map(id=>{ const es=log.filter(e=>e.id===id); if(!es.length) return ""; const by=p=>es.filter(e=>e.phase===p);
-    const g=by("guided"), r=by("repair"), own=by("independent"), dl=es.filter(e=>e.phase==="delayed"||e.phase==="mixed"), ex=by("explain").filter(e=>e.text);
+    const g=by("guided"), r=by("repair"), own=by("independent"), dl=es.filter(e=>e.phase==="delayed"||e.phase==="mixed"), ex=by("explain").filter(e=>e.text), spoken=by("explain").filter(e=>e.mode==="spoken").length;
     const cnt=a=>a.length?`${a.filter(e=>e.firstTry&&e.methodOk).length} clean / ${a.length}`:"–";
     const codes=[...new Set(es.flatMap(e=>e.codes||[]))].filter(c=>LP_CODE_NAMES[c]).map(c=>LP_CODE_NAMES[c]);
-    const ao=es.filter(e=>e.answerOnly===1&&!e.methodOk).length; const o=(S.lessons||{})[id]||{};
-    return `<tr><td>L${LP_U2[id].lesson}</td><td>${by("model").length}</td><td>${g.length?`${g.length}${g.some(e=>e.helps)?`, ${g.reduce((s,e)=>s+(+e.helps||0),0)} clue${g.reduce((s,e)=>s+(+e.helps||0),0)===1?"":"s"}`:""}`:"–"}</td><td>${r.length?`${r.filter(e=>e.ok).length} fixed / ${r.length}`:"–"}</td><td>${cnt(own)}${ao?` (+${ao} answer only)`:""}</td><td>${dl.length?cnt(dl):(+o.due>0?`due ${new Date(+o.due).toLocaleDateString(undefined,{month:"short",day:"numeric"})}`:"–")}</td><td style="text-align:left">${codes.length?esc(codes.join("; ")):"–"}${ex.length?`<br><span class="muted">Said: “${esc(ex[ex.length-1].text)}”</span>`:""}</td></tr>`; }).join("");
-  return `<div class="card"><h2 style="margin-top:0">Unit 2 lesson practice</h2><p class="muted" style="font-size:13px;margin:0 0 8px">Separate from the practice counts above. “Clean” means finished with the lesson's method, no clues, and no do-overs. “Answer only” means the learner typed the right answer but skipped building the model, which is not counted as using the method. Guided work is progress, not proof; the check-in about two days later, with new numbers, is the better sign it stuck.</p>
-    ${rows?`<div style="overflow-x:auto"><table class="report"><tr><th>Lesson</th><th>Watched</th><th>Guided</th><th>Slip found</th><th>On their own</th><th>Check-in</th><th>What came up</th></tr>${rows}</table></div>`:`<p class="muted">No lesson practice yet. With the class calendar on, it appears on Home under “This week in class.”</p>`}</div>`; }
+    const ao=es.filter(e=>e.answerOnly===1&&!e.methodOk).length, preview=es.filter(e=>e.answerPreviewed===1&&e.methodOk).length, opened=es.filter(e=>e.video===1).length, o=(S.lessons||{})[id]||{};
+    const checked=[...new Set([...own,...dl].filter(e=>e.methodOk).map(e=>LP_EVIDENCE_NAMES[e.methodEvidence]).filter(Boolean))];
+    return `<tr><td>L${LP_U2[id].lesson}</td><td>${by("model").length}${opened?`<br><span class="muted">video link tapped ${opened}</span>`:""}</td><td>${g.length?`${g.length}${g.some(e=>e.helps)?`, ${g.reduce((s,e)=>s+(+e.helps||0),0)} clue${g.reduce((s,e)=>s+(+e.helps||0),0)===1?"":"s"}`:""}`:"–"}</td><td>${r.length?`${r.filter(e=>e.ok).length} fixed / ${r.length}`:"–"}</td><td>${cnt(own)}${ao?` (+${ao} answer only)`:""}${preview?` (+${preview} answer confirmed first)`:""}</td><td>${dl.length?cnt(dl):(+o.due>0?`due ${new Date(+o.due).toLocaleDateString(undefined,{month:"short",day:"numeric"})}`:"–")}</td><td style="text-align:left">${codes.length?esc(codes.join("; ")):"–"}${checked.length?`<br><span class="muted">Checked: ${esc(checked.join("; "))}</span>`:""}${ex.length?`<br><span class="muted">Typed: “${esc(ex[ex.length-1].text)}”</span>`:""}${spoken?`<br><span class="muted">${spoken} explanation${spoken===1?"":"s"} said aloud (self-reported)</span>`:""}</td></tr>`; }).join("");
+  return `<div class="card"><h2 style="margin-top:0">Unit 2 lesson practice</h2><p class="muted" style="font-size:13px;margin:0 0 8px">Separate from the practice counts above. “Clean” means the checked steps were finished without clues, do-overs, or seeing a confirmed final answer first. The label describes only what the app checked: row totals alone do not prove digit-by-digit algorithm work. Answer-only and answer-confirmed-first attempts are shown separately. Guided work is practice; a later check-in with new numbers gives stronger evidence. “Model shown” counts app steps, while “video link tapped” records a tap, not whether a video played or was watched.</p>
+    ${rows?`<div style="overflow-x:auto"><table class="report"><tr><th>Lesson</th><th>Model shown</th><th>Guided</th><th>Slip found</th><th>On their own</th><th>Check-in</th><th>What came up</th></tr>${rows}</table></div>`:`<p class="muted">No lesson practice yet. With the class calendar on, it appears on Home under “This week in class.”</p>`}</div>`; }
+const LP_EVIDENCE_NAMES={"area-cells-to-rows":"area cells to row totals","row-totals-and-size":"row totals and size","distributive-cells-to-rows":"four products to rows","expansion-to-column-bridge":"expansion to a written column","column-digits-regroup-and-sum":"algorithm digits, carries, and column sums","expanded-recombination":"expanded-form recombination","compatible-parts":"compatible parts and partial quotients","area-width-vs-product":"band widths versus products","area-bands-and-ledger":"area bands and subtraction ledger"};
 const LP_CODE_NAMES={trial:"tested a band that was too big, then chose a smaller one (a normal step)", "one-band":"wrote the whole answer as one band or part (counted as the answer, not the method)", structure:"an expression with the right value that didn't match the words", overshoot:"a band too big for what was left (then fixed)", "area-as-quotient":"used the amount left as a partial quotient", "product-as-quotient":"mixed up a product and a partial quotient", leftover:"tried to finish with something left",
   "missing-band":"left a partial quotient out of the sum", unprocessed:"left a part out of the sum", place:"a place-value slip (zeros)", "not-compatible":"chose a part the divisor doesn't divide evenly", "tens-row-zero":"tens row missing its 0",
   "tens-as-ones":"treated the tens digit as ones", "row-match":"matched products to the wrong row", "not-place":"split a number but not by place value", "copied-sign":"copied a sign incorrectly when rewriting", straddle:"mixed numbers from two groups",
-  "order-from":"reversed the order in a “from” phrase", grouping:"grouping (parentheses) needed", "groups-vs-add":"added where equal groups meant multiply", "ignored-parens":"skipped the parentheses", "ignored-order":"worked left to right past × or ÷",
+  "order-from":"reversed the order in a “from” phrase", grouping:"grouping (parentheses) needed", "groups-vs-add":"added where equal groups meant multiply", "ignored-parens":"skipped the parentheses", "ignored-order":"worked left to right past × or ÷", regroup:"a regrouped ten needed attention", "column-digit":"a digit in the algorithm needed attention", "column-add":"a column sum needed attention",
   "composite-leaf":"stopped a branch at a number that isn't prime", "missing-prime":"left a prime out", spot:"needed more than one look to find the slip", "answer-only":"typed an answer that didn't match", "times-vs-more":"read “times as large” as “more than”", "row-size":"row size estimate off by a place"};
 (function(){ try{ const st=document.createElement("style"); st.textContent=[
   ".lphome{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}.lphome .btn{margin:0}.lpdue{flex-basis:100%;display:flex;flex-wrap:wrap;gap:8px}",
@@ -7315,7 +7395,7 @@ const LP_CODE_NAMES={trial:"tested a band that was too big, then chose a smaller
   ".lpcompat .lpdivrow{font-size:18px;margin:3px 0;font-variant-numeric:tabular-nums}.lptree{list-style:none;padding-left:0;margin:6px 0}.lptree ul{list-style:none;padding-left:26px;border-left:2px solid var(--line);margin:4px 0 4px 12px}",
   ".lpleaf{display:inline-block;min-width:36px;text-align:center;font-weight:700;font-size:18px;padding:2px 8px;border:2px solid transparent;border-radius:999px}.lpleaf.prime{border-color:var(--ok);background:var(--ok-bg)}",
   ".lpsteps{display:grid;gap:8px}.lprstep{font-variant-numeric:tabular-nums}.lpexp{width:100%;font-size:17px;padding:8px;border:2px solid var(--line);border-radius:10px}.lpvocab ul{margin:4px 0 8px;padding-left:20px}.lpgrown{font-size:14px}",
-  "@media (max-width:420px){.lpdiv-top,.lpband{grid-template-columns:52px minmax(96px,1fr) 48px}.lpgrid th,.lpgrid td{padding:6px 6px;min-width:48px;font-size:15px}}"
+  "@media (max-width:420px){.lpdiv{display:grid;grid-template-columns:minmax(0,1fr) minmax(68px,max-content);gap:8px}.lpdiv-top,.lpband{grid-template-columns:40px minmax(72px,1fr) 38px;gap:3px}.lpnote{font-size:10px}.lpq{font-size:14px}.lpledger{min-width:0;font-size:13px}.lprect{font-size:14px}.lpgrid th,.lpgrid td{padding:6px 6px;min-width:48px;font-size:15px}}"
   ].join("\n"); document.head.appendChild(st); }catch(e){} })();
 
 home();
