@@ -1586,7 +1586,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.21.1 · September 26, 2026";
+const BUILD="v9.22 · September 26, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -4305,7 +4305,7 @@ const FOUND_HOME_ORDER=["facts","wholepv","tenths","factors","twostep"];
 function foundationsHomeHTML(){ if(!S) return ""; const ks=FOUND_HOME_ORDER.filter(k=>SKILLS[k] && SKILLS[k].foundation && SKILL_ORDER.includes(k)); if(!ks.length) return "";
   return `<div class="card found" id="foundations"><div class="week-head"><h2 style="margin:0">Build your foundations</h2></div>
       <p class="muted" style="font-size:14px;margin:6px 0 10px">Short practice that makes the big problems easier.</p>
-      <div class="skills">${ks.map(k=>`<button class="skill" data-skill="${k}"><div style="flex:1"><div class="name">${esc(SKILLS[k].name)}</div><div class="blurb">${esc(SKILLS[k].blurb)}</div></div>${dots(S.levels[k]||1)}</button>`).join("")}</div></div>`; }
+      <div class="skills">${ks.map(k=>`<button class="skill" data-skill="${k}"><div style="flex:1"><div class="name">${esc(SKILLS[k].name)}${S.foundations&&S.foundations[k]?` <span class="std" title="Included in Start today">In your plan</span>`:""}</div><div class="blurb">${esc(SKILLS[k].blurb)}</div></div>${dots(S.levels[k]||1)}</button>`).join("")}</div></div>`; }
 // v9.21 (Agent P): a practice spot in a foundation skill is keyed by the kind of question (variant), so Focus serves that kind again.
 { const _ctxOfP=ctxOf; ctxOf=function(p){ const c=_ctxOfP(p); if(p && ["wholepv","factors","tenths"].includes(p.skill) && p.meta && p.meta.variant) c.variant=p.meta.variant; return c; }; }
 // ===== v9.21 (Agent M): foundations to keep practicing (grown-ups setting), the Today plan's foundation slot, and the practice-spot nudge =====
@@ -4353,13 +4353,13 @@ function foundNudge(){ if(!S) return null; const act=foundActive(); if(!act.leng
   return best ? best.sk : null; }
 // buildTodayPlan() → this: no foundation on → the plan is unchanged. Otherwise one "found" slot goes just before the last slot (the sitting
 // still ends on ordinary practice); a nudge takes a spare "mix" slot (never the first one, which the Unit 1 review may use), or, with no
-// spare, takes over the found slot. The plan stays at 6 or fewer. Pure: Home calls buildTodayPlan() just to name the slots.
+// spare, waits until another sitting so the regular rotation is not skipped. The plan stays at 6 or fewer. Pure: Home calls buildTodayPlan() just to name the slots.
 function foundPlanSlots(plan){ if(!S) return plan; const act=foundActive(); if(!act.length) return plan;
   const out=plan.slice(); const rot=foundRotNext(), nudge=foundNudge();
   const spare=()=>{ const first=out.indexOf("mix"); for(let i=out.length-2;i>=0;i--) if(out[i]==="mix" && i!==first) return i; return -1; };
   let at; if(out.length<6){ at=Math.max(0,out.length-1); out.splice(at,0,"found"); } else { at=spare(); if(at<0) at=out.length-2; out[at]="found"; }
   const map={}; map[at]=rot; let nudgeAt=-1;
-  if(nudge && nudge!==rot){ const j=spare(); if(j>=0){ out[j]="found"; map[j]=nudge; nudgeAt=j; } else { map[at]=nudge; nudgeAt=at; } }
+  if(nudge && nudge!==rot){ const j=spare(); if(j>=0){ out[j]="found"; map[j]=nudge; nudgeAt=j; } }
   else if(nudge) nudgeAt=at; // the rotation already serves it; serving it also clears the nudge
   out.foundSk=map; out.foundRot=rot; out.foundNudgeAt=nudgeAt; return out; }
 // v9.21 review #11: Home's "About six problems" counts the plan, plus the 2 extra facts when this sitting's foundation slot is a facts round of 3.
@@ -4386,12 +4386,13 @@ function foundationsGrownupsHTML(){ if(!S) return ""; const f=foundNorm(S.founda
   const status = act.length ? `On. Each “Start today” has one foundation builder, taking turns among ${act.map(k=>esc(SKILLS[k].name)).join(", ")}${act.includes("facts")?"; multiplication facts come as a short round of 3 in that one slot":""}. A miss in a matching fifth-grade skill can add one more foundation problem to the next sitting (at most one per sitting).`
     : FOUND_KEYS.some(k=>f[k]) ? `The chosen foundations are not in this build yet, so nothing changes.` : `Off. Nothing changes until a box is checked and saved.`;
   return `<div class="card fdcard" id="fdcard"><h2 style="margin-top:0">Foundations to keep practicing</h2>
-    <p class="muted" style="font-size:14px;margin:0 0 8px">Short practice on earlier skills that the fifth-grade work stands on. Choose areas from your own school information or from what you see while practicing. Check only the areas you want to add to “Start today.” Nothing changes until you save.</p>
+    <p class="muted" style="font-size:14px;margin:0 0 8px">Choose focus areas for ${esc(S.name)}. These earlier skills support fifth-grade work. Start with all five, or check only the areas you want in “Start today.” Each learner has their own choices, and you can change them later. Nothing changes until you save.</p>
     <details id="fdreport" style="margin:12px 0;padding:10px;border:1px solid var(--line);border-radius:8px"><summary style="cursor:pointer;font-weight:700">Review a report card here</summary>
       <p class="muted" style="font-size:13px;margin:8px 0">Choose a photo or PDF, or take a picture. Use the preview to compare the topics below with your child's card, then check the practice areas you want. Schools use different score scales. This app does not read or diagnose the document automatically. The file stays on this device, is not sent anywhere, and is not saved in progress or backups.</p>
       <div class="actions" style="margin-top:4px"><button type="button" class="btn" id="fdpick">Choose photo or PDF</button><input class="vh" type="file" id="fdfile" aria-label="Choose a report card photo or PDF" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf,.pdf,.heic,.heif"><button type="button" class="btn" id="fdshoot">Take a picture</button><input class="vh" type="file" id="fdcamera" aria-label="Take a report card picture" accept="image/*" capture="environment"></div>
       <div id="fdfilemsg" role="status" aria-live="polite" class="muted" style="font-size:13px"></div><div id="fdpreview">${reportPreviewHTML()}</div>
     </details>
+    <div class="actions" style="margin:0 0 12px"><button type="button" class="btn quiet small" id="fdstarter">Select all five areas</button><button type="button" class="btn quiet small" id="fdclear">Clear choices</button></div>
     <ul style="margin:0 0 6px;padding:0">${rows}</ul>
     <p class="fdstatus" style="font-size:14px;margin:0 0 8px"><b>Practice effect:</b> ${status}${f.updated?` <span class="muted">Last saved ${esc(fmtDate(f.updated))}.</span>`:""}</p>
     <div class="actions" style="margin-top:6px"><button class="btn primary" id="fdsave">Save practice choices</button><span class="muted" id="fdmsg" style="font-size:13px;align-self:center" role="status" aria-live="polite"></span></div></div>`; }
@@ -4406,6 +4407,8 @@ function bindFoundations(){ const q=id=>app.querySelector("#"+id); if(!q("fdcard
     catch(e){ reportRelease(); if(msg) msg.textContent="This browser could not open that file. Try a smaller photo or PDF."; } };
   q("fdpick").onclick=()=>q("fdfile").click(); q("fdshoot").onclick=()=>q("fdcamera").click();
   q("fdfile").onchange=chooseFile; q("fdcamera").onchange=chooseFile; showPreview();
+  q("fdstarter").onclick=()=>{ for(const k of FOUND_KEYS){ const cb=q("fd-"+k); if(cb) cb.checked=true; } q("fdmsg").textContent="All five selected for this learner. Save to add them to Start today."; };
+  q("fdclear").onclick=()=>{ for(const k of FOUND_KEYS){ const cb=q("fd-"+k); if(cb) cb.checked=false; } q("fdmsg").textContent="Choices cleared. Save to remove them from Start today."; };
   q("fdsave").onclick=()=>{ const o={}; for(const k of FOUND_KEYS){ const cb=q("fd-"+k); o[k]=!!(cb && cb.checked); } o.updated=Date.now(); S.foundations=o; const ok=save(); rerender(ok?"Saved.":"Saved for now, but this device would not store it."); }; }
 // ===== v9.21 (Agent F): multiplication and division facts, skill "facts" (grown-ups page only: 3.OA.7) =====
 // Facts 2–10 × 2–10. Levels: L1 ×2, 5, 10 · L2 adds ×3, 4 · L3 adds ×6, 9 · L4 adds ×7, 8 (every fact) · L5 every fact plus division.
