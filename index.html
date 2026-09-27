@@ -131,6 +131,7 @@ pre.stack .cr{color:#B45309;font-weight:600}
 .opt.crossed{text-decoration:line-through;opacity:.45} /* a wrong pick already tried on this step */ /* what the step meant, shown only after she has answered it */
 .substep.pre{border:2px solid #E9D8B5;background:#FFFBEF;border-radius:12px;padding:10px 12px;margin:8px 0 12px}
 .substep.pre .cq{margin-bottom:6px}
+.substep.pre .prenext{margin:8px 0 0;font-size:15px;color:#5A4A1F}
 .scratch{margin-top:16px}
 .scratch-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;font-size:14px}
 .scratch canvas{display:block;width:100%;height:300px;border:2px solid var(--line);border-radius:12px;background:#FFFEF8;touch-action:none;cursor:crosshair}
@@ -869,8 +870,8 @@ function genWhichLarger(level, focus){
   const tags=opts.map((o,i)=> i===ans ? "correct" : (a.d.length!==b.d.length ? "length" : "other"));
   const p={...base, prompt:`Which number is <b>${larger?"larger":"smaller"}</b>, ${fmt(a)} or ${fmt(b)}?`, options:opts, optionTags:tags, answer:ans, display:fmt(win), meta:{...base.meta, which:larger?"larger":"smaller"}};
   p.steps=base.steps.slice(0,-1).concat([{t:`Say both numbers. In the first place where the digits differ, the greater digit belongs to the greater number.`, cues:[`Find the first place, reading left to right, where the digits differ.`, `The greater digit in that first differing place belongs to the greater number.`], check:finalCheck(p), vis:cmpLineHTML([a,b]), visAfter:true /* v9.19 */}]);
-  { const G=cmpV(a,b)>0?a:b; // v9.18.1 review: hint 4 answers this question in its own words, not with a symbol it never asks for
-    p.hints=base.hints.slice(0,3).concat([{t:`<b>${fmt(G)}</b> has the greater digit in that place, so it is the larger number. The question asks for the <b>${larger?"larger":"smaller"}</b> one.`}]); }
+  { // v9.30: the last Hint asks for the comparison; it must not name the winning number.
+    p.hints=base.hints.slice(0,3).concat([{t:`Find the first place where these two numbers have different digits. Which digit is greater there? Then choose the <b>${larger?"larger":"smaller"}</b> number.`}]); }
   return p;
 }
 function genOpenDecimal(level, focus){
@@ -888,7 +889,7 @@ function genOpenDecimal(level, focus){
             : {t:`The tenths digit is already ${t0}, so change the <b>whole number part</b> instead: a ${greater?"greater":"lesser"} whole number part decides no matter what the decimal digits are.`, cues:[`Change the whole number part in the right direction; the decimals will not matter.`, `${greater?"Greater":"Less"} than ${x.w}: any whole number that far works.`], check:Object.assign(ci(`What whole number part could you use?`, greater?x.w+1:x.w-1, String(greater?x.w+1:x.w-1)), {validate:v=>Number.isInteger(v)&&v>=0&&(greater?v>x.w:v<x.w)})}, // v9.18: any whole number in the right direction
     {t:`Write your number with <b>one</b> decimal point.`, cues:[`One whole number, one decimal point, then your tenths digit.`, `Write it like 8.4: the whole part, a point, the digit you chose.`], check:Object.assign(ci(`Type a decimal ${greater?"greater":"less"} than ${fmt(x)}.`, numValue(sample), p.display), {validate})}
   ];
-  p.hints=[{t:`Only one decimal point. Compare the tenths place first.`},{t:`Keep the whole number part ${x.w} and pick a tenths digit ${greater?"greater":"less"} than ${t0}${tenthOK?"":", or change the whole number part"}.`},{t:`For example, ${fmt(sample)}.`}];
+  p.hints=[{t:`Only one decimal point. Compare the tenths place first.`},{t:`Keep the whole number part ${x.w} and pick a tenths digit ${greater?"greater":"less"} than ${t0}${tenthOK?"":", or change the whole number part"}.`},{t:`Try a number, then compare it with ${fmt(x)} one place at a time. Does it go the requested direction?`}];
   return p;
 }
 function genCompare(level, focus){
@@ -1586,7 +1587,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.24 · September 27, 2026";
+const BUILD="v9.31 · September 27, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -1743,22 +1744,17 @@ function genMultiply(level, focus){
     steps.push({t:`Step 3: add the two partial products.${stackMul(a,b,[a*ones,a*tens*10])}`, row:"t", check:wc(finalCheck(p),"add-partials"), sub:ad.steps, tAfter:`Step 3, finished: read the total from the digits you wrote (${ad.readBack}).`});
   }
   p.steps=steps;
-  // Hints are written for a kid who finds math hard, working alone: plain words first, the SWUN word in parentheses, and by hint 3 the whole
-  // row worked out in words so she can finish without a grown-up. They never give the final answer.
-  // Hints, one small step at a time, in the order the algorithm goes (ones column first). Each column gets up to three: which fact to do;
-  // the fact's answer; which digit to write and what to carry. She asks for the next one only when stuck. Plain words first, SWUN word after.
+  // v9.30: orient to one column, then give the fact. Do not dictate a digit or move to another blank box until she tries this one.
   const names=["ones","tens","hundreds","thousands","ten thousands"];
   const colPlan=(digit, shift, rowKey, rowName)=>{ const digs=String(a).split("").map(Number).reverse(); let carry=0; const out=[];
     digs.forEach((g,j)=>{ const nm=names[j+shift]||"next"; const prod=g*digit, sum=prod+carry, last=j===digs.length-1, cin=carry; const hs=[];
       hs.push(`${rowName}<b>${ucfirst(nm)} column</b>: the fact to do is <b>${digit} × ${g}</b>${cin?`, then add the <b>${cin}</b> you carried`:""}. Try it on the scratch paper first.`);
       hs.push(`${ucfirst(nm)}: ${digit} × ${g} = <b>${prod}</b>${cin?`, plus the carried ${cin} makes <b>${sum}</b>`:""}. ${last?"This is the last digit, so the whole number gets written.":sum>=10?"That is 10 or more, so only one digit fits here. Which digit do you write, and what do you carry? (SWUN: regroup.)":"That is less than 10, so it fits in one box. Nothing to carry."}`);
-      if(!last && sum>=10) hs.push(`Write the <b>${sum%10}</b> in the ${nm} box and carry the <b>${Math.floor(sum/10)}</b>: a small ${Math.floor(sum/10)} above the next digit of ${a}. Add it in on the next column.`);
-      else if(last) hs.push(`Write <b>${sum}</b> here, starting in the ${nm} box and going left.`);
       out.push({key:`${rowKey}-${j+shift}`, hints:hs}); carry = last ? 0 : Math.floor(sum/10); });
     return out; };
   const addPlan=(x,y)=>{ const X=String(x), Y=String(y), n=Math.max(X.length,Y.length); const dx=X.padStart(n,"0").split("").map(Number).reverse(), dy=Y.padStart(n,"0").split("").map(Number).reverse(); let carry=0; const out=[];
     for(let jj=0;jj<n;jj++){ const cin=carry, sum=dx[jj]+dy[jj]+cin, nm=names[jj]||"next", last=jj===n-1; const hs=[`<b>${ucfirst(nm)} column</b> of the total: add ${dx[jj]} + ${dy[jj]}${cin?` + the ${cin} you carried`:""}.`];
-      hs.push(last?`${[dx[jj],dy[jj]].concat(cin?[cin]:[]).join(" + ")} = <b>${sum}</b>. Last column, so write the whole ${sum}.`:sum>=10?`${[dx[jj],dy[jj]].concat(cin?[cin]:[]).join(" + ")} = <b>${sum}</b>. Write the <b>${sum%10}</b> and carry 1 to the ${names[jj+1]} column.`:`${[dx[jj],dy[jj]].concat(cin?[cin]:[]).join(" + ")} = <b>${sum}</b>. Write it; nothing to carry.`);
+      hs.push(last?`${[dx[jj],dy[jj]].concat(cin?[cin]:[]).join(" + ")} = <b>${sum}</b>. This is the last column. Where does that number go?`:sum>=10?`${[dx[jj],dy[jj]].concat(cin?[cin]:[]).join(" + ")} = <b>${sum}</b>. Only one digit fits here. Which digit stays, and what do you carry?`:`${[dx[jj],dy[jj]].concat(cin?[cin]:[]).join(" + ")} = <b>${sum}</b>. It fits in one box. What will you write?`);
       out.push({key:`t-${jj}`, hints:hs}); carry = last?0:(sum>=10?1:0); } return out; };
   if(variant==="area"||variant==="distributive"){ // model variants get their own ladder: partition, area of each piece, then combine. No column carrying here.
     const distB = variant==="distributive" && b>=10; // v9.18: the distributive walkthrough keeps ${a} whole and splits ${b}; the hints match it
@@ -1910,38 +1906,64 @@ function divAnchorCue(d, k, target, mode){ const L=v=>v.toLocaleString("en-US");
   const near10=Math.round(k/10)*10; const a = k<=3 ? 5 : k<=6 ? 2 : k<=12 ? (k===10 ? 5 : 10) : (near10!==k ? near10 : k-5); const prod=d*a, below=prod<target;
   if(k<=3) return `Count by ${d}s: ${[1,2,3,4].map(j=>L(d*j)).join(", ")}. ${mode==="fit"?`Which is the last one that is not past ${L(target)}?`:`Which one lands on ${L(target)}?`}`; // v9.18.1 review #18: a small count starts from the divisor, not from a far-off anchor
   return `${d} × ${a} = ${L(prod)}, which is ${below?"less":"more"} than ${L(target)}. Count ${below?"on":"back"} by ${d}s from ${L(prod)}, and stop ${mode==="fit"?(below?`at the last one that does not pass ${L(target)}`:`at the first one that is not past ${L(target)}`):`when you land on ${L(target)}`}.`; }
+// v9.25.2: a two-digit divisor is not a multiplication fact to recall. Give a nearby group count and a direction to move.
+function divOnesGuide(d, count, target){ const L=n=>n.toLocaleString("en-US");
+  if(count>=7){ const ten=d*10, nine=ten-d;
+    const rescue=[]; let from=nine;
+    for(let taken=2;taken<=10-count;taken++){ const next=from-d; rescue.push({t:`Take away one more group of ${d}.`, check:wc(ci(`${L(from)} − ${d} = ?`,next,L(next)),"fact"), cues:[`Subtract ${d} in parts: take away the tens, then the ones.`,`Check by adding ${d} back to your answer. Do you get ${L(from)}?`], after:`That leaves ${L(next)} after ${taken} groups have been taken away.`}); from=next; }
+    rescue.push({t:`You started with 10 groups and took away ${10-count}. Count how many groups remain.`, check:wc(ci(`10 − ${10-count} = ?`,count),"place"), cues:[`Count back ${10-count} from 10.`,`Keep one finger for each group you took away, then count the groups left.`]});
+    return {t:`Start from 10 groups: ${d} × 10 = ${L(ten)}. That is too high. Take away one ${d} at a time, counting the groups back until you reach ${L(target)}.`,
+      cues:[`Try ${L(ten)} − ${d}. That is one group fewer than 10. Is it your target yet?`,
+        `${L(ten)} − ${d} = ${L(nine)}. ${count===9?`That lands on ${L(target)}. How many groups remain?`:`That is still above ${L(target)}. Take away another ${d}, and keep track of the groups.`}`], rescue}; }
+  if(count===5){ const ten=d*10;
+    return {t:`10 groups of ${d} make ${L(ten)}. Half as many groups make half as much. How many groups make ${L(target)}?`,
+      cues:[`Half of ${L(ten)} is ${L(target)}. How many groups is half of 10?`,`Split 10 groups into two equal piles. How many are in one pile?`],
+      rescue:[{t:`Split 10 groups into two equal piles.`, check:wc(ci(`10 ÷ 2 = ?`,5),"place"), cues:[`Give one group to each pile until all 10 are placed.`,`Count the groups in just one pile.`]}]}; }
+  if(count===4 || count===6){ const five=d*5, move=count===4?"take away":"add", sign=count===4?"−":"+";
+    return {t:`5 groups of ${d} make ${L(five)} (half of ${L(d*10)}). Compare ${L(five)} with ${L(target)}, then ${move} one ${d}. Keep track of the groups.`,
+      cues:[`${L(five)} ${sign} ${d} = ${L(target)}. That is one group ${count===4?"fewer":"more"} than 5. How many groups now?`,`Start at 5 groups and ${count===4?"count back one":"count on one"} while you ${move} ${d}.`],
+      rescue:[{t:`Start with 5 groups, then ${move} one group.`, check:wc(ci(`5 ${sign} 1 = ?`,count),"place"), cues:[`Count ${count===4?"back":"on"} one from 5.`,`Keep the count of groups separate from the amount in each group.`]}]}; }
+  return {t:`Count by ${d}s, keeping track of each group. Stop when you reach ${L(target)}.`,
+    cues:[`One group is ${d}; two groups are ${L(2*d)}. Which count reaches ${L(target)}?`,`Say the counts as you add ${d}: 1 group, 2 groups, 3 groups. Stop at ${L(target)}.`]};
+}
 // The worksheet's place-value strategy: split the dividend into friendly multiples of the divisor,
 // divide each piece, then add the small answers. Some pieces combine ordinary place-value parts.
-// v9.18 (ask before tell): the first card models the strategy on the worksheet example (a different problem) and ASKS for the biggest chunk;
-// each friendly part of HER number is revealed only in `after`, once she has found it, and the plan panel fills in the same way.
+// v9.31: the Unit 2 Lessons 9 and 10 videos show a compatible-addend split, a separate division
+// problem for each addend, partial quotients, and their sum. Keep each new amount checked before it enters the plan.
 function divPlaceLesson(p, parts){
   const {N,d,q}=p.meta, L=n=>n.toLocaleString("en-US");
   const sumQuotients=parts.map(x=>L(x.qpart)).join(" + ");
   const placeName=u=>u>=10000?"ten thousands":u>=1000?"thousands":u===100?"hundreds":u===10?"tens":"ones"; const sing=(k,w)=>k===1?w.replace(/s$/,""):w;
-  // v9.18.1 review #5: the example narrates the moves she will make (take a part that fits, see what is left, repeat, add).
-  const ex=(q===122||(N===3660&&d===30)) ? {N:"2,480",d:20,moves:"20 × 100 = 2,000 fits: 100. Left: 480. 20 × 20 = 400 fits: 20. Left: 80. 20 × 4 = 80: 4. Add: 100 + 20 + 4 = 124.",first:"2,000",big:"20,000"} : {N:"3,660",d:30,moves:"30 × 100 = 3,000 fits: 100. Left: 660. 30 × 20 = 600 fits: 20. Left: 60. 30 × 2 = 60: 2. Add: 100 + 20 + 2 = 122.",first:"3,000",big:"30,000"};
   const u0=Math.min(1000,Math.pow(10,String(parts[0].qpart).length-1)); const sizeOpts=[`thousands (${d} × 1,000)`,`hundreds (${d} × 100)`,`tens (${d} × 10)`,`ones (${d} × 1)`]; const sizeAns={1000:0,100:1,10:2,1:3}[u0];
-  const steps=[{t:`<b>Place value strategy.</b> Example: ${ex.N} ÷ ${ex.d}. ${ex.moves} Now yours: ${L(N)} ÷ ${d}.`, // v9.18.1: kept under 45 words; the "parts don't match the digits" note rides in Why? and the coach line
-    more:`The parts don't have to match the digits: any part that ${d} divides evenly works, as long as the parts add back to ${L(N)}. Why does the example start with ${ex.first}? ${ex.d} × 100 = ${ex.first} fits in ${ex.N}, but ${ex.d} × 1,000 = ${ex.big} is too big.`,
+  const steps=[{t:`<b>Split ${L(N)} into friendly parts.</b> A part is friendly when ${d} divides it evenly. Find one part, divide it, then do the same with what remains. Add the small answers at the end.`,
+    more:`Friendly parts need to add back to ${L(N)}. They can combine ordinary place-value parts; they do not have to match the digits in ${L(N)}.`,
     check:wc(cm(`What is the biggest chunk of ${d}s that fits in ${L(N)}?`, sizeOpts, sizeAns),"place"), divIndex:0,
-    cues:[u0===1000?`Which products are smaller than ${L(N)}? Start with the biggest one and check it.`:`Try the biggest first: ${d} × 1,000 = ${L(d*1000)}. Does that fit in ${L(N)}?`, `${d} × ${L(u0)} = ${L(d*u0)}. Does that fit in ${L(N)}? And ${d} × ${L(u0*10)} = ${L(d*u0*10)}?`],
-    after:`${d} × ${L(u0)} = ${L(d*u0)} fits in ${L(N)}, but ${d} × ${L(u0*10)} = ${L(d*u0*10)} does not. The first friendly part is some ${placeName(u0)} of ${d}s.`}];
+    cues:[u0===1000?`Which products are smaller than ${L(N)}? Start with the biggest one and check it.`:`Try the biggest first: ${d} × 1,000 = ${L(d*1000)}. Does that fit in ${L(N)}?`, `Compare ${d} × ${L(u0)} with ${L(N)}. Then compare ${d} × ${L(u0*10)} with ${L(N)}. Which group size fits?`],
+    after:`${L(u0)} groups of ${d} fit, but ${L(u0*10)} groups do not. Now decide how many ${L(u0)}-group jumps fit.`}];
   let remaining=N;
   parts.forEach((x,i)=>{
     const unit=Math.pow(10,String(x.qpart).length-1), digit=x.qpart/unit, unitName=placeName(unit);
     let base=d; while(base%10===0) base/=10; const zf=d/base, bigUnit=unit*zf, bigName=placeName(bigUnit);
     const core=base*digit, before=remaining, after=remaining-x.piece, front=Math.floor(before/bigUnit);
     const anchor=digit===1?2:digit-1, anchorProduct=base*anchor;
-    if(unit>1){ // v9.18.1 review #1: one concrete choice (SWUN: find the friendly part 1,100, then 1,100 ÷ 11 = 100) instead of "11 × ? = 11" and "1 hundred of groups"
+    if(unit>1){ // v9.25.1: give a reusable jump size, not all three products; she tests the choices herself
       const ks=(digit===1?[1,2,3]:digit===9?[8,9,10]:[digit-1,digit,digit+1]).map(k=>k*unit);
-      steps.push({t:`<b>${i===0?"First":"Next"} friendly part.</b> ${i===0?"":`${L(before)} is left to share. `}Which is the biggest that still fits in ${L(before)}? ${ks.map(k=>`${d} × ${L(k)} = ${L(d*k)}`).join(" · ")}`,
-        check:wc(cm(`Biggest friendly part that fits in ${L(before)}:`, ks.map(k=>`${L(d*k)} (${d} × ${L(k)})`), ks.indexOf(x.qpart)),"place"), divIndex:i, divDone:i,
-        cues:[`Which products are not more than ${L(before)}? Pick the biggest of those.`, `${L(d*(x.qpart+unit))} is more than ${L(before)}, so it does not fit.`],
-        after:`${L(x.piece)} ÷ ${d} = ${L(x.qpart)}. Your friendly part is <b>${L(x.piece)}</b>.`});
-    } else steps.push({t: zf===1 ? `<b>${parts.length===1?"The chunk":"Last chunk"}: ones of ${d}s.</b> ${L(before)} is left. Use a small fact.` : `<b>${i===0?"First":"Next"} chunk: ones of ${d}s.</b> One ${d} is <b>${base} ${sing(base,bigName)}</b>. Put a finger over the smaller places: ${L(before)} has <b>${L(front)}</b> ${sing(front,bigName)}. Use a small fact.`,
+      const jump=d*unit, low=ks[0], lowPiece=d*low, high=ks[2], highPiece=d*high;
+      steps.push({t:`<b>${i===0?"First":"Next"} friendly part.</b> ${i===0?"":`${L(before)} is left to share. `}Use jumps of ${L(unit)} groups of ${d} to test the choices. Which makes the biggest part without going past ${L(before)}?`,
+        check:wc(cm(`Biggest friendly part that fits in ${L(before)}:`, ks.map(k=>`${L(k)} groups of ${d}`), ks.indexOf(x.qpart)),"place"), divIndex:i, guidedChoice:true,
+        cues:[`First find one jump: ${d} × ${L(unit)} = ? Then test the choices against ${L(before)}.`, digit===1?`The first choice is one jump of ${L(unit)} groups. Multiply ${d} by ${L(unit)}, then see whether two jumps would fit.`:`${L(low)} groups make ${L(lowPiece)}. Add ${L(jump)} to test the next choice; add ${L(jump)} again to test the last. Stop before the total passes ${L(before)}.`],
+        after:`${L(x.qpart)} groups fit. Work out how much those groups make before writing the separate division problem.`});
+      steps.push({t:`<b>Write this friendly part.</b> You chose ${L(x.qpart)} groups of ${d}. How much is that?`,
+        check:wc(ci(`${d} × ${L(x.qpart)} = ?`,x.piece,L(x.piece)),"place"), divIndex:i, divDone:i,
+        cues:[digit===1?`One ${L(unit)}-group jump is ${d} × ${L(unit)}. Multiply by 10 once for each zero in ${L(unit)}.`:`One jump is ${d} × ${L(unit)} = ${L(jump)}. How many jumps are in ${L(x.qpart)} groups?`,
+          digit===1?`First find ${d} × 10. Multiply that result by 10 again if you need 100 groups.`:`${L(low)} groups make ${L(lowPiece)}. Add ${L(jump)} for each extra ${L(unit)} groups until you reach ${L(x.qpart)} groups.`],
+        after:`${L(x.piece)} is a friendly part: ${L(x.piece)} ÷ ${d} = ${L(x.qpart)}. It fits in ${L(before)}${highPiece>before?`; ${L(highPiece)} would be too much`:``}.`});
+    } else { const countGuide=zf===1?divOnesGuide(base,digit,front):null;
+      steps.push({t: zf===1 ? `<b>${parts.length===1?"The chunk":"Last chunk"}: groups of ${d}.</b> ${L(before)} is left. ${countGuide.t}` : `<b>${i===0?"First":"Next"} chunk: ones of ${d}s.</b> One ${d} is <b>${base} ${sing(base,bigName)}</b>. Put a finger over the smaller places: ${L(before)} has <b>${L(front)}</b> ${sing(front,bigName)}. Use a small fact.`,
       check:wc(ci(front===core?(digit===1?`How many ${base}s make ${L(core)}?` /* v9.18.1 review: never a "91 × ? = 91" trick fact */:`${base} × ? = ${L(core)}`):`How many ${base}s fit in ${L(front)} without going over?`,digit),"fact"), divIndex:i, divDone:i,
-      cues:[`Count by ${base}s: ${base}, ${L(2*base)}, … Stop before you pass ${L(front)}.`,`${base} × ${anchor} = ${L(anchorProduct)}. ${digit===1?`That is more than ${L(front)}. Try fewer.`:`Does one more ${base} still fit in ${L(front)}?`}`],
-      after:`${L(x.piece)} ÷ ${d} = ${digit}. Check: ${d} × ${digit} = ${L(x.piece)}.`});
+      ...(countGuide&&countGuide.rescue?{rescue:countGuide.rescue}:{}),
+      cues:countGuide?countGuide.cues:[`Count by ${base}s: ${base}, ${L(2*base)}, … Stop before you pass ${L(front)}.`,`${base} × ${anchor} = ${L(anchorProduct)}. ${digit===1?`That is more than ${L(front)}. Try fewer.`:`Does one more ${base} still fit in ${L(front)}?`}`],
+      after:`${L(x.piece)} ÷ ${d} = ${digit}. Check: ${d} × ${digit} = ${L(x.piece)}.`}); }
     if(i<parts.length-1){ steps.push({t:`We have shared out ${L(x.piece)} of the ${L(before)}. What is left to divide by ${d}?`,
       check:wc(ci(`${L(before)} − ${L(x.piece)} = ?`,after,L(after)),"rows"), divIndex:i, divLeft:after /* v9.18.1 review #23: the plan shows the leftover as soon as she finds it */,
       cues:[`Line up the place values and take away ${L(x.piece)}.`,`${L(before)} = ${L(x.piece)} + ?`], after:`${L(after)} is left. That is the sum of the parts we have not divided yet.`});
@@ -1963,8 +1985,8 @@ function divPlaceLesson(p, parts){
   p.steps=steps; p.divMap=true;
   p.hints=[
     {t:`Split ${L(N)} into friendly parts that ${d} can divide evenly. Parts don't have to match the digits; all the parts must add back to ${L(N)}.`},
-    {t:`Biggest chunk first. Does ${d} × 1,000 = ${L(d*1000)} fit in ${L(N)}? Does ${d} × 100 = ${L(d*100)}? Does ${d} × 10 = ${L(d*10)}?`},
-    {t:`Start with ${L(parts[0].qpart)} groups: ${d} × ${L(parts[0].qpart)} = ${L(parts[0].piece)}. Take that away from ${L(N)}, then find the biggest chunk that fits in what is left.`},
+    {t:`Biggest chunk first. ${[1000,100,10].filter(k=>d*k!==N).map(k=>`Does ${d} × ${L(k)} = ${L(d*k)} fit in ${L(N)}?`).join(" ")} If one is too large and another is too small, try a count between them.`},
+    {t:parts.length===1 ? divAnchorCue(d,parts[0].qpart,N,"exact") : `Start with ${L(parts[0].qpart)} groups: ${d} × ${L(parts[0].qpart)} = ${L(parts[0].piece)}. Take that away from ${L(N)}, then find the biggest chunk that fits in what is left.`},
     {t:`After each part, check by multiplying its small answer by ${d}. Then add all the small answers.`}
   ];
   return p;
@@ -1976,7 +1998,7 @@ function divPlaceMap(p){
   const rest=N-found.reduce((s,x)=>s+x.piece,0); // v9.18.1 review #23: once she has found what is left, the plan shows it right away
   const split=`${L(N)} = ${found.map(x=>L(x.piece)).join(" + ")}${all?"":(found.length?(lefts.has(rest)?` + ${L(rest)} (still to share)`:" + ?"):"? + …")}`;
   const rows=parts.map((x,i)=> solved.has(i) ? `<div class="piece${active===i?" active":""}">${L(x.piece)} ÷ ${d} = <b>${L(x.qpart)}</b></div>` : (i===found.length && active!==-1 ? `<div class="piece active">Next chunk: ? ÷ ${d} = <b>?</b></div>` : "")).join("");
-  return `<div class="div-map" role="group" aria-label="Friendly parts for ${L(N)} divided by ${d}"><strong>Our division plan</strong><div class="split">${split}</div>${rows}<div class="combine">Add the small answers to find ${L(N)} ÷ ${d}.</div></div>`;
+  return `<div class="div-map" role="group" aria-label="Friendly parts for ${L(N)} divided by ${d}"><strong>Split → divide each part → add the small answers</strong><div class="split">${split}</div>${rows}<div class="combine">When all parts are divided, add their small answers to find ${L(N)} ÷ ${d}.</div><div class="muted" style="font-size:13px;margin-top:8px">See this method in <a href="https://videocdn.swunmath.com/lesson_videos/g5/G5_U2_L9.mp4" target="_blank" rel="noopener noreferrer">SWUN Grade 5 Unit 2 Lesson 9</a> or <a href="https://videocdn.swunmath.com/lesson_videos/g5/G5_U2_L10.mp4" target="_blank" rel="noopener noreferrer">Lesson 10</a>. Videos open in a new tab.</div></div>`;
 }
 function genDivide(level, focus){
   const f=focus&&focus.tag;
@@ -2448,7 +2470,9 @@ function genDecDiv(level, focus){
   const steps=[];
   if(variant==="dealing"){
     const shareLess = N<d; // each share is less than 1 when there is less than one whole per group
-    const estOpts=shuffle([...new Set([shareLess?"less than 1":"about "+fmtV(est), shareLess?"about "+fmtV(Math.max(1000,Math.round(N/d/1000)*1000||1000)):"about "+fmtV(est*10), shareLess?"more than "+fmt(Nn):"about "+fmtV(Math.max(100,Math.round(est/10)))])]);
+    // v9.25 (user report, 2.91 ÷ 3): "about 1" was offered as wrong beside "less than 1", but 0.97 is about 1. With less than one whole per
+    // group, the choices now split cleanly on the one decision that matters: less than 1, or more than 1.
+    const estOpts=shuffle([...new Set([shareLess?"less than 1":"about "+fmtV(est), shareLess?"more than 1":"about "+fmtV(est*10), shareLess?"more than "+fmt(Nn):"about "+fmtV(Math.max(100,Math.round(est/10)))])]);
     const cTxt = compat ? fmtV(compat.c*1000) : fmt(Nn);
     steps.push({t:`<b>Dealing strategy</b> (sharing equally): ${fmt(Nn)} shared into ${fmt(dn)} equal groups. Estimate first: ${shareLess?`compare ${fmt(Nn)} with ${fmt(dn)}. Is there even one whole for each group?`:`${fmt(Nn)} is close to <b>${cTxt}</b>, and ${cTxt} ÷ ${fmt(dn)} is an easy one to do in your head.`}`,
       check:Object.assign(wc(cm(`About how big is each share?`, estOpts, estOpts.indexOf(shareLess?"less than 1":"about "+fmtV(est))),"point"),{visibleOk:shareLess}), cues: shareLess ? [`Which is bigger, ${fmt(Nn)} or ${fmt(dn)}? If there are fewer wholes than groups, can each group get a whole?`, `${fmt(Nn)} is less than ${fmt(dn)}, so there is not one whole for every group.`] : [`Divide the easy number in your head: ${cTxt} ÷ ${fmt(dn)}.`, `Only one choice is about the size of ${cTxt} ÷ ${fmt(dn)}; the others are 10 times too big or too small.`],
@@ -3282,7 +3306,7 @@ function thFraction(level, f){ // 3/10 = 0.3 and 0.25 = 25/100
     if(d===100 && n<10) steps.push({t:`${n} has only one digit, but its last digit must sit in the hundredths place.`, check:ci(`How many zeros go right after the decimal point?`, 1), cues:[`Two places to fill and only one digit. What fills the empty place?`, `The empty place is the tenths place.`], after:`A 0 holds the tenths place.`});
     steps.push({t:`Write it: ${w?"the whole number, ":""}the decimal point, then the digits in their places.`, check:finalCheck(p), cues:[`${w?"Whole number first, then":"A 0 for no wholes, then"} the decimal point, then the digits.`, `The last digit goes in the ${DEC_PLACES[k-1]} place.`], after:`${frac} = ${fmt(dec)}.`, chart:dec, visAfter:true});
     p.steps=steps;
-    p.hints=[{t:`The denominator names the last place: tenths take one place after the point, hundredths take two.`},{t:`${d===10?"Tenths":"Hundredths"}: the last digit goes ${d===10?"one place":"two places"} after the decimal point.`},{t: d===100 && n<10 ? `${n} has only one digit, so a 0 holds the tenths place.` : `Write ${w}, the decimal point, then ${n}.`}];
+    p.hints=[{t:`The denominator names the last place: tenths take one place after the point, hundredths take two.`},{t:`${d===10?"Tenths":"Hundredths"}: the last digit goes ${d===10?"one place":"two places"} after the decimal point.`},{t:`Put the last digit in the ${d===10?"tenths":"hundredths"} place. ${d===100?"If a place before it is empty, what digit holds that place?":"What goes before the decimal point when there are no wholes?"}`}];
     return p; }
   const validate=str=>{ const fr=parseFraction(str); return !!fr && fr.d>0 && fr.n>0 && Math.abs(frValue(fr)-val)<1e-9; };
   const p={skill:"tenths", level, prompt:`Write <b>${fmt(dec)}</b> as a fraction.`, type:"input", text:true, validate, answer:val, display:frac, show:null, meta:{variant:"fraction", kind, w, n, d}};
@@ -3291,7 +3315,7 @@ function thFraction(level, f){ // 3/10 = 0.3 and 0.25 = 25/100
       cues:[`Say the places after the point: tenths, hundredths, … Stop at the last digit.`, `${fmt(dec)} has ${plural(k,"digit")} after the point.`], after:`So the denominator is ${d}.`},
     {t:`The digits after the point, read as a whole number, make the numerator.`, check:ci(`What is the numerator?`, n), cues:[`Read only the digits after the decimal point, as a whole number.`, `A 0 in front is not read.`], after:`${n} over ${d}.`},
     {t:`Write the fraction: the numerator, a slash, then the denominator.${w?` The whole number goes in front, with a space.`:""}`, check:finalText(p), cues:[`Numerator / denominator${w?", with the whole number in front":""}.`, `Type it like ${d===10?"7/10":"7/100"}${w?` after the whole number and a space`:""}.`], after:`${fmt(dec)} = ${frac}.${w?"":fGridSVG(d===10?n*10:n)}`}];
-  p.hints=[{t:`The last digit's place names the denominator: tenths → 10, hundredths → 100.`},{t:`${fmt(dec)} ends in the ${DEC_PLACES[k-1]} place, so the denominator is ${d}.`},{t:`The digits after the point make ${n}. Write ${n}/${d}${w?` after the ${w}`:""}.`}];
+  p.hints=[{t:`The last digit's place names the denominator: tenths → 10, hundredths → 100.`},{t:`${fmt(dec)} ends in the ${DEC_PLACES[k-1]} place, so the denominator is ${d}.`},{t:`Read the digits after the point for the top number. Put that over the denominator you found${w?", with the whole number in front":""}.`}];
   return p; }
 function thRename(level, f){ // 3/10 = 30/100, 60/100 = 6/10, and 3/10 + 45/100 (4.NF.5)
   const kinds = level<=1 ? ["t2h"] : level===2 ? ["t2h","h2t"] : ["t2h","h2t","add"]; const kind=(f && ["t2h","h2t","add"].includes(f.kind)) ? f.kind : pick(kinds);
@@ -3301,7 +3325,7 @@ function thRename(level, f){ // 3/10 = 30/100, 60/100 = 6/10, and 3/10 + 45/100 
     const e=fPick([2,5,7], x=>x===a);
     p.steps=[{t:`Hundredths are smaller pieces: cut each tenth into equal hundredths. Example: ${e}/10 = ${10*e}/100.`, check:ci(`How many hundredths make 1 tenth?`, 10), cues:[`Picture one tenth cut into pieces the size of a hundredth. How many pieces?`, `100 hundredths make 1 whole, and 10 tenths make 1 whole.`], after:`1 tenth = 10 hundredths.`},
       {t:`Now ${a} tenth${a>1?"s":""}.`, check:finalCheck(p), cues:[`${a} group${a>1?"s":""} of 10 hundredths.`, `${a} × 10 = ?`], after:`${a}/10 = ${10*a}/100.${fGridSVG(10*a)}`}];
-    p.hints=[{t:`Each tenth is the same amount as ten hundredths.`},{t:`${a} tenth${a>1?"s are":" is"} ${a} group${a>1?"s":""} of 10 hundredths.`},{t:`${a} × 10 = ?`}];
+    p.hints=[{t:a===1?`Ten tenths make one whole, and 100 hundredths make one whole. How many hundredths are in each tenth?`:`Each tenth is the same amount as ten hundredths.`},{t:a===1?`Split 100 hundredths into 10 equal groups. How many are in one group?`:`${a} tenths are ${a} groups of 10 hundredths.`},{t:`${a} × 10 = ?`}];
     return p; }
   if(kind==="h2t"){ const b=ri(1,9);
     const p={skill:"tenths", level, prompt:`<span class="big-num">${10*b}/100 = ▢/10</span>${box}`, type:"input", answer:b, display:String(b), show:null, meta:{variant:"rename", kind, b}};
@@ -3781,7 +3805,7 @@ function noteComp(sk, comp, ok, o){
 }
 // What "Focus on where I missed" should serve next: a review that has come due, else the open weakness served least recently. null → nothing.
 function recoveryTarget(o){
-  const W=S.weak, now=Date.now(); const okKey=k=>SKILLS[parseWeakKey(k).sk];
+  const W=S.weak, now=Date.now(); const okKey=k=>SKILLS[parseWeakKey(k).sk] && taughtSk(parseWeakKey(k).sk); // v9.25: nothing ahead of the class calendar
   const open=Object.keys(W).filter(k=>W[k].state==="weak" && okKey(k)).sort((a,b)=>(W[a].served||0)-(W[b].served||0) || (W[b].misses-W[b].wins)-(W[a].misses-W[a].wins));
   const due=Object.keys(W).filter(k=>W[k].state==="review" && W[k].due<=now && okKey(k)).sort((a,b)=>W[a].due-W[b].due);
   const key=(o&&o.openFirst) ? (open[0]||due[0]) : (due[0]||open[0]); if(!key) return null; /* openFirst: the planned sitting's "weakest spot" slot wants an open weakness even when a review is also due (the review has its own slot) */
@@ -3892,8 +3916,8 @@ let pendingTransfer=null, helpPrompts=[], pendingStretch=null; // pendingStretch
  // after a help chain (miss → walkthrough → one like it), the next fresh problem is the same skill with the coach hidden: an immediate, unprompted transfer check
 let todayPlan=null, todayIdx=0, todayExtra=0, todaySid=0; /* todaySid: this sitting's id; every fresh problem served in it is tagged, so the summary counts the sitting's own problems and nothing else */ // "Start today": the planned slots for this sitting, and how many extra problems were added to end on a win
 // The plan: a due check-in or review if there is one, this week's lesson (twice), the weakest open spot, then mixed practice. About six problems, and it ends on a win.
-function buildTodayPlan(){ const plan=[]; const now=Date.now(); const W=S.weak||{}; const okKey=k=>SKILLS[parseWeakKey(k).sk];
-  const dueCheck=Object.keys(S.checkins||{}).some(k=>SKILLS[k.split("|")[0]] && S.checkins[k].due<=now); const dueReview=Object.keys(W).some(k=>W[k].state==="review" && W[k].due<=now && okKey(k)); const openWeak=Object.keys(W).some(k=>W[k].state==="weak" && okKey(k)); /* asked separately: a due review must not crowd out an open weakness */
+function buildTodayPlan(){ const plan=[]; const now=Date.now(); const W=S.weak||{}; const okKey=k=>SKILLS[parseWeakKey(k).sk] && taughtSk(parseWeakKey(k).sk);
+  const dueCheck=Object.keys(S.checkins||{}).some(k=>SKILLS[k.split("|")[0]] && taughtSk(k.split("|")[0]) && S.checkins[k].due<=now); const dueReview=Object.keys(W).some(k=>W[k].state==="review" && W[k].due<=now && okKey(k)); const openWeak=Object.keys(W).some(k=>W[k].state==="weak" && okKey(k)); /* asked separately: a due review must not crowd out an open weakness */
   if(dueCheck || dueReview) plan.push("review");
   if(Object.keys(weekWeights()).length){ plan.push("week"); plan.push("week"); } else plan.push("mix");
   if(openWeak) plan.push("focus");
@@ -3910,9 +3934,14 @@ const REP_COMP={ "addsub:numberline":"jump", "addsub:chart":"chart", "decmul:are
 function stepFor(p, comp){ const walk=steps=>{ for(const st of steps||[]){ if(st.check && st.check.comp===comp) return st; if(Array.isArray(st.sub)){ const f=walk(st.sub); if(f) return f; } } return null; }; return walk(p.steps); }
 // Attach the component check: for a Focus target that names a step-level component, and for any problem served in a representation variant.
 function attachPre(p, comp){ if(!p || p.ws || !comp) return; const st=stepFor(p, comp); if(!st || !st.check) return; p.pre={comp, check:st.check, note:st.t}; }
-const PRE_NAMES={partition:"break it into parts", benchmark:"pick the benchmark", wholes:"the wholes", remainder:"the leftover pieces", unit:"name the unit", point:"the decimal point", groups:"more or fewer groups", fact:"a fact", "common-factor":"a common factor", "common-denominator":"a common denominator", magnitude:"same-size pieces", jump:"the jumps", chart:"the chart", structure:"the kind of story", model:"the model", sections:"add the sections", "not-simplest":"simplest form"}; // v9.12: child words, not internal component names
+const PRE_NAMES={partition:"break it into parts", benchmark:"pick the benchmark", wholes:"the wholes", remainder:"the leftover pieces", unit:"name the unit", point:"estimate the size", groups:"more or fewer groups", fact:"a fact", "common-factor":"a common factor", "common-denominator":"a common denominator", magnitude:"same-size pieces", jump:"the jumps", chart:"the chart", structure:"the kind of story", model:"the model", sections:"add the sections", "not-simplest":"simplest form"}; // v9.12: child words, not internal component names
+// v9.25 (user report): picking a first-step choice used to change nothing on screen, and the a/b/c letters did nothing from the keyboard.
+// The card now says that Check looks at both parts, confirms the pick, and moves to the answer box; the letters pick a choice.
+function preNextText(){ const c=cur && cur.pre && cur.pre.check; if(!c) return "";
+  if(c.type!=="mc") return "Do this step here, then work out the answer below. Check looks at both.";
+  return preSel>=0 ? `You picked ${"abcd"[preSel]}. Now work out the answer below and press Check. You can still change your pick.` : "Pick one. Then work out the answer below and press Check. Check looks at both."; }
 function preHTML(){ if(!cur.pre || phase!=="q") return ""; const c=cur.pre.check; const nm=PRE_NAMES[cur.pre.comp]||compName(cur.skill,cur.pre.comp);
-  return `<div class="substep pre" id="pre"><div class="cq"><b>First step: ${esc(nm)}.</b> ${c.q}</div>${c.type==="mc" ? optsHTML("preopts", c.options||[], preSel, c.answer, false, "opt copt") : `<label class="vh" for="preans">Your answer for this step</label><input class="ans small${isTextTarget(c)?" text":""}" id="preans" ${ansAttrs(c)} autocomplete="off" placeholder="this step first" value="${esc(preVal)}">`}</div>`; }
+  return `<div class="substep pre" id="pre"><div class="cq"><b>First step: ${esc(nm)}.</b> ${c.q}</div>${c.type==="mc" ? optsHTML("preopts", c.options||[], preSel, c.answer, false, "opt copt") : `<label class="vh" for="preans">Your answer for this step</label><input class="ans small${isTextTarget(c)?" text":""}" id="preans" ${ansAttrs(c)} autocomplete="off" placeholder="this step first" value="${esc(preVal)}">`}<p class="prenext" id="prenext" aria-live="polite">${esc(preNextText())}</p></div>`; }
 function gradePre(){ if(!cur.pre) return null; const c=cur.pre.check; if(c.type==="mc"){ if(preSel<0) return {missing:true}; return {ok:preSel===c.answer, yours:String((c.options||[])[preSel])}; } const inp=app.querySelector("#preans"); const v=inp?inp.value:preVal; preVal=v; if(!String(v).trim()) return {missing:true}; const iss=issueFor(c,v); if(iss) return {missing:true, issue:iss}; return {ok:!!checkAccepts(c,v), yours:String(v).trim()}; }
 const SUPPORT_NAMES={3:"the pre-written tens-row zero and the opening coach line", 2:"the column labels", 1:"the carry boxes"}; // what each support level adds on top of the one below it
 function resetSession(){ sessionN=0; stopOfferedAt=-1; sessionDone=false; sessionMissRun=0; breakOfferedAt=-1; } // a new learner starts a fresh sitting
@@ -3932,7 +3961,7 @@ const withMeOK=()=>!!(cur && phase==="q" && !cur.ws && !walkthroughBtn() && !onr
 const withMeBtn=()=>withMeOK() ? `<button class="btn quiet" id="withme" title="Do this exact problem together, one small checked step at a time. It counts as help, not on your own.">Do it with me, one step at a time</button>` : "";
 const exampleSig=p=>{ const m=p.meta||{}; return JSON.stringify([p.skill, p.type, ctxKey(ctxOf(p)), m.kind||"", m.dir||"", m.variant||"", m.op||"", m.which===undefined?"":!!m.which, p.ws?1:0]); }; // everything that defines the concept; only the numbers may differ
 function buildExample(){ if(cur.example) return cur.example; let ex=null; const want=exampleSig(cur); const f={...focusFromCtx(cur.skill, ctxOf(cur))}; const m=cur.meta||{}; if(m.variant) f.variant=m.variant; if(m.kind) f.kind=m.kind; if(m.dir) f.dir=m.dir; if(m.op) f.op=m.op; if(m.which!==undefined) f.which=!!m.which;
-  for(let i=0;i<40;i++){ const c=SKILLS[cur.skill].gen(cur.level, f); if(plain(c.prompt)!==plain(cur.prompt) && exampleSig(c)===want){ ex=c; break; } } if(!ex) return null;
+  for(let i=0;i<40;i++){ const c=SKILLS[cur.skill].gen(cur.level, f); if(plain(c.prompt)!==plain(cur.prompt) && String(c.display)!==String(cur.display) && exampleSig(c)===want){ ex=c; break; } } if(!ex) return null;
   const mk=st=>({t:st.t, ans: st.check ? (st.check.type==="mc" ? String((st.check.options||[])[st.check.answer]) : String(st.check.display)) : null, after: st.after||null, more: st.more||null, vis: chartsHTML(st)+(st.vis||""), visAfter: !!st.visAfter}); /* v9.18: the example shows each step's picture too, after that step's answer when the picture would give it away */ /* a worked example shows the answer and the explanation that a live walkthrough reveals only after she answers */
   const steps=(ex.steps||[]).map(st=> Array.isArray(st.sub)&&st.sub.length ? {...mk(st), sub:expandAll(st.sub).map(mk)} : mk(st)); /* v9.13: the big steps, each with its smaller steps kept behind "Show smaller steps" */
   cur.example={prompt:plain(ex.prompt), display:ex.display, steps}; return cur.example; }
@@ -4279,6 +4308,18 @@ function missWeights(){
   const tag={}; for(const k in tags){ tag[k]=Object.keys(tags[k]).sort((a,b)=>tags[k][b]-tags[k][a])[0]; }
   return {w, tag};
 }
+// v9.25 (user report: decimal division showed up during Unit 2): mixed practice draws only from skills taught so far. With the class
+// pacing calendar on, that is every skill in the lessons up to and including the class's current lesson. With it off, it is the skills this
+// learner has already practiced (two or more); a brand-new learner with the calendar off still mixes everything, as before, because the app
+// has no way to know what was taught. A skill button on Home still opens any skill on purpose.
+// With the calendar on, a skill ahead of the class (for example one opened from Home on purpose) keeps its history, but its practice-list
+// items and check-ins wait until the class reaches it, so "Start today" does not keep serving it.
+function taughtSk(sk){ if(!classCalOn() || (SKILLS[sk] && SKILLS[sk].foundation)) return true; return mixPool().includes(sk); }
+function mixPool(){ const all=SKILL_ORDER.filter(k=>SKILLS[k] && !SKILLS[k].foundation);
+  if(classCalOn()){ const L=lessonList(), ci=lessonIdx(effectiveClassAt()); if(ci>=0){ const t=new Set(); for(let i=0;i<=ci;i++) for(const k of lessonSkills(L[i])) t.add(k);
+    const pool=all.filter(k=>t.has(k)); if(pool.length) return pool; } }
+  const seen=new Set(((S&&S.log)||[]).filter(e=>e && e.sk).map(e=>e.sk)), pool=all.filter(k=>seen.has(k));
+  return pool.length>=2 ? pool : all; }
 function pickSkill(){
   const slot = todaySlotNow(); const eff = slot==="week" ? "week" : slot==="focus" ? "miss" : slot ? "mix" : mode;
   if(slot==="found"){ const fk=foundSlotSkill(); if(fk) return fk; } // v9.21: a foundation builder (a foundation that is not in this build falls through to mixed practice)
@@ -4288,7 +4329,7 @@ function pickSkill(){
   else if(hwMode()) return hwMode().skill;
   else if(eff!=="mix" && eff!=="week" && eff!=="miss") return eff;
   if(slot==="mix" && todayPlan && todayPlan.indexOf("mix")===todayIdx && typeof nsUnit1Pick==="function"){ const u1=nsUnit1Pick(); if(u1) return u1; } // v9.19/v9.20 (check-up): the grown-ups "Extra Unit 1 review" setting on → for 4 weeks from its start date, the first "mix" slot of Start today draws from the Unit 1 skills only; off → unchanged
-  const mixKeys=SKILL_ORDER.filter(k=>!(SKILLS[k] && SKILLS[k].foundation)); // v9.21: foundation skills come only through their own slot, their own buttons, or a practice spot
+  const mixKeys=mixPool(); // v9.21: foundation skills come only through their own slot, their own buttons, or a practice spot; v9.25: only skills taught so far
   return drawWeighted(mixKeys, mixKeys.map(k=>(MAX_LEVEL+1-S.levels[k])*2+1)); // mix (and week with nothing to draw from)
 }
 // v9.12: leaving a problem after working on it (typing, a hint, the nudge, the example) is recorded, and counts as a miss for the level.
@@ -4623,8 +4664,8 @@ function bindFoundations(){ const q=id=>app.querySelector("#"+id); if(!q("fdcard
   const rerender=msg=>{ const c=q("fdcard"); if(!c) return; const wasOpen=!!q("fdreport")?.open; c.outerHTML=foundationsGrownupsHTML(); bindFoundations(); if(q("fdreport")) q("fdreport").open=wasOpen; if(msg && q("fdmsg")) q("fdmsg").textContent=msg; };
   const showPreview=()=>{ if(q("fdpreview")) q("fdpreview").innerHTML=reportPreviewHTML(); if(q("fdremove")) q("fdremove").onclick=()=>{ reportRelease(); showPreview(); if(q("fdfilemsg")) q("fdfilemsg").textContent="Preview removed."; };
     const im=app.querySelector("#fdpreview img"); if(im) im.onerror=()=>{ im.remove(); if(q("fdfilemsg")) q("fdfilemsg").textContent="This photo type can't be shown here. Open it in your Photos app, or take a picture instead."; }; // v9.23 review #8: e.g. HEIC outside Safari
-    if(q("fdpdfopen")) q("fdpdfopen").onclick=()=>rhAwayMark(); }; // the grown-up's own switch to the PDF tab keeps the URL alive for that tab
-  const chooseFile=ev=>{ rhAwayAt=0; const file=ev.target.files && ev.target.files[0]; ev.target.value=""; if(!file) return; const kind=reportFileOK(file), msg=q("fdfilemsg");
+    if(q("fdpdfopen")) q("fdpdfopen").onclick=()=>rhAwayMark(RH_AWAY_PDF_MS); }; // the grown-up's own switch to the PDF tab keeps the URL alive for that tab
+  const chooseFile=ev=>{ rhBackCancel(); const file=ev.target.files && ev.target.files[0]; ev.target.value=""; if(!file) return; const kind=reportFileOK(file), msg=q("fdfilemsg");
     if(!kind){ if(msg) msg.textContent="Choose a PDF, JPG, PNG, WebP, or HEIC photo."; return; }
     if(file.size>25*1024*1024){ if(msg) msg.textContent="That file is over 25 MB. Choose a smaller copy."; return; }
     if(typeof URL.createObjectURL!=="function"){ if(msg) msg.textContent="This browser cannot preview the file. Open it in your device's photo or PDF app while choosing practice areas here."; return; }
@@ -4632,7 +4673,7 @@ function bindFoundations(){ const q=id=>app.querySelector("#"+id); if(!q("fdcard
       reportPreview={url:URL.createObjectURL(src),name:file.name||"Report card",kind}; showPreview(); if(q("fdreport")) q("fdreport").open=true; if(msg) msg.textContent="Ready to review. The file has not been uploaded or saved."; }
     catch(e){ reportRelease(); if(msg) msg.textContent="This browser could not open that file. Try a smaller photo or PDF."; } };
   q("fdpick").onclick=()=>{ rhAwayMark(); q("fdfile").click(); }; q("fdshoot").onclick=()=>{ rhAwayMark(); q("fdcamera").click(); }; // a phone's picker or camera hides the page; that is not walking away
-  q("fdfile").onchange=chooseFile; q("fdcamera").onchange=chooseFile; q("fdfile").oncancel=q("fdcamera").oncancel=()=>{ rhAwayAt=0; }; showPreview();
+  q("fdfile").onchange=chooseFile; q("fdcamera").onchange=chooseFile; q("fdfile").oncancel=q("fdcamera").oncancel=()=>{ rhBackCancel(); }; showPreview();
   const refreshPlan=()=>{ if(q("rhplan")) q("rhplan").innerHTML=rhPlanHTML(); };
   q("fdcard").addEventListener("change", ev=>{ if(ev.target && ev.target.matches("input[data-fd]")) refreshPlan(); });
   q("fdstarter").onclick=()=>{ for(const k of FOUND_KEYS){ const cb=q("fd-"+k); if(cb) cb.checked=true; } refreshPlan(); q("fdmsg").textContent=`All ${["zero","one","two","three","four","five","six","seven","eight"][FOUND_KEYS.length]||FOUND_KEYS.length} selected for this learner. Save to add them to Start today.`; };
@@ -4653,26 +4694,41 @@ function bindFoundations(){ const q=id=>app.querySelector("#"+id); if(!q("fdcard
 // grown-up's own picker, camera, or PDF tab (rhAwayMark, cleared on return); with a PIN set, 5 idle minutes on the grown-ups page return
 // to the PIN screen (rhIdleArm / rhIdleTick). Each domain heading has a "mark all lines" control (#7).
 // v9.24: two independent, temporary card slots. The recent card drives starter picks; the earlier card supplies labeled context.
+// v9.25 review: one order on screen (#5: starter picks first, including at most one comment-theme area the ranking left out); Undo after a
+// grade or term change clears a card (#6); idle clearing without a PIN (#7); a long absence after the picker clears on return (#8);
+// a card-order check with "Swap cards" (#9); a clear message when only the Earlier card has entries (#10). Undo data is memory-only too.
 // A slot has {grade, term, marks, themes}. Nothing here is copied into S, DB, storage, a transfer code, or a log.
-let rhCards={recent:null, earlier:null}, rhSlot="recent", rhState=null;
-function rhReset(){ rhCards={recent:null, earlier:null}; rhSlot="recent"; rhState=null; }
+let rhCards={recent:null, earlier:null}, rhSlot="recent", rhState=null, rhUndo=null; // v9.25 review #6: rhUndo = {slot, prev, what} after a grade or term change clears a card
+function rhReset(){ rhCards={recent:null, earlier:null}; rhSlot="recent"; rhState=null; rhUndo=null; }
+function rhCopy(c){ return c ? {grade:c.grade, term:c.term, marks:Object.assign({}, c.marks||{}), themes:(c.themes||[]).slice()} : null; }
 function rhActive(){ if(!rhState) rhState={grade:null, term:"latest", marks:{}, themes:[]}; rhCards[rhSlot]=rhState; return rhState; }
 function rhCardLabel(slot){ const c=rhCards[slot], label=slot==="recent"?"Recent card":"Earlier card";
   return c&&c.grade ? `${label}: grade ${c.grade}, ${c.term==="latest"?"latest marked term":c.term}` : `${label}: no grade chosen`; }
 function rhCardHasEvidence(c){ return !!(c && (Object.keys(c.marks||{}).length || (c.themes||[]).length)); }
-let rhAwayAt=0; const RH_AWAY_MS=2*60*1000; // set when the grown-up opens the picker, camera, or the PDF tab; cleared on return (at most 2 min)
-function rhAwayMark(){ rhAwayAt=Date.now(); }
-function rhAway(type){ if(type==="hidden" && rhAwayAt && Date.now()-rhAwayAt<RH_AWAY_MS) return; rhAwayAt=0;
-  const had=!!(reportPreview||rhState||rhCards.recent||rhCards.earlier); reportRelease(); rhReset(); if(!had) return;
+let rhAwayAt=0, rhHiddenAt=0, rhAwayMs=0, rhBackT=null; const RH_AWAY_MS=2*60*1000, RH_AWAY_PDF_MS=10*60*1000; // rhAwayAt: set when the grown-up opens the picker, camera, or the PDF tab; cleared on return
+function rhAwayMark(ms){ rhAwayAt=Date.now(); rhAwayMs=ms||RH_AWAY_MS; } // v9.25 review L5: reading the card in the PDF tab gets 10 minutes
+function rhBackCancel(){ if(rhBackT){ clearTimeout(rhBackT); rhBackT=null; } rhAwayAt=0; rhHiddenAt=0; } // a chosen or cancelled file: the grown-up is here
+// Wipes the preview and both cards from memory and from the screen. Returns false when there was nothing to clear.
+function rhClearScreen(note){ const had=!!(reportPreview||rhState||rhCards.recent||rhCards.earlier); reportRelease(); rhReset(); if(!had) return false;
   const p=app.querySelector("#fdpreview"), h=app.querySelector("#rhhelp"), m=app.querySelector("#fdfilemsg");
-  if(p) p.innerHTML=reportPreviewHTML(); if(h) h.innerHTML=rhHTML(); if(m) m.textContent="The preview and marks were cleared when this page was hidden."; }
+  if(p) p.innerHTML=reportPreviewHTML(); if(h) h.innerHTML=rhHTML(); if(m) m.textContent=note; return true; }
+// v9.25 review #8: a hide inside the picker/camera grace window is remembered (rhHiddenAt). If the page then stays away for 2 minutes
+// or more, the cards are cleared on return, so a cancelled picker that never reports back cannot keep marks on screen indefinitely.
+function rhAway(type){ if(type==="hidden" && rhAwayAt && Date.now()-rhAwayAt<(rhAwayMs||RH_AWAY_MS)){ rhHiddenAt=Date.now(); return; } if(rhBackT){ clearTimeout(rhBackT); rhBackT=null; } rhAwayAt=0; rhHiddenAt=0;
+  rhClearScreen("The preview and marks were cleared when this page was hidden."); }
+// v9.25 review M2: a phone may report "visible" before it delivers the chosen file, so the long-absence clear waits one second and is
+// cancelled when a file arrives or the picker reports a cancel in that time.
+function rhBack(){ const lim=rhAwayMs||RH_AWAY_MS, long=rhHiddenAt && Date.now()-rhHiddenAt>=lim; rhAwayAt=0; rhHiddenAt=0; if(!long) return;
+  if(rhBackT) clearTimeout(rhBackT); rhBackT=setTimeout(()=>{ rhBackT=null; rhClearScreen(`The preview and marks were cleared because this page was away for ${lim>=RH_AWAY_PDF_MS?"10":"2"} minutes or more.`); }, 1000); }
 const RH_IDLE_MS=5*60*1000; let rhIdleT=null, rhIdleAt=0; // rhIdleAt: the last tap, key, or scroll anywhere
 function rhIdleArm(){ rhIdleAt=Date.now(); if(!rhIdleT) rhIdleT=setTimeout(rhIdleTick, RH_IDLE_MS); } // bindFoundations: the grown-ups page is showing
 function rhIdleTick(){ rhIdleT=null; if(!app.querySelector("#gupage")) return; // left the grown-ups page: stop until it is opened again
-  const left=RH_IDLE_MS-(Date.now()-rhIdleAt); if(left>0 || typeof guGate!=="function" || !guGate().length){ rhIdleT=setTimeout(rhIdleTick, left>0?left:RH_IDLE_MS); return; }
+  const left=RH_IDLE_MS-(Date.now()-rhIdleAt); if(left>0){ rhIdleT=setTimeout(rhIdleTick, left); return; }
+  if(typeof guGate!=="function" || !guGate().length){ // v9.25 review #7: no PIN to lock, but the card details still leave the screen
+    rhClearScreen("The preview and marks were cleared after 5 minutes without activity."); rhIdleT=setTimeout(rhIdleTick, RH_IDLE_MS); return; }
   reportRelease(); rhReset(); app.innerHTML=""; grownups(); } // the gate has no separate re-lock function: grownups() from off the page asks for the PIN
 try{ for(const t of ["pointerdown","keydown","input","change","wheel","touchstart","scroll"]) document.addEventListener(t, ()=>{ rhIdleAt=Date.now(); }, {capture:true, passive:true});
-  document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden") rhAway("hidden"); else rhAwayAt=0; });
+  document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden") rhAway("hidden"); else rhBack(); });
   window.addEventListener("pagehide", ()=>rhAway("pagehide")); }catch(e){}
 const RH_DOMAINS={OA:"Operations and Algebraic Thinking", NBT:"Number and Operations in Base Ten", NF:"Number and Operations—Fractions", MD:"Measurement and Data", G:"Geometry"};
 const RH_MARKS=[["","Not marked"],["meets","Meets or above"],["prog","Progressing"],["below","Below"]], RH_MARK_WORD={prog:"progressing", below:"below"};
@@ -4734,59 +4790,78 @@ function rhShort(t){ t=String(t); if(t.length<=42) return t; let c=t.slice(0,43)
 // Pure: marks and themes → {found, skills, u1, habits, uncovered, ranked, top}. Only lines of the chosen grade count; reasons name what
 // was marked. Ranked: any Below reason first, then any Progressing reason, then themes only; within each, more reasons first; ties keep
 // the Home order. top: the foundations "Use these" checks (rhTopFound).
-function rhSuggest(st){ st=st||rhState||{}; const out={found:[], skills:[], u1:null, habits:[], uncovered:[], ranked:[], top:[]}, by={}, marks=st.marks||{}, themes=Array.isArray(st.themes)?st.themes:[];
+function rhSuggest(st){ st=st||rhState||{}; const out={found:[], skills:[], u1:null, habits:[], uncovered:[], ranked:[], byRank:[], top:[]}, by={}, marks=st.marks||{}, themes=Array.isArray(st.themes)?st.themes:[];
   const gap=t=>{ if(t && !out.uncovered.includes(t)) out.uncovered.push(t); };
   const add=(k,why,m,note)=>{ if(/^habit:/.test(k)){ const id=k.slice(6), H=RH_HABITS[id]; if(!H) return false; let h=out.habits.find(x=>x.id===id); if(!h){ h={id, k, name:H.name, tip:H.tip, reasons:[]}; out.habits.push(h); } h.reasons.push(`${why} → habit tip`); return true; }
-    const t=rhTarget(k); if(!t) return false; let e=by[k]; if(!e){ e=by[k]={k, kind:t.kind, name:t.name, reasons:[], below:0, prog:0}; if(t.kind==="found") out.found.push(e); else if(t.kind==="skill") out.skills.push(e); else out.u1=e; }
-    if(m==="below") e.below++; else if(m==="prog") e.prog++;
+    const t=rhTarget(k); if(!t) return false; let e=by[k]; if(!e){ e=by[k]={k, kind:t.kind, name:t.name, reasons:[], below:0, prog:0, theme:0}; if(t.kind==="found") out.found.push(e); else if(t.kind==="skill") out.skills.push(e); else out.u1=e; }
+    if(m==="below") e.below++; else if(m==="prog") e.prog++; else if(m==="theme") e.theme++;
     e.reasons.push(`${why} → ${t.name}${note?` (${note})`:""}`); return true; };
   for(const [id,,title,targets,o] of (RH_LINES[st.grade]||[])){ const m=marks[id]; if(m!=="prog" && m!=="below") continue; let hit=false; const nt=(o&&o.note)||{};
     for(const k of targets) if(add(k, `You marked “${rhShort(title)}” as ${RH_MARK_WORD[m]}`, m, nt[k])) hit=true; if(!hit) gap(rhShort(title)); if(o&&o.gap) gap(o.gap); }
-  for(const [id,label,targets,o] of RH_THEMES) if(themes.includes(id)){ const nt=(o&&o.note)||{}; for(const k of targets) add(k, `You chose the comment theme “${label}”`, "", nt[k]); if(o&&o.gap) gap(o.gap); }
+  for(const [id,label,targets,o] of RH_THEMES) if(themes.includes(id)){ const nt=(o&&o.note)||{}; for(const k of targets) add(k, `You chose the comment theme “${label}”`, "theme", nt[k]); if(o&&o.gap) gap(o.gap); }
   const base=e=>e.kind==="found" ? FOUND_KEYS.indexOf(e.k) : e.kind==="skill" ? 100+SKILL_ORDER.indexOf(e.k) : 9999;
   const rank=(a,b)=>rhTier(a)-rhTier(b) || b.reasons.length-a.reasons.length || base(a)-base(b);
-  out.found.sort(rank); out.skills.sort(rank); out.ranked=[...out.found, ...out.skills, ...(out.u1?[out.u1]:[])].sort(rank); out.top=rhTopFound(out.found); return out; }
+  out.found.sort(rank); out.skills.sort(rank); out.top=rhStarter(out.found); // v9.25 review #5: one order everywhere: starter picks first, then the ranked rest
+  out.byRank=[...out.found, ...out.skills, ...(out.u1?[out.u1]:[])].sort(rank); out.ranked=[...out.top, ...out.byRank.filter(e=>!out.top.includes(e))]; return out; }
 function rhTier(e){ return e.below ? 0 : e.prog ? 1 : 2; }
 // "Use these": the top two ranked foundations, plus a third only when it ties the second (same tier, same number of reasons).
 function rhTopFound(found){ const f=found.slice(0,3); if(f.length===3 && (rhTier(f[2])!==rhTier(f[1]) || f[2].reasons.length!==f[1].reasons.length)) f.pop(); return f; }
-function rhSuggestHTML(){ const r=rhSuggest(), items=[...r.ranked, ...r.habits], top=rhSlot==="recent"?r.top.map(e=>e.k):[];
+// v9.25 review #5: starter picks = the ranked top (rhTopFound) plus, at most, one foundation named by a comment theme on this card that
+// the ranking left out (the highest-ranked such area). A teacher's specific comment can then reach the short list without the app
+// treating it as a diagnosis; the parent still reviews every pick before saving.
+function rhStarter(found){ const top=rhTopFound(found); for(const e of top) e.teacherPick=false; const extra=top.some(e=>rhTier(e)<2) && found.find(e=>e.theme && !top.includes(e)); // review L1: themes only → no extra
+  if(extra){ extra.teacherPick=true; top.push(extra); } return top; }
+function rhSuggestHTML(){ const r=rhSuggest(), recent=rhSlot==="recent", items=[...(recent?r.ranked:r.byRank), ...r.habits], top=recent?r.top.map(e=>e.k):[]; // an earlier card has no starter picks, so it keeps the plain ranking
   if(!items.length && !r.uncovered.length) return `<p class="muted" style="font-size:13px;margin:0">Mark a line as Progressing or Below, or tap a comment theme, to see practice candidates here.</p>`;
   const kindTxt={found:"foundation box", skill:"practice on Home", u1:"setting in the check-up card on this page, with its own Save"};
-  const li=e=>`<li class="rhitem${top.includes(e.k)?" rhtop":""}" data-rhk="${esc(e.k)}"><b>${esc(e.name)}</b> <span class="muted" style="font-size:12px">${e.tip?"habit tip":esc(kindTxt[e.kind]||"")}</span> <span class="rhn" style="font-size:12px">· ${e.reasons.length} reason${e.reasons.length===1?"":"s"}</span>${top.includes(e.k)?` <span class="rhpick">starter pick; review the full plan below</span>`:""}${e.tip?`<br><span style="font-size:13px">${esc(e.tip)}</span>`:""}${e.reasons.map(t=>`<br><span class="muted rhreason">${esc(t)}</span>`).join("")}</li>`;
-  return `<p class="rhlabel" style="font-size:13px;margin:0 0 6px"><b>Practice candidates, not a diagnosis.</b> Ask the teacher which of these to start with.</p>${items.length?`<p class="muted" style="font-size:12px;margin:0 0 4px">Ranked: lines marked Below first, then Progressing, then comment themes; more reasons rank higher.</p><ul>${items.map(li).join("")}</ul>`:""}
+  const li=e=>`<li class="rhitem${top.includes(e.k)?" rhtop":""}" data-rhk="${esc(e.k)}"><b>${esc(e.name)}</b> <span class="muted" style="font-size:12px">${e.tip?"habit tip":esc(kindTxt[e.kind]||"")}</span> <span class="rhn" style="font-size:12px">· ${e.reasons.length} reason${e.reasons.length===1?"":"s"}</span>${top.includes(e.k)?` <span class="rhpick">${e.teacherPick?"starter pick from a teacher comment":"starter pick"}; review the full plan below</span>`:""}${e.tip?`<br><span style="font-size:13px">${esc(e.tip)}</span>`:""}${e.reasons.map(t=>`<br><span class="muted rhreason">${esc(t)}</span>`).join("")}</li>`;
+  return `<p class="rhlabel" style="font-size:13px;margin:0 0 6px"><b>Practice candidates, not a diagnosis.</b> Ask the teacher which of these to start with.</p>${items.length?`<p class="muted" style="font-size:12px;margin:0 0 4px">${top.length?"Starter picks first (on the recent card: the top-ranked areas, plus one area from a comment theme when the marks leave it out). Then ":"Ranked: "}lines marked Below, then Progressing, then comment themes only; more reasons rank higher.</p><ul>${items.map(li).join("")}</ul>`:""}
     ${r.uncovered.length?`<p class="muted rhnone" style="font-size:13px;margin:6px 0 0">No practice in this app for: ${r.uncovered.map(t=>`“${esc(t)}”`).join(", ")}. The teacher can suggest practice for these.</p>`:""}`; }
+// v9.25 review #9: a gentle check when the Earlier card looks newer than the Recent one, or when both show the same grade and term.
+// It never changes anything by itself; "Swap cards" exchanges the two slots in memory.
+function rhOrderNote(){ const r=rhCards.recent, e=rhCards.earlier; if(!(r && e && r.grade && e.grade)) return "";
+  const tn=t=>({T1:1,T2:2,T3:3})[t]||0, swapBtn=`<button type="button" class="btn quiet small" id="rhswap">Swap cards</button>`;
+  let t="", btn=swapBtn; if(e.grade>r.grade || (e.grade===r.grade && tn(e.term) && tn(r.term) && tn(e.term)>tn(r.term))) t="The Earlier card looks newer than the Recent card. Starter picks use only the Recent card, so check which is newer.";
+  else if(e.grade===r.grade && tn(e.term) && e.term===r.term){ t=`Both cards show grade ${r.grade}, ${r.term}. If the same card was entered twice, clear the Earlier card.`; btn=`<button type="button" class="btn quiet small" id="rhclearearlier">Clear the Earlier card</button>`; } // review L3
+  return t ? `<p class="rhorder" role="note" style="font-size:13px;margin:0 0 8px;padding:6px 8px;border:1px solid var(--line);border-radius:6px">${esc(t)} ${btn}</p>` : ""; }
 // Both slots are shown together for choosing a plan. Evidence from an earlier card is context, never an automatic starter pick.
 function rhPlanHTML(){ const rows=new Map(), others=[], settings=[], habits=[], gaps=[];
   for(const slot of ["recent","earlier"]){ const card=rhCards[slot]; if(!rhCardHasEvidence(card)) continue; const r=rhSuggest(card);
-    for(const e of r.found){ let row=rows.get(e.k); if(!row){ row={k:e.k,name:e.name,recent:false,earlier:false,teacher:false}; rows.set(e.k,row); }
-      row[slot]=true; if(slot==="recent" && e.reasons.some(t=>t.includes("comment theme"))) row.teacher=true; }
+    const seq=(slot==="recent"?r.ranked:r.byRank).filter(e=>e.kind==="found"); // v9.25 review #5: the plan follows the same order as that card's candidate list
+    seq.forEach((e,i)=>{ let row=rows.get(e.k); if(!row){ row={k:e.k,name:e.name,recent:false,earlier:false,teacher:false,starter:false,ri:99,ei:99}; rows.set(e.k,row); }
+      row[slot]=true; row[slot==="recent"?"ri":"ei"]=i; if(slot==="recent" && e.theme) row.teacher=true; if(slot==="recent" && r.top.includes(e)) row.starter=true; });
     for(const e of r.skills) others.push({slot,name:e.name}); if(r.u1) settings.push({slot,name:r.u1.name});
     for(const e of r.habits) habits.push({slot,name:e.name,tip:e.tip}); for(const name of r.uncovered) gaps.push({slot,name}); }
   // A prior saved choice or an earlier click can remain checked after the marks change. Keep it visible for deliberate removal.
   for(const k of FOUND_KEYS){ const box=app.querySelector("#fd-"+k), checked=box?box.checked:!!(S&&S.foundations&&S.foundations[k]);
-    if(checked && !rows.has(k)) rows.set(k,{k,name:SKILLS[k].name,recent:false,earlier:false,teacher:false,savedOnly:true}); }
+    if(checked && !rows.has(k)) rows.set(k,{k,name:SKILLS[k].name,recent:false,earlier:false,teacher:false,starter:false,ri:99,ei:99,savedOnly:true}); }
   const meets=["recent","earlier"].map(slot=>{ const c=rhCards[slot]; if(!c || !c.grade) return "";
     const lines=(RH_LINES[c.grade]||[]).filter(([id])=>(c.marks||{})[id]==="meets").map(([, ,title])=>`<li>${esc(title)}</li>`);
     return lines.length?`<p style="margin:6px 0 2px"><b>${slot==="recent"?"Recent":"Earlier"} card marked Meets or above:</b></p><ul style="margin:3px 0">${lines.join("")}</ul>`:""; }).filter(Boolean);
   const meetsHTML=meets.length?`<details class="rhmet" style="margin-top:8px"><summary>See lines marked Meets or above</summary>${meets.join("")}<p class="muted" style="font-size:12px">A broad Meets mark can coexist with a teacher comment about a narrower skill. Different grades use different standards, so these are not direct before-and-after scores.</p></details>`:"";
-  if(!rows.size && !others.length && !settings.length && !habits.length && !gaps.length) return `<p class="muted" style="font-size:13px;margin:0">${meets.length?"No Progressing or Below lines or comment themes were entered, so there are no new practice candidates.":"Mark a math line or a teacher-comment theme to build an editable plan. Start with the recent card; an earlier card is optional."}</p>${meetsHTML}`;
-  const order=[...rows.values()].sort((a,b)=>Number(b.recent)-Number(a.recent) || Number(b.teacher)-Number(a.teacher) || FOUND_KEYS.indexOf(a.k)-FOUND_KEYS.indexOf(b.k));
+  const check=rhOrderNote();
+  if(!rows.size && !others.length && !settings.length && !habits.length && !gaps.length) return `${check}<p class="muted" style="font-size:13px;margin:0">${meets.length?"No Progressing or Below lines or comment themes were entered, so there are no new practice candidates.":"Mark a math line or a teacher-comment theme to build an editable plan. Start with the recent card; an earlier card is optional."}</p>${meetsHTML}`;
+  const order=[...rows.values()].sort((a,b)=>Number(!!a.savedOnly)-Number(!!b.savedOnly) || Number(b.recent)-Number(a.recent) || a.ri-b.ri || a.ei-b.ei || FOUND_KEYS.indexOf(a.k)-FOUND_KEYS.indexOf(b.k));
   const chosen=k=>{ const box=app.querySelector("#fd-"+k); return box ? box.checked : !!(S&&S.foundations&&S.foundations[k]); };
-  const item=x=>`<label class="rhplanrow"><input type="checkbox" data-rhplan="${esc(x.k)}"${chosen(x.k)?" checked":""}><span><b>${esc(x.name)}</b><br><span class="muted">${x.savedOnly?"Already selected; no match on the entered cards — review whether to keep it":x.recent?"Recent card":"Earlier card only — check current work first"}${x.earlier&&x.recent?" · also on earlier card":""}${x.teacher?" · teacher comment on recent card":""}</span></span></label>`;
+  const item=x=>`<label class="rhplanrow"><input type="checkbox" data-rhplan="${esc(x.k)}"${chosen(x.k)?" checked":""}><span><b>${esc(x.name)}</b><br><span class="muted">${x.starter?"Starter pick · ":""}${x.savedOnly?"Already selected; no match on the entered cards — review whether to keep it":x.recent?"Recent card":"Earlier card only — check current work first"}${x.earlier&&x.recent?" · also on earlier card":""}${x.teacher?" · teacher comment on recent card":""}</span></span></label>`;
   const otherNames=[...new Set(others.map(x=>`${x.slot==="recent"?"Recent":"Earlier"}: ${x.name}`))];
   const settingNames=[...new Set(settings.map(x=>`${x.slot==="recent"?"Recent":"Earlier"}: ${x.name}`))];
   const habitNames=[...new Set(habits.map(x=>`${x.slot==="recent"?"Recent":"Earlier"}: ${x.name} — ${x.tip}`))];
-  return `<p class="muted" style="font-size:13px;margin:0 0 7px">${esc(rhCardLabel("recent"))}${rhCardHasEvidence(rhCards.earlier)?` · ${esc(rhCardLabel("earlier"))}`:""}. Older cards add context; they do not override recent marks. Check the areas you want, then press “Save practice choices” below. Only the on/off choices are saved with this learner's progress; the card marks and comment themes are not.</p>
+  return `${check}<p class="muted" style="font-size:13px;margin:0 0 7px">${esc(rhCardLabel("recent"))}${rhCardHasEvidence(rhCards.earlier)?` · ${esc(rhCardLabel("earlier"))}`:""}. Older cards add context; they do not override recent marks. Check the areas you want, then press “Save practice choices” below. Only the on/off choices are saved with this learner's progress; the card marks and comment themes are not.</p>
     ${order.map(item).join("")}${otherNames.length?`<p class="muted" style="font-size:12px;margin:7px 0 0">Also available on Home: ${otherNames.map(esc).join("; ")}.</p>`:""}
     ${settingNames.length?`<p class="muted" style="font-size:12px;margin:7px 0 0">Separate grown-up setting, with its own Save: ${settingNames.map(esc).join("; ")}.</p>`:""}
     ${habitNames.length?`<p class="muted" style="font-size:12px;margin:7px 0 0">Habit tips: ${habitNames.map(esc).join("; ")}.</p>`:""}
     ${gaps.length?`<p class="muted" style="font-size:12px;margin:7px 0 0"><b>No matching activity here:</b> ${gaps.map(x=>`${x.slot==="recent"?"Recent":"Earlier"}: ${esc(x.name)}`).join("; ")}. Ask the teacher which part to practice.</p>`:""}
     ${meetsHTML}`; }
+// review M1: a second grade or term change on a card that the first change emptied keeps the first Undo (the only copy of the entries).
+function rhUndoFor(s){ return (!rhCardHasEvidence(s) && rhUndo && rhUndo.slot===rhSlot) ? rhUndo : null; }
+function rhUndoHTML(){ if(!rhUndo || rhUndo.slot!==rhSlot) return ""; const p=rhUndo.prev, n=Object.keys(p.marks||{}).length, t=(p.themes||[]).length;
+  return `<p class="rhundo" role="status" style="font-size:13px;margin:6px 0 0">${esc(rhUndo.what)} changed, so this card's ${n} mark${n===1?"":"s"}${t?` and ${t} comment theme${t===1?"":"s"}`:""} ${n+t===1?"was":"were"} cleared. <button type="button" class="btn quiet small" id="rhundo">Undo</button></p>`; }
 function rhHTML(){ const st=rhState||{}, g=st.grade||null, marks=st.marks||{}, themes=Array.isArray(st.themes)?st.themes:[];
   const grades=[3,4,5].map(n=>`<button type="button" class="btn quiet small rhgrade${g===n?" on":""}" data-rhgrade="${n}" aria-pressed="${g===n}">Grade ${n}</button>`).join("");
   const slots=[["recent","Recent card"],["earlier","Earlier card (optional)"]].map(([k,t])=>`<button type="button" class="btn quiet small rhslot${rhSlot===k?" on":""}" data-rhslot="${k}" aria-pressed="${rhSlot===k}">${t}</button>`).join("");
   const terms=[["latest","Latest marked term"],["T1","Term 1"],["T2","Term 2"],["T3","Term 3"],["other","Other / no term"]];
-  const term=g?`<div class="rhterm"><label for="rhterm">Term on this card</label><select id="rhterm" data-rhterm="1">${terms.map(([k,t])=>`<option value="${k}"${(st.term||"latest")===k?" selected":""}>${t}</option>`).join("")}</select></div><p class="muted" style="font-size:12px;margin:4px 0 0">Use one marked column at a time, preferably the latest. A blank cell means “Not marked,” not a low score. Changing grade or term clears this card's marks and comment themes.</p>`:"";
+  const term=g?`<div class="rhterm"><label for="rhterm">Term on this card</label><select id="rhterm" data-rhterm="1">${terms.map(([k,t])=>`<option value="${k}"${(st.term||"latest")===k?" selected":""}>${t}</option>`).join("")}</select></div><p class="muted" style="font-size:12px;margin:4px 0 0">Use one marked column at a time, preferably the latest. A blank cell means “Not marked,” not a low score. Changing grade or term clears this card's marks and comment themes; you can undo it right after.</p>`:"";
   const lines=!g ? `<p class="muted" style="font-size:13px;margin:0">Pick the grade printed on the card to see its math lines.</p>`
     : `<p class="muted rhkey" style="font-size:13px;margin:0 0 4px">Match the words on the card; marks are often 4 = exceeds, 3 = meets, 2 = progressing, 1 = below — check your card's key.</p>`
       + Object.keys(RH_DOMAINS).map(dm=>{ const ls=(RH_LINES[g]||[]).filter(l=>l[0].split(".")[1]===dm); if(!ls.length) return "";
@@ -4795,9 +4870,9 @@ function rhHTML(){ const st=rhState||{}, g=st.grade||null, marks=st.marks||{}, t
           return `<div class="rhline"><label for="${fid}">${esc(title)} <span class="muted" style="font-size:12px">${esc(std)}</span></label><select id="${fid}" data-rhline="${esc(id)}">${RH_MARKS.map(([k,t])=>`<option value="${k}"${k===v?" selected":""}>${t}</option>`).join("")}</select></div>`; }).join("")}</fieldset>`; }).join("");
   const chips=RH_THEMES.map(([id,label])=>{ const on=themes.includes(id); return `<button type="button" class="btn quiet small rhchip${on?" on":""}" data-rhtheme="${id}" aria-pressed="${on}">${esc(label)}</button>`; }).join("");
   return `<h3 style="margin:0 0 4px">Report-card helper</h3>
-      <p class="muted rhnote" style="font-size:13px;margin:0 0 6px">The app does not read or upload your document. You read the card and mark what it says here; the app suggests matching practice. Marks are kept only while this page is open and showing; leaving it or switching to another app or tab clears them (choosing or opening the document here does not).</p>
+      <p class="muted rhnote" style="font-size:13px;margin:0 0 6px">The app does not read or upload your document. You read the card and mark what it says here; the app suggests matching practice. Marks are kept only while this page is open and showing; leaving it or switching to another app or tab clears them (choosing or opening the document here does not, unless the page stays away 2 minutes or more, or 10 minutes in the PDF tab). ${(typeof guGate==="function" && guGate().length)?"With a grown-up PIN, 5 minutes with no activity locks this page and clears them.":"Without a grown-up PIN, 5 minutes with no activity also clears them."}</p>
       <p class="rhstep"><b>1. Choose a card</b></p><div class="rhslots" role="group" aria-label="Card being reviewed">${slots}</div><p class="muted" style="font-size:12px;margin:4px 0 0">Put the newest card under Recent. Use Earlier for a prior year or term; each card keeps its own marks and comment themes until you leave this page.</p>
-      <p class="rhstep"><b>2. Grade and term on this card</b></p><div class="rhgrades" role="group" aria-label="Grade on the card">${grades}</div>${term}
+      <p class="rhstep"><b>2. Grade and term on this card</b></p><div class="rhgrades" role="group" aria-label="Grade on the card">${grades}</div>${term}${rhUndoHTML()}
       <p class="rhstep"><b>3. Mark each math line</b></p>${lines}
       <p class="rhstep"><b>4. Comment themes for this card (optional)</b> <span class="muted" style="font-size:13px;font-weight:400">Tap only the topics mentioned on this card.</span></p><div class="rhchips" role="group" aria-label="Comment themes">${chips}</div>
       <p class="rhstep"><b>5. Candidates from this card</b></p><div class="rhsugg" id="rhsugg">${rhSuggestHTML()}</div>
@@ -4810,25 +4885,34 @@ function rhBind(){ const box=app.querySelector("#rhhelp"); if(!box) return;
   const redraw=sel=>{ box.innerHTML=rhHTML(); const f=sel && box.querySelector(sel); if(f) f.focus({preventScroll:true}); };
   const sugg=()=>{ const s=box.querySelector("#rhsugg"), p=box.querySelector("#rhplan"); if(s) s.innerHTML=rhSuggestHTML(); if(p) p.innerHTML=rhPlanHTML(); };
   box.onclick=ev=>{ const b=ev.target && ev.target.closest && ev.target.closest("button"); if(!b || !box.contains(b)) return;
-    if(b.dataset.rhslot){ const slot=b.dataset.rhslot; if(slot!=="recent" && slot!=="earlier") return; rhCards[rhSlot]=rhState; rhSlot=slot; rhState=rhCards[slot]; redraw(`[data-rhslot="${slot}"]`); return; }
-    if(b.dataset.rhgrade){ const n=+b.dataset.rhgrade; if([3,4,5].includes(n)){ const s=st(); if(s.grade!==n){ s.grade=n; s.term="latest"; s.marks={}; s.themes=[]; } redraw(`[data-rhgrade="${n}"]`); } return; }
-    if(b.dataset.rhtheme){ const id=b.dataset.rhtheme, s=st(); if(!RH_THEMES.some(t=>t[0]===id)) return; s.themes=s.themes.includes(id)?s.themes.filter(x=>x!==id):s.themes.concat(id);
-      const on=s.themes.includes(id); b.classList.toggle("on",on); b.setAttribute("aria-pressed",String(on)); sugg(); return; }
+    if(b.dataset.rhslot){ const slot=b.dataset.rhslot; if(slot!=="recent" && slot!=="earlier") return; rhCards[rhSlot]=rhState; rhSlot=slot; rhState=rhCards[slot]; rhUndo=null; redraw(`[data-rhslot="${slot}"]`); return; }
+    if(b.dataset.rhgrade){ const n=+b.dataset.rhgrade; if([3,4,5].includes(n)){ const s=st(); if(s.grade!==n){ const u=rhUndoFor(s);
+        if(u && u.prev.grade===n){ rhState=rhCards[rhSlot]=rhCopy(u.prev); rhUndo=null; redraw(`[data-rhgrade="${n}"]`); msg(`Back to grade ${n}: this card's term, marks, and comment themes were restored.`); return; } // review M1
+        rhUndo=rhCardHasEvidence(s)?{slot:rhSlot, prev:rhCopy(s), what:"Grade"}:u; s.grade=n; s.term="latest"; s.marks={}; s.themes=[]; } redraw(`[data-rhgrade="${n}"]`); } return; }
+    if(b.id==="rhundo"){ if(!rhUndo || rhUndo.slot!==rhSlot) return; rhState=rhCards[rhSlot]=rhCopy(rhUndo.prev); rhUndo=null; redraw('[data-rhslot="'+rhSlot+'"]'); msg("Restored this card's grade, term, marks, and comment themes."); return; }
+    if(b.id==="rhswap"){ rhCards[rhSlot]=rhState; rhCards={recent:rhCards.earlier, earlier:rhCards.recent}; rhState=rhCards[rhSlot]; rhUndo=null; redraw(`[data-rhslot="${rhSlot}"]`); msg("Swapped the Recent and Earlier cards. Starter picks now use the new Recent card."); return; }
+    if(b.id==="rhclearearlier"){ rhCards[rhSlot]=rhState; rhCards.earlier=null; if(rhSlot==="earlier") rhState=null; rhUndo=null; redraw(`[data-rhslot="${rhSlot}"]`); msg("The Earlier card was cleared. The Recent card is untouched."); return; }
+    if(b.dataset.rhtheme){ const id=b.dataset.rhtheme, s=st(); if(!RH_THEMES.some(t=>t[0]===id)) return; rhUndo=null; s.themes=s.themes.includes(id)?s.themes.filter(x=>x!==id):s.themes.concat(id);
+      const on=s.themes.includes(id); b.classList.toggle("on",on); b.setAttribute("aria-pressed",String(on)); const u=box.querySelector(".rhundo"); if(u) u.remove(); sugg(); return; }
     if(b.id==="rhuse" || b.id==="rhall"){ const all=b.id==="rhall", recent=rhSuggest(rhCards.recent||{grade:null,marks:{},themes:[]}), earlier=rhCardHasEvidence(rhCards.earlier)?rhSuggest(rhCards.earlier):null;
       const candidates=all?[...recent.found, ...(earlier?earlier.found:[])]:recent.top, pick=[...new Map(candidates.map(e=>[e.k,e])).values()], done=[]; // other boxes are left as they are
-      for(const e of pick){ const cb=app.querySelector("#fd-"+e.k); if(cb){ cb.checked=true; done.push(e.name); } } const rest=recent.found.length-done.length;
-      sugg(); msg(!done.length ? "No foundation box matches yet. Mark a line as Progressing or Below, or tap a theme."
-        : `${all?`Checked all ${done.length} foundation candidate${done.length===1?"":"s"}`:`Checked the top ${done.length===1?"one":done.length===2?"two":"three"}`}: ${done.join(", ")}.${!all && rest>0?` ${rest} more foundation candidate${rest===1?" is":"s are"} not checked; “Check all candidates” adds ${rest===1?"it":"them"}.`:""} Nothing is saved until you press “Save practice choices.”`); return; }
+      for(const e of pick){ const cb=app.querySelector("#fd-"+e.k); if(cb){ cb.checked=true; done.push(e.name+(!all && e.teacherPick?" (from a teacher comment)":"")); } } const rest=recent.found.length-done.length;
+      const nTop=done.length-(!all && pick.some(e=>e.teacherPick)?1:0), word=n=>["zero","one","two","three"][n]||String(n);
+      sugg(); msg(!done.length ? (!all && !rhCardHasEvidence(rhCards.recent) && earlier && earlier.found.length ? "The Recent card is blank. Starter picks use only the Recent card: enter it first, or use “Check all candidates” to include the Earlier card." // v9.25 review #10
+          : "No foundation box matches yet. Mark a line as Progressing or Below, or tap a theme.")
+        : `${all?`Checked all ${done.length} foundation candidate${done.length===1?"":"s"}`:`Checked the top ${word(nTop)}${nTop<done.length?" plus one teacher-comment area":""}`}: ${done.join(", ")}.${!all && rest>0?` ${rest} more foundation candidate${rest===1?" is":"s are"} not checked; “Check all candidates” adds ${rest===1?"it":"them"}.`:""} Nothing is saved until you press “Save practice choices.”`); return; }
     if(b.id==="rhclear"){ rhReset(); redraw('[data-rhslot="recent"]'); msg("Marks cleared from both cards."); } };
   box.onchange=ev=>{ const el=ev.target; if(!el || !el.dataset) return;
     if(el.dataset.rhplan){ const k=el.dataset.rhplan, cb=app.querySelector("#fd-"+k); if(cb && FOUND_KEYS.includes(k)){ cb.checked=el.checked; msg(`${SKILLS[k].name} ${el.checked?"checked":"unchecked"}. Save practice choices below to keep this plan.`); } return; }
     if(el.dataset.rhterm){ const v=String(el.value||""), s=st(); if(!["latest","T1","T2","T3","other"].includes(v)) return;
-      if(s.term!==v){ s.term=v; s.marks={}; s.themes=[]; redraw('#rhterm'); msg("Term changed. This card's marks and comment themes were cleared; the other card is untouched."); } return; }
-    if(el.dataset.rhdom){ const dm=el.dataset.rhdom, raw=String(el.value||""), v=raw==="none"?"":raw, s=st(); el.value=""; if(!raw || !RH_MARKS.some(m=>m[0]===v)) return;
+      if(s.term!==v){ const u=rhUndoFor(s);
+        if(u && u.prev.grade===s.grade && u.prev.term===v){ rhState=rhCards[rhSlot]=rhCopy(u.prev); rhUndo=null; redraw('#rhterm'); msg("Back to that term: this card's marks and comment themes were restored."); return; } // review M1
+        rhUndo=rhCardHasEvidence(s)?{slot:rhSlot, prev:rhCopy(s), what:"Term"}:(u?Object.assign({},u,{what:"Term"}):null); s.term=v; s.marks={}; s.themes=[]; redraw('#rhterm'); msg("Term changed. This card's marks and comment themes were cleared; the other card is untouched."); } return; }
+    if(el.dataset.rhdom){ const dm=el.dataset.rhdom, raw=String(el.value||""), v=raw==="none"?"":raw, s=st(); el.value=""; if(!raw || !RH_MARKS.some(m=>m[0]===v)) return; rhUndo=null; { const u=box.querySelector(".rhundo"); if(u) u.remove(); }
       const ls=(RH_LINES[s.grade]||[]).filter(l=>l[0].split(".")[1]===dm); for(const [id] of ls){ if(v) s.marks[id]=v; else delete s.marks[id]; const sel=box.querySelector(`select[data-rhline="${id}"]`); if(sel) sel.value=v; }
       sugg(); msg(`All ${ls.length} ${dm} line${ls.length===1?"":"s"} set to “${RH_MARKS.find(m=>m[0]===v)[1]}.”`); return; }
     if(!el.dataset.rhline) return; const id=el.dataset.rhline, v=String(el.value||""), s=st();
-    if(!RH_MARKS.some(m=>m[0]===v)) return; if(v) s.marks[id]=v; else delete s.marks[id]; sugg(); }; }
+    if(!RH_MARKS.some(m=>m[0]===v)) return; if(rhUndo){ rhUndo=null; const u=box.querySelector(".rhundo"); if(u) u.remove(); } if(v) s.marks[id]=v; else delete s.marks[id]; sugg(); }; }
 (function(){ try{ const st=document.createElement("style"); st.textContent=[ // preview and helper side by side when there is room, stacked on a phone
   ".rhwrap{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:flex-start}",
   ".rhwrap>.rhside{flex:1 1 280px;min-width:0;max-width:100%}",
@@ -5082,11 +5166,11 @@ function next(){ // a fresh problem: new help chain
   const slot = todaySlotNow(); const eff = slot==="week" ? "week" : slot==="focus" ? "miss" : slot==="review" ? "review" : slot ? "mix" : mode;
   if(eff==="week" && classCalOn()){ const l=lessonById(effectiveClassAt()); if(l && l.focus && typeof l.focus==="object" && l.focus[sk]) focus=l.focus[sk]; }
   let target=null, checkinSk=null;
-  if(eff==="review"){ const t=recoveryTarget(); if(t && t.state==="review"){ target=t; sk=t.sk; focus=t.focus; S.weak[t.key].served=Date.now(); } else { const due=Object.keys(S.checkins||{}).filter(k=>SKILLS[k.split("|")[0]] && S.checkins[k].due<=Date.now()).sort((a,b)=>S.checkins[a].due-S.checkins[b].due)[0]; if(due){ checkinSk=due; sk=due.split("|")[0]; } } }
+  if(eff==="review"){ const t=recoveryTarget(); if(t && t.state==="review"){ target=t; sk=t.sk; focus=t.focus; S.weak[t.key].served=Date.now(); } else { const due=Object.keys(S.checkins||{}).filter(k=>SKILLS[k.split("|")[0]] && taughtSk(k.split("|")[0]) && S.checkins[k].due<=Date.now()).sort((a,b)=>S.checkins[a].due-S.checkins[b].due)[0]; if(due){ checkinSk=due; sk=due.split("|")[0]; } } }
   else if(eff==="miss"){ target=recoveryTarget(slot==="focus"?{openFirst:true}:undefined); if(target && target.sk===sk){ focus=target.focus; S.weak[target.key].served=Date.now(); } else target=null; } // the recovery cycle; with nothing open or due this is an ordinary mix problem
   else if(mode==="week"||mode==="mix"){ // a small, visible review allocation in ordinary sessions (the planned session handles this through its own "review" slot): every third fresh problem, a due review or a due check-in takes the slot
     if(sessionN%3===2){ const t=recoveryTarget(); if(t && t.state==="review"){ target=t; sk=t.sk; focus=t.focus; S.weak[t.key].served=Date.now(); }
-      else { const due=Object.keys(S.checkins||{}).filter(k=>SKILLS[k.split("|")[0]] && S.checkins[k].due<=Date.now()).sort((a,b)=>S.checkins[a].due-S.checkins[b].due)[0]; if(due){ checkinSk=due; sk=due.split("|")[0]; } } } }
+      else { const due=Object.keys(S.checkins||{}).filter(k=>SKILLS[k.split("|")[0]] && taughtSk(k.split("|")[0]) && S.checkins[k].due<=Date.now()).sort((a,b)=>S.checkins[a].due-S.checkins[b].due)[0]; if(due){ checkinSk=due; sk=due.split("|")[0]; } } } }
   const hw=hwMode();
   // v9.21 review #1: in the foundation slot (or mid facts round) a queued fresh one of another skill waits for the next slot, so a miss just
   // before it cannot erase the foundation builder, the facts round, or a nudge; the sitting still ends on that fresh one (the last slot).
@@ -5223,6 +5307,10 @@ function wsPaint(){ const sp=wsSpec(cur);
   const dirBox=app.querySelector(".ws-direction"); if(dirBox){ dirBox.classList.remove("nudge"); if(ws.nudge){ void dirBox.offsetWidth; dirBox.classList.add("nudge"); } }
   if(current){ const place=+(ws.sel||"0-0").split("-")[1]; current.textContent=carryMode?`Blue box: carry into the ${WHOLE_PLACES[place]||""} place.`:ws.edge?`Blue box: ${WHOLE_PLACES[place]||""} place (done).`:`Blue box: ${WHOLE_PLACES[place]||""} place, next move ${ws.dir==="r"?"→ right":"← left"}${wsFilled(ws.sel)?". A new digit replaces this one":""}.`; }
   const nx=app.querySelector("#wsnext"); if(nx){ const last=active===ws.rowKeys[ws.rowKeys.length-1]; nx.textContent=last?"check answer ↵":"next row ↵"; nx.setAttribute("aria-label",last?"Check this answer":"Move to the next row"); }
+  const hint=app.querySelector("#showhint"), guided=app.querySelector("#hintwork");
+  if(hint && cur.hintPlan){ const c=wsHintCursor(), blocked=c && (cur.hintUsed||{})[c.key]>=c.hints.length;
+    hint.disabled=!c||!!blocked; hint.textContent=!c?"Check your work":blocked?"Try this box first":"Hint for this box";
+    if(guided) guided.hidden=!blocked; }
 }
 function wsInstruction(active, sp, carryMode){ const last=active===ws.rowKeys[ws.rowKeys.length-1]; const go=last?"Check answer":"Next row";
   if(carryMode) return "Carry box: type one digit. Then the blue box goes back to where you were.";
@@ -5231,18 +5319,18 @@ function wsInstruction(active, sp, carryMode){ const last=active===ws.rowKeys[ws
   if(ws.dir==="r") return "You started on the left, so after each digit the blue box moves one place right.";
   return wsRowPrompt(active,sp); }
 function wsFocusCell(){ const cell=app.querySelector(`.ws .cell[data-k="${ws.sel}"]`); if(cell && !cell.disabled) cell.focus({preventScroll:true}); }
-// Which cell the next hint should be about: the first empty box in algorithm order; if none is empty, the first box that does not match the
-// steps; a cell whose mini-ladder is used up is passed over. Returns null when every box is filled and matches.
+// v9.30: stay on the first unfinished box. A used-up ladder must not skip blank boxes and dispense the rest of the answer.
 function wsHintCursor(){ const sp=wsSpec(cur); const plan=cur.hintPlan||[]; const used=cur.hintUsed||{};
-  const done=c=>(used[c.key]||0)>=c.hints.length; const val=k=>ws.vals[k];
+  const val=k=>ws.vals[k];
   // One pass in solution order: the first cell that is either empty or filled but not matching. An earlier wrong digit comes before a later blank row.
-  const issue=plan.find(c=>{ if(done(c)) return false; if(c.key==="t-plan") return !(val("t-0")!==undefined&&val("t-0")!==""); if(ws.locked[c.key]) return false; const v=val(c.key); if(v===undefined||v==="") return true; return sp.exp[c.key]!==undefined && v!==sp.exp[c.key]; });
+  const issue=plan.find(c=>{ if(c.key==="t-plan") return (used[c.key]||0)<c.hints.length && !(val("t-0")!==undefined&&val("t-0")!==""); if(ws.locked[c.key]) return false; const v=val(c.key); if(v===undefined||v==="") return true; return sp.exp[c.key]!==undefined && v!==sp.exp[c.key]; });
   return issue||null; }
 function wsNextHint(){ cur.hintUsed=cur.hintUsed||{}; cur.hintLog=cur.hintLog||[];
   if(!coachOn() && !cur.hintUsed.overview && cur.hints[0]){ cur.hintUsed.overview=1; cur.hintLog.push({t:cur.hints[0].t}); return; } // without the coach line, the overview is the first hint
   const c=wsHintCursor();
   if(!c){ if(!cur.hintLog.some(h=>h.done)) cur.hintLog.push({t:`Every box is filled in and matches the steps. Press <b>Check</b>.`, done:true}); return; }
-  const idx=cur.hintUsed[c.key]||0; cur.hintLog.push({t:c.hints[idx], key:c.key}); cur.hintUsed[c.key]=idx+1; }
+  const idx=cur.hintUsed[c.key]||0; if(idx>=c.hints.length) return;
+  cur.hintLog.push({t:c.hints[idx], key:c.key}); cur.hintUsed[c.key]=idx+1; }
 function bindWS(){
   app.querySelectorAll(".ws .cell[data-k]:not([disabled])").forEach(el=>el.onclick=()=>{ wsSelect(el.dataset.k); wsPaint(); });
   app.querySelectorAll(".pad .btn").forEach(b=>b.onclick=()=>{ const d=b.dataset.d; if(d==="bs") wsBack(); else if(d==="nx"){ if(wsNextRow()) submit(); else wsPaint(); } else if(d==="clr") wsClearRow(); else wsType(d); });
@@ -5369,9 +5457,9 @@ function render(){
     if(phase==="q"){
       const hOff=(coachOn()||nudgeAvailable())?1:0; // hint 1 is the coach line (or the nudge behind its button); the Hint button hands out hint 2 onward
       if(cur.hintPlan && cur.ws && ws){ // workspace: hints follow her work, one cell at a time (only when this problem really has a live workspace)
-        const log=cur.hintLog||[]; const total=(cur.hintTotal||cur.hints.length)-hOff; const more = !log.some(h=>h.done);
+        const log=cur.hintLog||[]; const total=(cur.hintTotal||cur.hints.length)-hOff; const target=wsHintCursor(); const blocked=target && (cur.hintUsed||{})[target.key]>=target.hints.length;
         body+=`<div class="hints" id="hints" aria-live="polite">${log.map((h,i)=>`<div class="step"><span class="n">Hint ${i+1+hOff} of ${total+hOff}.</span>${h.t}</div>`).join("")}</div>
-          <div class="actions"><button class="btn primary" id="check">Check</button>${onrampWaiting()?"":`<button class="btn quiet" id="showhint" ${more?"":"disabled"}>${log.length===0?(hOff?"Hint for the next box":"Hint"):more?"Hint for the next box":"No more hints"}</button>`}${exampleBtn()}</div>${exampleHTML()}`; }
+          <div class="actions"><button class="btn primary" id="check">Check</button>${onrampWaiting()?"":`<button class="btn quiet" id="showhint" ${target&&!blocked?"":"disabled"}>${!target?"Check your work":blocked?"Try this box first":"Hint for this box"}</button><button class="btn quiet" id="hintwork" ${blocked?"":"hidden"}>Work through this problem</button>`}${exampleBtn()}</div>${exampleHTML()}`; }
       else { const hAvail=cur.hints.length-hOff;
       body+=`<div class="hints" id="hints" aria-live="polite">${cur.hints.slice(hOff,hOff+hintIdx).map((h,i)=>`<div class="step"><span class="n">Hint ${i+1+hOff}${cur.hints.length>4?` of ${cur.hints.length}`:""}.</span>${h.t}${chartsHTML(h)}</div>`).join("")}</div>
         <div class="actions"><button class="btn primary" id="check">Check</button>${onrampWaiting()?"":`<button class="btn quiet" id="showhint" ${hintIdx>=hAvail?"disabled":""}>${hintIdx===0?(hOff?"Next hint":"Hint"):hintIdx<hAvail?"Another hint":"No more hints"}</button>`}${withMeBtn()}${exampleBtn()}</div>${exampleHTML()}`; }
@@ -5418,7 +5506,7 @@ function render(){
     if(cur.ws){ wsInit(); body+=`<div class="yours">${cur.voluntaryWalkthrough?"Your work so far":"Your work (red cells are the ones to look at)"}</div>`+wsHTML(true, ws.marks||{}); }
     else if(cur.type==="input"){ if(!cur.voluntaryWalkthrough || lastAnswer) body+=`<div class="yours" id="yourslbl">${cur.voluntaryWalkthrough?"Your work so far":"Your answer"}</div><input class="ans" disabled aria-labelledby="yourslbl" value="${esc(lastAnswer)}">`; }
     else body+=optsHTML("opts", cur.options, selected, -1, true, "opt");
-    const head = cur.voluntaryWalkthrough ? "Let's work through this exact problem together. Nothing is scored." : chain>=2 ? "Still not there. One more walk through, then another try." : (stage==="fresh" && cur.onramp) ? "Not yet, and that is OK. It was a warm-up, so it is not scored. Let's walk through it together." : (stage==="fresh" && cur.stretch) ? "Not yet, and that is OK. That was a stretch, so it is not scored and your level stays. Let's look at it together." : (cur.skippedTo ? "Not yet. What you had right stays; we start at the first spot to fix." : "Not yet. Let's walk through it.");
+    const head = cur.voluntaryWalkthrough ? "Let's work through this exact problem together. Nothing is scored." : homeworkNoReveal() ? "Let's work through the part that is stuck, then try again." : chain>=2 ? "Still not there. One more walk through, then another try." : (stage==="fresh" && cur.onramp) ? "Not yet, and that is OK. It was a warm-up, so it is not scored. Let's walk through it together." : (stage==="fresh" && cur.stretch) ? "Not yet, and that is OK. That was a stretch, so it is not scored and your level stays. Let's look at it together." : (cur.skippedTo ? "Not yet. What you had right stays; we start at the first spot to fix." : "Not yet. Let's walk through it.");
     // A break is offered during sustained struggle, not only after success: three fresh misses in a row this sitting, or three shown answers inside one walkthrough.
     // v9.13: the offer comes earlier. Two tough ones in a row, two shown answers, or four struggle signals (help taps and wrong step entries) in this walkthrough.
     const struggling = !wtKeepGoing && ((sessionMissRun>=2 && breakOfferedAt!==sessionMissRun) || revealed>=2 || wtSignals>=4); // one "keep going" answers every condition for this walkthrough
@@ -5426,7 +5514,7 @@ function render(){
     right=`<div class="banner ${cur.voluntaryWalkthrough?"learn":"no"}" style="margin-top:0" role="status" aria-live="polite"><span class="mark" aria-hidden="true">${cur.voluntaryWalkthrough?"→":"✕"}</span><div>${head}${noteHTML}<small>Step ${stepIdx+1} of ${total}</small>${downHTML}</div></div>
       ${breakHTML}<div class="progress" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${stepIdx+1}" aria-label="Walkthrough progress"><i style="width:${Math.round(100*(stepIdx+1)/total)}%"></i></div>
       ${cur.divMap?divPlaceMap(cur):""}
-      <div class="wt" id="wt">${cur.steps.slice(0,stepIdx+1).map((s,i)=>stepHTML(s,i,i<stepIdx,true)).join("")}</div>
+      <div class="wt" id="wt">${cur.steps.slice(0,stepIdx+1).map((s,i)=>stepHTML(s,i,i<stepIdx,true)).join("")}</div>${exampleOpen?exampleHTML():""}
       <div class="actions">${(open || (sc && sc.state==="explain"))?"":(!last?`<button class="btn primary" id="step">Next step</button>`:`<button class="btn primary" id="retry">Try one like it</button>`)}</div>`; /* the reason question must be answered before moving on */
   }
   const idleTip=`<div class="idletip" id="idletip" role="status" aria-live="polite"></div>`; if(phase==="wt") right+=idleTip; else if(phase==="q") body+=idleTip; // v9.13: a quiet "stuck?" line after a long pause
@@ -5535,6 +5623,7 @@ function bind(){
       if(hintIdx<cur.hints.length-(coachOn()?1:0)){ hintIdx++; inlineErr=""; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const hs=app.querySelectorAll("#hints .step"); if(hs.length) hs[hs.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); } };
   }
   if(q("workthrough")) q("workthrough").onclick=beginWalkthrough;
+  if(q("hintwork")) q("hintwork").onclick=beginWalkthrough;
   if(q("withme")) q("withme").onclick=beginWalkthrough; // v9.20: from the hint ladder into the checked walkthrough (studied; never independent)
   if(q("cstep")){
     q("cstep").onclick=checkStep;
@@ -5551,7 +5640,7 @@ function bind(){
   if(q("orshow")) q("orshow").onclick=()=>{ cur.onrampChoice="example"; exampleOpen=true; cur.studied=true; exStep=0; exAll=false; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const ex=app.querySelector("#example"); if(ex) ex.scrollIntoView({behavior:"smooth",block:"nearest"}); };
   if(q("stretch")) q("stretch").onclick=()=>{ pendingStretch=cur.skill; next(); };
   if(q("nudge")) q("nudge").onclick=()=>{ cur.nudgeOpen=true; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); }; /* her call; the attempt becomes "prompted" */
-  const toMine=()=>{ const f=app.querySelector("#ans:not([disabled])")||app.querySelector(".ws .cell.sel:not([disabled])")||app.querySelector("#opts .opt")||app.querySelector("#check"); const pr=app.querySelector(".prompt"); if(pr && pr.scrollIntoView) pr.scrollIntoView({behavior:"smooth",block:"start"}); if(f) f.focus({preventScroll:true}); };
+  const toMine=()=>{ const f=app.querySelector("#cans:not([disabled])")||app.querySelector("#copts .opt:not([disabled])")||app.querySelector("#ans:not([disabled])")||app.querySelector(".ws .cell.sel:not([disabled])")||app.querySelector("#opts .opt")||app.querySelector("#check"); const pr=phase==="wt"?app.querySelector("#wt .step:last-child"):app.querySelector(".prompt"); if(pr && pr.scrollIntoView) pr.scrollIntoView({behavior:"smooth",block:"start"}); if(f) f.focus({preventScroll:true}); };
   if(q("exnext")) q("exnext").onclick=()=>{ exStep++; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const c=app.querySelector("#exnext")||app.querySelector("#extry"); if(c && c.scrollIntoView) c.scrollIntoView({behavior:"smooth",block:"nearest"}); };
   if(q("exall")) q("exall").onclick=()=>{ exAll=true; cur.exAll=true; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); };
   app.querySelectorAll(".exsub").forEach(b=>b.onclick=()=>{ exSub[+b.dataset.i]=true; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); });
@@ -5572,9 +5661,12 @@ function setSel(groupId, i, focusIt){ // select an MC option without re-renderin
   if((groupId==="opts"||groupId==="preopts") && phase==="q" && S && S.pendingQ && !S.pendingQ.typed){ S.pendingQ.typed=true; S.pendingQ.at=Date.now(); save(); } // v9.12: a pick counts as working on it
   if(groupId==="opts") selected=i; else if(groupId==="wopts"){ if(whyState) whyState.sel=i; } else if(groupId==="preopts") preSel=i; else if(groupId==="xopts"){ if(sc) sc.xsel=i; } else if(sc) sc.sel=i;
   app.querySelectorAll("#"+groupId+" .opt").forEach(x=>{ const on=+x.dataset.i===i; x.classList.toggle("sel",on); x.setAttribute("aria-checked",on); if(on&&focusIt) x.focus({preventScroll:true}); });
+  if(groupId==="preopts"){ const pn=app.querySelector("#prenext"); if(pn) pn.textContent=preNextText(); if(inlineErr && /first step/i.test(inlineErr)){ inlineErr=""; const er=app.querySelector("#ierr"); if(er) er.textContent=""; }
+    if(!focusIt && phase==="q"){ const nx=cur.type==="mc" ? app.querySelector("#opts .opt") : app.querySelector("#ans"); if(nx) nx.focus({preventScroll:true}); } } // a tap or a letter moves on; arrow keys stay in the choices
 }
 function activeGroup(){ // the MC radiogroup the keyboard should drive right now, if any
   if(phase==="q"&&cur.type==="mc") return {id:"opts", n:cur.options.length, get:()=>selected};
+  if(phase==="q"&&cur.pre&&cur.pre.check&&cur.pre.check.type==="mc") return {id:"preopts", n:(cur.pre.check.options||[]).length, get:()=>preSel}; // v9.25: the first-step choices
   if(phase==="ok"&&whyState&&!whyState.done&&cur.why) return {id:"wopts", n:cur.why.options.length, get:()=>whyState.sel};
   if((phase==="wt"||phase==="reveal")&&sc&&sc.state==="explain"&&sc.explain) return {id:"xopts", n:sc.explain.options.length, get:()=>sc.xsel};
   if((phase==="wt"||phase==="reveal")&&scActive()&&cur.steps[stepIdx].check.type==="mc") return {id:"copts", n:(cur.steps[stepIdx].check.options||[]).length, get:()=>sc.sel};
@@ -5646,7 +5738,12 @@ function diag(yours){ try{ return (typeof diagnose==="function" && diagnose(cur,
 function submit(){
   let ok, yours, raw, wsGrade=null;
   let twoPoints=false;
-  let preRes=null; if(cur.pre){ preRes=gradePre(); if(preRes.missing){ inlineErr=preRes.issue||`First, do the first step: ${plain(cur.pre.check.q)}`; render(); const f=app.querySelector("#preans")||app.querySelector("#preopts .opt"); if(f) f.focus(); return; } }
+  if(cur.pre && cur.pre.check.type==="mc" && cur.type==="input" && !isTextTarget(cur)){ const inp=app.querySelector("#ans"), v=inp?inp.value.trim().toLowerCase().replace(/[.)]$/,""):"", li="abcd".indexOf(v);
+    if(v.length===1 && li>=0 && li<(cur.pre.check.options||[]).length){ // v9.25 (user report): "c" typed into the answer box meant the first-step choice
+      if(preSel<0){ preSel=li; inp.value=""; lastAnswer=""; inlineErr=`You picked ${v} for the first step. Now type the answer to the problem as a number.`; }
+      else inlineErr=`The letters are for the first step, and you picked ${"abcd"[preSel]} there. Type the answer to the problem as a number.`;
+      render(); const f=app.querySelector("#ans"); if(f) f.focus(); return; } }
+  let preRes=null; if(cur.pre){ preRes=gradePre(); if(preRes.missing){ inlineErr=preRes.issue||`First, do the first step at the top: ${plain(cur.pre.check.q)}${cur.pre.check.type==="mc"?" Tap a choice or press its letter.":""}`; render(); const f=app.querySelector("#preans")||app.querySelector("#preopts .opt"); if(f) f.focus(); return; } }
   if(cur.ws){ const g=gradeWS(); if(g.err){ if(!g.swap && !g.reason) cur.unfinished=(cur.unfinished||0)+1; inlineErr=g.err; render(); return; } wsGrade=g; ok=g.ok; yours=g.yours; raw=g.product; } // an incomplete grid is sent back, not graded: unfinished is not the same as wrong
   else if(cur.type==="input"){ const inp=app.querySelector("#ans"); const v=inp.value; lastAnswer=v; if(!v.trim()){ inp.focus(); return; }
     twoPoints = !!(cur.meta && cur.meta.open) && (v.match(/\./g)||[]).length>1; // "0.05.0" on a write-a-decimal problem: a real mistake, walk it through
@@ -5728,7 +5825,8 @@ function submit(){
       cur.steps.unshift({t:`First, ${fmt(x)} and ${fmt(xx)} are the <b>same number</b>: a zero on the end of a decimal adds nothing. Compare them in the chart.`, charts:[x,xx], check:cm(`${fmt(xx)} is … ${fmt(x)}`, ["greater than","less than","equal to"], 2)}); }
     if(stage==="fresh") chain=1; else chain++;
     missEntry=pushLog(entry);
-    if(chain<3){ phase="wt"; stepIdx=0; stepRes=[]; revealed=0; passed=0; wtSignals=0;
+    { // v9.30: repeated full misses still start checked work; never switch to the copy-the-answer page
+      phase="wt"; stepIdx=0; stepRes=[]; revealed=0; passed=0; wtSignals=0;
       if(wsGrade && wsGrade.marks){ // adaptive start: open the sub-steps of the first wrong row and begin at the first wrong column; earlier work is shown as already right
         const target=wsFirstBad(wsGrade.marks, cur); let start=-1;
         if(target){ const rowOrder = cur.meta.b<10 ? ["t"] : ["r0","r1","t"];
@@ -5743,7 +5841,6 @@ function submit(){
             start=i; break; } }
         if(start>0 && start<cur.steps.length){ stepIdx=start; cur.skippedTo=start; } else { stepRes.length=0; stepIdx=0; } }
       initStepCheck(); }
-    else { phase="reveal"; S.persist=0; cur.steps=expandAll(cur.steps); stepIdx=cur.steps.length-1; initStepCheck(); } // the whole solution, smallest steps included; the final check is re-used so she copies the answer in
   }
   save(); render();
   if(phase!=="ok"){ const tgt = window.innerWidth<1000 ? app.querySelector(".banner.no") : null; if(tgt && tgt.scrollIntoView) tgt.scrollIntoView({behavior:"smooth", block:"start"}); else window.scrollTo({top:0,behavior:"smooth"}); } // v9.12: in one column the walkthrough is below the scratch pad; go to it
@@ -5924,11 +6021,11 @@ function checkStep(){
       initStepCheck(); if(sc) sc.msg="Not quite. Let's build it one piece at a time."; save(); render();
       const el=app.querySelectorAll("#wt .step"); if(el.length) el[el.length-1].scrollIntoView({behavior:"smooth",block:"nearest"});
       return; }
-    if(c.type==="mc"){ sc.crossed=sc.crossed||[]; if(!sc.crossed.includes(sc.sel)) sc.crossed.push(sc.sel); }
-    const onlyOneLeft = c.type==="mc" && (c.options||[]).length - (sc.crossed||[]).length <= 1; /* every wrong choice is crossed off: picking the last one would be elimination, not knowing, so the answer is shown instead */
     wtSignals++; // v9.13: a wrong step entry is a struggle signal
-    if(sc.tries<3 && !onlyOneLeft){ const yoursText = c.type==="mc" ? String((c.options||[])[sc.sel]) : sc.val; sc.msg=`Not quite. ${cueFor(st, c, sc.tries, yoursText)}${sc.tries>=2?` <span class="muted">Still stuck? <b>Show me this step</b> is below, or take a break.</span>`:""}`; sc.val=""; sc.sel=-1; } /* first miss orients, second narrows; the answer waits until the third */
-    else revealStepAnswer(st, c); }
+    if(sc.tries>=3 && Array.isArray(st.rescue) && st.rescue.length && !st.rescueOpened){ expandRescue(st,"Let's work this out in smaller checked steps."); return; }
+    const yoursText=c.type==="mc"?String((c.options||[])[sc.sel]):sc.val;
+    sc.msg=sc.tries<=2?`Not quite. ${cueFor(st,c,sc.tries,yoursText)}`:`That is still tricky. Try the calculation on scratch paper, or tap <b>See one like it</b> for a different worked example. You can take a break, too.`;
+    sc.val=""; sc.sel=-1; }
   finishStepCheck(c, last);
 }
 function revealStepAnswer(st, c){ // the answer and its explanation together; the reason question follows as an invitation (v9.13: it can be skipped)
@@ -5937,9 +6034,11 @@ function revealStepAnswer(st, c){ // the answer and its explanation together; th
   if(ex){ sc.state="explain"; sc.explain=ex; sc.xsel=-1; sc.msg=`${shown} ${st.after?`${st.after} `:""}Can you see why? Pick the reason, or tap <b>Just tell me why</b>.`; }
   else { sc.state="confirm"; sc.msg=`${shown} ${st.after?`${st.after} `:""}${lockIn}`; }
 }
-// v9.13 "Help me" on a walkthrough step: the same ladder a wrong answer climbs (smaller steps → orienting clue → narrower clue → the answer),
-// reached by asking instead of by being wrong. For the records it counts the same as a miss on that step, so evidence stays honest.
-function stepHelpLabel(st, c){ if(!sc) return "Help me"; if(Array.isArray(st.sub) && st.sub.length && !st.expanded) return "Help me"; const left = c.type==="mc" ? (c.options||[]).length-(sc.crossed||[]).length : 99; if((sc.tries||0)>=2 || (c.type==="mc" && left<=2 && (sc.tries||0)>=1)) return "Show me this step"; return (sc.tries||0)===0 ? "Help me" : "Another clue"; }
+// v9.30: every checked step keeps the answer hers: clues, checked smaller steps, or a different example.
+function homeworkNoReveal(){ return !!(cur && cur.hw); }
+function expandRescue(st,message){ st.rescueOpened=true; cur.steps.splice(stepIdx,0,...st.rescue.map(x=>({...x}))); expanded++; if(missEntry) missEntry.expanded=expanded;
+  initStepCheck(); if(sc) sc.msg=message; save(); render(); const el=app.querySelectorAll("#wt .step"); if(el.length) el[el.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); }
+function stepHelpLabel(st, c){ if(!sc) return "Help me"; if(Array.isArray(st.sub) && st.sub.length && !st.expanded) return "Help me"; if((sc.tries||0)>=2) return Array.isArray(st.rescue)&&st.rescue.length&&!st.rescueOpened?"Smaller steps":"See one like it"; return (sc.tries||0)===0 ? "Help me" : "Another clue"; }
 function stepHelp(){
   if(!sc || sc.state!=="open" || !(phase==="wt")) return;
   const st=cur.steps[stepIdx], c=st.check, last=stepIdx===cur.steps.length-1;
@@ -5951,12 +6050,11 @@ function stepHelp(){
     const el=app.querySelectorAll("#wt .step"); if(el.length) el[el.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); return; }
   if((sc.tries||0)===0 && typeof c.comp!=="function") noteStepComp(c, sc, false); // asking on the first try: the step was not hers yet (a function-keyed component needs an answer to read, so it waits)
   sc.tries=(sc.tries||0)+1; sc.helped=(sc.helped||0)+1;
-  if(c.type==="mc"){ sc.crossed=sc.crossed||[]; }
-  const left = c.type==="mc" ? (c.options||[]).length-sc.crossed.length : 99;
-  if(sc.tries>=3 || (c.type==="mc" && sc.tries>=2 && left<=2)) revealStepAnswer(st, c);
-  else if(c.type==="mc" && sc.tries===2){ const wrong=(c.options||[]).map((_,i)=>i).filter(i=>i!==c.answer && !sc.crossed.includes(i)); if(wrong.length){ sc.crossed.push(wrong[0]); } sc.sel=-1; sc.msg=`One choice that does not fit is crossed off. Pick from the ones left. <span class="muted">Still stuck? Tap <b>Show me this step</b>.</span>`; }
-  else { sc.msg=`Here is a clue. ${cueFor(st, c, sc.tries, "")}`; }
-  finishStepCheck(c, last);
+  if(sc.tries>=3){
+    if(Array.isArray(st.rescue) && st.rescue.length && !st.rescueOpened){ expandRescue(st,"Here are smaller steps. Work out each one, then return to this question."); return; }
+    if(!exampleOpen){ exampleOpen=true; cur.studied=true; exStep=0; exAll=false; exSub={}; }
+    sc.msg="This answer is still yours. See how a different problem works below, then try this step again."; save(); render(); const ex=app.querySelector("#example"); if(ex) ex.scrollIntoView({behavior:"smooth",block:"nearest"}); return; }
+  sc.msg=`Here is a clue. ${cueFor(st,c,sc.tries,"")}`; save(); render();
   const cm=app.querySelector("#cmsg"); if(cm && cm.scrollIntoView) cm.scrollIntoView({behavior:"smooth",block:"nearest"});
 }
 function checkExplain(skip){ skip=skip===true; // the "why" question after a reveal: right, wrong, or skipped, the step closes as revealed; the pick is recorded, never a pass
