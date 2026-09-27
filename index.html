@@ -1586,7 +1586,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.22 · September 26, 2026";
+const BUILD="v9.23 · September 27, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -2095,7 +2095,8 @@ diagnose=function(prob, yours){
 const _focusFor2=focusFor;
 focusFor=function(prob, tag){ const f=_focusFor2(prob, tag); const m=prob.meta||{}; if(prob.skill==="divide"){ f.variant=m.variant; f.d=m.d; } if(prob.skill==="placevalue"){ f.variant=m.variant; } return f; };
 
-// ---- Official MCS 2026-27 Grade 5 Claims & Pacing Guide (Swun Math). Dates are the district calendar; lesson position within a unit is estimated by school day.
+// ---- Swun Math Grade 5 pacing, 2026–27 (one class pacing calendar). Unit dates come from that calendar; lesson position within a unit is estimated by school day.
+// v9.24: following it is a per-learner grown-up choice (S.classCal, see classCalOn); new learners start with it off.
 const UNITS=[{"unit": 1, "name": "Place Value System", "start": "2026-08-13", "end": "2026-09-02", "days": 15, "assess": "September 3 & 4"}, {"unit": 2, "name": "Multiplication and Division of Whole Numbers", "start": "2026-09-08", "end": "2026-09-28", "days": 15, "assess": "September 29 & 30"}, {"unit": 3, "name": "Add and Subtract Decimals", "start": "2026-10-01", "end": "2026-10-09", "days": 7, "assess": "October 12 & 13"}, {"unit": 4, "name": "Multiply and Divide Decimals", "start": "2026-10-14", "end": "2026-10-28", "days": 11, "assess": "October 29 & 30"}, {"unit": 5, "name": "Add Fractions", "start": "2026-11-10", "end": "2026-11-30", "days": 12, "assess": "December 1 & 2"}, {"unit": 6, "name": "Subtract Fractions", "start": "2026-12-03", "end": "2027-01-13", "days": 15, "assess": "January 14 & 15"}, {"unit": 7, "name": "Multiply Fractions", "start": "2027-01-19", "end": "2027-02-03", "days": 12, "assess": "February 4 & 5"}, {"unit": 8, "name": "Divide Fractions", "start": "2027-02-09", "end": "2027-02-19", "days": 8, "assess": "February 22 & 23"}, {"unit": 9, "name": "Polygons and Volume", "start": "2027-03-04", "end": "2027-03-17", "days": 10, "assess": "March 18 & 19"}, {"unit": 10, "name": "Graphing", "start": "2027-03-30", "end": "2027-04-21", "days": 17, "assess": "April 22 & 23"}, {"unit": 11, "name": "Measurement and Data", "start": "2027-04-26", "end": "2027-05-12", "days": 13, "assess": "May 13 & 14"}];
 const LESSONS=[
   {"id": "U1L1", "unit": 1, "lesson": 1, "name": "Read and Write Numbers to the Thousandths Place", "std": "5.NBT.3a", "type": "C", "skills": ["standard", "words"]},
@@ -2218,7 +2219,7 @@ const LESSONS=[
   {"id": "U10L14", "unit": 10, "lesson": 14, "name": "Graphing Patterns", "std": "5.OA.3", "type": "P", "skills": []},
   {"id": "U10L15", "unit": 10, "lesson": 15, "name": "Graph & Analyze Real World Data", "std": "5.G.2 5.OA.3", "type": "C", "skills": []},
   {"id": "U10L16", "unit": 10, "lesson": 16, "name": "Graph & Analyze Real World Data", "std": "5.G.2 5.OA.3", "type": "P", "skills": []},
-  {"id": "U10L17", "unit": 10, "lesson": 17, "name": "Representing Numerical Patterns", "std": "5.G.1 5.G.2 5.OA.3", "stdNote": "the supplied pacing guide prints 2.G.2; the grade-five standard that fits is 5.G.2 (inferred, not confirmed by the district)", "type": "MT", "skills": []},
+  {"id": "U10L17", "unit": 10, "lesson": 17, "name": "Representing Numerical Patterns", "std": "5.G.1 5.G.2 5.OA.3", "stdNote": "the supplied pacing guide prints 2.G.2; the grade-five standard that fits is 5.G.2 (inferred, not confirmed)", "type": "MT", "skills": []},
   {"id": "U11L1", "unit": 11, "lesson": 1, "name": "Length: Multi-Step Word Problems", "std": "5.MD.1", "type": "C", "skills": []},
   {"id": "U11L2", "unit": 11, "lesson": 2, "name": "Length: Multi-Step Word Problems", "std": "5.MD.1", "type": "P", "skills": []},
   {"id": "U11L3", "unit": 11, "lesson": 3, "name": "Weight: Multi-Step Word Problems", "std": "5.MD.1", "type": "C", "skills": []},
@@ -2236,13 +2237,13 @@ const LESSONS=[
 for(const k of SKILL_ORDER){ SKILLS[k].lessons = LESSONS.filter(L=>L.skills.includes(k)).map(L=>L.id); }
 function lessonTypeLabel(t){ return t==="C" ? "Concept lesson (C)" : t==="P" ? "Practice lesson (P)" : t==="MT" ? "Unit review (MT)" : String(t||""); }
 function _isoToDate(iso){ const [y,m,d]=iso.split("-").map(Number); return new Date(y,m-1,d); }
-// v9.12: MCS 2026-27 non-instruction weekdays, from the district's 2026-27 school calendar (MTA-posted copy, marked DRAFT 04/23/25).
+// v9.12: non-instruction weekdays of the 2026–27 school calendar that goes with this pacing (a draft copy).
 // With these removed, every unit's school-day count equals the pacing guide's "days" (checked for all 11 units in the release tests).
-const MCS_NO_SCHOOL=new Set(["2026-09-07","2026-11-11","2026-11-26","2026-11-27",
+const PACING_NO_SCHOOL=new Set(["2026-09-07","2026-11-11","2026-11-26","2026-11-27",
   ...["21","22","23","24","25","28","29","30","31"].map(d=>"2026-12-"+d), ...["01","04","05","06","07","08","18"].map(d=>"2027-01-"+d),
   "2027-02-08","2027-02-15", ...["22","23","24","25","26","29"].map(d=>"2027-03-"+d), "2027-05-31"]);
 const _ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-function _schoolDays(a,b){ let n=0; const d=new Date(a); while(d<=b){ const w=d.getDay(); if(w!==0&&w!==6&&!MCS_NO_SCHOOL.has(_ymd(d))) n++; d.setDate(d.getDate()+1); } return n; }
+function _schoolDays(a,b){ let n=0; const d=new Date(a); while(d<=b){ const w=d.getDay(); if(w!==0&&w!==6&&!PACING_NO_SCHOOL.has(_ymd(d))) n++; d.setDate(d.getDate()+1); } return n; }
 // Estimated lesson for a date: within a unit, spread its lessons evenly over the unit's school days; between units, sit on the previous unit's last lesson (review).
 function lessonForDate(date){
   const d=new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -2794,12 +2795,12 @@ whyFor=function(p){ const m=p.meta||{}; let out=null;
 
 // ===================== v9.21 (Agent M): "Two-step stories" (twostep), a foundation skill =====================
 // Grown-ups only (never on her screens): 4.OA.3, multistep word problems with the four operations, leading into 5.OA.1–2 (Unit 2
-// expressions and story problems). Basis: the 4th-grade T2 teacher comment named multi-step problems. The walkthrough asks before it
+// expressions and story problems). Multi-step problems are a common 4th–5th grade practice need. The walkthrough asks before it
 // tells: 1. what do you need to find first? (after a model on a different story) → 2. the first computation → 3. the second (and a third
 // at level 5) → 4. does it make sense? (more or less than an amount she knows, and why) → 5. the answer to the question.
 // Levels: 1–2 whole numbers up to 100 (2 adds sharing and money); 3 one multi-digit step; 4 bigger multi-digit steps; 5 three steps, or
-// the unknown in the middle. About 1 in 4 problems at levels 1–4 is a bare two-step equation (3 × 12 − 5, (48 ÷ 6) + 7), the kind the
-// comment names. Stories reuse the NAMES / ITEMS pools and are written for a strong reader.
+// the unknown in the middle. About 1 in 4 problems at levels 1–4 is a bare two-step equation (3 × 12 − 5, (48 ÷ 6) + 7), a common
+// classroom form. Stories reuse the NAMES / ITEMS pools and use grade-level reading.
 const TS_OPS={"+":(a,b)=>a+b,"−":(a,b)=>a-b,"×":(a,b)=>a*b,"÷":(a,b)=>a/b};
 const tsN=v=>Number(v).toLocaleString("en-US");
 function tsStory(big, L, N, F, one, many, girl, want){
@@ -2953,7 +2954,7 @@ NOTES["first-part"]="That answers one part of the story. The question needs one 
   const _focusForTS=focusFor; focusFor=function(prob, tag){ const f=_focusForTS(prob, tag); if(prob && prob.skill==="twostep" && prob.meta && prob.meta.variant) f.variant=prob.meta.variant; return f; }; }
 
 const NOT_YET_COVERED =(()=>{ const missing=UNITS.filter(u=>!LESSONS.some(L=>L.unit===u.unit && L.skills.length)); const partial=UNITS.filter(u=>LESSONS.some(L=>L.unit===u.unit && L.skills.length) && LESSONS.some(L=>L.unit===u.unit && !L.skills.length && L.type!=="MT"));
-  return "Built from the MCS 2026-27 Grade 5 Claims & Pacing Guide (Swun Math). Units not yet in the app: "+missing.map(u=>`Unit ${u.unit} ${u.name} (${u.start.slice(5).replace("-","/")}–${u.end.slice(5).replace("-","/")})`).join("; ")+"."+(partial.length?" Units partly covered: "+partial.map(u=>"Unit "+u.unit).join(", ")+".":"")+" Lesson types: C = concept lesson, P = practice lesson, MT = unit review (labels as used in the guide; meanings inferred). Optional lessons are italicized in the guide and cannot be told apart in this copy."; })();
+  return "Lesson list built from the Swun Math Grade 5 pacing, 2026–27. Units not yet in the app: "+missing.map(u=>`Unit ${u.unit} ${u.name} (${u.start.slice(5).replace("-","/")}–${u.end.slice(5).replace("-","/")})`).join("; ")+"."+(partial.length?" Units partly covered: "+partial.map(u=>"Unit "+u.unit).join(", ")+".":"")+" Lesson types: C = concept lesson, P = practice lesson, MT = unit review (labels as used in the guide; meanings inferred). Optional lessons are italicized in the guide and cannot be told apart in this copy."; })();
 const NOTES2={
   "left-to-right":"That is what you get by working straight across from left to right. Multiplication and division come before addition and subtraction, even when they appear later in the line.",
   "parens":"The parentheses were skipped. Whatever is inside grouping symbols happens first, no matter what operation it is.",
@@ -3394,6 +3395,205 @@ Object.assign(NOTES, {
 });
 { const _focusForP=focusFor; focusFor=function(prob, tag){ const f=_focusForP(prob, tag); if(prob && ["wholepv","factors","tenths"].includes(prob.skill) && prob.meta){ if(prob.meta.variant) f.variant=prob.meta.variant; if(prob.meta.kind) f.kind=prob.meta.kind; } return f; }; } // "one like it" keeps the same kind of question
 
+// ===================== v9.23 (Agent Q): "Fraction building blocks" (fracbasics), a foundation skill =====================
+// Grown-ups only (never on her screens): 3.NF.1–3 and 4.NF.1–3, the earlier fraction ideas under Unit 5 (5.NF.1–2): unit fractions, fractions
+// as sums of unit fractions, equivalent fractions with a fraction-bar model, comparing with the same denominator, the same numerator, or
+// against 1/2, and adding and subtracting with like denominators. Kid-facing text names the math, never a grade. Walkthroughs follow the
+// middle-ground rubric: the first card models on a different fraction; the key decision (how many equal parts, which unit fraction, how
+// each part is cut, which parts are bigger, which side of 1/2, whether the bottom number changes) is asked before it is told; cues go from
+// a nudge to a narrower hint; and a bar picture that would show an answer waits until she has answered (vis + visAfter). The bars are drawn
+// to scale: every bar in a picture has the same width, and its parts are exactly equal.
+const FB_ORD={2:["half","halves"],3:["third","thirds"],4:["fourth","fourths"],5:["fifth","fifths"],6:["sixth","sixths"],7:["seventh","sevenths"],8:["eighth","eighths"],9:["ninth","ninths"],10:["tenth","tenths"],12:["twelfth","twelfths"],16:["sixteenth","sixteenths"],20:["twentieth","twentieths"],24:["twenty-fourth","twenty-fourths"]};
+const fbOrd=(n,d)=>{ const w=FB_ORD[d]||[d+"th",d+"ths"]; return n===1?w[0]:w[1]; }; // 1 fourth, 3 fourths
+const fbCnt=(n,d)=>`${n} ${fbOrd(n,d)}`;
+const fbF=(n,d)=>`${n}/${d}`;
+const fbCap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const fbRep=(k,d)=>Array(k).fill(fbF(1,d)).join(" + "); // 1/4 + 1/4 + 1/4
+const fbDens=L=>L<=2 ? [2,3,4,6,8] : [2,3,4,5,6,8,10,12];
+const fbSame=(n,d)=>str=>{ const fr=parseFraction(str); return !!fr && fr.d>0 && frValue(fr)>0 && Math.abs(frValue(fr)-n/d)<1e-9; }; // any fraction, mixed number, or whole number with the same value
+const fbMixed=(n,d)=>{ const w=Math.floor(n/d), r=n%d; return r ? (w?`${w} ${r}/${d}`:`${r}/${d}`) : String(w); };
+// Fraction bars: one bar per row, all the same width, each cut into d equal parts with the first n shaded (n ≤ d). inline: inside the prompt paragraph.
+function fbBars(rows, inline){ const W=300, H=34, gap=14, x0=58; let r="", y=6;
+  for(const row of rows){ const pw=W/row.d;
+    for(let i=0;i<row.d;i++) r+=`<rect x="${(x0+i*pw).toFixed(2)}" y="${y}" width="${pw.toFixed(2)}" height="${H}" style="fill:${i<row.n?"var(--hi,#FFE566)":"transparent"};stroke:var(--ink,#1B2A41)" stroke-width="1.5"/>`;
+    if(row.label) r+=`<text x="${x0-8}" y="${y+H/2+5}" font-size="15" font-weight="700" text-anchor="end" style="fill:var(--ink,#1B2A41)">${row.label}</text>`;
+    y+=H+gap; }
+  const vw=x0+W+8, vh=y-gap+6, tag=inline?"span":"div", aria="Fraction bars of the same length: "+rows.map(x=>`one cut into ${x.d} equal parts with ${x.n} shaded`).join(", ");
+  return `<${tag} class="chart" style="display:block"><svg viewBox="0 0 ${vw} ${vh}" width="100%" style="max-width:${vw}px;display:block;margin:8px auto" role="img" aria-label="${aria}">${r}</svg></${tag}>`; }
+const fbBox=`<span class="muted">What number goes in the box?</span>`;
+function genFracBasics(level, focus){ const f=focus||{}; const L=Math.min(MAX_LEVEL, Math.max(1, Math.round(+level)||1));
+  const pool = L<=1 ? ["unit","sum","equiv","compare"] : ["unit","sum","equiv","compare","addsub"];
+  const v = (f.variant && FB_GEN[f.variant]) ? f.variant : pick(pool); return FB_GEN[v](L, f); }
+// ---- unit fractions: name one of b equal parts; how many 1/b make a whole (3.NF.1) ----
+function fbUnit(L, f){ const kind=(f && ["name","count"].includes(f.kind)) ? f.kind : pick(["name","count"]);
+  const b=pick(fbDens(L).filter(x=>x!==fbUnit.last)); fbUnit.last=b; const ex=fPick([3,5,6,8,10], x=>x===b);
+  if(kind==="name"){
+    const p={skill:"fracbasics", level:L, prompt:`The whole bar is cut into equal parts. What fraction of the whole bar is shaded?${fbBars([{n:1,d:b}], true)}`, type:"input", text:true, validate:fbSame(1,b), answer:1/b, display:fbF(1,b), show:null, meta:{variant:"unit", kind, b}};
+    p.steps=[
+      {t:`A fraction names equal parts of one whole. The bottom number counts all the equal parts. Example: a bar cut into ${ex} equal parts is cut into ${fbOrd(2,ex)}, and one part is 1/${ex}.`, check:ci(`How many equal parts is the whole bar cut into?`, b),
+        cues:[`Count every part of the bar, shaded or not.`, b%2===0 ? `Count the parts in half of the bar, then double that.` : `Count the parts one at a time from the left. The shaded part counts too.`], after:`The whole bar is cut into ${b} equal parts.`},
+      {t:`The top number counts the shaded parts. Write the fraction for the shaded part.`, check:finalText(p), cues:[`Top: how many parts are shaded. Bottom: how many equal parts make the whole bar.`, `1 part is shaded. The whole bar has ${b} equal parts.`],
+        after:`1 of ${b} equal parts is 1/${b}, one ${fbOrd(1,b)}.`, vis:fbBars([{n:1,d:b,label:fbF(1,b)}]), visAfter:true}];
+    p.hints=[{t:`Count all the equal parts: that is the bottom number. Count the shaded parts: that is the top number.`},{t:`The whole bar has ${b} equal parts.`},{t:`1 part is shaded out of ${b} equal parts.`}];
+    return p; }
+  const wh = L>=3 && Math.random()<0.5 ? 2 : 1, ans=wh*b;
+  const p={skill:"fracbasics", level:L, prompt:`How many <b>1/${b}</b> parts make ${wh===1?"one whole":"2 wholes"}?`, type:"input", answer:ans, display:String(ans), show:null, meta:{variant:"unit", kind, b, wholes:wh}};
+  const o=buildOptions("all the equal parts in one whole", [{text:"the shaded parts", tag:"unit-size"},{text:"how many wholes there are", tag:"unit-size"}]);
+  const steps=[{t:`Example: 1/${ex} is one of ${ex} equal parts, so ${ex} of them fill one whole: ${ex}/${ex} = 1. Now look at 1/${b}.`, check:cm(`What does the bottom number of 1/${b} count?`, o.options, o.answer),
+    cues:[`Think of the example: 1/${ex} is one of how many parts?`, `In 1/${ex}, the ${ex} counts the parts that fill one whole.`], after:`The ${b} counts all the equal parts in one whole.`}];
+  const count=[`1/${b} is one of how many equal parts?`, `Count up: 1/${b}, 2/${b}, … until the top number matches the bottom.`];
+  if(wh===1) steps.push({t:`So how many 1/${b} parts fill one whole?`, check:finalCheck(p), cues:count, after:`${b} parts of 1/${b} make ${b}/${b}, one whole.`, vis:fbBars([{n:b,d:b,label:`${b}/${b}`}]), visAfter:true});
+  else steps.push({t:`Start with one whole.`, check:ci(`How many 1/${b} parts fill one whole?`, b), cues:count, after:`${b} parts fill one whole.`},
+    {t:`2 wholes need that many parts twice.`, check:finalCheck(p), cues:[`One whole takes the parts you just counted. Add another whole's worth.`, `${b} + ${b} = ?`], after:`${b} + ${b} = ${ans}: ${ans} parts of 1/${b} make 2 wholes.`, vis:fbBars([{n:b,d:b},{n:b,d:b}]), visAfter:true});
+  p.steps=steps;
+  p.hints=[{t:`The bottom number counts the equal parts that fill one whole.`},{t:`Count up: 1/${b}, 2/${b}, … until the top number matches the bottom.`},{t: wh===1 ? `${b}/${b} is one whole.` : `One whole is ${b}/${b}. Two wholes take twice as many parts.`}];
+  return p; }
+// ---- fractions as sums of unit fractions: 3/4 = 1/4 + 1/4 + 1/4 (3.NF.1, 4.NF.3b) ----
+function fbSum(L, f){ const kind=(f && ["decompose","compose"].includes(f.kind)) ? f.kind : pick(["decompose","compose"]);
+  let b, a, g=0; do{ b=pick(fbDens(L).filter(x=>x>=3)); a=ri(2, Math.min(L<=2?4:6, kind==="compose" && L>=4 ? b+2 : b-1)); }while(g++<60 && (a===b || (kind==="decompose" && a>=b)));
+  if(a===b || (kind==="decompose" && a>=b)) return null; // safeGen tries again
+  if(kind==="decompose"){
+    const D=[{text:fbRep(a+1,b), tag:"unit-count"}, {text:fbRep(a,a), tag:"unit-size"}]; if(a>=3) D.push({text:fbRep(a-1,b), tag:"unit-count"});
+    const o=buildOptions(fbRep(a,b), D);
+    const p={skill:"fracbasics", level:L, prompt:`Which sum of unit fractions equals <b>${fbF(a,b)}</b>?`, type:"mc", options:o.options, optionTags:o.optionTags, answer:o.answer, display:fbRep(a,b), show:null, meta:{variant:"sum", kind, a, b}};
+    const exs=[[2,5],[3,8],[2,3],[4,6],[3,10]].filter(e=>e[1]!==b && e[0]!==a); const e=exs.length?pick(exs):[2,9];
+    const uo=buildOptions(fbF(1,b), [{text:fbF(1,a), tag:"unit-size"},{text:fbF(1,2*b), tag:"unit-size"}]);
+    p.steps=[
+      {t:`A unit fraction is one equal part, like 1/7 or 1/9. A fraction counts unit fractions. Example: ${fbF(e[0],e[1])} is ${fbCnt(e[0],e[1])}: ${fbRep(e[0],e[1])}.`, check:cm(`Which unit fraction is ${fbF(a,b)} made of?`, uo.options, uo.answer),
+        cues:[`The bottom number names the size of each part.`, `The whole is cut into ${b} equal parts. What fraction is one of those parts?`], after:`${fbF(a,b)} is made of ${fbOrd(2,b)}: each part is ${fbF(1,b)}.`},
+      {t:`Now count the parts.`, check:ci(`How many ${fbOrd(2,b)} are in ${fbF(a,b)}?`, a), cues:[`The top number counts the parts.`, `Look at the top number of ${fbF(a,b)}.`], after:`${fbF(a,b)} is ${fbCnt(a,b)}.`},
+      {t:`Pick the sum with one ${fbF(1,b)} for each part.`, check:finalCheck(p), cues:[`Each part is ${fbF(1,b)}. How many times should it be added?`, `Count the ${fbF(1,b)}s in each choice.`],
+        after:`${fbF(a,b)} = ${fbRep(a,b)}.`, vis:fbBars([{n:a,d:b,label:fbF(a,b)}]), visAfter:true}];
+    p.hints=[{t:`A fraction counts equal parts. The bottom number names the part; the top number says how many.`},{t:`${fbF(a,b)} is made of ${fbOrd(2,b)}. Count how many.`},{t:`${fbF(a,b)} is ${fbCnt(a,b)}: add ${fbF(1,b)} that many times.`}];
+    return p; }
+  const S=fbRep(a,b);
+  const p={skill:"fracbasics", level:L, prompt:`Add.<br><span class="big-num">${S} = ?</span>`, type:"input", text:true, validate:fbSame(a,b), answer:a/b, display:fbF(a,b), show:null, meta:{variant:"sum", kind, a, b}};
+  const so=buildOptions(fbOrd(2,b), [{text:fbOrd(2,2*b), tag:"add-denominators"},{text:fbOrd(2,a), tag:"unit-size"}]); // 1/4 + 1/4 = 2/8 adds the bottom numbers too
+  const e=fPick([[3,5],[2,6],[4,10],[2,3]], x=>x[1]===b || x[0]===a);
+  p.steps=[
+    {t:`Adding the same unit fraction counts parts of the same size. Example: ${fbRep(e[0],e[1])} = ${fbF(e[0],e[1])}, ${fbCnt(e[0],e[1])}.`, check:cm(`What size are the parts in the total?`, so.options, so.answer),
+      cues:[`Does putting parts together change the size of each part?`, `Adding ${fbOrd(2,b)} to ${fbOrd(2,b)} is like adding apples to apples. What do you get?`], after:`Still ${fbOrd(2,b)}: the parts do not change size, so the bottom number stays ${b}.`},
+    {t:`Now count the parts.`, check:ci(`How many ${fbOrd(2,b)} are there in all?`, a), cues:[`Count each ${fbF(1,b)} once.`, a>=4 ? `Count them in pairs: 2, 4, …` : `Touch each one as you count: 1, 2, …`], after:`${fbCnt(a,b)}.`},
+    {t:`Write the total as a fraction.`, check:finalText(p), cues:[`Top: how many parts. Bottom: the size of each part.`, `${a} parts, each one ${fbOrd(1,b)}.`],
+      after:`${S} = ${fbF(a,b)}${a>b?` = ${fbMixed(a,b)}`:""}.${a<=b?fbBars([{n:a,d:b,label:fbF(a,b)}]):""}`}];
+  p.hints=[{t:`Adding the same unit fraction: count the parts. The size of the parts stays the same.`},{t:`Each part is ${fbF(1,b)}, one ${fbOrd(1,b)}. How many are there?`},{t:`There are ${a} of them, and each is one ${fbOrd(1,b)}.`}];
+  return p; }
+// ---- equivalent fractions with fraction bars: cut each part into k equal parts (up), or group k parts into one (down) (3.NF.3a–b, 4.NF.1) ----
+const FB_EQ=[[2,2],[2,3],[2,4],[2,5],[2,6],[3,2],[3,4],[4,2],[4,3],[5,2],[6,2]]; // [b, k]: b × k is 4, 6, 8, 10, or 12
+function fbEquiv(L, f){ const kind=(f && ["up","down"].includes(f.kind)) ? f.kind : (L<=1 ? "up" : pick(["up","down"]));
+  const [b,k]=pick(FB_EQ.filter(([bb,kk])=>bb*kk<=(L<=1?8:12) && (L>=3 || bb<=4))); const B=b*k, a=ri(1,b-1), A=a*k;
+  const top={n:a,d:b,label:fbF(a,b)}, bot={n:A,d:B,label:fbF(A,B)};
+  const kCues=[`How many ${fbOrd(2,B)} fit in one ${fbOrd(1,b)}? What number times ${b} makes ${B}?`, k===2 ? `Is ${B} double ${b}?` : `${b} × ${k-1} = ${b*(k-1)}. How many ${b}s make ${B}?`];
+  if(kind==="up"){
+    const p={skill:"fracbasics", level:L, prompt:`<span class="big-num">${fbF(a,b)} = ▢/${B}</span>${fbBox}${fbBars([top], true)}`, type:"input", answer:A, display:String(A), show:null, meta:{variant:"equiv", kind, a, b, k}};
+    const ex=fPick([["1/2 = 3/6","each half is cut into 3 equal parts",2,3],["1/3 = 2/6","each third is cut into 2 equal parts",3,2],["3/4 = 6/8","each fourth is cut into 2 equal parts",4,2],["2/5 = 4/10","each fifth is cut into 2 equal parts",5,2],["1/3 = 4/12","each third is cut into 4 equal parts",3,4],["1/4 = 3/12","each fourth is cut into 3 equal parts",4,3]], e=>e[2]===b || e[3]===k || fNums(e[0]).includes(k) || e[0].split(" ").includes(fbF(a,b))); // a different fraction and a different cut
+    p.steps=[
+      {t:`Cut every part into the same number of smaller equal parts, and the fraction still names the same amount. Example: ${ex[0]}: ${ex[1]}.`, check:ci(`To make ${fbOrd(2,B)}, each ${fbOrd(1,b)} is cut into how many equal parts?`, k),
+        cues:kCues, after:`${b} × ${k} = ${B}, so each ${fbOrd(1,b)} is cut into ${k} equal parts.`, vis:fbBars([top,{n:0,d:B}]), visAfter:true},
+      {t: a===1 ? `The shaded ${fbOrd(1,b)} is cut the same way.` : `Each shaded ${fbOrd(1,b)} is now ${k} smaller parts.`, check:finalCheck(p),
+        cues:[a===1 ? `Only 1 ${fbOrd(1,b)} is shaded. How many small parts is it cut into?` : `There are ${a} shaded ${fbOrd(2,b)}, and each one is ${k} ${fbOrd(2,B)}.`, `${a} × ${k} = ?`],
+        after:`${fbF(a,b)} = ${fbF(A,B)}: the same amount of the bar, cut into smaller equal parts.`, vis:fbBars([top,bot]), visAfter:true}];
+    p.hints=[{t:`Cut each part into the same number of smaller equal parts, then count the shaded small parts.`},{t:`How many ${fbOrd(2,B)} fit in one ${fbOrd(1,b)}?`},{t:`Each ${fbOrd(1,b)} is ${k} ${fbOrd(2,B)}. Now count them for ${a===1?"the shaded part":`all ${a} shaded parts`}.`}];
+    return p; }
+  const p={skill:"fracbasics", level:L, prompt:`<span class="big-num">${fbF(A,B)} = ▢/${b}</span>${fbBox}${fbBars([bot], true)}`, type:"input", answer:a, display:String(a), show:null, meta:{variant:"equiv", kind, a, b, k}};
+  const ex=fPick([["4/10 = 2/5","every 2 tenths make 1 fifth",5,2],["6/8 = 3/4","every 2 eighths make 1 fourth",4,2],["3/6 = 1/2","every 3 sixths make 1 half",2,3],["4/12 = 1/3","every 4 twelfths make 1 third",3,4],["2/6 = 1/3","every 2 sixths make 1 third",3,2],["6/9 = 2/3","every 3 ninths make 1 third",3,3],["3/12 = 1/4","every 3 twelfths make 1 fourth",4,3]], e=>e[2]===b || e[3]===k || fNums(e[0]).includes(k) || e[0].split(" ").includes(fbF(A,B))); // a different fraction and a different grouping
+  p.steps=[
+    {t:`Group small equal parts into bigger equal parts, and the fraction still names the same amount. Example: ${ex[0]}: ${ex[1]}.`, check:ci(`How many ${fbOrd(2,B)} make one ${fbOrd(1,b)}?`, k),
+      cues:kCues, after:`${b} × ${k} = ${B}, so every ${k} ${fbOrd(2,B)} make one ${fbOrd(1,b)}.`, vis:fbBars([bot,{n:0,d:b}]), visAfter:true},
+    {t:`Put the ${A} shaded ${fbOrd(A,B)} into groups of ${k}.`, check:finalCheck(p), cues:[`Each group of ${k} ${fbOrd(2,B)} is one ${fbOrd(1,b)}. How many groups?`, `${A} ÷ ${k} = ?`],
+      after:`${fbF(A,B)} = ${fbF(a,b)}: the same amount of the bar, in bigger equal parts.`, vis:fbBars([bot,top]), visAfter:true}];
+  p.hints=[{t:`Group the small parts into bigger equal parts, then count the groups.`},{t:`How many ${fbOrd(2,B)} make one ${fbOrd(1,b)}?`},{t:`Every ${k} ${fbOrd(2,B)} make one ${fbOrd(1,b)}. How many groups of ${k} are in ${A}?`}];
+  return p; }
+// ---- compare: same denominator, same numerator, against 1/2, or on opposite sides of 1/2 (3.NF.3d, 4.NF.2) ----
+function fbCompare(L, f){ const kinds = L<=2 ? ["sameden","samenum"] : L===3 ? ["sameden","samenum","half"] : ["sameden","samenum","half","across"];
+  const kind=(f && ["sameden","samenum","half","across"].includes(f.kind)) ? f.kind : pick(kinds); const D=fbDens(L), ev=[4,6,8,10,12].filter(x=>D.includes(x)); let A, B, g=0;
+  if(kind==="sameden"){ const d=pick(D.filter(x=>x>=3)); let x, y; do{ x=ri(1,d-1); y=ri(1,d-1); }while(x===y); A={n:x,d}; B={n:y,d}; }
+  else if(kind==="samenum"){ let d1, d2, n; do{ d1=pick(D); d2=pick(D); n=ri(1, Math.max(1, Math.min(d1,d2)-1)); }while(g++<60 && (d1===d2 || n>=Math.min(d1,d2))); if(d1===d2 || n>=Math.min(d1,d2)) return null; A={n,d:d1}; B={n,d:d2}; }
+  else if(kind==="half"){ const d=pick(ev); let x; do{ x=ri(1,d-1); }while(2*x===d); A={n:x,d}; B={n:1,d:2}; if(Math.random()<0.3) [A,B]=[B,A]; }
+  else { let d1, d2; do{ d1=pick(ev); d2=pick(ev); }while(g++<60 && d1===d2); if(d1===d2) return null; A={n:ri(1,d1/2-1),d:d1}; B={n:ri(d2/2+1,d2-1),d:d2}; if(Math.random()<0.5) [A,B]=[B,A]; }
+  const va=A.n/A.d, vb=B.n/B.d; if(Math.abs(va-vb)<1e-9) return null; const sym=va<vb?"<":">", ans=va<vb?0:1;
+  const wrongTag = kind==="sameden" ? "fraction-size" : kind==="samenum" ? "part-size" : "half-benchmark";
+  const fa=fbF(A.n,A.d), fb=fbF(B.n,B.d), [H,Lo]=va>vb?[A,B]:[B,A], big=fbF(H.n,H.d);
+  const p={skill:"fracbasics", level:L, prompt:`Which symbol makes this true?<br><span class="big-num">${fa} &nbsp;?&nbsp; ${fb}</span>`, type:"mc", options:fCmpOpts.slice(), optionTags:fCmpOpts.map((o,i)=>i===ans?"correct":i===2?"not-equal":wrongTag), answer:ans, display:`${fa} ${sym} ${fb}`, show:null, meta:{variant:"compare", kind, A, B}};
+  const lab=x=>({...x, label:fbF(x.n,x.d)}), half={n:1,d:2,label:"1/2"};
+  const symCue=`The open side of the symbol faces the greater fraction.`;
+  if(kind==="sameden"){
+    const ex=fPick([["2/5 < 4/5",5,"2 fifths is less than 4 fifths"],["5/6 > 1/6",6,"5 sixths is more than 1 sixth"],["3/8 < 7/8",8,"3 eighths is less than 7 eighths"],["2/3 > 1/3",3,"2 thirds is more than 1 third"]], e=>e[1]===A.d);
+    const o=buildOptions("the top numbers: how many parts", [{text:"the bottom numbers: the size of the parts", tag:"fraction-size"}]);
+    p.steps=[
+      {t:`Look at the bottom numbers first. Example: ${ex[0]}: ${ex[2]}.`, check:cm(`Both fractions are ${fbOrd(2,A.d)}. What decides which one is greater?`, o.options, o.answer),
+        cues:[`Are the parts the same size in both fractions?`, `Both are ${fbOrd(2,A.d)}, so the parts match. Which numbers are different?`], after:`The parts are the same size, so the top numbers decide: more parts is greater.`},
+      {t:`Compare the top numbers, ${A.n} and ${B.n}. Which symbol makes it true?`, check:finalCheck(p), cues:[`More parts of the same size is greater. ${symCue}`, `${Math.max(A.n,B.n)} parts is more than ${Math.min(A.n,B.n)} ${Math.min(A.n,B.n)===1?"part":"parts"}.`],
+        after:`${p.display}: ${fbCnt(H.n,H.d)} is more than ${fbCnt(Lo.n,Lo.d)}.`, vis:fbBars([lab(A),lab(B)]), visAfter:true}];
+    p.hints=[{t:`Same bottom number: the parts are the same size, so compare the top numbers.`},{t:`${fbCnt(A.n,A.d)} and ${fbCnt(B.n,B.d)}. Which is more parts?`},{t:`${fbCnt(H.n,H.d)} is more. The open side of the symbol faces it.`}];
+    return p; }
+  if(kind==="samenum"){ const sm = A.d<B.d ? A : B; // fewer parts in the whole → bigger parts
+    const ex=fPick([["1/3 > 1/6",[3,6],"thirds are bigger parts than sixths"],["2/4 > 2/8",[4,8],"fourths are bigger parts than eighths"],["1/2 > 1/5",[2,5],"halves are bigger parts than fifths"],["3/5 > 3/10",[5,10],"fifths are bigger parts than tenths"]], e=>e[1].includes(A.d)||e[1].includes(B.d));
+    const o=[fbOrd(2,A.d), fbOrd(2,B.d)];
+    p.steps=[
+      {t:`When the top numbers match, compare the size of the parts. Example: ${ex[0]}: ${ex[2]}.`, check:cm(`Which parts are bigger?`, o, o.indexOf(fbOrd(2,sm.d))),
+        cues:[`Cut one whole into more equal parts. Does each part get bigger or smaller?`, `Picture one bar cut into ${A.d} parts and one cut into ${B.d} parts. Which parts are wider?`], after:`${fbCap(fbOrd(2,sm.d))} are bigger: fewer equal parts share the same whole.`},
+      {t:`Both fractions have ${A.n===1?"1 part":A.n+" parts"}. Which symbol makes it true?`, check:finalCheck(p), cues:[`The same number of parts: bigger parts make the greater fraction. ${symCue}`, `${fbCap(fbOrd(2,sm.d))} are the bigger parts. Which fraction is made of them?`],
+        after:`${p.display}: ${fbOrd(2,sm.d)} are bigger than ${fbOrd(2,(sm===A?B:A).d)}.`, vis:fbBars([lab(A),lab(B)]), visAfter:true}];
+    p.hints=[{t:`Same top number: compare the size of the parts. Fewer parts in the whole means bigger parts.`},{t:`Which is bigger, one ${fbOrd(1,A.d)} or one ${fbOrd(1,B.d)}?`},{t:`${fbCap(fbOrd(2,sm.d))} are bigger, so ${fbF(sm.n,sm.d)} is greater.`}];
+    return p; }
+  if(kind==="half"){ const F=(A.d===2) ? B : A, h=F.d/2, more=F.n>h;
+    const ex=fPick([[8,"3/8 is less than 1/2: half of 8 is 4, and 3 is less than 4"],[6,"4/6 is more than 1/2: half of 6 is 3, and 4 is more than 3"],[10,"7/10 is more than 1/2: half of 10 is 5, and 7 is more than 5"],[4,"1/4 is less than 1/2: half of 4 is 2, and 1 is less than 2"],[12,"5/12 is less than 1/2: half of 12 is 6, and 5 is less than 6"]], e=>e[0]===F.d || fNums(e[1].replace(/1\/2/g,"")).includes(h)); // a different fraction, and no number that is her half
+    p.steps=[
+      {t:`1/2 is half of the equal parts. Example: ${ex[1]}.`, check:ci(`What is half of ${F.d}?`, h), cues:[`Split ${F.d} into two equal groups. How many in each?`, `Which number plus itself makes ${F.d}?`], after:`Half of ${F.d} is ${h}, so 1/2 = ${h}/${F.d}.`},
+      {t:`Compare ${fbF(F.n,F.d)} with ${h}/${F.d}. Which symbol makes it true?`, check:finalCheck(p), cues:[`More than half of the parts is more than 1/2. ${symCue}`, `${F.n} ${F.n===1?"part":"parts"} and ${h} parts: which is more?`],
+        after:`${p.display}: ${F.n} of ${F.d} equal parts is ${more?"more":"less"} than half.`, vis:fbBars([lab(A),lab(B)]), visAfter:true}];
+    p.hints=[{t:`Compare with 1/2: half of the bottom number is the middle.`},{t:`Half of ${F.d} is ${h}. Is ${F.n} more or less than ${h}?`},{t:`${F.n} is ${more?"more":"less"} than ${h}, so ${fbF(F.n,F.d)} is ${more?"more":"less"} than 1/2.`}];
+    return p; }
+  const side=F=>F.n*2>F.d ? 0 : 1, so=["more than 1/2","less than 1/2"];
+  const ex=fPick([["2/6 < 5/8","2/6 is under half, and 5/8 is over half"],["7/10 > 1/4","7/10 is over half, and 1/4 is under half"],["3/4 > 5/12","3/4 is over half, and 5/12 is under half"],["3/10 < 4/6","3/10 is under half, and 4/6 is over half"]], e=>e[0].split(" ").includes(fa)||e[0].split(" ").includes(fb));
+  const one=(F,i)=>({t: i===0 ? `Compare each fraction with 1/2 first. Example: ${ex[0]}: ${ex[1]}.` : `Now ${fbF(F.n,F.d)}.`, check:cm(`Is ${fbF(F.n,F.d)} more or less than 1/2?`, so.slice(), side(F)),
+    cues:[`What is half of ${F.d}? Is ${F.n} more or less than that?`, `Half of ${F.d} is ${F.d/2}.`], after:`Half of ${F.d} is ${F.d/2}, so ${fbF(F.n,F.d)} is ${so[side(F)]}.`});
+  p.steps=[one(A,0), one(B,1),
+    {t:`One fraction is more than 1/2 and the other is less. Which symbol makes it true?`, check:finalCheck(p), cues:[`The fraction that is more than 1/2 is the greater one. ${symCue}`, `${big} is more than 1/2.`],
+      after:`${p.display}: ${big} is more than 1/2, and ${fbF(Lo.n,Lo.d)} is less.`, vis:fbBars([lab(A),half,lab(B)]), visAfter:true}];
+  p.hints=[{t:`Compare each fraction with 1/2 first: half of the bottom number is the middle.`},{t:`Half of ${A.d} is ${A.d/2}, and half of ${B.d} is ${B.d/2}.`},{t:`${big} is more than 1/2, and the other is less.`}];
+  return p; }
+// ---- add and subtract with like denominators (4.NF.3a) ----
+function fbAddSub(L, f){ const kind=(f && ["add","sub"].includes(f.kind)) ? f.kind : pick(["add","sub"]), sub=kind==="sub";
+  const b=pick(fbDens(L).filter(x=>x>=3)), over=!sub && L>=4 && Math.random()<0.4; let a, c, g=0;
+  if(!sub){ do{ a=ri(1,b-1); c=ri(1,b-1); }while(g++<60 && (over ? a+c<=b : a+c>=b)); }
+  else { do{ a=ri(2,b-1); c=ri(1,a-1); }while(g++<60 && c>=a); }
+  const r = sub ? a-c : a+c, op = sub ? "−" : "+";
+  if(!(r>0) || (!sub && (over ? r<=b : r>=b)) || (sub && a>=b)) return null; // safeGen tries again
+  const p={skill:"fracbasics", level:L, prompt:`${sub?"Subtract":"Add"}.<br><span class="big-num">${fbF(a,b)} ${op} ${fbF(c,b)} = ?</span>`, type:"input", text:true, validate:fbSame(r,b), answer:r/b, display:fbF(r,b), show:null, meta:{variant:"addsub", kind, a, c, b}};
+  const ex = sub ? `6/7 − 2/7 = 4/7: 6 sevenths take away 2 sevenths leaves 4 sevenths` : `2/7 + 3/7 = 5/7: 2 sevenths and 3 sevenths make 5 sevenths`;
+  const o=buildOptions(`it stays ${b}`, [{text: sub ? `it becomes 0 (${b} − ${b})` : `it becomes ${2*b} (${b} + ${b})`, tag:"add-denominators"}]);
+  const hi=Math.max(a,c), lo=Math.min(a,c);
+  p.steps=[
+    {t:`${sub?"Subtracting":"Adding"} fractions with the same bottom number. Example: ${ex}.`, check:cm(`What happens to the bottom number, ${b}, in the answer?`, o.options, o.answer),
+      cues:[`Do the parts change size when you ${sub?"take some away":"put them together"}?`, `Both fractions are ${fbOrd(2,b)}. Is the answer still counting ${fbOrd(2,b)}?`], after:`It stays ${b}: the parts are still ${fbOrd(2,b)}. Only the number of parts changes.`},
+    {t:`Now count the parts.`, check:ci(`${a} ${op} ${c} = ?`, r),
+      cues: sub ? [`Count back ${c} from ${a}.`, c===1 ? `One less than ${a}.` : `${a} − 1 = ${a-1}. Count back ${c-1} more.`] : [`Start at ${hi} and count on ${lo}.`, lo===1 ? `One more than ${hi}.` : `${hi} + 1 = ${hi+1}. Count on ${lo-1} more.`], after:`${a} ${op} ${c} = ${r}: ${fbCnt(r,b)}.`},
+    {t:`Write the answer as a fraction.`, check:finalText(p), cues:[`Top: how many parts. Bottom: the size of the parts.`, `You counted ${fbCnt(r,b)}. Which number goes on top, and which on the bottom?`],
+      after:`${fbF(a,b)} ${op} ${fbF(c,b)} = ${fbF(r,b)}${r>b?` = ${fbMixed(r,b)}`:""}.`}];
+  if(r<=b){ const last=p.steps[2]; last.vis=fbBars(sub ? [{n:a,d:b,label:fbF(a,b)},{n:r,d:b,label:fbF(r,b)}] : [{n:a,d:b,label:fbF(a,b)},{n:c,d:b,label:fbF(c,b)},{n:r,d:b,label:fbF(r,b)}]); last.visAfter=true; }
+  p.hints=[{t:`Same bottom number: count the parts, and keep the bottom number.`},{t:`${fbCnt(a,b)} ${sub?"take away":"and"} ${fbCnt(c,b)}. How many ${fbOrd(2,b)}?`},{t:`${a} ${op} ${c} = ${r}: ${r===1?"1 part":r+" parts"}, and the parts are still ${fbOrd(2,b)}.`}];
+  return p; }
+const FB_GEN={unit:fbUnit, sum:fbSum, equiv:fbEquiv, compare:fbCompare, addsub:fbAddSub};
+// ---- registration (a foundation skill: Home lists it only under "Build your foundations") ----
+Object.assign(SKILLS, { fracbasics:{name:"Fraction building blocks", gen:safeGen(genFracBasics), blurb:"3/4 = 1/4 + 1/4 + 1/4 · 1/2 = 2/4 · 3/8 < 5/8", std:"3.NF.1–3, 4.NF.1–3", grade:"3–4", foundation:true, lessons:[]} });
+SKILL_ORDER.push("fracbasics");
+Object.assign(NOTES, {
+  "add-denominators":"When the bottom numbers match, the parts stay the same size, so the bottom number stays the same. Add or take away only the top numbers.",
+  "unit-size":"The bottom number names the size of each part; the top number counts the parts.",
+  "unit-count":"Count the parts: the top number says how many unit fractions it takes.",
+  "fraction-size":"Same bottom number means same-size parts, so compare the top numbers.",
+  "part-size":"Same top number: the whole cut into fewer parts has bigger parts, so that fraction is greater.",
+  "half-benchmark":"Compare each fraction with 1/2 first. Half of the bottom number is the middle."
+});
+{ const _diagnoseFB=diagnose; diagnose=function(prob, yours){ // v9.23: adding the bottom numbers too (1/4 + 1/4 = 2/8) is the usual like-denominator slip
+    if(prob && prob.skill==="fracbasics" && prob.type==="input" && prob.text){ const m=prob.meta||{}, fr=parseFraction(yours); let tag="other";
+      if(fr && fr.w===0 && ((m.variant==="addsub" && m.kind==="add" && fr.d===2*m.b && fr.n===m.a+m.c) || (m.variant==="sum" && m.kind==="compose" && (fr.d===m.a*m.b || fr.d===2*m.b) && fr.n===m.a))) tag="add-denominators";
+      return {tag, note:NOTES[tag]||""}; }
+    return _diagnoseFB(prob, yours); };
+  const _focusForFB=focusFor; focusFor=function(prob, tag){ const f=_focusForFB(prob, tag); if(prob && prob.skill==="fracbasics" && prob.meta){ if(prob.meta.variant) f.variant=prob.meta.variant; if(prob.meta.kind) f.kind=prob.meta.kind; } return f; }; } // "one like it" keeps the same kind of question
+
 </script>
 <script>
 // ===== State & storage =====
@@ -3422,14 +3622,21 @@ function defaultClassAt(){ // first lesson whose skills are all in the app (and 
   const f=L.find(l=>l && Array.isArray(l.skills) && l.skills.length && l.skills.every(k=>SKILLS[k]));
   return (f||L[0]).id;
 }
-function calendarClassAt(){ // where the district pacing calendar says the class is today (engine estimate), else the old default
+function calendarClassAt(){ // where the class pacing calendar says the class is today (engine estimate), else the old default
   if(typeof lessonForDate==="function"){ try{ const id=lessonForDate(new Date()); if(lessonById(id)) return id; }catch(e){} }
   return defaultClassAt();
 }
 // Effective class position: a lesson the grown-up pinned, otherwise the calendar. S.classPin is a lesson id or null (= follow the calendar).
 const effectiveClassAt=()=>(S && lessonById(S.classPin)) ? S.classPin : calendarClassAt();
+// v9.24 review #1: the app is shared by many families, so following the class pacing calendar is a per-learner grown-up choice
+// (S.classCal: true = follow it, false = off). New learners start with it off; normalize() turns it on once for an older profile that
+// already has practice history, so an existing learner's screens do not change. When it is off: Home hides "This week in class" and the
+// lesson tags, weekWeights() is empty (so the Today plan's "week" slots become mixed practice), and the grown-ups page hides the lesson pin.
+// A pin (S.classPin) is kept while it is off and applies again when it is turned back on.
+const CLASS_CAL_NAME="Swun Math Grade 5 pacing, 2026–27";
+const classCalOn=()=>!!(S && S.classCal===true);
 const blankProfile=name=>({name, levels:Object.fromEntries(SKILL_ORDER.map(s=>[s,1])), hist:Object.fromEntries(SKILL_ORDER.map(s=>[s,[]])),
-  correct:0, attempted:0, best:0, run:0, guided:0, persist:0, shown:0, logTrimmed:0, scratch:(typeof window!=="undefined" && window.innerWidth>=700), today:{d:todayStr(), c:0, a:0}, log:[], created:Date.now(), classPin:null,
+  correct:0, attempted:0, best:0, run:0, guided:0, persist:0, shown:0, logTrimmed:0, scratch:(typeof window!=="undefined" && window.innerWidth>=700), today:{d:todayStr(), c:0, a:0}, log:[], created:Date.now(), classPin:null, classCal:false,
   coach:{},                        // per-skill coaching level 0–2 (2 = coach line + example offered; 1 = coach line; 0 = none). New skills start at 2; two clean successes fade one level; a fresh miss brings one back.
   weak:{},                         // weakness profile, keyed "skill:component" → {state:"weak"|"review"|"ok", wins, misses, lvl, last, due, stage, recovered}
   support:{multiply:3}, supportWins:{multiply:0}}); // workspace supports (3 = all of them, 0 = bare page) and clean wins toward fading the next one
@@ -3468,6 +3675,9 @@ function normalize(p){ // fill in anything missing (older saves, imports)
   // so profiles that were merely on the old default switch to following the calendar automatically.
   if(!("classPin" in p) && p.classAt!==undefined){ out.classPin = (lessonById(p.classAt) && p.classAt!==calendarClassAt()) ? p.classAt : null; }
   out.classPin = lessonById(out.classPin) ? out.classPin : null; // unknown or missing lesson id → follow the calendar
+  // v9.24: the class pacing calendar choice. A profile saved before the choice existed keeps following it if it has practice history
+  // (or a pinned lesson); one with no history starts with it off, like a new learner. After that, only the grown-up's choice counts.
+  out.classCal = ("classCal" in p) ? p.classCal===true : (out.log.length>0 || (+p.attempted||0)>0 || !!out.classPin);
   delete out.classAt;
   out.foundations=foundNorm(p.foundations); if(typeof out.foundLast!=="string") delete out.foundLast; out.foundNudgeAt=Math.max(0,+out.foundNudgeAt||0); // v9.21 (Agent M): the grown-ups' foundation choices (all off by default), the last one served, the last nudge served
   return out;
@@ -3815,19 +4025,21 @@ function homeEffortHTML(){ try{
 }catch(e){ return "The dots fill in as you level up; gold means maxed out."; } }
 function home(){
   if(typeof reportRelease==="function") reportRelease(); // a viewed school document never follows a grown-up back to Home or another player
+  if(typeof rhReset==="function") rhReset(); // v9.23: nor do the report-card helper's marks (memory only)
   if(cur && phase==="q") leaveProblem(); else resolvePending();
   pendingTransfer=null; // v9.12: a queued "fresh one" belongs to that sitting and skill; it never follows her to another skill or player
   mode=null; cur=null;
   if(!S){ if(Object.keys(DB.profiles).length) players(); else askName(); return; }
   S=normalize(S); DB.profiles[S.name]=S;
   const t=S.today;
-  // "This week in class": the lesson the district calendar (or a grown-up's pin) puts the class on, plus the one before it for spiral review
-  const L=lessonList(), ci=lessonIdx(effectiveClassAt()), curL=ci>=0?L[ci]:null, prevL=ci>0?L[ci-1]:null, nextL=(ci>=0&&ci<L.length-1)?L[ci+1]:null;
+  // "This week in class": the lesson the class pacing calendar (or a grown-up's pin) puts the class on, plus the one before it for spiral review.
+  // v9.24: shown only when a grown-up has the class pacing calendar on for this learner (classCalOn).
+  const calOn=classCalOn(), L=lessonList(), ci=calOn?lessonIdx(effectiveClassAt()):-1, curL=ci>=0?L[ci]:null, prevL=ci>0?L[ci-1]:null, nextL=(ci>=0&&ci<L.length-1)?L[ci+1]:null;
   const unit=curL?unitById(curL.unit):null;
   const lessonLine=(l,withUnit)=>[withUnit?`Unit ${esc(l.unit)}`:"", `Lesson ${esc(l.lesson)}`, esc(l.name)].filter(Boolean).join(" · "); // v9.12: standard codes and lesson types live on the grown-ups page; the kid screen names the lesson
   const weekHTML = curL ? `
     <div class="card week">
-      <div class="week-head"><h2 style="margin:0">This week in class</h2>${S.classPin?`<span class="std" title="Set on the grown-ups page">Pinned</span>`:`<span class="std" title="Estimated from the district pacing calendar">Calendar</span>`}</div>
+      <div class="week-head"><h2 style="margin:0">This week in class</h2>${S.classPin?`<span class="std" title="Set on the grown-ups page">Pinned</span>`:`<span class="std" title="Estimated from the class pacing calendar">Calendar</span>`}</div>
       <div class="week-unit muted">${unit?esc(unitTitle(unit.unit)):`Unit ${esc(curL.unit)}`}</div>
       <div class="week-lesson">${lessonLine(curL,false)}${curL.inferred?` <span class="muted inferred">(inferred)</span>`:""}</div>
       ${prevL?`<div class="week-prev muted">Spiral review: ${lessonLine(prevL, prevL.unit!==curL.unit)}</div>`:""}
@@ -3837,7 +4049,8 @@ function home(){
       <div class="actions" style="margin-top:12px"><button class="btn primary" data-skill="week" id="week">${Object.keys(weekWeights()).length?"Practice this week":"Mixed review instead"}</button>${nextL?`<button class="btn quiet small" id="moved" title="Advance to ${esc(lessonShort(nextL))}">Class moved on →</button>`:""}</div>
       <p class="muted week-foot">${S.classPin?"A grown-up set this lesson.":"If your homework says a different lesson, a grown-up can change it."}</p>
     </div>` : "";
-  const tagsHTML=k=>{ let ids=L.filter(l=>l && Array.isArray(l.skills) && l.skills.includes(k)).map(l=>l.id); // derive from the lesson list, else the skill's own list
+  const tagsHTML=k=>{ if(!calOn) return ""; // v9.24: lesson numbers belong to the class pacing calendar; with it off they would point at someone else's lessons
+    let ids=L.filter(l=>l && Array.isArray(l.skills) && l.skills.includes(k)).map(l=>l.id); // derive from the lesson list, else the skill's own list
     if(!ids.length) ids=Array.isArray(SKILLS[k].lessons)?SKILLS[k].lessons:[];
     const extra=Math.max(0, ids.length-6); ids=ids.slice(0,6);
     return ids.length?`<div class="tags" aria-label="Lessons">${ids.map(id=>`<span class="tag">${esc(lessonShortById(id))}</span>`).join("")}${extra?`<span class="tag">+${extra} more</span>`:""}</div>`:""; };
@@ -4049,7 +4262,8 @@ function drawWeighted(keys, weights){
   return keys[0];
 }
 function weekWeights(){ // current lesson's skills ×3, the two lessons before it ×1 each; skills the app lacks are skipped
-  const L=lessonList(), ci=lessonIdx(effectiveClassAt()); const w={};
+  const w={}; if(!classCalOn()) return w; // v9.24: the class pacing calendar is off for this learner, so there is no "this week's lesson"
+  const L=lessonList(), ci=lessonIdx(effectiveClassAt());
   if(ci<0) return w;
   [[ci,3],[ci-1,1],[ci-2,1]].forEach(([i,wt])=>{ if(i>=0) for(const k of lessonSkills(L[i])) w[k]=(w[k]||0)+wt; });
   return w;
@@ -4145,7 +4359,7 @@ const NL_SPAN=472, NL_MIN_GAP=8;
 function cmpLineHTML(nums){ try{ const k=Math.max(1, ...nums.map(x=>String(x.d||"").length)); const z=nlZoom(nums.map(toThousandths), Math.pow(10, 3-Math.min(3,k))); if(!z) return "";
     let out=numberLineSVG({...z, points:nums.map(x=>({v:toThousandths(x)/1000, label:fmt(x)})), aria:`Number line from ${nlFmt(z.min)} to ${nlFmt(z.max)} with ${nums.map(fmt).join(", ")} marked. Farther right is greater.`})+`<p class="nl-cap">On the number line, farther right means greater.</p>`;
     const px=(w,dv)=>dv/(w.max*1000-w.min*1000)*NL_SPAN; const srt=nums.map(x=>({x, v:toThousandths(x)})).sort((a,b)=>a.v-b.v); const wins=[];
-    for(let i=1;i<srt.length && wins.length<2;i++){ const a=srt[i-1], b=srt[i], dv=b.v-a.v; if(!(dv>0) || px(z,dv)>=NL_MIN_GAP) continue;
+    for(let i=1;i<srt.length && wins.length<2;i++){ const a=srt[i-1], b=srt[i], dv=b.v-a.v; if(!(dv>0) || px(z,dv)>=NL_MIN_GAP+0.5) continue; /* +0.5: points are drawn at rounded positions, so a pair at 7.96px must still get its zoomed line */
       if(wins.some(w=>a.v>=w.min*1000-1e-6 && b.v<=w.max*1000+1e-6 && px(w,dv)>=NL_MIN_GAP)) continue; // already drawn up close
       const kk=Math.max(1, String(a.x.d||"").length, String(b.x.d||"").length); const w=nlZoom([a.v,b.v], Math.pow(10, 3-Math.min(3,kk))); if(!w || px(w,dv)<NL_MIN_GAP) continue; wins.push(w);
       const inside=srt.filter(s=>s.v>=w.min*1000-1e-6 && s.v<=w.max*1000+1e-6).map(s=>s.x);
@@ -4256,8 +4470,8 @@ function quickGrownupsHTML(){
   const log=Array.isArray(S.log)?S.log:[]; const est=log.filter(e=>e.est===0||e.est===1), estOk=est.filter(e=>e.est===1).length, caught=log.filter(e=>e.reasonCaught).length, caughtOk=log.filter(e=>e.reasonCaught && e.ok).length;
   return `<div class="card"><h2 style="margin-top:0">Warm-ups and estimates</h2>
     <p style="margin:0">${mo.length?`Quick looks: ${mo.length} this month, ${mo.filter(x=>x.ok).length} right, by kind: ${Object.keys(by).map(k=>`${esc(k)} ${by[k].ok} of ${by[k].n}`).join(", ")}.`:`Quick looks: none yet this month.`} <span class="muted">One tiny warm-up at the first Today sitting of each day; not scored, no levels.</span></p>
-    <p style="margin:8px 0 0">${est.length?`Estimate first: ${est.length} made on multiplication and division, ${estOk} the right size.`:`Estimate first: none made yet (offered on about 1 in 3 multiplication and division problems).`}${caught?` The "does that make sense?" check caught an answer far from the estimate ${caught} time${caught===1?"":"s"}; ${caughtOk} of those ended right (a fix after that note counts as prompted: not on her own, not help, and it moves no level).`:""}</p>
-    <p style="margin:8px 0 0">${/* v9.20 (review #5): moved here from her Home screen, which now shows effort (days practiced this week, the last one she got on her own) */""}Overall counter: ${S.attempted?`${S.correct||0} of ${S.attempted} checked answers right (${Math.round(100*(S.correct||0)/S.attempted)}%); best run of right answers in a row: ${S.best||0}.`:"no answers checked yet."} <span class="muted">This counts every checked answer, with or without help; the independent counts above are the better guide. Home no longer shows this percentage or the run to her.</span></p></div>`;
+    <p style="margin:8px 0 0">${est.length?`Estimate first: ${est.length} made on multiplication and division, ${estOk} the right size.`:`Estimate first: none made yet (offered on about 1 in 3 multiplication and division problems).`}${caught?` The "does that make sense?" check caught an answer far from the estimate ${caught} time${caught===1?"":"s"}; ${caughtOk} of those ended right (a fix after that note counts as prompted: not done alone, not help, and it moves no level).`:""}</p>
+    <p style="margin:8px 0 0">${/* v9.20 (review #5): moved here from her Home screen, which now shows effort (days practiced this week, the last one she got on her own) */""}Overall counter: ${S.attempted?`${S.correct||0} of ${S.attempted} checked answers right (${Math.round(100*(S.correct||0)/S.attempted)}%); best run of right answers in a row: ${S.best||0}.`:"no answers checked yet."} <span class="muted">This counts every checked answer, with or without help; the independent counts above are the better guide. Home no longer shows this percentage or the run to the learner.</span></p></div>`;
 }
 
 // --- 3b. Estimate first, check after (whole-number multiplication and division on the practice screen; never homework, page problems, or the on-ramp) ---
@@ -4301,25 +4515,26 @@ function estReasonNote(val){ const e=cur && cur.est; if(!e || e.pick<0 || cur.re
 // ===== v9.21 foundations =====
 // v9.21 (Agent P): the Home card "Build your foundations": the foundation skills in this build, as skill buttons with level dots, in a fixed
 // order. Kid-facing: the math is named, never a grade. home() leaves foundation skills out of the main list, so this is their only button.
-const FOUND_HOME_ORDER=["facts","wholepv","tenths","factors","twostep"];
+const FOUND_HOME_ORDER=["facts","wholepv","tenths","fracbasics","factors","twostep"]; // v9.23: fraction building blocks after tenths
 function foundationsHomeHTML(){ if(!S) return ""; const ks=FOUND_HOME_ORDER.filter(k=>SKILLS[k] && SKILLS[k].foundation && SKILL_ORDER.includes(k)); if(!ks.length) return "";
   return `<div class="card found" id="foundations"><div class="week-head"><h2 style="margin:0">Build your foundations</h2></div>
       <p class="muted" style="font-size:14px;margin:6px 0 10px">Short practice that makes the big problems easier.</p>
       <div class="skills">${ks.map(k=>`<button class="skill" data-skill="${k}"><div style="flex:1"><div class="name">${esc(SKILLS[k].name)}${S.foundations&&S.foundations[k]?` <span class="std" title="Included in Start today">In your plan</span>`:""}</div><div class="blurb">${esc(SKILLS[k].blurb)}</div></div>${dots(S.levels[k]||1)}</button>`).join("")}</div></div>`; }
 // v9.21 (Agent P): a practice spot in a foundation skill is keyed by the kind of question (variant), so Focus serves that kind again.
-{ const _ctxOfP=ctxOf; ctxOf=function(p){ const c=_ctxOfP(p); if(p && ["wholepv","factors","tenths"].includes(p.skill) && p.meta && p.meta.variant) c.variant=p.meta.variant; return c; }; }
+{ const _ctxOfP=ctxOf; ctxOf=function(p){ const c=_ctxOfP(p); if(p && ["wholepv","factors","tenths","fracbasics"].includes(p.skill) && p.meta && p.meta.variant) c.variant=p.meta.variant; return c; }; }
 // ===== v9.21 (Agent M): foundations to keep practicing (grown-ups setting), the Today plan's foundation slot, and the practice-spot nudge =====
-// S.foundations = {facts, wholepv, tenths, factors, twostep: true|false, updated}. All off by default; only a grown-up turns one on, on the
+// S.foundations = {facts, wholepv, tenths, fracbasics (v9.23), factors, twostep: true|false, updated}. All off by default; only a grown-up turns one on, on the
 // grown-ups page (behind the optional PIN). A selected school document is only previewed in this tab; its bytes and name are not saved.
 // Any on → each "Start today" gets one slot labeled "a foundation builder" (kid-safe), taking turns among the chosen foundations
 // (S.foundLast); multiplication facts come as a round of 3 inside that one slot (todayPlan.factsLeft). A miss in a 5th-grade skill with a
 // matching foundation that is on may add one more foundation problem to the next sitting: at most one per sitting, and S.foundNudgeAt
 // marks the last nudge served so the same miss does not ask again. A foundation that is not in this build is skipped everywhere.
-const FOUND_KEYS=["facts","wholepv","tenths","factors","twostep"], FACTS_ROUND=3;
+const FOUND_KEYS=["facts","wholepv","tenths","fracbasics","factors","twostep"], FACTS_ROUND=3; // the rotation order, same as Home
 const FOUND_INFO={
   facts:{name:"Multiplication and division facts", std:"3.OA.7", rel:"Multiply (5.NBT.5) and Divide (5.NBT.6): every partial product and partial quotient", look:"Multiplication and division facts within 100"},
   wholepv:{name:"Place value with big numbers", std:"4.NBT.1–3", rel:"Unit 1 place value and decimals (5.NBT.1–4) and the check-up's place-value items", look:"Whole-number place value, multi-digit arithmetic, and rounding"},
   tenths:{name:"Tenths and hundredths", std:"4.NF.5–7", rel:"Unit 1 decimals: read, write, compare, round (5.NBT.3–4), and adding and subtracting decimals (5.NBT.7)", look:"Tenths, hundredths, decimal fractions, and comparing decimals"},
+  fracbasics:{name:"Fraction building blocks", std:"3.NF.1–3, 4.NF.1–3", rel:"Unit 5 fractions: simplifying, mixed numbers, estimating, and comparing (5.NF.1–2)", look:"Unit fractions, equivalent fractions, comparing fractions, and adding or subtracting like denominators"},
   factors:{name:"Factors and multiples", std:"4.OA.4", rel:"Prime factorization (5.OA.2.1, California) and simplifying fractions (Unit 5)", look:"Factors, multiples, and prime or composite numbers"},
   twostep:{name:"Two-step stories", std:"4.OA.3", rel:"Expressions and story problems (5.OA.1–2, Unit 2)", look:"Problems that need more than one step"}
 };
@@ -4327,24 +4542,27 @@ let reportPreview=null; // {url, name, kind}; a temporary object URL, never copi
 function reportRelease(){ if(reportPreview){ try{ URL.revokeObjectURL(reportPreview.url); }catch(e){} reportPreview=null; } }
 function reportPreviewHTML(){ if(!reportPreview) return `<p class="muted" style="font-size:13px;margin:8px 0 0">No document selected. The photo or PDF is never saved in this app.</p>`;
   const r=reportPreview, view=r.kind==="image" ? `<img src="${esc(r.url)}" alt="Selected report card preview" style="display:block;max-width:100%;max-height:430px;object-fit:contain;margin:8px 0;border:1px solid var(--line);border-radius:8px">`
-    : `<a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">Open this PDF for review</a>`;
-  return `<p style="font-size:13px;margin:8px 0 0"><b>Selected:</b> ${esc(r.name)}. This preview lasts only until you leave this page or reload the app.</p>${view}<button type="button" class="btn quiet small" id="fdremove">Remove preview</button>`; }
+    : `<iframe class="rhpdf" src="${esc(r.url)}" title="Selected report card PDF" style="display:block;width:100%;height:430px;margin:8px 0;border:1px solid var(--line);border-radius:8px;background:#fff"></iframe>`
+      + `<p class="rhpdfalt" style="font-size:13px;margin:0 0 8px">PDF not showing here? <a id="fdpdfopen" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">Open this PDF in a new tab</a>. If the PDF opened in a new tab, close that tab when you're done.</p>`; // v9.23 review #2: inline first; the link is only a fallback
+  return `<p style="font-size:13px;margin:8px 0 0"><b>Selected:</b> ${esc(r.name)}. This preview lasts only until you leave this page, switch away from it, or reload the app.</p>${view}<button type="button" class="btn quiet small" id="fdremove">Remove preview</button>`; }
 function reportFileOK(file){ const name=String(file&&file.name||"").toLowerCase(), type=String(file&&file.type||"").toLowerCase();
   if(type) return type==="application/pdf" ? "pdf" : /^image\/(jpeg|png|webp|heic|heif)$/.test(type) ? "image" : null;
   if(/\.pdf$/.test(name)) return "pdf";
   if(/\.(jpe?g|png|webp|heic|heif)$/.test(name)) return "image";
   return null; }
-function foundNorm(v){ const keys=["facts","wholepv","tenths","factors","twostep"]; /* local copy: normalize() runs at load, before this script's constants exist */ const src=(v && typeof v==="object" && !Array.isArray(v)) ? v : {}; const o={}; for(const k of keys) o[k]=src[k]===true; o.updated=(Number.isFinite(+src.updated) && +src.updated>0) ? +src.updated : 0; return o; }
+function foundNorm(v){ const keys=["facts","wholepv","tenths","fracbasics","factors","twostep"]; /* local copy: normalize() runs at load, before this script's constants exist */ const src=(v && typeof v==="object" && !Array.isArray(v)) ? v : {}; const o={}; for(const k of keys) o[k]=src[k]===true; o.updated=(Number.isFinite(+src.updated) && +src.updated>0) ? +src.updated : 0; return o; }
 const foundOK=k=>!!(SKILLS[k] && typeof SKILLS[k].gen==="function" && SKILL_ORDER.includes(k)); // in this build
 function foundActive(){ if(!S) return []; const f=S.foundations||{}; return FOUND_KEYS.filter(k=>f[k]===true && foundOK(k)); }
 function foundRotNext(){ const act=foundActive(); if(!act.length) return null; const i=FOUND_KEYS.indexOf(S.foundLast); for(let j=1;j<=FOUND_KEYS.length;j++){ const k=FOUND_KEYS[(i+j+FOUND_KEYS.length)%FOUND_KEYS.length]; if(act.includes(k)) return k; } return act[0]; } // the next chosen one after the last served
 // Which foundation a logged miss points at (first choice first): facts under × and ÷, place value under Unit 1 (tenths when the problem had a
-// decimal), factors under primes and simplifying, two-step stories under story expressions.
+// decimal), factors under primes and simplifying, two-step stories under story expressions, and (v9.23) fraction building blocks under
+// every fifth-grade fractions miss (after factors for a simplifying miss).
 const FOUND_PV=["placevalue","standard","words","expanded","compare","rounding","shift","powers"];
 function foundOfMiss(e){ const sk=e.sk, ctx=String(e.ctx||"");
   if(sk==="divide"||sk==="multiply") return ["facts"];
   if(FOUND_PV.includes(sk)) return /\d\.\d/.test(String(e.q||"")+" "+String(e.ans||"")) ? ["tenths","wholepv"] : ["wholepv","tenths"];
-  if(sk==="primes" || (sk==="fractions" && /(^|,)variant=simplify(,|$)/.test(ctx))) return ["factors"];
+  if(sk==="primes") return ["factors"];
+  if(sk==="fractions") return /(^|,)variant=simplify(,|$)/.test(ctx) ? ["factors","fracbasics"] : ["fracbasics"];
   if(sk==="expressions" && /(^|,)variant=word(,|$)/.test(ctx)) return ["twostep"];
   return []; }
 function foundNudge(){ if(!S) return null; const act=foundActive(); if(!act.length) return null; const since=Math.max(+S.foundNudgeAt||0, Date.now()-14*DAY); let best=null; // the most recent real miss since the last nudge (two weeks at most)
@@ -4380,36 +4598,210 @@ function todayAdvance(){ const P=todayPlan; // replaces the old inline "cur.toda
     if(k==="facts"){ P.factsLeft=FACTS_ROUND-1; P.factsKeys=fkey()?[fkey()]:[]; } }
   todayIdx++; if(todayIdx>P.length) todayExtra++; }
 function foundationsGrownupsHTML(){ if(!S) return ""; const f=foundNorm(S.foundations), act=foundActive();
+  if(!app.querySelector("#gupage")){ rhReset(); reportRelease(); } // v9.23: entering the grown-ups page fresh (not a re-render from inside it) starts with no marks and no preview
+  const nAll=["zero","one","two","three","four","five","six","seven","eight","nine","ten"][FOUND_KEYS.length]||String(FOUND_KEYS.length);
   const gradeTxt=k=>{ const g=SKILLS[k] && SKILLS[k].grade; return g ? (/grade/i.test(String(g)) ? String(g) : `grade ${g}`) : ""; };
   const rows=FOUND_KEYS.map(k=>{ const I=FOUND_INFO[k], have=foundOK(k), nm=have?SKILLS[k].name:I.name, gt=gradeTxt(k);
     return `<li style="list-style:none;margin:0 0 10px"><label style="display:flex;gap:8px;align-items:flex-start;font-size:15px"><input type="checkbox" id="fd-${k}" data-fd="${k}"${f[k]?" checked":""} style="margin-top:4px"><span><b>${esc(nm)}</b> <span class="muted" style="font-size:13px">${esc(I.std)}${gt?` · ${esc(gt)}`:""}</span><br><span class="muted" style="font-size:13px">Look for: ${esc(I.look)}.</span><br><span class="muted" style="font-size:13px">Feeds: ${esc(I.rel)}${have?"":". Not in this build yet, so it is skipped."}</span></span></label></li>`; }).join("");
   const status = act.length ? `On. Each “Start today” has one foundation builder, taking turns among ${act.map(k=>esc(SKILLS[k].name)).join(", ")}${act.includes("facts")?"; multiplication facts come as a short round of 3 in that one slot":""}. A miss in a matching fifth-grade skill can add one more foundation problem to the next sitting (at most one per sitting).`
     : FOUND_KEYS.some(k=>f[k]) ? `The chosen foundations are not in this build yet, so nothing changes.` : `Off. Nothing changes until a box is checked and saved.`;
   return `<div class="card fdcard" id="fdcard"><h2 style="margin-top:0">Foundations to keep practicing</h2>
-    <p class="muted" style="font-size:14px;margin:0 0 8px">Choose focus areas for ${esc(S.name)}. These earlier skills support fifth-grade work. Start with all five, or check only the areas you want in “Start today.” Each learner has their own choices, and you can change them later. Nothing changes until you save.</p>
+    <p class="muted" style="font-size:14px;margin:0 0 8px">Choose focus areas for ${esc(S.name)}. These earlier skills support fifth-grade work. Start with all ${nAll}, or check only the areas you want in “Start today.” Each learner has their own choices, and you can change them later. Nothing changes until you save.</p>
     <details id="fdreport" style="margin:12px 0;padding:10px;border:1px solid var(--line);border-radius:8px"><summary style="cursor:pointer;font-weight:700">Review a report card here</summary>
-      <p class="muted" style="font-size:13px;margin:8px 0">Choose a photo or PDF, or take a picture. Use the preview to compare the topics below with your child's card, then check the practice areas you want. Schools use different score scales. This app does not read or diagnose the document automatically. The file stays on this device, is not sent anywhere, and is not saved in progress or backups.</p>
+      <div class="rhwrap"><div class="rhside rhdoc">
+      <p class="muted" style="font-size:13px;margin:8px 0">Choose a photo or PDF, or take a picture. Keep the preview open while you use the report-card helper (beside it, or below it on a phone), then check the practice areas you want. Schools use different score scales. This app does not read or diagnose the document automatically. The file stays on this device, is not sent anywhere, and is not saved in progress or backups.</p>${(typeof guGate==="function" && !guGate().length)?`
+      <p class="rhpintip" style="font-size:13px;margin:0 0 8px"><b>Set a grown-up PIN if other children use this device.</b></p>`:""}
       <div class="actions" style="margin-top:4px"><button type="button" class="btn" id="fdpick">Choose photo or PDF</button><input class="vh" type="file" id="fdfile" aria-label="Choose a report card photo or PDF" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf,.pdf,.heic,.heif"><button type="button" class="btn" id="fdshoot">Take a picture</button><input class="vh" type="file" id="fdcamera" aria-label="Take a report card picture" accept="image/*" capture="environment"></div>
       <div id="fdfilemsg" role="status" aria-live="polite" class="muted" style="font-size:13px"></div><div id="fdpreview">${reportPreviewHTML()}</div>
+      </div><div class="rhside rhhelp" id="rhhelp">${rhHTML()}</div></div>
     </details>
-    <div class="actions" style="margin:0 0 12px"><button type="button" class="btn quiet small" id="fdstarter">Select all five areas</button><button type="button" class="btn quiet small" id="fdclear">Clear choices</button></div>
+    <div class="actions" style="margin:0 0 12px"><button type="button" class="btn quiet small" id="fdstarter">Select all ${nAll} areas</button><button type="button" class="btn quiet small" id="fdclear">Clear choices</button></div>
     <ul style="margin:0 0 6px;padding:0">${rows}</ul>
     <p class="fdstatus" style="font-size:14px;margin:0 0 8px"><b>Practice effect:</b> ${status}${f.updated?` <span class="muted">Last saved ${esc(fmtDate(f.updated))}.</span>`:""}</p>
     <div class="actions" style="margin-top:6px"><button class="btn primary" id="fdsave">Save practice choices</button><span class="muted" id="fdmsg" style="font-size:13px;align-self:center" role="status" aria-live="polite"></span></div></div>`; }
 function bindFoundations(){ const q=id=>app.querySelector("#"+id); if(!q("fdcard")) return;
   const rerender=msg=>{ const c=q("fdcard"); if(!c) return; const wasOpen=!!q("fdreport")?.open; c.outerHTML=foundationsGrownupsHTML(); bindFoundations(); if(q("fdreport")) q("fdreport").open=wasOpen; if(msg && q("fdmsg")) q("fdmsg").textContent=msg; };
-  const showPreview=()=>{ if(q("fdpreview")) q("fdpreview").innerHTML=reportPreviewHTML(); if(q("fdremove")) q("fdremove").onclick=()=>{ reportRelease(); showPreview(); if(q("fdfilemsg")) q("fdfilemsg").textContent="Preview removed."; }; };
-  const chooseFile=ev=>{ const file=ev.target.files && ev.target.files[0]; ev.target.value=""; if(!file) return; const kind=reportFileOK(file), msg=q("fdfilemsg");
+  const showPreview=()=>{ if(q("fdpreview")) q("fdpreview").innerHTML=reportPreviewHTML(); if(q("fdremove")) q("fdremove").onclick=()=>{ reportRelease(); showPreview(); if(q("fdfilemsg")) q("fdfilemsg").textContent="Preview removed."; };
+    const im=app.querySelector("#fdpreview img"); if(im) im.onerror=()=>{ im.remove(); if(q("fdfilemsg")) q("fdfilemsg").textContent="This photo type can't be shown here. Open it in your Photos app, or take a picture instead."; }; // v9.23 review #8: e.g. HEIC outside Safari
+    if(q("fdpdfopen")) q("fdpdfopen").onclick=()=>rhAwayMark(); }; // the grown-up's own switch to the PDF tab keeps the URL alive for that tab
+  const chooseFile=ev=>{ rhAwayAt=0; const file=ev.target.files && ev.target.files[0]; ev.target.value=""; if(!file) return; const kind=reportFileOK(file), msg=q("fdfilemsg");
     if(!kind){ if(msg) msg.textContent="Choose a PDF, JPG, PNG, WebP, or HEIC photo."; return; }
     if(file.size>25*1024*1024){ if(msg) msg.textContent="That file is over 25 MB. Choose a smaller copy."; return; }
     if(typeof URL.createObjectURL!=="function"){ if(msg) msg.textContent="This browser cannot preview the file. Open it in your device's photo or PDF app while choosing practice areas here."; return; }
-    reportRelease(); try{ reportPreview={url:URL.createObjectURL(file),name:file.name||"Report card",kind}; showPreview(); if(q("fdreport")) q("fdreport").open=true; if(msg) msg.textContent="Ready to review. The file has not been uploaded or saved."; }
+    reportRelease(); try{ const src=(kind==="pdf" && typeof file.slice==="function") ? file.slice(0, file.size, "application/pdf") : file; // shown inline, so a ".pdf" is always shown as a PDF, never sniffed as a page
+      reportPreview={url:URL.createObjectURL(src),name:file.name||"Report card",kind}; showPreview(); if(q("fdreport")) q("fdreport").open=true; if(msg) msg.textContent="Ready to review. The file has not been uploaded or saved."; }
     catch(e){ reportRelease(); if(msg) msg.textContent="This browser could not open that file. Try a smaller photo or PDF."; } };
-  q("fdpick").onclick=()=>q("fdfile").click(); q("fdshoot").onclick=()=>q("fdcamera").click();
-  q("fdfile").onchange=chooseFile; q("fdcamera").onchange=chooseFile; showPreview();
-  q("fdstarter").onclick=()=>{ for(const k of FOUND_KEYS){ const cb=q("fd-"+k); if(cb) cb.checked=true; } q("fdmsg").textContent="All five selected for this learner. Save to add them to Start today."; };
+  q("fdpick").onclick=()=>{ rhAwayMark(); q("fdfile").click(); }; q("fdshoot").onclick=()=>{ rhAwayMark(); q("fdcamera").click(); }; // a phone's picker or camera hides the page; that is not walking away
+  q("fdfile").onchange=chooseFile; q("fdcamera").onchange=chooseFile; q("fdfile").oncancel=q("fdcamera").oncancel=()=>{ rhAwayAt=0; }; showPreview();
+  q("fdstarter").onclick=()=>{ for(const k of FOUND_KEYS){ const cb=q("fd-"+k); if(cb) cb.checked=true; } q("fdmsg").textContent=`All ${["zero","one","two","three","four","five","six","seven","eight"][FOUND_KEYS.length]||FOUND_KEYS.length} selected for this learner. Save to add them to Start today.`; };
   q("fdclear").onclick=()=>{ for(const k of FOUND_KEYS){ const cb=q("fd-"+k); if(cb) cb.checked=false; } q("fdmsg").textContent="Choices cleared. Save to remove them from Start today."; };
-  q("fdsave").onclick=()=>{ const o={}; for(const k of FOUND_KEYS){ const cb=q("fd-"+k); o[k]=!!(cb && cb.checked); } o.updated=Date.now(); S.foundations=o; const ok=save(); rerender(ok?"Saved.":"Saved for now, but this device would not store it."); }; }
+  q("fdsave").onclick=()=>{ const o={}; for(const k of FOUND_KEYS){ const cb=q("fd-"+k); o[k]=!!(cb && cb.checked); } o.updated=Date.now(); S.foundations=o; const ok=save(); rerender(ok?"Saved.":"Saved for now, but this device would not store it."); };
+  rhBind(); rhIdleArm(); }
+// ===== v9.23 (Agent R): the report-card helper, inside "Review a report card here" (grown-ups page, behind the optional PIN) =====
+// The grown-up reads the card; the app only maps what they mark. Pick the grade printed on the card (3, 4, or 5), mark each math line
+// (the Common Core math cluster headings, which standards-based report cards commonly print) as Meets or above / Progressing / Below /
+// Not marked, and optionally tap comment themes. Progressing or Below lines and chosen themes become practice candidates through RH_LINES
+// and RH_THEMES, each with a reason naming what was marked. "Use these" only pre-checks matching foundation boxes; the existing Save still
+// decides, and it stores only the on/off choices. Privacy: rhState lives in memory only. It is never copied into S, DB, a backup,
+// localStorage, or the log; nothing here uses the network or reads the document. Clear wipes it, home() wipes it, and so does entering
+// the grown-ups page fresh (foundationsGrownupsHTML). A target that is not registered in this build (e.g. "fracbasics") is skipped.
+// v9.23 review: suggestions are ranked (#3: a Below line before a Progressing one, then more reasons first); "Use these" checks only the
+// top two or three foundations (rhTopFound) and names them, and "Check all candidates" checks the rest. A line's or theme's optional last
+// field {note:{key:text}, gap:text} keeps partial matches honest (#4: "building blocks for this") and lists the part with no practice here.
+// Walking away (#5): hiding the page (another app or tab) or pagehide releases the preview and wipes the marks (rhAway), except for the
+// grown-up's own picker, camera, or PDF tab (rhAwayMark, cleared on return); with a PIN set, 5 idle minutes on the grown-ups page return
+// to the PIN screen (rhIdleArm / rhIdleTick). Each domain heading has a "mark all lines" control (#7).
+let rhState=null; // {grade:3|4|5|null, marks:{lineId:"meets"|"prog"|"below"}, themes:[themeId]}; memory only, never saved
+function rhReset(){ rhState=null; }
+let rhAwayAt=0; const RH_AWAY_MS=2*60*1000; // set when the grown-up opens the picker, camera, or the PDF tab; cleared on return (at most 2 min)
+function rhAwayMark(){ rhAwayAt=Date.now(); }
+function rhAway(type){ if(type==="hidden" && rhAwayAt && Date.now()-rhAwayAt<RH_AWAY_MS) return; rhAwayAt=0;
+  const had=!!(reportPreview||rhState); reportRelease(); rhReset(); if(!had) return;
+  const p=app.querySelector("#fdpreview"), h=app.querySelector("#rhhelp"), m=app.querySelector("#fdfilemsg");
+  if(p) p.innerHTML=reportPreviewHTML(); if(h) h.innerHTML=rhHTML(); if(m) m.textContent="The preview and marks were cleared when this page was hidden."; }
+const RH_IDLE_MS=5*60*1000; let rhIdleT=null, rhIdleAt=0; // rhIdleAt: the last tap, key, or scroll anywhere
+function rhIdleArm(){ rhIdleAt=Date.now(); if(!rhIdleT) rhIdleT=setTimeout(rhIdleTick, RH_IDLE_MS); } // bindFoundations: the grown-ups page is showing
+function rhIdleTick(){ rhIdleT=null; if(!app.querySelector("#gupage")) return; // left the grown-ups page: stop until it is opened again
+  const left=RH_IDLE_MS-(Date.now()-rhIdleAt); if(left>0 || typeof guGate!=="function" || !guGate().length){ rhIdleT=setTimeout(rhIdleTick, left>0?left:RH_IDLE_MS); return; }
+  reportRelease(); rhReset(); app.innerHTML=""; grownups(); } // the gate has no separate re-lock function: grownups() from off the page asks for the PIN
+try{ for(const t of ["pointerdown","keydown","input","change","wheel","touchstart","scroll"]) document.addEventListener(t, ()=>{ rhIdleAt=Date.now(); }, {capture:true, passive:true});
+  document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden") rhAway("hidden"); else rhAwayAt=0; });
+  window.addEventListener("pagehide", ()=>rhAway("pagehide")); }catch(e){}
+const RH_DOMAINS={OA:"Operations and Algebraic Thinking", NBT:"Number and Operations in Base Ten", NF:"Number and Operations—Fractions", MD:"Measurement and Data", G:"Geometry"};
+const RH_MARKS=[["","Not marked"],["meets","Meets or above"],["prog","Progressing"],["below","Below"]], RH_MARK_WORD={prog:"progressing", below:"below"};
+// [line id (grade.domain.cluster), standards, cluster heading, practice targets]. A target is a skill key (a foundation box when it is in
+// FOUND_KEYS, otherwise a skill on Home) or "u1", the Extra Unit 1 review setting (Unit 1 = 5.NBT.1–4). [] = no practice for it here.
+// Optional 5th field: {note:{target:text}} is added to that target's reason; gap is listed under "No practice in this app for" as well.
+// No skill here multiplies or divides fractions, so 5.NF.B and 4.NF.4 are listed there, and fraction skills are only building blocks.
+const RH_LINES={
+  3:[["3.OA.A","3.OA.1–4","Represent and solve problems involving multiplication and division",["facts"]],
+     ["3.OA.B","3.OA.5–6","Understand properties of multiplication and the relationship between multiplication and division",["facts"]],
+     ["3.OA.C","3.OA.7","Multiply and divide within 100",["facts"]],
+     ["3.OA.D","3.OA.8–9","Solve problems involving the four operations, and identify and explain patterns in arithmetic",["twostep"]],
+     ["3.NBT.A","3.NBT.1–3","Use place value understanding and properties of operations to perform multi-digit arithmetic",["wholepv"]],
+     ["3.NF.A","3.NF.1–3","Develop understanding of fractions as numbers",["fracbasics"]],
+     ["3.MD.A","3.MD.1–2","Solve problems involving measurement and estimation of intervals of time, liquid volumes, and masses of objects",[]],
+     ["3.MD.B","3.MD.3–4","Represent and interpret data",[]],
+     ["3.MD.C","3.MD.5–7","Geometric measurement: understand concepts of area and relate area to multiplication and to addition",[]],
+     ["3.MD.D","3.MD.8","Geometric measurement: recognize perimeter as an attribute of plane figures and distinguish between linear and area measures",[]],
+     ["3.G.A","3.G.1–2","Reason with shapes and their attributes",[]]],
+  4:[["4.OA.A","4.OA.1–3","Use the four operations with whole numbers to solve problems",["twostep","expressions"]],
+     ["4.OA.B","4.OA.4","Gain familiarity with factors and multiples",["factors","primes"]],
+     ["4.OA.C","4.OA.5","Generate and analyze patterns",[]],
+     ["4.NBT.A","4.NBT.1–3","Generalize place value understanding for multi-digit whole numbers",["wholepv","placevalue"]],
+     ["4.NBT.B","4.NBT.4–6","Use place value understanding and properties of operations to perform multi-digit arithmetic",["facts","wholepv","multiply","divide"]],
+     ["4.NF.A","4.NF.1–2","Extend understanding of fraction equivalence and ordering",["fracbasics","fractions"]],
+     ["4.NF.B","4.NF.3–4","Build fractions from unit fractions by applying and extending previous understandings of operations on whole numbers",["fracbasics","fractions"],{note:{fractions:"building blocks for this"}, gap:"4.NF.4: multiplying a fraction by a whole number"}],
+     ["4.NF.C","4.NF.5–7","Understand decimal notation for fractions, and compare decimal fractions",["tenths","compare"]],
+     ["4.MD.A","4.MD.1–3","Solve problems involving measurement and conversion of measurements from a larger unit to a smaller unit",[]],
+     ["4.MD.B","4.MD.4","Represent and interpret data",[]],
+     ["4.MD.C","4.MD.5–7","Geometric measurement: understand concepts of angle and measure angles",[]],
+     ["4.G.A","4.G.1–3","Draw and identify lines and angles, and classify shapes by properties of their lines and angles",[]]],
+  5:[["5.OA.A","5.OA.1–2","Write and interpret numerical expressions",["twostep","orderops","expressions"]],
+     ["5.OA.B","5.OA.3","Analyze patterns and relationships",[]],
+     ["5.NBT.A","5.NBT.1–4","Understand the place value system",["wholepv","tenths","placevalue","shift","compare","rounding","u1"]],
+     ["5.NBT.B","5.NBT.5–7","Perform operations with multi-digit whole numbers and with decimals to hundredths",["facts","multiply","divide","addsub","decmul","decdiv"]],
+     ["5.NF.A","5.NF.1–2","Use equivalent fractions as a strategy to add and subtract fractions",["fracbasics","factors","fractions"]],
+     ["5.NF.B","5.NF.3–7","Apply and extend previous understandings of multiplication and division to multiply and divide fractions",["fracbasics","fractions"],{note:{fracbasics:"building blocks for this", fractions:"building blocks for this"}, gap:"5.NF.B: multiplying and dividing fractions"}],
+     ["5.MD.A","5.MD.1","Convert like measurement units within a given measurement system",[]],
+     ["5.MD.B","5.MD.2","Represent and interpret data",[]],
+     ["5.MD.C","5.MD.3–5","Geometric measurement: understand concepts of volume and relate volume to multiplication and to addition",[]],
+     ["5.G.A","5.G.1–2","Graph points on the coordinate plane to solve real-world and mathematical problems",[]],
+     ["5.G.B","5.G.3–4","Classify two-dimensional figures into categories based on their properties",[]]]
+};
+// [theme id, chip label, targets]. "habit:<id>" shows a tip (RH_HABITS): the habits it names are already built in, so nothing new is switched on.
+const RH_THEMES=[["facts","Multiplication facts",["facts","multiply","divide"]], ["multistep","Multi-step problems",["twostep","expressions"]],
+  ["fractions","Fractions",["fracbasics","fractions"]], ["placevalue","Place value / big numbers",["wholepv","placevalue"]],
+  ["decimals","Decimals",["tenths","compare","addsub"]], ["careful","Careful work / checking",["habit:careful"]], ["independent","Working independently",["habit:independent"]],
+  // v9.23 review #7: word problems → story practice; explaining → a tip (reason questions are built in); "Add and subtract" practices decimals only
+  ["wordprob","Word problems / reading math",["twostep","expressions"]], ["explain","Explaining thinking",["habit:explain"]],
+  ["addsubfl","Adding and subtracting fluency",["addsub"],{note:{addsub:"decimals only"}, gap:"whole-number adding and subtracting fluency (no dedicated practice)"}]];
+const RH_HABITS={careful:{name:"Careful work and checking", tip:"Estimate first and the “does that make sense?” check are already built into multiplication and division practice; nothing to turn on. Tip: ask for a quick estimate before solving and a look back after."},
+  independent:{name:"Working independently", tip:"Hints in the app come one step at a time, and the “By skill” table on this page separates answers done independently from answers with help. Tip: let the learner try first, then point to the Hint button before stepping in."},
+  explain:{name:"Explaining thinking", tip:"Reason questions are built in: walkthrough steps ask “why?” and let the learner pick the reason; nothing to turn on. Tip: ask the learner to explain one answer out loud in their own words."}};
+function rhTarget(k){ if(k==="u1") return (typeof nsUnit1Skills==="function" && nsUnit1Skills().length) ? {kind:"u1", name:"Extra Unit 1 review"} : null;
+  if(!(SKILLS[k] && typeof SKILLS[k].gen==="function" && SKILL_ORDER.includes(k))) return null; // not in this build: skipped
+  return {kind:(FOUND_KEYS.includes(k) && foundOK(k)) ? "found" : "skill", name:SKILLS[k].name}; }
+function rhShort(t){ t=String(t); if(t.length<=42) return t; let c=t.slice(0,43); c=c.slice(0,c.lastIndexOf(" ")); // whole words, no dangling "for" or "and"
+  let p; do{ p=c; c=c.replace(/[,:;]$/,"").replace(/\s+(a|an|and|as|by|for|from|in|of|on|or|the|to|with)$/i,""); }while(c!==p); return c+"…"; }
+// Pure: marks and themes → {found, skills, u1, habits, uncovered, ranked, top}. Only lines of the chosen grade count; reasons name what
+// was marked. Ranked: any Below reason first, then any Progressing reason, then themes only; within each, more reasons first; ties keep
+// the Home order. top: the foundations "Use these" checks (rhTopFound).
+function rhSuggest(st){ st=st||rhState||{}; const out={found:[], skills:[], u1:null, habits:[], uncovered:[], ranked:[], top:[]}, by={}, marks=st.marks||{}, themes=Array.isArray(st.themes)?st.themes:[];
+  const gap=t=>{ if(t && !out.uncovered.includes(t)) out.uncovered.push(t); };
+  const add=(k,why,m,note)=>{ if(/^habit:/.test(k)){ const id=k.slice(6), H=RH_HABITS[id]; if(!H) return false; let h=out.habits.find(x=>x.id===id); if(!h){ h={id, k, name:H.name, tip:H.tip, reasons:[]}; out.habits.push(h); } h.reasons.push(`${why} → habit tip`); return true; }
+    const t=rhTarget(k); if(!t) return false; let e=by[k]; if(!e){ e=by[k]={k, kind:t.kind, name:t.name, reasons:[], below:0, prog:0}; if(t.kind==="found") out.found.push(e); else if(t.kind==="skill") out.skills.push(e); else out.u1=e; }
+    if(m==="below") e.below++; else if(m==="prog") e.prog++;
+    e.reasons.push(`${why} → ${t.name}${note?` (${note})`:""}`); return true; };
+  for(const [id,,title,targets,o] of (RH_LINES[st.grade]||[])){ const m=marks[id]; if(m!=="prog" && m!=="below") continue; let hit=false; const nt=(o&&o.note)||{};
+    for(const k of targets) if(add(k, `You marked “${rhShort(title)}” as ${RH_MARK_WORD[m]}`, m, nt[k])) hit=true; if(!hit) gap(rhShort(title)); if(o&&o.gap) gap(o.gap); }
+  for(const [id,label,targets,o] of RH_THEMES) if(themes.includes(id)){ const nt=(o&&o.note)||{}; for(const k of targets) add(k, `You chose the comment theme “${label}”`, "", nt[k]); if(o&&o.gap) gap(o.gap); }
+  const base=e=>e.kind==="found" ? FOUND_KEYS.indexOf(e.k) : e.kind==="skill" ? 100+SKILL_ORDER.indexOf(e.k) : 9999;
+  const rank=(a,b)=>rhTier(a)-rhTier(b) || b.reasons.length-a.reasons.length || base(a)-base(b);
+  out.found.sort(rank); out.skills.sort(rank); out.ranked=[...out.found, ...out.skills, ...(out.u1?[out.u1]:[])].sort(rank); out.top=rhTopFound(out.found); return out; }
+function rhTier(e){ return e.below ? 0 : e.prog ? 1 : 2; }
+// "Use these": the top two ranked foundations, plus a third only when it ties the second (same tier, same number of reasons).
+function rhTopFound(found){ const f=found.slice(0,3); if(f.length===3 && (rhTier(f[2])!==rhTier(f[1]) || f[2].reasons.length!==f[1].reasons.length)) f.pop(); return f; }
+function rhSuggestHTML(){ const r=rhSuggest(), items=[...r.ranked, ...r.habits], top=r.top.map(e=>e.k);
+  if(!items.length && !r.uncovered.length) return `<p class="muted" style="font-size:13px;margin:0">Mark a line as Progressing or Below, or tap a comment theme, to see practice candidates here.</p>`;
+  const kindTxt={found:"foundation box", skill:"practice on Home", u1:"setting in the check-up card on this page, with its own Save"};
+  const li=e=>`<li class="rhitem${top.includes(e.k)?" rhtop":""}" data-rhk="${esc(e.k)}"><b>${esc(e.name)}</b> <span class="muted" style="font-size:12px">${e.tip?"habit tip":esc(kindTxt[e.kind]||"")}</span> <span class="rhn" style="font-size:12px">· ${e.reasons.length} reason${e.reasons.length===1?"":"s"}</span>${top.includes(e.k)?` <span class="rhpick">top pick: “Use these” checks it</span>`:""}${e.tip?`<br><span style="font-size:13px">${esc(e.tip)}</span>`:""}${e.reasons.map(t=>`<br><span class="muted rhreason">${esc(t)}</span>`).join("")}</li>`;
+  return `<p class="rhlabel" style="font-size:13px;margin:0 0 6px"><b>Practice candidates, not a diagnosis.</b> Ask the teacher which of these to start with.</p>${items.length?`<p class="muted" style="font-size:12px;margin:0 0 4px">Ranked: lines marked Below first, then Progressing, then comment themes; more reasons rank higher.</p><ul>${items.map(li).join("")}</ul>`:""}
+    ${r.uncovered.length?`<p class="muted rhnone" style="font-size:13px;margin:6px 0 0">No practice in this app for: ${r.uncovered.map(t=>`“${esc(t)}”`).join(", ")}. The teacher can suggest practice for these.</p>`:""}`; }
+function rhHTML(){ const st=rhState||{}, g=st.grade||null, marks=st.marks||{}, themes=Array.isArray(st.themes)?st.themes:[];
+  const grades=[3,4,5].map(n=>`<button type="button" class="btn quiet small rhgrade${g===n?" on":""}" data-rhgrade="${n}" aria-pressed="${g===n}">Grade ${n}</button>`).join("");
+  const lines=!g ? `<p class="muted" style="font-size:13px;margin:0">Pick the grade printed on the card to see its math lines.</p>`
+    : `<p class="muted rhkey" style="font-size:13px;margin:0 0 4px">Match the words on the card; marks are often 4 = exceeds, 3 = meets, 2 = progressing, 1 = below — check your card's key.</p>`
+      + Object.keys(RH_DOMAINS).map(dm=>{ const ls=(RH_LINES[g]||[]).filter(l=>l[0].split(".")[1]===dm); if(!ls.length) return "";
+        const aid="rhdall-"+dm; // v9.23 review #7: many cards print one mark per domain
+        return `<fieldset class="rhdom"><legend>${esc(RH_DOMAINS[dm])} (${dm})</legend><div class="rhdomall"><label for="${aid}">Mark all lines in this domain</label><select id="${aid}" data-rhdom="${dm}"><option value="" selected>Choose…</option>${RH_MARKS.map(([k,t])=>`<option value="${k||"none"}">${t}</option>`).join("")}</select></div>${ls.map(([id,std,title])=>{ const fid="rhm-"+id.replace(/\./g,"-"), v=marks[id]||"";
+          return `<div class="rhline"><label for="${fid}">${esc(title)} <span class="muted" style="font-size:12px">${esc(std)}</span></label><select id="${fid}" data-rhline="${esc(id)}">${RH_MARKS.map(([k,t])=>`<option value="${k}"${k===v?" selected":""}>${t}</option>`).join("")}</select></div>`; }).join("")}</fieldset>`; }).join("");
+  const chips=RH_THEMES.map(([id,label])=>{ const on=themes.includes(id); return `<button type="button" class="btn quiet small rhchip${on?" on":""}" data-rhtheme="${id}" aria-pressed="${on}">${esc(label)}</button>`; }).join("");
+  return `<h3 style="margin:0 0 4px">Report-card helper</h3>
+      <p class="muted rhnote" style="font-size:13px;margin:0 0 6px">The app does not read or upload your document. You read the card and mark what it says here; the app suggests matching practice. Marks are kept only while this page is open and showing; leaving it or switching to another app or tab clears them (choosing or opening the document here does not).</p>
+      <p class="rhstep"><b>1. Grade on the card</b></p><div class="rhgrades" role="group" aria-label="Grade on the card">${grades}</div>
+      <p class="rhstep"><b>2. Mark each math line</b></p>${lines}
+      <p class="rhstep"><b>3. Comment themes (optional)</b> <span class="muted" style="font-size:13px;font-weight:400">Tap the ones the teacher's comment mentions.</span></p><div class="rhchips" role="group" aria-label="Comment themes">${chips}</div>
+      <p class="rhstep"><b>4. Practice candidates</b></p><div class="rhsugg" id="rhsugg">${rhSuggestHTML()}</div>
+      <div class="actions" style="margin-top:8px"><button type="button" class="btn" id="rhuse">Use these</button><button type="button" class="btn quiet small" id="rhall">Check all candidates</button><button type="button" class="btn quiet small" id="rhclear">Clear marks</button><span class="muted" id="rhmsg" style="font-size:13px;align-self:center" role="status" aria-live="polite"></span></div>`; }
+// Delegated handlers on #rhhelp: a mark or a theme redraws only the suggestions (focus stays put); a grade redraws the helper. Nothing
+// here touches S or storage; "Use these" sets checkboxes in the card and leaves saving to "Save practice choices".
+function rhBind(){ const box=app.querySelector("#rhhelp"); if(!box) return;
+  const st=()=>rhState||(rhState={grade:null, marks:{}, themes:[]}), msg=t=>{ const m=box.querySelector("#rhmsg"); if(m) m.textContent=t; };
+  const redraw=sel=>{ box.innerHTML=rhHTML(); const f=sel && box.querySelector(sel); if(f) f.focus({preventScroll:true}); };
+  const sugg=()=>{ const s=box.querySelector("#rhsugg"); if(s) s.innerHTML=rhSuggestHTML(); };
+  box.onclick=ev=>{ const b=ev.target && ev.target.closest && ev.target.closest("button"); if(!b || !box.contains(b)) return;
+    if(b.dataset.rhgrade){ const n=+b.dataset.rhgrade; if([3,4,5].includes(n)){ st().grade=n; redraw(`[data-rhgrade="${n}"]`); } return; }
+    if(b.dataset.rhtheme){ const id=b.dataset.rhtheme, s=st(); if(!RH_THEMES.some(t=>t[0]===id)) return; s.themes=s.themes.includes(id)?s.themes.filter(x=>x!==id):s.themes.concat(id);
+      const on=s.themes.includes(id); b.classList.toggle("on",on); b.setAttribute("aria-pressed",String(on)); sugg(); return; }
+    if(b.id==="rhuse" || b.id==="rhall"){ const r=rhSuggest(), all=b.id==="rhall", pick=all?r.found:r.top, done=[]; // other boxes are left as they are
+      for(const e of pick){ const cb=app.querySelector("#fd-"+e.k); if(cb){ cb.checked=true; done.push(e.name); } } const rest=r.found.length-done.length;
+      msg(!done.length ? "No foundation box matches yet. Mark a line as Progressing or Below, or tap a theme."
+        : `${all?`Checked all ${done.length} foundation candidate${done.length===1?"":"s"}`:`Checked the top ${done.length===1?"one":done.length===2?"two":"three"}`}: ${done.join(", ")}.${!all && rest>0?` ${rest} more foundation candidate${rest===1?" is":"s are"} not checked; “Check all candidates” adds ${rest===1?"it":"them"}.`:""} Nothing is saved until you press “Save practice choices.”`); return; }
+    if(b.id==="rhclear"){ rhReset(); redraw('[data-rhgrade="3"]'); msg("Marks cleared."); } };
+  box.onchange=ev=>{ const el=ev.target; if(!el || !el.dataset) return;
+    if(el.dataset.rhdom){ const dm=el.dataset.rhdom, raw=String(el.value||""), v=raw==="none"?"":raw, s=st(); el.value=""; if(!raw || !RH_MARKS.some(m=>m[0]===v)) return;
+      const ls=(RH_LINES[s.grade]||[]).filter(l=>l[0].split(".")[1]===dm); for(const [id] of ls){ if(v) s.marks[id]=v; else delete s.marks[id]; const sel=box.querySelector(`select[data-rhline="${id}"]`); if(sel) sel.value=v; }
+      sugg(); msg(`All ${ls.length} ${dm} line${ls.length===1?"":"s"} set to “${RH_MARKS.find(m=>m[0]===v)[1]}.”`); return; }
+    if(!el.dataset.rhline) return; const id=el.dataset.rhline, v=String(el.value||""), s=st();
+    if(!RH_MARKS.some(m=>m[0]===v)) return; if(v) s.marks[id]=v; else delete s.marks[id]; sugg(); }; }
+(function(){ try{ const st=document.createElement("style"); st.textContent=[ // preview and helper side by side when there is room, stacked on a phone
+  ".rhwrap{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:flex-start}",
+  ".rhwrap>.rhside{flex:1 1 280px;min-width:0;max-width:100%}",
+  ".rhhelp h3{font-size:17px}.rhstep{margin:12px 0 4px;font-size:15px}",
+  ".rhgrades,.rhchips{display:flex;flex-wrap:wrap;gap:8px}",
+  ".rhgrades .btn,.rhchips .btn{margin:0;min-height:40px;padding:6px 12px;font-size:14px}",
+  ".rhgrade.on,.rhchip.on{border-color:var(--ink);background:#F0F3F7;color:var(--ink)}.rhchip.on::before{content:\"\\2713\\00a0\";font-weight:800}",
+  ".rhdom{border:1px solid var(--line);border-radius:8px;margin:8px 0;padding:4px 10px 6px;min-width:0}.rhdom legend{font-weight:700;font-size:14px;padding:0 4px}",
+  ".rhline{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;justify-content:space-between;padding:6px 0;border-top:1px solid #E6EBF1;font-size:14px}",
+  ".rhline:first-of-type{border-top:none}.rhline label{flex:1 1 180px;min-width:0}",
+  ".rhline select{flex:0 0 auto;font-size:16px;padding:4px 6px;max-width:100%}",
+  ".rhsugg ul{margin:6px 0;padding-left:18px}.rhsugg li{margin:0 0 6px;font-size:14px}.rhreason{font-size:13px}",
+  ".rhdomall{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;justify-content:space-between;padding:4px 0 6px;font-size:13px;color:var(--muted,#555)}", // v9.23 review
+  ".rhdomall label{flex:1 1 160px;min-width:0}.rhdomall select{flex:0 0 auto;font-size:16px;padding:4px 6px;max-width:100%}",
+  ".rhpick{display:inline-block;font-size:12px;font-weight:700;padding:0 6px;border:1px solid var(--ink);border-radius:10px;margin-left:2px}",
+  ".rhdoc .rhpdf{max-width:100%;min-height:320px}"
+  ].join("\n"); document.head.appendChild(st); }catch(e){} })();
 // ===== v9.21 (Agent F): multiplication and division facts, skill "facts" (grown-ups page only: 3.OA.7) =====
 // Facts 2–10 × 2–10. Levels: L1 ×2, 5, 10 · L2 adds ×3, 4 · L3 adds ×6, 9 · L4 adds ×7, 8 (every fact) · L5 every fact plus division.
 // Fact memory: S.facts["7x8"] (smaller factor first; 56 ÷ 8 shares the key of its multiplication partner) = {seen, right, last, box}, a
@@ -4608,7 +5000,7 @@ function factsGrownupsHTML(){ if(!S) return "";
     <div style="overflow-x:auto"><table class="facts-grid" style="border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums"><tr><th style="${bd}">×</th>${F.map(b=>`<th style="${bd}">${b}</th>`).join("")}</tr>${F.map(a=>`<tr><th style="${bd}">${a}</th>${F.map(b=>cell(a,b)).join("")}</tr>`).join("")}</table></div>
     <p class="muted" style="margin:8px 0 0;font-size:13px">Key: ${Object.values(CAT).map(c=>`<span style="display:inline-block;border:1px solid var(--line);background:${c[1]};padding:0 6px;margin-right:4px">${c[2]||"&nbsp;"}</span>${c[0]}`).join(" · ")}</p>
     <p class="muted" style="margin:8px 0 0;font-size:13px">Level ${lv} of 5: ${LV[lv-1]}. Standard 3.OA.7 (fluently multiply and divide within 100). Facts support multi-digit multiplication and partial-quotient steps.</p>
-    <p class="muted" style="margin:8px 0 0;font-size:13px">How it works: each fact sits in a box from 0 to 3. A miss (on a facts problem, or on a fact step inside a multiplication or division walkthrough) puts it back to practicing; a right answer on her own moves it up one box, and so does one with only the strategy line on screen (no hint taps), but only as far as "getting there"; "known well" needs one more right answer on her own at least 12 hours after she last saw it. Practice picks mostly practicing and not-yet-seen facts and facts not seen lately, with about 1 in 4 known facts so she stays confident. There is no timer, and speed is not measured. Her screen shows only "Facts you know well: N".</p></div>`; }
+    <p class="muted" style="margin:8px 0 0;font-size:13px">How it works: each fact sits in a box from 0 to 3. A miss (on a facts problem, or on a fact step inside a multiplication or division walkthrough) puts it back to practicing; a right answer with no help moves it up one box, and so does one with only the strategy line on screen (no hint taps), but only as far as "getting there"; "known well" needs one more right answer with no help at least 12 hours after the learner last saw it. Practice picks mostly practicing and not-yet-seen facts and facts not seen lately, with about 1 in 4 known facts so the learner stays confident. There is no timer, and speed is not measured. The learner's screen shows only "Facts you know well: N".</p></div>`; }
 Object.assign(SKILLS, {facts:{name:"Multiplication facts", gen:safeGen(genFacts), blurb:"7 × 8 → 56 and 56 ÷ 8 → 7, built from facts you know", std:"3.OA.7", grade:"3", foundation:true, lessons:[]}});
 SKILL_ORDER.push("facts");
 function start(m){ mode=m; if(m==="nscheck"){ nsStart(); return; } if(m==="hw:check"){ pendingHW=null; hwEntry(); return; } if(m==="today"){ todayPlan=buildTodayPlan(); todayIdx=0; todayExtra=0; todaySid=Date.now(); if(quickLookDue()){ quickLookStart(); return; } } next(); }
@@ -4642,7 +5034,7 @@ function next(){ // a fresh problem: new help chain
   // Week mode: the current lesson may ask for a particular flavour of a skill (e.g. area-model multiplication). Skill mode passes nothing.
   let focus;
   const slot = todaySlotNow(); const eff = slot==="week" ? "week" : slot==="focus" ? "miss" : slot==="review" ? "review" : slot ? "mix" : mode;
-  if(eff==="week"){ const l=lessonById(effectiveClassAt()); if(l && l.focus && typeof l.focus==="object" && l.focus[sk]) focus=l.focus[sk]; }
+  if(eff==="week" && classCalOn()){ const l=lessonById(effectiveClassAt()); if(l && l.focus && typeof l.focus==="object" && l.focus[sk]) focus=l.focus[sk]; }
   let target=null, checkinSk=null;
   if(eff==="review"){ const t=recoveryTarget(); if(t && t.state==="review"){ target=t; sk=t.sk; focus=t.focus; S.weak[t.key].served=Date.now(); } else { const due=Object.keys(S.checkins||{}).filter(k=>SKILLS[k.split("|")[0]] && S.checkins[k].due<=Date.now()).sort((a,b)=>S.checkins[a].due-S.checkins[b].due)[0]; if(due){ checkinSk=due; sk=due.split("|")[0]; } } }
   else if(eff==="miss"){ target=recoveryTarget(slot==="focus"?{openFirst:true}:undefined); if(target && target.sk===sk){ focus=target.focus; S.weak[target.key].served=Date.now(); } else target=null; } // the recovery cycle; with nothing open or due this is an ordinary mix problem
@@ -4694,7 +5086,7 @@ function issueFor(target,str){
   return isNaN(parseAnswer(str)) ? "Type a number, like 72.585" : "";
 }
 const isTextTarget=t=>!!t && t.text===true;
-const textPH=t=>{ const sk=cur&&cur.skill, q=String((t&&t.q)||""); return sk==="fractions" ? "Type it like 3/4 or 1 3/4" : /exponent|10\^|x 10/i.test(q) || sk==="powers" ? "Type it like 8 x 10^3" : sk==="primes" ? "Type it like 2 x 2 x 3" : "Type your answer"; }; // v9.12: the example matches the kind of answer
+const textPH=t=>{ const sk=cur&&cur.skill, q=String((t&&t.q)||""); return (sk==="fractions"||sk==="fracbasics") ? "Type it like 3/4 or 1 3/4" : /exponent|10\^|x 10/i.test(q) || sk==="powers" ? "Type it like 8 x 10^3" : sk==="primes" ? "Type it like 2 x 2 x 3" : "Type your answer"; }; // v9.12: the example matches the kind of answer
 const ansAttrs=t=>isTextTarget(t) ? `inputmode="text" autocapitalize="off" spellcheck="false"` : `inputmode="decimal"`;
 
 // ===== Multiplication workspace =====
@@ -5742,10 +6134,13 @@ function nsOpenSpot(it, raw, lvl, exact){
   // v9.21 (Agent P): the smaller follow-up missed too (this is only called for a follow-up on a miss, so the main item before it was missed
   // or "not sure") → one practice spot also opens, at level 1, in the matching foundation skill: place-value items → place value with big
   // numbers, decimal compare and order → tenths and hundredths. Estimate and number-line items have no follow-up, so a miss or "not sure"
-  // on them is the evidence: estimate → multiplication facts, a decimal on the 0-to-1 line → tenths and hundredths. Skipped for a foundation
+  // on them is the evidence: a decimal on the 0-to-1 line → tenths and hundredths. v9.23 (red-team finding 4): the estimate item (about how
+  // big a 2-digit × or ÷ answer is) is one size judgment, not evidence of a missed multiplication fact, so it never opens a facts spot. It
+  // opens a place-value spot with the rounding kind of question (wholepv, variant round), because estimating starts by rounding to a
+  // friendly number. This is the one check-up item that opens a foundation spot without a smaller follow-up. Skipped for a foundation
   // skill that is not in this build.
-  try{ const c=it && it.comp, fu=!!(it && it.fu); const fk = c==="estimate" ? "facts" : c==="magnitude" ? "tenths" : (fu && ["tenfold","digit-value","read-write","powers","exponents","expanded","round"].includes(c)) ? "wholepv" : (fu && (c==="compare" || c==="order")) ? "tenths" : null;
-    if(fk && SKILLS[fk] && SKILL_ORDER.includes(fk)) noteComp(fk, "*", false, {lvl:1, ctx:{}}); }catch(x){}
+  try{ const c=it && it.comp, fu=!!(it && it.fu); const fk = c==="estimate" ? "wholepv" : c==="magnitude" ? "tenths" : (fu && ["tenfold","digit-value","read-write","powers","exponents","expanded","round"].includes(c)) ? "wholepv" : (fu && (c==="compare" || c==="order")) ? "tenths" : null;
+    if(fk && SKILLS[fk] && SKILL_ORDER.includes(fk)) noteComp(fk, "*", false, {lvl:1, ctx: c==="estimate" ? {variant:"round"} : {}}); }catch(x){}
   if(!it || !it.sk || !it.p || !SKILLS[it.sk]) return;
   let tag="*"; if(raw!==null && raw!==undefined){ try{ const d=diagnose(it.p, raw); if(d && d.tag) tag=d.tag; }catch(x){} }
   try{ const ctx=ctxOf(it.p); for(const c of compsOfMiss(it.sk, tag)){ noteComp(it.sk, c, false, {lvl, ctx});
@@ -5784,7 +6179,7 @@ function nsGrownupsHTML(){ if(!S) return ""; const all=nsChecks().filter(c=>c.it
     const a=r(last), b=r(prev), both=Object.keys(a).filter(k=>k in b);
     const newly=both.filter(k=>a[k].result==="ok" && b[k].result!=="ok"), slipped=both.filter(k=>a[k].result!=="ok" && b[k].result==="ok");
     changed=`<p class="nschanged" style="font-size:14px;margin:8px 0 0"><b>Since ${esc(nsDay(prev.t))} (finished check-ups only, items asked the same way both times):</b> ${!both.length?"No item was asked the same way both times, so there is nothing to compare.":newly.length?`Newly shown: ${newly.map(k=>esc(nm(a[k]))).join(", ")} (one example each).`:"Nothing newly shown."}${slipped.length?` Shown last time, not this time: ${slipped.map(k=>esc(nm(a[k]))).join(", ")}.`:""}</p>`; }
-  const intro=`<p class="nssnap" style="font-size:14px;margin:0 0 8px"><b>One example per skill.</b> Treat results as possible practice starting points, not a diagnosis. The teacher's item analysis is the better guide.</p>
+  const intro=`<p class="nssnap" style="font-size:14px;margin:0 0 8px"><b>One example per skill.</b> Treat results as possible practice starting points, not a diagnosis. Ask the teacher which of these to start with.</p>
       <p class="muted" style="font-size:14px;margin:0 0 8px">Ten short questions (about 10 minutes): the Unit 1 place-value ideas (5.NBT.1–4) and a few on the size of numbers, one example each. Each row names what that one example asked. A miss or “Not sure yet” on a place-value item brings one smaller follow-up of the same kind at level 1 (at most ${NS_FU_MAX} per check-up); “Right on the easier one” means the smaller one was right. ${esc(S.name)} sees it as “Show what you know”: no score and no labels. A miss opens a practice spot that “Start today” serves (at level 1 after a follow-up); it never changes levels. Worth repeating after about 3 weeks.</p>`;
   const partHTML = partial ? `<div class="nspartial"><p class="muted" style="font-size:14px;margin:10px 0 6px"><b>${partial===open?"In progress; comparison available when finished.":"Stopped before the end; it is not compared, and the next check-up starts fresh."}</b> Started ${esc(fmtDate(partial.t))}: ${partial.items.length} of 10 answered${partial===open?"; the home tile offers “Finish it”":""}.</p>${table(partial,"nsptable")}</div>` : "";
   const left = (last ? `<p class="muted" style="font-size:14px;margin:0 0 6px">Last finished check-up: <b>${esc(fmtDate(last.t))}</b>.${done.length>1?` ${done.length} finished check-ups saved.`:""}</p>${table(last,"nstable")}${changed}`
@@ -5817,8 +6212,9 @@ try{ let ch=false; for(const n of Object.keys(DB.profiles||{})) if(nsMigrateNote
 // grownups(), which shows only a number pad until the PIN is entered (a re-render from inside the unlocked page, #gupage, stays open).
 // Only a salted hash is stored: S.guPin = {salt, h}. This is a deterrent for a curious child, NOT security: the hash is a simple
 // non-cryptographic one (FNV-1a, repeated) with a per-profile salt stored right next to it, and anyone with the device's storage could read
-// or clear it. "Forgot PIN?" is tamper-evident rather than secret: typing RESET clears the PIN and records S.pinResetAt, and the grown-ups
-// page shows a banner until a grown-up dismisses it (S.pinResetSeen). A PIN set on any player guards every player's grown-ups page on this
+// or clear it. "Forgot PIN?" is tamper-evident rather than secret: typing RESET (then confirming that it clears the device's PIN) clears
+// every PIN on the device and records pinResetAt on every player, and each player's grown-ups page shows a banner until a grown-up
+// dismisses it there (S.pinResetSeen, per player). A PIN set on any player guards every player's grown-ups page on this
 // device, because the backup text there holds every player's progress; a player with a PIN of their own is opened with that PIN.
 function guPinOf(p){ const g=(p && typeof p==="object") ? p.guPin : null; return (g && typeof g==="object" && typeof g.salt==="string" && typeof g.h==="string" && g.h) ? g : null; }
 function guHash(salt, pin){ let h=0x811c9dc5; const s=String(salt)+"|"+String(pin); for(let r=0;r<64;r++){ for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,0x01000193)>>>0; } h=Math.imul(h^r,0x01000193)>>>0; } return h.toString(36); }
@@ -5833,7 +6229,10 @@ function grownups(){ if(!S){ home(); return; }
 function guPinScreen(){ if(!guPad) guPad={val:"", err:"", reset:false}; cur=null;
   const dots=[0,1,2,3].map(i=>`<span class="gudot${i<guPad.val.length?" on":""}" aria-hidden="true" style="display:inline-block;width:18px;height:18px;border-radius:50%;margin:0 6px;border:2px solid var(--ink);background:${i<guPad.val.length?"var(--ink)":"transparent"}"></span>`).join("");
   const pad=["1","2","3","4","5","6","7","8","9","clear","0","back"].map(k=>k==="clear"?`<button type="button" class="btn quiet gukey" data-k="clear" style="margin:0">Clear</button>`:k==="back"?`<button type="button" class="btn quiet gukey" data-k="back" aria-label="Delete the last digit" style="margin:0">⌫</button>`:`<button type="button" class="btn gukey" data-k="${k}" style="margin:0;font-size:22px">${k}</button>`).join("");
-  const reset = guPad.reset ? `<div class="gureset" style="text-align:left;margin-top:12px"><p class="muted" style="font-size:14px;margin:0 0 6px">Type RESET to clear the PIN. The grown-ups page will then show that the PIN was reset, and when.</p>
+  // v9.24 review #10: the PIN is device-wide, so RESET clears it for every player on this device. A second step says so before anything changes.
+  const reset = guPad.reset==="confirm" ? `<div class="gureset guconfirm" id="guconfirm" style="text-align:left;margin-top:12px"><p style="font-size:14px;margin:0 0 6px"><b>This clears the grown-up PIN on this device, for every player.</b> Anyone using this device can then open every player's grown-ups page until a new PIN is set. Each player's grown-ups page will say the PIN was reset, and when, until a grown-up dismisses it there.</p>
+      <div class="actions" style="margin-top:8px"><button class="btn danger" id="guresetyes">Yes, clear the device's PIN</button><button class="btn quiet" id="guresetno">Cancel</button></div></div>`
+    : guPad.reset ? `<div class="gureset" style="text-align:left;margin-top:12px"><p class="muted" style="font-size:14px;margin:0 0 6px">Type RESET to clear the grown-up PIN on this device (it is shared by every player here). Each player's grown-ups page will then show that the PIN was reset, and when.</p>
       <label class="vh" for="guresetin">Type RESET</label><input id="guresetin" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" style="font-size:16px;padding:6px 8px;width:140px">
       <div class="actions" style="margin-top:8px"><button class="btn" id="guresetgo">Clear the PIN</button><button class="btn quiet" id="guresetno">Cancel</button></div></div>`
     : `<button class="btn quiet small" id="guforgot" style="margin-top:10px">Forgot PIN?</button>`;
@@ -5846,13 +6245,15 @@ function guPinScreen(){ if(!guPad) guPad={val:"", err:"", reset:false}; cur=null
   app.querySelectorAll(".gukey").forEach(b=>b.onclick=()=>guPress(b.dataset.k));
   if(q("guforgot")) q("guforgot").onclick=()=>{ guPad.reset=true; guPad.err=""; guPad.val=""; guPinScreen(); const i=app.querySelector("#guresetin"); if(i) i.focus({preventScroll:true}); };
   if(q("guresetno")) q("guresetno").onclick=()=>{ guPad.reset=false; guPad.err=""; guPinScreen(); };
-  if(q("guresetgo")) q("guresetgo").onclick=()=>{ if(String(q("guresetin").value||"").trim()!=="RESET"){ guPad.err="Type RESET in capital letters to clear the PIN."; q("guerr").textContent=guPad.err; return; } guReset(); };
+  if(q("guresetgo")) q("guresetgo").onclick=()=>{ if(String(q("guresetin").value||"").trim()!=="RESET"){ guPad.err="Type RESET in capital letters to clear the PIN."; q("guerr").textContent=guPad.err; return; } guPad.reset="confirm"; guPad.err=""; guPinScreen(); const y=app.querySelector("#guresetyes"); if(y) y.focus({preventScroll:true}); };
+  if(q("guresetyes")) q("guresetyes").onclick=()=>guReset();
   if(!guPad.reset){ const k=app.querySelector('.gukey[data-k="1"]'); if(k) k.focus({preventScroll:true}); } }
 function guPress(k){ if(!guPad || !app.querySelector("#gupin")) return;
   if(k==="clear") guPad.val=""; else if(k==="back") guPad.val=guPad.val.slice(0,-1); else if(/^\d$/.test(k) && guPad.val.length<4){ guPad.val+=k; guPad.err=""; }
   if(guPad.val.length===4){ const pin=guPad.val; guPad.val=""; if(guPinOK(pin)){ guPad=null; grownupsPage(); return; } guPad.err="That PIN didn't match."; }
   guPinScreen(); }
-function guReset(){ const now=Date.now(); for(const p of guGate()){ delete p.guPin; p.pinResetAt=now; } save(); guPad=null; grownupsPage(); }
+function guReset(){ const now=Date.now(); for(const p of Object.values(DB.profiles||{})){ if(!p || typeof p!=="object") continue; delete p.guPin; p.pinResetAt=now; } // every PIN on the device goes, and every player's page gets its own banner (dismissed per player)
+  if(S){ delete S.guPin; S.pinResetAt=now; } save(); guPad=null; grownupsPage(); }
 function guKey(e){ if(!guPad || !app.querySelector("#gupin") || e.altKey || e.ctrlKey || e.metaKey) return; const tg=e.target; if(tg && tg.tagName==="INPUT") return;
   if(/^\d$/.test(e.key)){ e.preventDefault(); if(!e.repeat) guPress(e.key); } else if(e.key==="Backspace"){ e.preventDefault(); guPress("back"); } }
 try{ window.addEventListener("keydown", guKey); }catch(e){}
@@ -5962,7 +6363,7 @@ function tiersHTML(log){
       const byLvl={}; indOk.forEach(e=>{ const l=+e.lvl||1; byLvl[l]=(byLvl[l]||0)+1; }); const lvls=Object.keys(byLvl).map(Number).sort((a,b)=>a-b);
       const solid=lvls.filter(l=>byLvl[l]>=2).pop()||lvls[0]; // the highest level with at least two independent successes, else the lowest seen
       const counts=lvls.map(l=>`${byLvl[l]} at level ${l}`).join(", "); const hwOnly=indOk.every(e=>e.hw);
-      ready.push(`<li><b>${esc(SKILLS[k].name)}</b>: ${ind} different problem${ind===1?"":"s"} of the last ${fresh.length} right on her own (${counts}). Solid at level ${solid}${solid<S.levels[k]?`; practice level is ${S.levels[k]}, not yet shown there`:""}${hwOnly?" · homework shapes only":""}.${last?exOk(last):""}</li>`); } }
+      ready.push(`<li><b>${esc(SKILLS[k].name)}</b>: ${ind} different problem${ind===1?"":"s"} of the last ${fresh.length} right with no help (${counts}). Solid at level ${solid}${solid<S.levels[k]?`; practice level is ${S.levels[k]}, not yet shown there`:""}${hwOnly?" · homework shapes only":""}.${last?exOk(last):""}</li>`); } }
   for(const w of wsum.ok.sort((a,b)=>b.recovered-a.recovered)) ready.push(`<li><b>${esc(SKILLS[w.sk].name)}</b>: ${esc(w.name)} recovered ${fmtDate(w.recovered)} after ${w.misses} miss${w.misses===1?"":"es"}, two clean wins, and two later check-ins.</li>`);
   if(S.support && S.support.multiply<3) ready.push(`<li><b>Multiplication page</b>: working with ${S.support.multiply===0?"no supports, the bare page":`${S.support.multiply} of 3 supports`} (${[S.support.multiply>=1?"carry boxes":"",S.support.multiply>=2?"column labels":""].filter(Boolean).join(", ")||"none"}).</li>`);
   const empty=t=>`<li class="muted">${t}</li>`;
@@ -5973,17 +6374,17 @@ function tiersHTML(log){
       return `<div style="overflow-x:auto"><table class="report"><tr><th>Evidence</th><th>What the app has seen</th></tr>
         ${row("Independent calculation", distinct?`${distinct} different problem${distinct===1?"":"s"} right without hints, examples, an opened nudge, the full coach card, or answer cues`:"none yet")}
         ${row("Supported completion", sup?`${sup} right with supports on (the multiplication tools, or the full coach card)`:"none")}
-        ${(()=>{ const asked=log.reduce((a,e)=>a+(+e.explainAsked||0),0), okX=log.reduce((a,e)=>a+(+e.explainOk||0),0); const skipped=log.reduce((a,e)=>a+(+e.explainSkipped||0),0), helps=log.reduce((a,e)=>a+(+e.helpTaps||0),0), breaks=log.filter(e=>e.breakTaken).length; return row("Reason after a shown step", asked||skipped?`${asked?`${okX} of ${asked} right reasons picked after a walkthrough step had to be shown`:"no reasons picked yet"}${skipped?`; ${skipped} time${skipped===1?"":"s"} she tapped “Just tell me why” instead`:""}`:"none yet")+row("Asked for help in a walkthrough", helps||breaks?`${helps} “Help me” tap${helps===1?"":"s"}${breaks?`; took a break from a walkthrough ${breaks} time${breaks===1?"":"s"}`:""}. Asking counts like a miss on that step, so the evidence stays honest.`:"none yet"); })()}
-        ${(()=>{ const pr=log.filter(e=>cls(e)==="prompted").length; return row("Prompted", pr?`${pr} right after a nudge: the one-line reminder she opened, or the “does that make sense?” check against her estimate`:"none"); })()}
-        ${(()=>{ const ft=log.filter(e=>e.freshAfterHelp); const fr=ft.filter(e=>cls(e)==="independent").length; return row("Fresh problem right after help", ft.length?`${fr} of ${ft.length} right on her own, new numbers, coach hidden (immediate transfer)`:"none yet"); })()}
+        ${(()=>{ const asked=log.reduce((a,e)=>a+(+e.explainAsked||0),0), okX=log.reduce((a,e)=>a+(+e.explainOk||0),0); const skipped=log.reduce((a,e)=>a+(+e.explainSkipped||0),0), helps=log.reduce((a,e)=>a+(+e.helpTaps||0),0), breaks=log.filter(e=>e.breakTaken).length; return row("Reason after a shown step", asked||skipped?`${asked?`${okX} of ${asked} right reasons picked after a walkthrough step had to be shown`:"no reasons picked yet"}${skipped?`; ${skipped} time${skipped===1?"":"s"} the learner tapped “Just tell me why” instead`:""}`:"none yet")+row("Asked for help in a walkthrough", helps||breaks?`${helps} “Help me” tap${helps===1?"":"s"}${breaks?`; took a break from a walkthrough ${breaks} time${breaks===1?"":"s"}`:""}. Asking counts like a miss on that step, so the evidence stays honest.`:"none yet"); })()}
+        ${(()=>{ const pr=log.filter(e=>cls(e)==="prompted").length; return row("Prompted", pr?`${pr} right after a nudge: the one-line reminder the learner opened, or the “does that make sense?” check against their estimate`:"none"); })()}
+        ${(()=>{ const ft=log.filter(e=>e.freshAfterHelp); const fr=ft.filter(e=>cls(e)==="independent").length; return row("Fresh problem right after help", ft.length?`${fr} of ${ft.length} right with no help, new numbers, coach hidden (immediate transfer)`:"none yet"); })()}
         ${row("Studied first", studied?`${studied} right after looking at a worked example`:"none")}
         ${row("Explanation", whyAll?`recognized the correct reason on ${whyOk} of ${whyAll} "say why" questions`:"not asked yet")}
         ${row("Delayed check", delayed||delayedMiss?`${delayed} fresh problem${delayed===1?"":"s"} right after a gap of a week or more${delayedMiss?`; ${delayedMiss} missed`:""}`:(dueSoon?`not yet: ${dueSoon} check-in${dueSoon===1?"":"s"} scheduled`:"not checked yet"))}
         ${(()=>{ const t=log.filter(e=>e.transfer); const ok=t.filter(e=>e.ok).length, solo=t.filter(e=>e.ok&&!e.helped).length, forms=t.filter(e=>e.ok&&e.changedForm).length; return row("Transfer to paper", t.length?`${ok} of ${t.length} worksheet problem${t.length===1?"":"s"} right (${solo} without adult help, ${forms} in a different form), scored by a grown-up: ${t.slice(-3).map(e=>`${esc(str(e.q||"paper"))} ${e.ok?"✓":"✗"}`).join(", ")}`:"not checked yet: record a paper problem below"); })()}
-      </table></div><p class="muted" style="font-size:13px;margin:8px 0 14px">Recognizing a reason on a multiple-choice question is a weaker signal than explaining it herself; a delayed check is stronger than recent accuracy. Item counts and gaps (two wins, then 3 and 7 days) are the app's working defaults, not proven thresholds.</p>`; })()}
+      </table></div><p class="muted" style="font-size:13px;margin:8px 0 14px">Recognizing a reason on a multiple-choice question is a weaker signal than explaining it in their own words; a delayed check is stronger than recent accuracy. Item counts and gaps (two wins, then 3 and 7 days) are the app's working defaults, not proven thresholds.</p>`; })()}
     <div class="card" style="margin-top:0">
       <h3 style="margin:0 0 6px">Record a paper check</h3>
-      <p class="muted" style="font-size:14px;margin:0 0 8px">One worksheet problem she has not seen in the app, in the form her class uses. Score it yourself; note whether an adult helped. This is the strongest evidence the app can hold, and it is kept separate from app scoring.</p>
+      <p class="muted" style="font-size:14px;margin:0 0 8px">One worksheet problem the learner has not seen in the app, in the form their class uses. Score it yourself; note whether an adult helped. This is the strongest evidence the app can hold, and it is kept separate from app scoring.</p>
       <div class="row"><select class="sel" id="paperSk">${SKILL_ORDER.map(k=>`<option value="${k}">${esc(SKILLS[k].name)}</option>`).join("")}</select>
         <input class="ans small text" id="paperQ" type="text" placeholder="the problem, like 148 × 19 or 3.45 + 2.7" style="flex:1 1 220px;font-size:16px;padding:8px 10px">
         <label class="row" style="gap:6px"><input type="radio" name="paperOk" value="1" checked> right</label><label class="row" style="gap:6px"><input type="radio" name="paperOk" value="0"> wrong</label>
@@ -5991,7 +6392,7 @@ function tiersHTML(log){
         <button class="btn" id="paperSave">Record</button><span class="muted" id="paperMsg" style="font-size:13px" role="status" aria-live="polite"></span></div>
     </div>
     <h2 style="margin-top:0">What to do next</h2>
-    <p class="muted" style="font-size:14px;margin:0 0 6px">Built from what she actually missed (down to the step, for multiplication), not from which pages she has done. "Focus on where I missed" on the home screen works this list from the top.</p>
+    <p class="muted" style="font-size:14px;margin:0 0 6px">Built from what the learner actually missed (down to the step, for multiplication), not from which pages they have done. "Focus on where I missed" on the home screen works this list from the top.</p>
     <div class="tiers">
       <div class="tier help"><h3>Still needs help</h3><ul>${help.join("")||empty("Nothing open. Every miss has been worked back to two clean wins.")}</ul></div>
       <div class="tier next"><h3>Worth practicing next</h3><ul>${next.join("")||empty("Nothing waiting for review.")}</ul></div>
@@ -6016,14 +6417,14 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
   const skillName=k=>SKILLS[k]?SKILLS[k].name:esc(str(k)||"?");
   const missMeta=e=>`${Number.isFinite(e.t)?fmtDate(e.t):"unknown time"} · ${skillName(e.sk)}${e.lvl!=null?` · level ${esc(str(e.lvl))}`:""} · ${e.stage?esc(str(e.stage)):(e.retry?"retry":"fresh")}${e.page?" · from the page":e.hw?" · homework":""}${e.shown?" · answer shown":""}${+e.hints>0?" · "+(+e.hints)+" hint"+(+e.hints>1?"s":"")+(e.hintsOf?" of "+e.hintsOf:""):""}${typeof e.tag==="string"&&e.tag?` · <span class="tag">${esc(e.tag)}</span>`:""}${e.revealed!==undefined?` · walkthrough: ${+e.passed||0} step${+e.passed===1?"":"s"} right, ${+e.revealed||0} shown${e.explainAsked?`, reasons ${+e.explainOk||0} of ${+e.explainAsked}`:""}${+e.explainSkipped?`, ${+e.explainSkipped} reason${+e.explainSkipped===1?"":"s"} just shown`:""}${+e.helpTaps?`, ${+e.helpTaps} help tap${+e.helpTaps===1?"":"s"}`:""}`:""}${e.comps&&typeof e.comps==="object"?(()=>{ const m=Object.keys(e.comps).filter(c=>e.comps[c]&&e.comps[c].miss); return m.length?` · missed: ${m.map(c=>esc(compName(e.sk,c))).join(", ")}`:""; })():""}${e.support!==undefined?` · supports ${esc(str(e.support))} of 3`:""}${e.cues?` · visible: ${esc(str(e.cues))}`:""}${e.pre?` · step (${esc(compName(e.sk,e.pre.comp))}): ${e.pre.ok?"shown ✓":`answered ${esc(str(e.pre.yours))}, is ${esc(str(e.pre.ans))}`}`:""}${e.unfinished?` · sent back ${+e.unfinished} time${+e.unfinished===1?"":"s"} for empty boxes before this`:""}${e.swapCaught?` · two digits typed in reverse were caught before grading`:""}${e.proved?` · proved: ${esc(str(e.proved)).replace(/,/g,", ")}`:""}`;
   const exportText=JSON.stringify(DB); const nPlayers=Object.keys(DB.profiles).length;
-  // Class position: the district calendar's estimate, or a lesson pinned here from the homework header
-  const L=lessonList(), classId=effectiveClassAt(), calId=calendarClassAt();
+  // Class position: the class pacing calendar's estimate, or a lesson pinned here from the homework header (v9.24: only when the calendar is on)
+  const L=lessonList(), classId=effectiveClassAt(), calId=calendarClassAt(), calOn=classCalOn();
   const byUnit=[]; for(const l of L){ if(!l) continue; let g=byUnit.find(x=>x.unit===l.unit); if(!g){ g={unit:l.unit, ls:[]}; byUnit.push(g); } g.ls.push(l); }
   const optLabel=l=>`${lessonShort(l)} · ${l.name}${l.std?` · ${l.std}${l.stdNote?" (the guide prints a different code; see note)":""}`:""}${l.type?` · ${l.type}`:""}${l.inferred?" (inferred)":""}${lessonSkills(l).length?"":" · not in the app yet"}`;
   const lessonOpts=byUnit.map(g=>`<optgroup label="${esc(unitTitle(g.unit))}">${g.ls.map(l=>`<option value="${esc(l.id)}" ${l.id===classId?"selected":""}>${esc(optLabel(l))}</option>`).join("")}</optgroup>`).join("");
   const classModeHTML=()=>S.classPin
-    ? `<b>Pinned by you:</b> ${esc(lessonShortById(S.classPin))}. The district calendar puts the class at ${calId?esc(lessonShortById(calId)):"—"} today.`
-    : `<b>Following the district calendar:</b> ${calId?esc(lessonShortById(calId)):"—"} today (estimated from the unit dates, weekdays only).`;
+    ? `<b>Pinned by you:</b> ${esc(lessonShortById(S.classPin))}. The pacing calendar puts the class at ${calId?esc(lessonShortById(calId)):"—"} today.`
+    : `<b>Following the pacing calendar:</b> ${calId?esc(lessonShortById(calId)):"—"} today (estimated from the unit dates, weekdays only).`;
   // Skill → lesson table, grouped by unit, with lesson type letters
   const covered=byUnit.filter(g=>g.ls.some(l=>lessonSkills(l).length));
   const coveredUnits=new Set(covered.map(g=>g.unit));
@@ -6035,10 +6436,16 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
     return `<tr class="unit-row"><th colspan="2" scope="colgroup">${esc(unitTitle(g.unit))}</th></tr>`
       + skillsIn.map(k=>`<tr><td>${SKILLS[k].name}</td><td>${g.ls.filter(l=>lessonSkills(l).includes(k)).map(lessonTag).join(" ")}</td></tr>`).join("")
       + (missing.length?`<tr><td class="muted">Not in the app yet</td><td class="muted">${missing.map(l=>`L${esc(l.lesson)}${l.type?` ${esc(l.type)}`:""}`).join(", ")}</td></tr>`:""); }).join("");
+  // v9.24 review #1: the per-learner choice comes first; the pin and the lesson map show only when the calendar is on
+  const calChoiceHTML=`<div class="classcal" id="classcal"><p class="muted" style="font-size:14px;margin:0 0 8px">If ${esc(S.name)}'s class uses this pacing calendar, turn it on: Home then shows “This week in class”, and “Start today” includes this week's lesson. When it is off, Home leaves that card out and “Start today” uses mixed practice in its place. This choice is for ${esc(S.name)} only.</p>
+      <div class="row" style="gap:10px;flex-wrap:wrap"><label class="row" style="gap:6px;font-size:14px">Follow a class pacing calendar <select id="classcalsel" style="font-size:16px;padding:6px 8px"><option value="on"${calOn?" selected":""}>${esc(CLASS_CAL_NAME)}</option><option value="off"${calOn?"":" selected"}>Off</option></select></label>
+        <button class="btn" id="classcalsave">Save</button><span class="muted" id="classcalmsg" style="font-size:13px;align-self:center" role="status" aria-live="polite"></span></div>
+      <p class="muted classcalstate" style="font-size:14px;margin:8px 0 0"><b>Now:</b> ${calOn?`following ${esc(CLASS_CAL_NAME)}.`:"off. No class calendar is used for this learner."}</p></div>`;
   const classHTML = L.length ? `
-    <div class="card">
+    <div class="card" id="classcard">
       <h2 style="margin-top:0">Class position</h2>
-      <p class="muted" style="font-size:14px;margin:0 0 8px">By default the app follows the district pacing calendar. If the homework header says otherwise ("Homework · Unit 2 Lesson 5"), pick that lesson and pin it. "Practice this week" on the home screen draws mostly from this lesson, with some from the two before it for spiral review.</p>
+      ${calChoiceHTML}${calOn?`
+      <p class="muted" style="font-size:14px;margin:12px 0 8px">The app follows the pacing calendar unless you pin a lesson. If the homework header says otherwise ("Homework · Unit 2 Lesson 5"), pick that lesson and pin it. "Practice this week" on the home screen draws mostly from this lesson, with some from the two before it for spiral review.</p>
       <p class="muted" style="font-size:14px;margin:0 0 8px"><b>Pin the topic, not just the page number.</b> A page titled "Spiral Review U2 L7" practices Lesson 7's skill even when it sits in Lesson 9's homework. Pin the lesson whose name matches what the page is actually doing; for tonight's exact problem shapes, use "Homework practice" on the home screen, which ignores levels and the calendar.</p>
       <p class="muted classmode" id="classmode" style="font-size:14px;margin:0 0 8px" role="status" aria-live="polite">${classModeHTML()}</p>
       <label class="vh" for="classat">Lesson the class is on</label>
@@ -6046,10 +6453,11 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
       <div class="actions" style="margin-top:10px"><button class="btn" id="saveclass">Save (pin this lesson)</button><button class="btn quiet" id="followcal">Follow the calendar</button><span class="muted" id="classsaved" style="font-size:13px" role="status" aria-live="polite"></span></div>
       <h2>Which lessons each skill practices</h2>
       <div style="overflow-x:auto"><table class="report"><tr><th>Skill here</th><th>Lessons</th></tr>${skillMap||`<tr><td colspan="2" class="muted">No lesson in the list has a skill here yet.</td></tr>`}</table></div>
-      <p class="muted" style="font-size:13px;margin:10px 0 0">Lesson types: C = concept lesson, P = practice lesson, MT = unit review.</p>
+      <p class="muted" style="font-size:13px;margin:10px 0 0">Lesson types: C = concept lesson, P = practice lesson, MT = unit review.</p>`:""}
     </div>` : "";
-  const notYetUnitsHTML = notYetUnits.length ? `<p class="muted" style="font-size:13px;margin:10px 0 4px">Units with nothing in the app yet:</p><ul class="units muted">${notYetUnits.map(t=>`<li>${t}</li>`).join("")}</ul>` : "";
-  const notYet = typeof NOT_YET_COVERED==="string" && NOT_YET_COVERED.trim() ? NOT_YET_COVERED : `See the lesson map above for what each skill covers.`;
+  const notYetUnitsHTML = (calOn && notYetUnits.length) ? `<p class="muted" style="font-size:13px;margin:10px 0 4px">Units with nothing in the app yet:</p><ul class="units muted">${notYetUnits.map(t=>`<li>${t}</li>`).join("")}</ul>` : "";
+  const notYet = !calOn ? `The unit-by-unit lesson list appears here when the class pacing calendar is on (see "Class position").` // v9.24: the unit list belongs to the pacing calendar
+    : typeof NOT_YET_COVERED==="string" && NOT_YET_COVERED.trim() ? NOT_YET_COVERED : `See the lesson map above for what each skill covers.`;
   app.innerHTML=`
     <div class="topbar" id="gupage"><button class="btn quiet" id="back">Home</button><h1 style="margin:0">${esc(S.name)}'s progress</h1><span class="muted build">Build ${esc(BUILD)}</span></div>${warnHTML()}${guBannerHTML()}${guCardHTML()}
     <p class="muted" style="margin:6px 0 0">${(()=>{ const cls=e=>classifyEntry(e); const wk=log.filter(e=>Number.isFinite(e.t)&&e.t>=weekAgo); const wi=wk.filter(e=>["independent","indep-miss"].includes(cls(e))); const wiR=wi.filter(e=>cls(e)==="independent").length; const wHelp=wk.filter(e=>["supported","prompted","guided"].includes(cls(e))).length; const wCopied=wk.filter(e=>cls(e)==="copied").length;
@@ -6109,6 +6517,9 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
     if(!SKILLS[sk]) return; pushLog({t:Date.now(), sk, q: qtxt?`paper: ${qtxt}`:"paper problem", yours:"", ans:"", ok:okv?1:0, stage:"paper", hints:0, independent:0, transfer:1, parentScored:1, helped:helped?1:0, changedForm:changedForm?1:0, lvl:S.levels[sk]});
     if(!okv){ noteComp(sk, "*", false, {lvl:S.levels[sk]}); } // a paper miss opens the skill for Focus, like any miss
     save(); grownups(); const msg=app.querySelector("#paperMsg"); if(msg) msg.textContent="Recorded."; };
+  if(q("classcalsave")) q("classcalsave").onclick=()=>{ const on=q("classcalsel").value==="on"; S.classCal=on; const okSave=save(); grownups(); // v9.24: re-render so the pin and lesson map appear or go
+    const m=app.querySelector("#classcalmsg"); if(m) m.textContent=okSave?(on?"Saved. Home shows “This week in class”.":"Saved. The class pacing calendar is off."):"Saved for now, but this device would not store it.";
+    const sel=app.querySelector("#classcalsel"); if(sel) sel.focus({preventScroll:true}); };
   if(q("saveclass")) q("saveclass").onclick=()=>{ const id=q("classat").value; const l=lessonById(id);
     if(!l){ q("classsaved").textContent="Pick a lesson from the list."; return; }
     S.classPin=l.id; const okSave=save(); q("classsaved").textContent=okSave?`Pinned: ${lessonShort(l)}.`:"Pinned for now, but this device refused to save it."; setClassMode(); };
@@ -6121,7 +6532,7 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
   q("tcopy").onclick=async()=>{ q("tmsg").textContent="Building…"; try{ const code=await codeFor(); const ok=await copyText(code); q("tmsg").textContent= ok ? `Copied (${fmtBytes(code.length)}). Now paste it into Restore on the new iPad.` : "Could not copy automatically; the code is shown below, select it and copy by hand."; if(!ok){ q("tcode").hidden=false; q("tcode").value=code; } }catch(e){ q("tmsg").textContent="Could not build the code: "+(e.message||e); } };
   if(q("tshare")) q("tshare").onclick=async()=>{ try{ const code=await codeFor(); await navigator.share({title:"Math Practice transfer code", text:code}); q("tmsg").textContent="Shared. On the new iPad, copy the code from where it landed and paste it into Restore."; }catch(e){ if(e && e.name!=="AbortError") q("tmsg").textContent="Sharing did not work here; use Copy instead."; } };
   q("tshow").onclick=async()=>{ const ta=q("tcode"); if(!ta.hidden){ ta.hidden=true; q("tshow").textContent="Show the code"; return; } ta.value="Building…"; ta.hidden=false; ta.value=await codeFor(); q("tshow").textContent="Hide the code"; };
-  q("reset").onclick=()=>{ if(confirm(`Erase ${S.name}'s levels and history and start from level 1?`)){ const n=S.name; S=normalize(blankProfile(n)); DB.profiles[n]=S; save(); home(); } };
+  q("reset").onclick=()=>{ if(confirm(`Erase ${S.name}'s levels and history and start from level 1?`)){ const n=S.name, cal=S.classCal===true; S=normalize({...blankProfile(n), classCal:cal}); DB.profiles[n]=S; save(); home(); } }; // v9.24: the class pacing calendar choice is a setting, not progress, so it survives
   q("remove").onclick=()=>{ if(confirm(`Remove ${S.name} completely? This cannot be undone (unless you saved a backup).`)){ delete DB.profiles[S.name]; DB.current=null; S=null; save(); home(); } };
 }
 home();
