@@ -95,8 +95,10 @@ h2{font-size:20px;margin:18px 0 6px}
 .home-more{border-top:1px solid var(--line);margin-top:14px;padding-top:5px}
 .home-more summary,.home-fold summary{cursor:pointer;list-style:none;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:700;color:var(--ink)}
 .home-more summary::-webkit-details-marker,.home-fold summary::-webkit-details-marker{display:none}
-.home-more summary::after,.home-fold summary::after{content:"+";font-size:24px;line-height:1;flex-shrink:0}
-.home-more[open] summary::after,.home-fold[open] summary::after{content:"−"}
+.home-more summary::after,.home-fold summary::after{content:"+";content:"+" / "";font-size:24px;line-height:1;flex-shrink:0} /* v9.36: the alt text "" keeps screen readers from announcing "plus"; older browsers keep the first rule */
+.home-more[open] summary::after,.home-fold[open] summary::after{content:"−";content:"−" / ""}
+.home-lead .week-guess{font-size:15px;margin:8px 0 0}
+.home-lead .lpmore{font-size:14px;margin:8px 0 0}
 .home-more summary:focus-visible,.home-fold summary:focus-visible{outline:3px solid var(--ink);outline-offset:2px;box-shadow:0 0 0 6px var(--hi);border-radius:8px}
 .home-more-body{padding:3px 0 4px}
 .home-fold{padding-top:7px;padding-bottom:7px}
@@ -1623,7 +1625,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.35 · September 27, 2026";
+const BUILD="v9.36.1 · September 27, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -2295,11 +2297,15 @@ const LESSONS=[
 for(const k of SKILL_ORDER){ SKILLS[k].lessons = LESSONS.filter(L=>L.skills.includes(k)).map(L=>L.id); }
 function lessonTypeLabel(t){ return t==="C" ? "Concept lesson (C)" : t==="P" ? "Practice lesson (P)" : t==="MT" ? "Unit review (MT)" : String(t||""); }
 function _isoToDate(iso){ const [y,m,d]=iso.split("-").map(Number); return new Date(y,m-1,d); }
-// v9.12: non-instruction weekdays of the 2026–27 school calendar that goes with this pacing (a draft copy).
-// With these removed, every unit's school-day count equals the pacing guide's "days" (checked for all 11 units in the release tests).
+// Non-attendance weekdays (TK-12) from the school district's 2026–2027 academic calendar (the district PDF dated September 8, 2026):
+// Sept 7; Nov 11, 26, 27; winter break Dec 21 – Jan 8; Jan 18; Feb 8, 15; spring break Mar 22–29. The school year runs Aug 11 – May 27 (180 days).
+// v9.36.1: verified against that calendar; May 31, 2027 was dropped because it falls after the last day of school.
+// With these removed, every unit's school-day count equals the pacing guide's "days" (review-tests/school-calendar-v9361.cjs).
+// Minimum days (every Wednesday; TK-6 conference weeks) are attendance days, and the pacing guide counts them as lesson days.
+const SCHOOL_YEAR={first:"2026-08-11", last:"2027-05-27", days:180};
 const PACING_NO_SCHOOL=new Set(["2026-09-07","2026-11-11","2026-11-26","2026-11-27",
   ...["21","22","23","24","25","28","29","30","31"].map(d=>"2026-12-"+d), ...["01","04","05","06","07","08","18"].map(d=>"2027-01-"+d),
-  "2027-02-08","2027-02-15", ...["22","23","24","25","26","29"].map(d=>"2027-03-"+d), "2027-05-31"]);
+  "2027-02-08","2027-02-15", ...["22","23","24","25","26","29"].map(d=>"2027-03-"+d)]);
 const _ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 function _schoolDays(a,b){ let n=0; const d=new Date(a); while(d<=b){ const w=d.getDay(); if(w!==0&&w!==6&&!PACING_NO_SCHOOL.has(_ymd(d))) n++; d.setDate(d.getDate()+1); } return n; }
 // Estimated lesson for a date: within a unit, spread its lessons evenly over the unit's school days; between units, sit on the previous unit's last lesson (review).
@@ -3689,6 +3695,14 @@ function calendarClassAt(){ // where the class pacing calendar says the class is
 }
 // Effective class position: a lesson the grown-up pinned, otherwise the calendar. S.classPin is a lesson id or null (= follow the calendar).
 const effectiveClassAt=()=>(S && lessonById(S.classPin)) ? S.classPin : calendarClassAt();
+// v9.36: a pin records when it was set (S.classPinAt, ms). A pin from before v9.36 has no date; it is stamped the first time v9.36 sees it and
+// flagged approximate (S.classPinApprox=1), so it reads "on or before" that day. A pin never moves forward on its own, so after
+// PIN_STALE_SCHOOL_DAYS school days Home and the grown-ups page both ask for a check against the homework.
+const PIN_STALE_SCHOOL_DAYS=5;
+function pinSchoolDaysOld(){ if(!S||!S.classPin||!Number.isFinite(+S.classPinAt)) return 0; const a=new Date(+S.classPinAt), now=new Date(); a.setHours(0,0,0,0); now.setHours(0,0,0,0);
+  if(now<=a) return 0; const from=new Date(a); from.setDate(from.getDate()+1); return _schoolDays(from, now); }
+const pinIsStale=()=>!!(S && S.classPin && pinSchoolDaysOld()>=PIN_STALE_SCHOOL_DAYS);
+const pinDayText=()=>{ if(!S||!Number.isFinite(+S.classPinAt)) return ""; const d=new Date(+S.classPinAt).toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"}); return S.classPinApprox?`on or before ${d}`:`on ${d}`; };
 // v9.24 review #1: the app is shared by many families, so following the class pacing calendar is a per-learner grown-up choice
 // (S.classCal: true = follow it, false = off). New learners start with it off; normalize() turns it on once for an older profile that
 // already has practice history, so an existing learner's screens do not change. When it is off: Home hides "This week in class" and the
@@ -3736,6 +3750,8 @@ function normalize(p){ // fill in anything missing (older saves, imports)
   // so profiles that were merely on the old default switch to following the calendar automatically.
   if(!("classPin" in p) && p.classAt!==undefined){ out.classPin = (lessonById(p.classAt) && p.classAt!==calendarClassAt()) ? p.classAt : null; }
   out.classPin = lessonById(out.classPin) ? out.classPin : null; // unknown or missing lesson id → follow the calendar
+  if(out.classPin){ if(!(Number.isFinite(+out.classPinAt) && +out.classPinAt>0)){ out.classPinAt=Date.now(); out.classPinApprox=1; } else { out.classPinAt=+out.classPinAt; out.classPinApprox=out.classPinApprox?1:0; } }
+  else { delete out.classPinAt; delete out.classPinApprox; } // v9.36: when the pin was set
   // v9.24: the class pacing calendar choice. A profile saved before the choice existed keeps following it if it has practice history
   // (or a pinned lesson); one with no history starts with it off, like a new learner. After that, only the grown-up's choice counts.
   out.classCal = ("classCal" in p) ? p.classCal===true : (out.log.length>0 || (+p.attempted||0)>0 || !!out.classPin);
@@ -4089,6 +4105,10 @@ function homeEffortHTML(){ try{
   if(!log.length) parts.push("The dots fill in as you level up; gold means maxed out.");
   return parts.join(" ");
 }catch(e){ return "The dots fill in as you level up; gold means maxed out."; } }
+// v9.36: which Home disclosures are open, kept in memory for this sitting only (per player), so coming back to Home does not re-close them.
+const homeOpen={};
+const foldAttr=key=>{ const k=(S&&S.name||"")+"|"+key; return ` data-fold="${key}"${homeOpen[k]?" open":""}`; };
+function bindFolds(){ app.querySelectorAll("details[data-fold]").forEach(d=>d.addEventListener("toggle",()=>{ homeOpen[(S&&S.name||"")+"|"+d.dataset.fold]=d.open; })); }
 function home(){
   if(typeof reportRelease==="function") reportRelease(); // a viewed school document never follows a grown-up back to Home or another player
   if(typeof rhReset==="function") rhReset(); // v9.23: nor do the report-card helper's marks (memory only)
@@ -4104,20 +4124,27 @@ function home(){
   const unit=curL?unitById(curL.unit):null;
   const lessonLine=(l,withUnit)=>[withUnit?`Unit ${esc(l.unit)}`:"", `Lesson ${esc(l.lesson)}`, esc(l.name)].filter(Boolean).join(" · "); // v9.12: standard codes and lesson types live on the grown-ups page; the kid screen names the lesson
   const lessonRouteVisible=!!(curL && typeof LP_U2!=="undefined" && LP_U2[curL.id] && typeof lpReached==="function" && lpReached().length);
+  const guess=!!curL && !S.classPin; // v9.36: an unpinned class lesson is the calendar's estimate, not a known fact
+  const stale=!!curL && typeof pinIsStale==="function" && pinIsStale();
+  const hasWeek=Object.keys(weekWeights()).length;
+  const pausedLesson=typeof lpResumeReady==="function" && lpResumeReady(); // her own paused lesson outranks any other main button
+  const weekAction=`<div class="actions home-week-action"><button class="btn${guess||pausedLesson?"":" primary"}" data-skill="week" id="week">${hasWeek?"Practice this week":"Mixed review instead"}</button></div>`;
+  const lpHTML=(typeof lpHomeHTML==="function" && typeof lpReached==="function" && lpReached().length) ? lpHomeHTML(curL,{guess, mid:lessonRouteVisible?"":weekAction}) : "";
   const weekHTML = curL ? `
     <div class="card week home-lead">
       <div class="week-head"><h2 style="margin:0">This week in class</h2>${S.classPin?`<span class="std" title="Set on the grown-ups page">Pinned</span>`:`<span class="std" title="Estimated from the class pacing calendar">Estimate</span>`}</div>
       <div class="week-lesson">${lessonLine(curL,false)}${curL.inferred?` <span class="muted inferred">(inferred)</span>`:""}</div>
-      ${lessonRouteVisible||lessonSkills(curL).length?"":(Object.keys(weekWeights()).length?`<p class="muted week-note">This lesson is not in the app yet. Mixed review uses earlier lessons: ${[...new Set([ci-1,ci-2].filter(i=>i>=0).flatMap(i=>lessonSkills(L[i])))].map(k=>esc(SKILLS[k].name)).join(", ")}.</p>`:`<p class="muted week-note"><b>This lesson is not in the app yet.</b> Mixed review draws from other topics, not this lesson.</p>`)}
+      ${guess?`<p class="muted week-guess">This is a guess from the school calendar. If your homework shows a different lesson, ask a grown-up to set it.</p>`:""}
+      ${stale?`<p class="muted week-guess">A grown-up set this lesson ${esc(pinDayText())}. If your homework shows a newer lesson, ask a grown-up to update it.</p>`:""}
+      ${lessonRouteVisible||lessonSkills(curL).length?"":(hasWeek?`<p class="muted week-note">This lesson is not in the app yet. Mixed review uses earlier lessons: ${[...new Set([ci-1,ci-2].filter(i=>i>=0).flatMap(i=>lessonSkills(L[i])))].map(k=>esc(SKILLS[k].name)).join(", ")}.</p>`:`<p class="muted week-note"><b>This lesson is not in the app yet.</b> Mixed review draws from other topics, not this lesson.</p>`)}
       ${/number line/i.test(curL.name)&&lessonSkills(curL).length&&!(curL.focus&&Object.values(curL.focus).some(f=>f&&f.variant==="numberline"))?`<p class="muted week-note">The app practices these problems by place value; this lesson's number-line picture is not here yet.</p>`:""}
-      ${typeof lpHomeHTML==="function"?lpHomeHTML(curL):""}
-      ${lessonRouteVisible?"":`<div class="actions home-week-action"><button class="btn primary" data-skill="week" id="week">${Object.keys(weekWeights()).length?"Practice this week":"Mixed review instead"}</button></div>`}
-      <details class="home-more"><summary>More class options</summary>
+      ${lpHTML||(lessonRouteVisible?"":weekAction)}
+      <details class="home-more"${foldAttr("class")}><summary>More class options</summary>
         <div class="home-more-body"><div class="week-unit muted">${unit?esc(unitTitle(unit.unit)):`Unit ${esc(curL.unit)}`}</div>
         ${prevL?`<div class="week-prev muted">Spiral review: ${lessonLine(prevL, prevL.unit!==curL.unit)}</div>`:""}
         ${unit&&unit.assess?`<div class="week-prev muted">Next assessment: Unit ${esc(unit.unit)} Assessment: ${esc(unit.assess)}</div>`:""}
-        ${lessonRouteVisible?`<div class="actions home-week-action"><button class="btn quiet" data-skill="week" id="week">${Object.keys(weekWeights()).length?"Mixed review: this week":"Mixed review instead"}</button></div>`:""}
-        <p class="muted week-foot">${S.classPin?"A grown-up set this lesson.":"If your homework says a different lesson, a grown-up can change it."}</p></div>
+        ${lessonRouteVisible?`<div class="actions home-week-action"><button class="btn quiet" data-skill="week" id="week">${hasWeek?"Mixed review: this week":"Mixed review instead"}</button></div>`:""}
+        <p class="muted week-foot">${S.classPin?`A grown-up set this lesson ${esc(pinDayText())}.`:"If your homework says a different lesson, a grown-up can change it."}</p></div>
       </details>
     </div>` : "";
   const tagsHTML=k=>{ if(!calOn) return ""; // v9.24: lesson numbers belong to the class pacing calendar; with it off they would point at someone else's lessons
@@ -4134,23 +4161,24 @@ function home(){
   app.innerHTML=`
     <div class="topbar"><h1 style="margin:0" tabindex="-1">Hi, ${esc(S.name)}.</h1><button class="btn quiet small" id="switch">Not ${esc(S.name)}?</button></div>${warnHTML()}
     <p class="home-intro">Pick one way to practice. You can ask for help along the way.</p>
-    ${doneLine}${weekHTML}
+    ${doneLine}${pausedLesson && !lpHTML ? `
+    <div class="card home-lead home-resume"><div class="lphome"><button class="btn primary" id="lpresume">Resume Lesson ${LP_U2[S.lessonResume.id].lesson}</button></div></div>` : ""}${weekHTML}
     <div class="card home-today" style="margin-top:0"><div class="week-head"><h2 style="margin:0">Start today</h2><span class="std" title="The app plans it">Planned for you</span></div>
       <p class="muted home-desc">${(()=>{ const P=buildTodayPlan(); return `About ${todayCountWords(P)} problems: ${P.map(todayLabel).filter((v,i,a)=>a.indexOf(v)===i).join(", ")}.`; })()}</p>
-      <div class="actions" style="margin-top:0"><button class="btn ${curL?"":"primary"} mix" data-skill="today" style="margin-top:0">Start today</button></div></div>
+      <div class="actions" style="margin-top:0"><button class="btn ${(!curL||guess)&&!pausedLesson?"primary":""} mix" data-skill="today" style="margin-top:0">Start today</button></div></div>
     ${nsHomeTile()}
     <div class="card hw">
       <div class="week-head"><h2 style="margin:0">Homework practice</h2></div>
       <p class="muted home-desc">Have a problem from your page? Type it here to work through it.</p>
       <button class="skill" data-skill="hw:check"><div style="flex:1"><div class="name">Check a problem from the page</div><div class="blurb">Use the exact numbers from your homework.</div></div></button>
-      <details class="home-more"><summary>More homework choices</summary><div class="home-more-body">
+      <details class="home-more"${foldAttr("hw")}><summary>${Object.keys(HW_MODES).length===1?"Practice with new numbers":"More homework choices"}</summary><div class="home-more-body">
         <p class="muted home-desc">Practice the same kinds of problems with new numbers. These do not change your level.</p>
         ${Object.keys(HW_MODES).map(id=>{ const h=HW_MODES[id]; return `<button class="skill" data-skill="hw:${id}"><div style="flex:1"><div class="name">${esc(h.name)}</div><div class="blurb">${esc(h.blurb)}</div></div></button>`; }).join("")}
         <p class="muted week-note">Want to build up to a homework problem? Choose a math topic below for practice that grows with you.</p>
       </div></details>
     </div>
     ${foundationsHomeHTML()}
-    <details class="card home-fold home-topics"><summary>Choose a math topic</summary><div class="home-more-body">
+    <details class="card home-fold home-topics"${foldAttr("topics")}><summary>Choose a math topic</summary><div class="home-more-body">
       <p class="muted home-desc">Pick one thing you want to work on.</p>
       <div class="skills">${SKILL_ORDER.filter(k=>!SKILLS[k].foundation)/* v9.21: foundation skills live only in "Build your foundations" */.map(k=>`<button class="skill" data-skill="${k}"><div style="flex:1"><div class="name">${SKILLS[k].name}</div><div class="blurb">${esc(SKILLS[k].blurb)}</div>${tagsHTML(k)}</div>${dots(S.levels[k])}</button>`).join("")}</div>
     </div></details>
@@ -4163,6 +4191,7 @@ function home(){
   app.querySelectorAll("[data-skill]").forEach(b=>b.onclick=()=>start(b.dataset.skill));
   app.querySelector("#switch").onclick=players;
   app.querySelector("#grown").onclick=grownups; if(typeof lpHomeBind==="function") lpHomeBind(); // v9.33: Unit 2 lesson practice
+  bindFolds();
   app.querySelector(".topbar h1").focus({preventScroll:true});
 }
 
@@ -4606,7 +4635,7 @@ function estReasonNote(val){ const e=cur && cur.est; if(!e || e.pick<0 || cur.re
 // order. Kid-facing: the math is named, never a grade. home() leaves foundation skills out of the main list, so this is their only button.
 const FOUND_HOME_ORDER=["facts","wholepv","tenths","fracbasics","factors","twostep"]; // v9.23: fraction building blocks after tenths
 function foundationsHomeHTML(){ if(!S) return ""; const ks=FOUND_HOME_ORDER.filter(k=>SKILLS[k] && SKILLS[k].foundation && SKILL_ORDER.includes(k)); if(!ks.length) return "";
-  return `<details class="card found home-fold" id="foundations"><summary>Build your foundations</summary><div class="home-more-body">
+  return `<details class="card found home-fold" id="foundations"${foldAttr("found")}><summary>Build your foundations</summary><div class="home-more-body">
       <p class="muted" style="font-size:14px;margin:6px 0 10px">Short practice that makes the big problems easier.</p>
       <div class="skills">${ks.map(k=>`<button class="skill" data-skill="${k}"><div style="flex:1"><div class="name">${esc(SKILLS[k].name)}${S.foundations&&S.foundations[k]?` <span class="std" title="Included in Start today">In your plan</span>`:""}</div><div class="blurb">${esc(SKILLS[k].blurb)}</div></div>${dots(S.levels[k]||1)}</button>`).join("")}</div></div></details>`; }
 // v9.21 (Agent P): a practice spot in a foundation skill is keyed by the kind of question (variant), so Focus serves that kind again.
@@ -6642,9 +6671,10 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
   const L=lessonList(), classId=effectiveClassAt(), calId=calendarClassAt(), calOn=classCalOn();
   const byUnit=[]; for(const l of L){ if(!l) continue; let g=byUnit.find(x=>x.unit===l.unit); if(!g){ g={unit:l.unit, ls:[]}; byUnit.push(g); } g.ls.push(l); }
   const optLabel=l=>`${lessonShort(l)} · ${l.name}${l.std?` · ${l.std}${l.stdNote?" (the guide prints a different code; see note)":""}`:""}${l.type?` · ${l.type}`:""}${l.inferred?" (inferred)":""}${lessonSkills(l).length?"":" · not in the app yet"}`;
-  const lessonOpts=byUnit.map(g=>`<optgroup label="${esc(unitTitle(g.unit))}">${g.ls.map(l=>`<option value="${esc(l.id)}" ${l.id===classId?"selected":""}>${esc(optLabel(l))}</option>`).join("")}</optgroup>`).join("");
+  // v9.36: while following the calendar, the list starts on "Choose…" so a tap on the pin button cannot silently pin the calendar's estimate
+  const lessonOpts=`<option value=""${S.classPin?"":" selected"}>Choose the lesson on the homework…</option>`+byUnit.map(g=>`<optgroup label="${esc(unitTitle(g.unit))}">${g.ls.map(l=>`<option value="${esc(l.id)}" ${S.classPin&&l.id===classId?"selected":""}>${esc(optLabel(l))}</option>`).join("")}</optgroup>`).join("");
   const classModeHTML=()=>S.classPin
-    ? `<b>Pinned by you:</b> ${esc(lessonShortById(S.classPin))}. The pacing calendar puts the class at ${calId?esc(lessonShortById(calId)):"—"} today.`
+    ? `<b>Pinned by you ${esc(pinDayText())}:</b> ${esc(lessonShortById(S.classPin))}. The pacing calendar puts the class at ${calId?esc(lessonShortById(calId)):"—"} today.${pinIsStale()?` <b>Check this pin:</b> it is ${pinSchoolDaysOld()} school days old and does not move forward on its own.`:""}`
     : `<b>Following the pacing calendar:</b> ${calId?esc(lessonShortById(calId)):"—"} today (estimated from the unit dates, weekdays only).`;
   // Skill → lesson table, grouped by unit, with lesson type letters
   const covered=byUnit.filter(g=>g.ls.some(l=>lessonSkills(l).length));
@@ -6658,20 +6688,21 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
       + skillsIn.map(k=>`<tr><td>${SKILLS[k].name}</td><td>${g.ls.filter(l=>lessonSkills(l).includes(k)).map(lessonTag).join(" ")}</td></tr>`).join("")
       + (missing.length?`<tr><td class="muted">Not in the app yet</td><td class="muted">${missing.map(l=>`L${esc(l.lesson)}${l.type?` ${esc(l.type)}`:""}`).join(", ")}</td></tr>`:""); }).join("");
   // v9.24 review #1: the per-learner choice comes first; the pin and the lesson map show only when the calendar is on
-  const calChoiceHTML=`<div class="classcal" id="classcal"><p class="muted" style="font-size:14px;margin:0 0 8px">If ${esc(S.name)}'s class uses this pacing calendar, turn it on: Home then shows “This week in class”, and “Start today” includes this week's lesson. When it is off, Home leaves that card out and “Start today” uses mixed practice in its place. This choice is for ${esc(S.name)} only.</p>
+  const calChoiceHTML=`<div class="classcal" id="classcal"><p class="muted" style="font-size:14px;margin:0 0 8px">If ${esc(S.name)}'s class uses this pacing calendar, turn it on: Home then leads with “This week in class”, and “Start today” includes this week's lesson. When it is off, Home leaves that card out and “Start today” uses mixed practice in its place. This choice is for ${esc(S.name)} only.</p>
       <div class="row" style="gap:10px;flex-wrap:wrap"><label class="row" style="gap:6px;font-size:14px">Follow a class pacing calendar <select id="classcalsel" style="font-size:16px;padding:6px 8px"><option value="on"${calOn?" selected":""}>${esc(CLASS_CAL_NAME)}</option><option value="off"${calOn?"":" selected"}>Off</option></select></label>
-        <button class="btn" id="classcalsave">Save</button><span class="muted" id="classcalmsg" style="font-size:13px;align-self:center" role="status" aria-live="polite"></span></div>
+        <button class="btn" id="classcalsave">Save calendar choice</button><span class="muted" id="classcalmsg" style="font-size:13px;align-self:center" role="status" aria-live="polite"></span></div>
       <p class="muted classcalstate" style="font-size:14px;margin:8px 0 0"><b>Now:</b> ${calOn?`following ${esc(CLASS_CAL_NAME)}.`:"off. No class calendar is used for this learner."}</p></div>`;
   const classHTML = L.length ? `
     <div class="card" id="classcard">
       <h2 style="margin-top:0">Class position</h2>
       ${calChoiceHTML}${calOn?`
-      <p class="muted" style="font-size:14px;margin:12px 0 8px">The app follows the pacing calendar unless you pin a lesson. If the homework header says otherwise ("Homework · Unit 2 Lesson 5"), pick that lesson and pin it. "Practice this week" on the home screen draws mostly from this lesson, with some from the two before it for spiral review.</p>
+      <p class="muted" style="font-size:14px;margin:12px 0 8px">The app follows the pacing calendar unless you pin a lesson. The calendar's lesson is an estimate from the unit dates; Home labels it “Estimate” and says it is a guess. If the homework header says otherwise ("Homework · Unit 2 Lesson 5"), pick that lesson and pin it. A pin stays on that lesson until you change it or choose “Follow the calendar”; after ${PIN_STALE_SCHOOL_DAYS} school days, Home and this page ask you to check it.</p>
+      <p class="muted" style="font-size:14px;margin:0 0 8px">On Home, the class card leads with that lesson. For a Unit 2 lesson it offers “Practice Lesson N step by step”; mixed review of the lesson (mostly this lesson, some from the two before it) is under “More class options” as “Mixed review: this week.” For a lesson without a step-by-step route, the card shows “Practice this week,” with the same mix.</p>
       <p class="muted" style="font-size:14px;margin:0 0 8px"><b>Pin the topic, not just the page number.</b> A page titled "Spiral Review U2 L7" practices Lesson 7's skill even when it sits in Lesson 9's homework. Pin the lesson whose name matches what the page is actually doing; for tonight's exact problem shapes, use "Homework practice" on the home screen, which ignores levels and the calendar.</p>
       <p class="muted classmode" id="classmode" style="font-size:14px;margin:0 0 8px" role="status" aria-live="polite">${classModeHTML()}</p>
       <label class="vh" for="classat">Lesson the class is on</label>
       <div class="row"><select class="sel" id="classat">${lessonOpts}</select></div>
-      <div class="actions" style="margin-top:10px"><button class="btn" id="saveclass">Save (pin this lesson)</button><button class="btn quiet" id="followcal">Follow the calendar</button><span class="muted" id="classsaved" style="font-size:13px" role="status" aria-live="polite"></span></div>
+      <div class="actions" style="margin-top:10px"><button class="btn" id="saveclass">Pin this lesson</button><button class="btn quiet" id="followcal">Follow the calendar</button><span class="muted" id="classsaved" style="font-size:13px" role="status" aria-live="polite"></span></div>
       <h2>Which lessons each skill practices</h2>
       <div style="overflow-x:auto"><table class="report"><tr><th>Skill here</th><th>Lessons</th></tr>${skillMap||`<tr><td colspan="2" class="muted">No lesson in the list has a skill here yet.</td></tr>`}</table></div>
       <p class="muted" style="font-size:13px;margin:10px 0 0">Lesson types: C = concept lesson, P = practice lesson, MT = unit review.</p>`:""}
@@ -6743,8 +6774,8 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
     const sel=app.querySelector("#classcalsel"); if(sel) sel.focus({preventScroll:true}); };
   if(q("saveclass")) q("saveclass").onclick=()=>{ const id=q("classat").value; const l=lessonById(id);
     if(!l){ q("classsaved").textContent="Pick a lesson from the list."; return; }
-    S.classPin=l.id; const okSave=save(); q("classsaved").textContent=okSave?`Pinned: ${lessonShort(l)}.`:"Pinned for now, but this device refused to save it."; setClassMode(); };
-  if(q("followcal")) q("followcal").onclick=()=>{ S.classPin=null; const okSave=save(); const id=calendarClassAt(); if(id) q("classat").value=id;
+    S.classPin=l.id; S.classPinAt=Date.now(); S.classPinApprox=0; const okSave=save(); q("classsaved").textContent=okSave?`Pinned: ${lessonShort(l)}. It stays there until you change it.`:"Pinned for now, but this device refused to save it."; setClassMode(); };
+  if(q("followcal")) q("followcal").onclick=()=>{ S.classPin=null; delete S.classPinAt; delete S.classPinApprox; const okSave=save(); const id=calendarClassAt(); q("classat").value="";
     q("classsaved").textContent=okSave?`Following the calendar: ${id?lessonShortById(id):"—"} today.`:"Following the calendar for now, but this device refused to save it."; setClassMode(); };
   q("copy").onclick=async()=>{ const ta=q("export"); ta.select(); let done=false; try{ await navigator.clipboard.writeText(ta.value); done=true; }catch(e){ try{ done=document.execCommand("copy"); }catch(e2){} } q("copied").textContent=done?"Copied.":"Select the text and copy it by hand."; };
   q("doimport").onclick=async()=>{ q("imperr").textContent="Checking…"; const r=await importBackupText(q("import").value); if(!r.ok){ q("imperr").textContent=r.err; return; } if(r.err){ q("imperr").textContent=r.err; return; } home(); };
@@ -7346,19 +7377,25 @@ for(const id of Object.keys(LP_U2)){ const l=typeof lessonById==="function"?less
 // ---- Home, picker, grown-ups report ----
 // Home (inside "This week in class", calendar on): the lesson route for the current Unit 2 lesson, a picker for any Unit 2 lesson the class has
 // reached, and any lesson check-ins that are due. "Practice this week" keeps its job as mixed review and says so.
-function lpHomeHTML(curL){ const reached=lpReached(); if(!reached.length) return ""; lpSanitize(); const due=lpDue();
+function lpHomeHTML(curL, opt){ opt=opt||{}; const reached=lpReached(); if(!reached.length) return ""; lpSanitize();
+  const due=lpDue().sort((a,b)=>(+S.lessons[a].due||0)-(+S.lessons[b].due||0)); // v9.36: the check-in waiting longest comes first
   const here=curL && LP_U2[curL.id] ? curL.id : null;
   const paused=lpResumeReady()?S.lessonResume:null;
-  return `<div class="lphome">${paused?`<button class="btn primary" id="lpresume">Resume Lesson ${LP_U2[paused.id].lesson}</button>`:""}${here?`<button class="btn ${paused?"quiet":"primary"}" id="lpnow" data-lp="${here}">Practice Lesson ${LP_U2[here].lesson} step by step</button>`:""}<button class="btn quiet small" id="lppick">${here?"Other Unit 2 lessons":"Unit 2 lessons, step by step"}</button>
-    ${due.length?`<div class="lpdue">${due.map(id=>`<button class="btn quiet small lpcheckin" data-lpcheck="${id}">Lesson ${LP_U2[id].lesson} check-in: new numbers, on your own</button>`).join("")}</div>`:""}</div>`; }
+  const pickLabel=here?"Other Unit 2 lessons":"Unit 2 lessons, step by step";
+  const nowCls=paused?"quiet":opt.guess?"":"primary"; // v9.36: an estimated lesson is offered, not made the main button
+  return `<div class="lphome">${paused?`<button class="btn primary" id="lpresume">Resume Lesson ${LP_U2[paused.id].lesson}</button>`:""}${here?`<button class="btn ${nowCls}" id="lpnow" data-lp="${here}">Practice Lesson ${LP_U2[here].lesson} step by step</button>`:""}</div>${opt.mid||""}<div class="lphome"><button class="btn quiet small" id="lppick">${pickLabel}</button>
+    ${due.length?`<div class="lpdue"><button class="btn quiet small lpcheckin" data-lpcheck="${due[0]}">Lesson ${LP_U2[due[0]].lesson} check-in: new numbers, on your own</button></div>`:""}</div>
+    ${due.length>1?`<p class="muted lpmore">${due.length-1} more check-in${due.length===2?" is":"s are"} ready in “${pickLabel}.”</p>`:""}`; }
 function lpHomeBind(){ const q=s=>app.querySelector(s); const b=q("#lpnow"); if(b) b.onclick=()=>lpStart(b.dataset.lp, false); const r=q("#lpresume"); if(r) r.onclick=lpResume; const p=q("#lppick"); if(p) p.onclick=lpPicker;
   app.querySelectorAll("[data-lpcheck]").forEach(x=>x.onclick=()=>lpStart(x.dataset.lpcheck, true)); }
 function lpPicker(){ if(!S) return; mode="lesson"; cur=null; lpSanitize(); const reached=lpReached(), due=lpDue(), L=LP_U2;
   app.innerHTML=`<div class="topbar"><button class="btn quiet" id="back">Home</button><div class="row"><span class="pill week">Unit 2</span></div></div>${warnHTML()}
-    <div class="card"><h2 style="margin-top:0">Unit 2 lessons, step by step</h2><p class="muted" style="font-size:14px;margin:0 0 10px">Each one practices exactly that lesson's method: watch one, try two together, find a slip, then two on your own. Mixed review is still on Home under “This week in class.”</p>
+    <div class="card"><h2 style="margin-top:0">Unit 2 lessons, step by step</h2><p class="muted" style="font-size:14px;margin:0 0 10px">Each one practices exactly that lesson's method: watch one, try two together, find a slip, then two on your own. Mixed review is still on Home, in “This week in class.”</p>
+    ${due.length?`<h3 style="margin:12px 0 6px">Check-ins ready</h3><div class="lpdue">${due.map(id=>`<button class="btn quiet small lpcheckin" data-lpcheck="${id}">Lesson ${L[id].lesson} check-in: new numbers, on your own</button>`).join("")}</div><h3 style="margin:14px 0 6px">Practice a lesson</h3>`:""}
     <div class="skills">${reached.map(id=>{ const o=(S.lessons||{})[id]||{}; return `<button class="skill" data-lp="${id}"><div style="flex:1"><div class="name">Lesson ${L[id].lesson}: ${esc(L[id].name)}</div><div class="blurb">${esc(lpPlain(L[id].goal))}</div>${o.sessions?`<div class="tags"><span class="tag">Practiced ${o.sessions} time${o.sessions===1?"":"s"}</span>${due.includes(id)?`<span class="tag">Check-in ready</span>`:""}</div>`:""}</div></button>`; }).join("")}</div>
     ${reached.length<Object.keys(L).length?`<p class="muted" style="font-size:13px;margin:10px 0 0">Later Unit 2 lessons show up here when the class calendar reaches them.</p>`:""}</div>`;
-  app.querySelector("#back").onclick=home; app.querySelectorAll("[data-lp]").forEach(b=>b.onclick=()=>lpStart(b.dataset.lp, false)); }
+  app.querySelector("#back").onclick=home; app.querySelectorAll("[data-lp]").forEach(b=>b.onclick=()=>lpStart(b.dataset.lp, false));
+  app.querySelectorAll("[data-lpcheck]").forEach(x=>x.onclick=()=>lpStart(x.dataset.lpcheck, true)); }
 // Grown-ups: process evidence kept apart from answer evidence, per lesson.
 function lpGrownupsHTML(){ lpSanitize(); const log=S.lessonLog; if(!log.length && !lpReached().length) return "";
   const rows=Object.keys(LP_U2).map(id=>{ const es=log.filter(e=>e.id===id); if(!es.length) return ""; const by=p=>es.filter(e=>e.phase===p);
