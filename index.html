@@ -230,14 +230,16 @@ pre.stack .cr{color:#B45309;font-weight:600}
 .stop{margin-top:14px;border:2px dashed var(--ink);border-radius:12px;padding:12px 14px;background:#FFFEF8}
 .stop b{display:block;margin-bottom:4px}
 .walter-note{display:flex;align-items:center;gap:12px;margin:12px 0;padding:8px 12px;border:1px solid #E7D9C4;border-radius:12px;background:#FFFCF6;color:var(--ink);font-size:15px;line-height:1.35}
-.walter-note img{width:72px;height:72px;object-fit:contain;flex:none}
+.walter-note img{width:112px;height:112px;object-fit:contain;flex:none}
 .walter-note p{margin:0}
 .walter-note b{display:inline;margin:0;color:#684622}
 .walter-note.compact{margin:8px 0;padding:5px 8px}
-.walter-note.compact img{width:72px;height:72px}
-.walter-home{width:52px;height:52px;object-fit:contain;flex:none;border-radius:50%}
-.walter-heading{display:flex;align-items:center;gap:10px;min-width:0}
-@media (max-width:380px){.walter-note img,.walter-note.compact img{width:64px;height:64px}}
+.walter-note.compact img{width:96px;height:96px}
+.walter-home{width:112px;height:112px;object-fit:contain;flex:none}
+.walter-heading{display:flex;align-items:center;gap:10px;min-width:0;flex:1 1 auto}
+.walter-heading h1{min-width:0;overflow-wrap:anywhere}
+.walter-heading+.btn{flex:none}
+@media (max-width:380px){.walter-home{width:88px;height:88px}.walter-note img{width:96px;height:96px}.walter-note.compact img{width:88px;height:88px}}
 /* Walter moves for a moment when an effort cue appears. Only a finished session gets a slow idle breath. */
 .walter-note img,.walter-home{transform-origin:50% 85%}
 .walter-home{animation:walter-hello 720ms ease-out both}
@@ -1652,7 +1654,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.39 · September 28, 2026";
+const BUILD="v9.40 · September 28, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -4141,7 +4143,14 @@ function walterCueKey(kind, message){
 }
 function walterNote(kind, message, compact=false, idle=false){
   if(!WALTER_ART[kind]) return "";
-  return `<div class="walter-note walter-${kind}${compact?" compact":""}${idle?" walter-idle":""}" data-walter-cue="${esc(walterCueKey(kind,message))}"><img src="${WALTER_ART[kind]}" alt="" width="72" height="72" loading="lazy"><p><b>Walter:</b> ${message}</p></div>`;
+  return `<div class="walter-note walter-${kind}${compact?" compact":""}${idle?" walter-idle":""}" data-walter-cue="${esc(walterCueKey(kind,message))}"><img src="${WALTER_ART[kind]}" alt="" width="112" height="112" loading="lazy"><p><b>Walter:</b> ${message}</p></div>`;
+}
+function walterStepMessage(step, helped){
+  if(cur && cur.skill==="multiply" && step && Number.isInteger(step.place) && step.place>=0 && step.place<3){
+    const place=["ones","tens","hundreds"][step.place];
+    return helped?`You used help to finish the ${place}-place step.`:`You revised the ${place}-place step and finished it.`;
+  }
+  return helped?"You used help to finish this step.":"You revised this step and finished it.";
 }
 const walterMotionSeen=new Set(); let walterObserver=null;
 function armWalterMotion(){
@@ -4212,7 +4221,7 @@ function home(){
       <p class="muted home-desc">${(()=>{ const P=buildTodayPlan(); return `About ${todayCountWords(P)} problems: ${P.map(todayLabel).filter((v,i,a)=>a.indexOf(v)===i).join(", ")}.`; })()}${guess?" We’ll use math you have practiced here, or a foundation builder, until a grown-up sets the class lesson.":""}</p>
       <div class="actions" style="margin-top:0"><button class="btn ${(!curL||guess)&&!pausedLesson?"primary":""} mix" data-skill="today" style="margin-top:0">Start today</button></div></div>`;
   app.innerHTML=`
-    <div class="topbar"><div class="walter-heading"><img class="walter-home" src="data:image/webp;base64,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" alt="" width="52" height="52"><h1 style="margin:0" tabindex="-1">Hi, ${esc(S.name)}.</h1></div><button class="btn quiet small" id="switch">Not ${esc(S.name)}?</button></div>${warnHTML()}
+    <div class="topbar"><div class="walter-heading"><img class="walter-home" src="${WALTER_ART.work}" alt="" width="112" height="112"><h1 style="margin:0" tabindex="-1">Hi, ${esc(S.name)}.</h1></div><button class="btn quiet small" id="switch">Not ${esc(S.name)}?</button></div>${warnHTML()}
     <p class="home-intro">Pick one way to practice. You can ask for help along the way.</p>
     ${doneLine}${pausedLesson && !lpHTML ? `
     <div class="card home-lead home-resume"><div class="lphome"><button class="btn primary" id="lpresume">Resume Lesson ${LP_U2[S.lessonResume.id].lesson}</button></div></div>` : ""}${guess&&!pausedLesson?todayHTML:""}${weekHTML}${guess&&!pausedLesson?"":todayHTML}
@@ -5566,7 +5575,7 @@ function render(){
   const top=`
     <div class="topbar"><button class="btn quiet" id="back">Home</button>
       <div class="row"><button class="btn quiet small" id="scratchtoggle" aria-pressed="${S.scratch?"true":"false"}" title="Scratch paper for working it out with the pencil">${S.scratch?"Hide scratch paper":"Scratch paper"}</button><span class="pill">${SKILLS[sk].name}</span>${mode==="week"?`<span class="pill week">${Object.keys(weekWeights()).length?"This week":"Mixed review"}</span>`:""}${mode==="today"&&todayPlan?`<span class="pill week" title="${esc(todayLabel(cur.todaySlot))}">Today ${Math.min(todayIdx,todayPlan.length)} of ${todayPlan.length}${cur.todaySlot&&cur.todaySlot!=="extra"?` · ${esc(todayLabel(cur.todaySlot))}`:" · one more"}</span>`:""}${mode==="miss"?`<span class="pill week" title="Chosen from your practice list, not the calendar">${cur.focusWhy?`Focus: ${esc(cur.focusKid||cur.focusWhy)}`:"Where I missed"}</span>`:""}${mode!=="miss"&&cur.focusKey&&cur.focusState==="review"?`<span class="pill week" title="A check-in on something you have shown before">Review: ${esc(cur.focusKid||cur.focusWhy||"")}</span>`:""}${cur.checkin?`<span class="pill week" title="A skill you have shown before; checking it still holds after a break">Check-in</span>`:""}${cur.hw?`<span class="pill week" title="${cur.fixed?"A problem typed from the page":"Worksheet shapes"}; does not change levels">${cur.fixed?"From the page":"Homework"}</span>`:""}${stage==="followup"?`<span class="pill">One like it</span>`:""}${cur.transferCheck?`<span class="pill week" title="Right after help: a fresh problem of the same kind, coach hidden, so the app can see what you do on your own">Fresh one</span>`:""}${cur.hw?"":dots(lvl)}</div></div>${warnHTML()}`;
-  let body=`${phase==="q"&&cur.checkin?walterNote("checkin","New numbers, same idea. Show what you remember.",true):""}<p class="prompt">${cur.prompt}</p>${sk==="facts"&&typeof factsKidLine==="function"?factsKidLine():""}${(phase==="q"||phase==="wt")?videoHelpHTML(cur):""}${phase==="q"&&walkthroughBtn()?`<div class="actions" style="margin:0 0 10px">${walkthroughBtn()}</div>`:""}`; let right="";
+  let body=`${phase==="q"&&cur.checkin?walterNote("checkin","New numbers, same idea. Show what you remember.",true):phase==="q"&&sessionN===0?walterNote("work","I'll sit with you while you try this one. Ask for a clue when you want one.",true):""}<p class="prompt">${cur.prompt}</p>${sk==="facts"&&typeof factsKidLine==="function"?factsKidLine():""}${(phase==="q"||phase==="wt")?videoHelpHTML(cur):""}${phase==="q"&&walkthroughBtn()?`<div class="actions" style="margin:0 0 10px">${walkthroughBtn()}</div>`:""}`; let right="";
   const showChart = cur.show ? chartHTML(cur.show, null, cur.minCols) : "";
   const m=cur.mistake;
   const noteHTML = m&&m.note ? `<small>${m.note}</small>` : "";
@@ -5646,11 +5655,13 @@ function render(){
     // v9.13: the offer comes earlier. Two tough ones in a row, two shown answers, or four struggle signals (help taps and wrong step entries) in this walkthrough.
     const struggling = !wtKeepGoing && ((sessionMissRun>=2 && breakOfferedAt!==sessionMissRun) || revealed>=2 || wtSignals>=4); // one "keep going" answers every condition for this walkthrough
     const breakHTML = struggling ? `<div class="stop" role="status"><b>This one is hard today.</b>${sessionMissRun>=2?`${sessionMissRun} tough ones in a row. `:""}That is OK. You can tap <b>Help me</b> on any step, or take a break. Brains often learn more after a rest than after another try.${walterNote("rest","Taking a break is okay. The problem can wait.",true)}<div class="actions" style="margin-top:8px"><button class="btn primary" id="breaknow">Take a break</button><button class="btn quiet" id="keepgoing">Keep going</button></div></div>` : "";
-    const walterWalk=struggling ? "" : sc && sc.state==="ok" && sc.tries>0 ? walterNote("nice",sc.helped?"You used help to finish this step.":"You revised this step and finished it.",true) : stepIdx===0 ? walterNote(cur.voluntaryWalkthrough?"work":"keep",cur.voluntaryWalkthrough?"Let's check one step at a time.":"Let's find the step that needs another look.",true) : "";
+    const walterStepDone=!struggling && sc && sc.state==="ok" && sc.tries>0 ? walterNote("nice",walterStepMessage(step,sc.helped),true) : "";
+    const walkStart=cur.skippedTo||0;
+    const walterWalk=!struggling && !walterStepDone && stepIdx===walkStart && !stepRes[stepIdx] ? walterNote(cur.voluntaryWalkthrough?"work":"keep",cur.voluntaryWalkthrough?"Let's check one step at a time.":"Let's find the step that needs another look.",true) : "";
     right=`<div class="banner ${cur.voluntaryWalkthrough?"learn":"no"}" style="margin-top:0" role="status" aria-live="polite"><span class="mark" aria-hidden="true">${cur.voluntaryWalkthrough?"→":"✕"}</span><div>${head}${noteHTML}<small>Step ${stepIdx+1} of ${total}</small>${downHTML}</div></div>
       ${walterWalk}${breakHTML}<div class="progress" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${stepIdx+1}" aria-label="Walkthrough progress"><i style="width:${Math.round(100*(stepIdx+1)/total)}%"></i></div>
       ${cur.divMap?divPlaceMap(cur):""}
-      <div class="wt" id="wt">${cur.steps.slice(0,stepIdx+1).map((s,i)=>stepHTML(s,i,i<stepIdx,true)).join("")}</div>${exampleOpen?exampleHTML():""}
+      <div class="wt" id="wt">${cur.steps.slice(0,stepIdx+1).map((s,i)=>stepHTML(s,i,i<stepIdx,true)).join("")}</div>${walterStepDone}${exampleOpen?exampleHTML():""}
       <div class="actions">${(open || (sc && sc.state==="explain"))?"":(!last?`<button class="btn primary" id="step">Next step</button>`:`<button class="btn primary" id="retry">Try one like it</button>`)}</div>`; /* the reason question must be answered before moving on */
   }
   const idleTip=`<div class="idletip" id="idletip" role="status" aria-live="polite"></div>`; if(phase==="wt") right+=idleTip; else if(phase==="q") body+=idleTip; // v9.13: a quiet "stuck?" line after a long pause
@@ -5768,7 +5779,7 @@ function focusFirst(){
 function beginWalkthrough(){
   if(phase!=="q" || !cur || !cur.steps || !cur.steps.length) return;
   const inp=app.querySelector("#ans"); if(inp) lastAnswer=inp.value;
-  cur.voluntaryWalkthrough=true; cur.studied=true;
+  cur.voluntaryWalkthrough=true; cur.studied=true; cur.skippedTo=0;
   S.pendingQ=null; phase="wt"; stepIdx=0; stepRes=[]; revealed=0; passed=0; expanded=0; wtSignals=0; missEntry=null;
   initStepCheck(); save(); render();
   const target=app.querySelector(".banner.learn"); if(target && target.scrollIntoView) target.scrollIntoView({behavior:"smooth",block:"start"});
@@ -5991,7 +6002,7 @@ function submit(){
     if(stage==="fresh") chain=1; else chain++;
     missEntry=pushLog(entry);
     { // v9.30: repeated full misses still start checked work; never switch to the copy-the-answer page
-      phase="wt"; stepIdx=0; stepRes=[]; revealed=0; passed=0; wtSignals=0;
+      phase="wt"; stepIdx=0; cur.skippedTo=0; stepRes=[]; revealed=0; passed=0; wtSignals=0;
       if(wsGrade && wsGrade.marks){ // adaptive start: open the sub-steps of the first wrong row and begin at the first wrong column; earlier work is shown as already right
         const target=wsFirstBad(wsGrade.marks, cur); let start=-1;
         if(target){ const rowOrder = cur.meta.b<10 ? ["t"] : ["r0","r1","t"];
@@ -6975,7 +6986,7 @@ function lpRender(){ const it=lp.items[lp.i], bp=lp.bp, n=lp.items.length;
   app.innerHTML=head+body; app.querySelector("#back").onclick=()=>{ lpSaveResume(); lp=null; home(); };
   lpBind(it); armWalterMotion(); lpSaveResume(); if(typeof noteScreen==="function") noteScreen(); }
 function lpVideoHTML(){ const n=lp.bp.lesson; return (typeof U2_VIDEO_NAMES==="object" && U2_VIDEO_NAMES[n]) ? `<p class="lpvideo"><a class="video-link" id="lpvideo" href="https://videocdn.swunmath.com/lesson_videos/g5/G5_U2_L${n}.mp4" target="_blank" rel="noopener noreferrer">Watch the class video: Lesson ${n}</a> <span class="muted">(opens SWUN’s site in a new tab)</span></p>` : ""; }
-function lpIntroHTML(){ const bp=lp.bp; return `<div class="card lpcard"><h2 style="margin-top:0">Lesson ${bp.lesson}: ${esc(bp.name)}</h2><p class="lpgoal"><b>Today's goal:</b> ${bp.goal}</p>
+function lpIntroHTML(){ const bp=lp.bp; return `<div class="card lpcard"><h2 style="margin-top:0">Lesson ${bp.lesson}: ${esc(bp.name)}</h2><p class="lpgoal"><b>Today's goal:</b> ${bp.goal}</p>${walterNote("work","I can look at the first example with you.",true)}
   <div class="lpvocab"><b>Words we use</b><ul>${bp.vocab.map(([w,d])=>`<li><b>${esc(w)}</b>: ${d}</li>`).join("")}</ul></div>
   <p class="muted" style="font-size:14px">First watch one worked out, then try two together, then two on your own. Your choices get checked one step at a time.</p>${lpVideoHTML()}
   <div class="actions"><button class="btn primary" id="lpgo">Start</button></div></div>`; }
