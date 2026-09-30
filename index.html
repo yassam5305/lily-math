@@ -109,7 +109,6 @@ h2{font-size:20px;margin:18px 0 6px}
 .hw .skill{margin:9px 0 0}
 .home-extra .actions{margin-top:8px!important}
 .home-extra .mix{margin-top:0}
-.home-focus{background:#FFFCF2;border-color:#D7C78E}
 .home-focus .tf-kicker{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#725C20;margin:0 0 2px}
 .home-focus h2{margin:0}
 .home-focus .tf-intro{font-size:15px;color:var(--graphite);margin:5px 0 0}
@@ -118,6 +117,7 @@ h2{font-size:20px;margin:18px 0 6px}
 .home-focus .walter-note p{font-size:15px}
 .home-focus .skills{grid-template-columns:1fr;gap:8px}
 .home-focus .tf-choice{margin:0;background:#fff;border-color:#D5D9D8;min-height:72px}
+.home-focus .tf-choice .name,.home-focus .tf-choice .blurb{display:block}
 .home-focus .tf-choice:focus-visible{outline:3px solid var(--ink);outline-offset:2px;box-shadow:0 0 0 6px var(--hi)}
 .home-focus .tf-symbol{width:38px;height:38px;display:grid;place-items:center;border-radius:10px;background:#EAF0F6;font-size:24px;font-weight:800;flex:none}
 .home-focus .tf-arrow{margin-left:auto;font-size:22px;font-weight:700;color:#526780}
@@ -127,6 +127,7 @@ h2{font-size:20px;margin:18px 0 6px}
 
 /* practice */
 .card{background:var(--card);border:2px solid var(--line);border-radius:var(--radius);padding:18px 18px 20px;margin-top:12px}
+.card.home-focus{background:#FFFCF2;border-color:#D7C78E}
 .prompt{font-size:19px;margin:0 0 12px}
 .big-num,.big-words{display:block;font-weight:800;font-size:34px;letter-spacing:.01em;margin-top:8px;font-variant-numeric:tabular-nums;line-height:1.15}
 .big-words{font-size:24px;font-weight:700}
@@ -1668,7 +1669,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.42 · September 29, 2026";
+const BUILD="v9.43 · September 29, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
