@@ -1654,7 +1654,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.40 · September 28, 2026";
+const BUILD="v9.41 · September 29, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -4224,8 +4224,17 @@ function home(){
     <div class="topbar"><div class="walter-heading"><img class="walter-home" src="${WALTER_ART.work}" alt="" width="112" height="112"><h1 style="margin:0" tabindex="-1">Hi, ${esc(S.name)}.</h1></div><button class="btn quiet small" id="switch">Not ${esc(S.name)}?</button></div>${warnHTML()}
     <p class="home-intro">Pick one way to practice. You can ask for help along the way.</p>
     ${doneLine}${pausedLesson && !lpHTML ? `
-    <div class="card home-lead home-resume"><div class="lphome"><button class="btn primary" id="lpresume">Resume Lesson ${LP_U2[S.lessonResume.id].lesson}</button></div></div>` : ""}${guess&&!pausedLesson?todayHTML:""}${weekHTML}${guess&&!pausedLesson?"":todayHTML}
+    <div class="card home-lead home-resume"><div class="lphome"><button class="btn primary" id="lpresume">${S.lessonResume.focus?"Resume teacher's focus":"Resume Lesson "+LP_U2[S.lessonResume.id].lesson}</button></div></div>` : ""}${guess&&!pausedLesson?todayHTML:""}${weekHTML}${guess&&!pausedLesson?"":todayHTML}
     ${nsHomeTile()}
+    <div class="card home-focus" aria-labelledby="teacher-focus-title">
+      <div class="week-head"><h2 id="teacher-focus-title" style="margin:0">Teacher's focus</h2><span class="std">Extra practice</span></div>
+      <p class="muted home-desc">Work through one example, try steps with help, then try new numbers on your own. Walter can sit with you.</p>
+      <div class="skills">
+        <button class="skill" data-teacher-focus="multiply"><div style="flex:1"><div class="name">Three-digit multiplication</div><div class="blurb">Use the standard algorithm: build each row by column, regroup, and add.</div></div></button>
+        <button class="skill" data-teacher-focus="divide"><div style="flex:1"><div class="name">Division with an area model</div><div class="blurb">Build bands, check each product, track what is left, and add partial quotients.</div></div></button>
+      </div>
+      ${teacherFocusDueHTML()}
+    </div>
     <div class="card hw">
       <div class="week-head"><h2 style="margin:0">Homework practice</h2></div>
       <p class="muted home-desc">Have a problem from your page? Type it here to work through it.</p>
@@ -4248,6 +4257,8 @@ function home(){
     <div class="stats muted">${homeEffortHTML()}</div>
     <div class="footer"><button class="btn quiet small" id="grown">For grown-ups</button><span class="muted build">Build ${esc(BUILD)}</span></div>`;
   app.querySelectorAll("[data-skill]").forEach(b=>b.onclick=()=>start(b.dataset.skill));
+  app.querySelectorAll("[data-teacher-focus]").forEach(b=>b.onclick=()=>lpStart(b.dataset.teacherFocus==="multiply"?"U2L8":"U2L11",false,null,true));
+  app.querySelectorAll("[data-teacher-check]").forEach(b=>b.onclick=()=>lpStart(b.dataset.teacherCheck==="multiply"?"U2L8":"U2L11",true,null,true));
   app.querySelector("#switch").onclick=players;
   app.querySelector("#grown").onclick=grownups; if(typeof lpHomeBind==="function") lpHomeBind(); // v9.33: Unit 2 lesson practice
   bindFolds(); armWalterMotion();
@@ -6928,6 +6939,25 @@ function lpReadInput(step, st){ const I=step.input||{type:"num"}, box=app.queryS
 
 // ---- session ----
 function lpBlueprint(id){ return LP_U2[id]||null; }
+// A teacher-requested route through the existing checked-step engine. It shares the
+// lesson's review schedule, while choosing the requested representation every time.
+function teacherFocusBlueprint(id){
+  const base=lpBlueprint(id); if(!base) return null;
+  if(id==="U2L8") return {...base, name:"Three-digit multiplication", goal:"Multiply a three-digit number by a two-digit number with the standard algorithm. Write each column, regroup when needed, and add the two rows.",
+    model:()=>{ const s=lpAlgorithm({a:213,b:12}); s.script=[]; return s; },
+    make:load=>{ const a=load<=1?100*lpRnd(1,3)+10*lpRnd(1,3)+lpRnd(1,3):load===2?lpRnd(102,489):lpRnd(301,899);
+      const b=load<=1?10*lpRnd(1,2)+lpRnd(1,3):load===2?10*lpRnd(2,4)+lpRnd(1,9):10*lpRnd(5,7)+lpRnd(1,9);
+      return lpAlgorithm({a,b}); }};
+  if(id==="U2L11") return {...base, name:"Division with an area model", goal:"Divide with bands in an area model. Put partial quotients on the right, products inside, and keep a subtraction ledger.",
+    make:load=>{ const d=load<=1?lpRnd(3,9):load===2?lpPick([12,15,20,25,30]):lpPick([21,24,32,36,42,48,56,63,72]);
+      const q=load<=1?lpRnd(31,99):load===2?lpRnd(31,119):lpRnd(71,139);
+      return lpAreaDiv({d,N:d*q,askWidth:load>=2,fewerClues:load>=3}); },
+    repair:load=>load>=3?LP_REPAIR[14]():load===2?LP_REPAIR[13]():LP_REPAIR[11]()};
+  return null;
+}
+function teacherFocusDueHTML(){ if(!S || !Array.isArray(S.lessonLog)) return "";
+  return ["multiply","divide"].map(kind=>{ const id=kind==="multiply"?"U2L8":"U2L11", o=S.lessons&&S.lessons[id];
+    return o && +o.due>0 && +o.due<=Date.now() && S.lessonLog.some(e=>e.id===id && e.teacherFocus) ? `<div class="actions"><button class="btn quiet small" data-teacher-check="${kind}">${kind==="multiply"?"Multiplication":"Division"} check-in: new numbers</button></div>` : ""; }).join(""); }
 // Saved lesson data may come from a restore or an older build: keep only well-formed entries and plain numbers.
 function lpSanitize(){ if(!S) return; const L=S.lessons&&typeof S.lessons==="object"&&!Array.isArray(S.lessons)?S.lessons:{}; const out={};
   for(const id of Object.keys(LP_U2)){ const o=L[id]; if(!o||typeof o!=="object") continue; out[id]={sessions:Math.max(0,Math.floor(+o.sessions||0)), load:Math.max(1,Math.min(3,Math.round(+o.load||1))), due:Math.max(0,+o.due||0), last:+o.last||0, checked:+o.checked||0, checkClean:o.checkClean?1:0}; }
@@ -6939,18 +6969,18 @@ function lpDue(){ const now=Date.now(); return lpReached().filter(id=>{ const o=
 function lpLoadFor(id){ const o=lpState(id); return Math.max(1, Math.min(3, Math.round(+o.load)||1)); }
 function lpSeeded(seed, work){ const old=Math.random; let state=seed>>>0; Math.random=()=>{ state=(Math.imul(1664525,state)+1013904223)>>>0; return state/4294967296; }; try{ return work(); } finally { Math.random=old; } }
 function lpSaveResume(){ if(!S||!lp||lp.items[lp.i].phase==="summary") return; const it=lp.items[lp.i], st=it.st||null;
-  S.lessonResume={v:1,id:lp.id,delayed:lp.delayed,seed:lp.seed,load:lp.load,i:lp.i,phase:it.phase,lid:it.lid||null,t:Date.now(),
+  S.lessonResume={v:1,id:lp.id,delayed:lp.delayed,focus:!!lp.focus,seed:lp.seed,load:lp.load,i:lp.i,phase:it.phase,lid:it.lid||null,t:Date.now(),
     st,rep:it.rep||null,recorded:!!it.recorded,results:lp.results}; save(); }
 function lpResumeReady(){ const r=S&&S.lessonResume; return !!(r&&r.v===1&&LP_U2[r.id]&&Number.isInteger(r.i)&&r.i>=0&&r.i<9&&Number.isInteger(r.seed)&&Number.isInteger(r.load)&&r.load>=1&&r.load<=3&&Number.isFinite(+r.t)&&Date.now()-r.t<30*864e5); }
-function lpResume(){ if(!lpResumeReady()) return; const id=S.lessonResume.id, delayed=!!S.lessonResume.delayed; try{ lpStart(id,delayed,S.lessonResume); }catch(e){ delete S.lessonResume; lp=null; save(); lpStart(id,delayed); } }
-function lpStart(id, delayed, resume){ const bp=lpBlueprint(id); if(!bp || !S) return; if(typeof home==="function" && cur && phase==="q") leaveProblem(); cur=null; mode="lesson:"+id;
+function lpResume(){ if(!lpResumeReady()) return; const id=S.lessonResume.id, delayed=!!S.lessonResume.delayed, focus=!!S.lessonResume.focus; try{ lpStart(id,delayed,S.lessonResume,focus); }catch(e){ delete S.lessonResume; lp=null; save(); lpStart(id,delayed,null,focus); } }
+function lpStart(id, delayed, resume, focus){ focus=!!(focus || (resume&&resume.focus)); const bp=focus?teacherFocusBlueprint(id):lpBlueprint(id); if(!bp || !S) return; if(typeof home==="function" && cur && phase==="q") leaveProblem(); cur=null; mode="lesson:"+id;
   const load=resume?resume.load:lpLoadFor(id), seed=resume?resume.seed:Math.floor(Math.random()*4294967296), items=[]; lpUsed=new Set();
   lpSeeded(seed,()=>{ if(delayed){ items.push({phase:"delayed", spec:bp.make(load, "delayed", 0)});
       const others=lpReached().filter(x=>x!==id && (S.lessons||{})[x] && +S.lessons[x].sessions>0); if(others.length){ const o=lpPick(others); items.push({phase:"mixed", lid:o, spec:LP_U2[o].make(lpLoadFor(o), "independent", 1)}); } }
     else { items.push({phase:"intro"}); items.push({phase:"model", spec:bp.model()}); items.push({phase:"guided", spec:bp.make(load, "guided", 0)}); items.push({phase:"guided", spec:bp.make(load, "guided", 1)});
       items.push({phase:"explain"}); items.push({phase:"repair", rspec:bp.repair(load)}); items.push({phase:"independent", spec:bp.make(load, "independent", 0)}); items.push({phase:"independent", spec:bp.make(load, "independent", 1)}); } });
-  items.push({phase:"summary"}); lp={id,bp,items,i:0,delayed:!!delayed,seed,load,t0:Date.now(),results:[]};
-  if(resume){ const it=items[resume.i]; if(!it||it.phase!==resume.phase||it.lid!==(resume.lid||undefined)){ delete S.lessonResume; lp=null; lpStart(id,delayed); return; }
+  items.push({phase:"summary"}); lp={id,bp,items,i:0,delayed:!!delayed,focus,seed,load,t0:Date.now(),results:[]};
+  if(resume){ const it=items[resume.i]; if(!it||it.phase!==resume.phase||it.lid!==(resume.lid||undefined)){ delete S.lessonResume; lp=null; lpStart(id,delayed,null,focus); return; }
     lp.i=resume.i; lp.results=Array.isArray(resume.results)?resume.results:[]; if(it.phase==="repair"){ it.spec=it.rspec.fix; it.rep=resume.rep&&typeof resume.rep==="object"?resume.rep:{stage:"spot",picked:-1,tries:0}; }
     if(it.spec){ if(it.phase==="model"){ lpItemStart(it); } else if(resume.st&&typeof resume.st==="object"&&!Array.isArray(resume.st)&&Number.isInteger(resume.st.k)&&resume.st.k>=0){
         it.st=resume.st; const shown=Array.isArray(it.st.helpShown)?it.st.helpShown.length:0; it.st.msg=""; it.st.msgKind=""; it.st.codes=Array.isArray(it.st.codes)?it.st.codes.filter(x=>typeof x==="string"):[]; it.step=it.spec.next(it.st); it.st.helpShown=(it.step&&it.step.help||[]).slice(0,shown); it.recorded=!!resume.recorded;
@@ -6963,7 +6993,7 @@ const LP_PHASE_NAME={intro:"The goal", model:"Watch one", guided:"Try it togethe
 function lpRecord(it, extra){ if(it.recorded) return null; it.recorded=true; const st=it.st||{}, sp=it.spec||{}, lid=it.lid||lp.id, oneShot=!!(st.done && sp.oneShot && sp.oneShot(st)), model=it.phase==="model";
   const method=st.done&&!st.skipped&&!oneShot&&!model?1:0;
   const e=Object.assign({t:Date.now(), id:lid, lesson:(LP_U2[lid]||lp.bp).lesson, phase:it.phase, kind:sp.kind||it.phase, q:it.spec?lpPlain(sp.title||""):"",
-    ok:st.done?1:0, methodOk:method, methodEvidence:sp.methodEvidence||sp.kind||it.phase, answerOnly:oneShot?1:(st.answerOnly===null||st.answerOnly===undefined?null:(st.answerOnly?1:0)), answerPreviewed:st.answerPreviewed?1:0,
+    ok:st.done?1:0, methodOk:method, methodEvidence:sp.methodEvidence||sp.kind||it.phase, teacherFocus:!!lp.focus, answerOnly:oneShot?1:(st.answerOnly===null||st.answerOnly===undefined?null:(st.answerOnly?1:0)), answerPreviewed:st.answerPreviewed?1:0,
     helps:+st.helps||0, tries:+st.tries||0, firstTry:method&&!st.tries&&!st.helps&&!st.answerPreviewed?1:0,
     codes:[...new Set(st.codes||[])], video:st.videoOpened?1:0, steps:+st.k||0, route:sp.route&&st.done?sp.route(st):undefined}, extra||{});
   S.lessonLog=Array.isArray(S.lessonLog)?S.lessonLog:[]; S.lessonLog.push(e); while(S.lessonLog.length>LP_LOG_CAP) S.lessonLog.shift(); lp.results.push(e); lpSaveResume(); return e; }
@@ -6975,7 +7005,7 @@ function lpFinish(){ const o=lpState(lp.id), own=lp.results.filter(e=>(e.phase==
 
 // ---- rendering ----
 function lpRender(){ const it=lp.items[lp.i], bp=lp.bp, n=lp.items.length;
-  const head=`<div class="topbar"><button class="btn quiet" id="back">${it.phase==="summary"?"Home":"Pause & Home"}</button><div class="row"><span class="pill week">Unit 2 · Lesson ${it.lid&&LP_U2[it.lid]?LP_U2[it.lid].lesson:bp.lesson}</span></div></div>${warnHTML()}
+  const head=`<div class="topbar"><button class="btn quiet" id="back">${it.phase==="summary"?"Home":"Pause & Home"}</button><div class="row"><span class="pill week">${lp.focus?"Teacher's focus":`Unit 2 · Lesson ${it.lid&&LP_U2[it.lid]?LP_U2[it.lid].lesson:bp.lesson}`}</span></div></div>${warnHTML()}
     <div class="lpprog" aria-label="Lesson steps">${lp.items.map((x,j)=>`<span class="lpdot${j<lp.i?" done":j===lp.i?" now":""}" title="${esc(LP_PHASE_NAME[x.phase])}"></span>`).join("")}<span class="muted lpprogtxt">${esc(LP_PHASE_NAME[it.phase])}${lp.delayed?"":` · ${lp.i+1} of ${n}`}</span></div>`;
   let body="";
   if(it.phase==="intro") body=lpIntroHTML();
@@ -6986,7 +7016,7 @@ function lpRender(){ const it=lp.items[lp.i], bp=lp.bp, n=lp.items.length;
   app.innerHTML=head+body; app.querySelector("#back").onclick=()=>{ lpSaveResume(); lp=null; home(); };
   lpBind(it); armWalterMotion(); lpSaveResume(); if(typeof noteScreen==="function") noteScreen(); }
 function lpVideoHTML(){ const n=lp.bp.lesson; return (typeof U2_VIDEO_NAMES==="object" && U2_VIDEO_NAMES[n]) ? `<p class="lpvideo"><a class="video-link" id="lpvideo" href="https://videocdn.swunmath.com/lesson_videos/g5/G5_U2_L${n}.mp4" target="_blank" rel="noopener noreferrer">Watch the class video: Lesson ${n}</a> <span class="muted">(opens SWUN’s site in a new tab)</span></p>` : ""; }
-function lpIntroHTML(){ const bp=lp.bp; return `<div class="card lpcard"><h2 style="margin-top:0">Lesson ${bp.lesson}: ${esc(bp.name)}</h2><p class="lpgoal"><b>Today's goal:</b> ${bp.goal}</p>${walterNote("work","I can look at the first example with you.",true)}
+function lpIntroHTML(){ const bp=lp.bp; return `<div class="card lpcard"><h2 style="margin-top:0">${lp.focus?"Teacher's focus: ":`Lesson ${bp.lesson}: `}${esc(bp.name)}</h2><p class="lpgoal"><b>Today's goal:</b> ${bp.goal}</p>${walterNote("work","I can look at the first example with you.",true)}
   <div class="lpvocab"><b>Words we use</b><ul>${bp.vocab.map(([w,d])=>`<li><b>${esc(w)}</b>: ${d}</li>`).join("")}</ul></div>
   <p class="muted" style="font-size:14px">First watch one worked out, then try two together, then two on your own. Your choices get checked one step at a time.</p>${lpVideoHTML()}
   <div class="actions"><button class="btn primary" id="lpgo">Start</button></div></div>`; }
@@ -7014,18 +7044,18 @@ function lpRepairHTML(it){ const r=it.rspec, rp=it.rep;
   return lpWorkHTML(it); }
 function lpSummaryHTML(){ const rs=lp.results, own=rs.filter(e=>e.phase==="independent"||e.phase==="delayed"||e.phase==="mixed"), clean=own.filter(e=>e.firstTry&&e.methodOk).length, o=lpState(lp.id);
   const due=+o.due>0?new Date(+o.due).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}):"";
-  return `<div class="card lpcard"><h2 style="margin-top:0">${lp.delayed?"Check-in done":"Lesson "+lp.bp.lesson+" practice done"}</h2>
+  return `<div class="card lpcard"><h2 style="margin-top:0">${lp.delayed?"Check-in done":lp.focus?"Teacher's focus practice done":"Lesson "+lp.bp.lesson+" practice done"}</h2>
     <p>${own.length?`You finished ${own.length} on your own${clean?`, and ${clean===own.length?"all":clean} of them with no clues and no do-overs`:""}.`:"You worked through the lesson steps."} ${rs.some(e=>e.phase==="repair"&&e.ok)?"You found the slip and fixed it.":""}</p>${walterNote("rest","You finished this lesson. Time for a rest.",true,true)}
     ${due?`<p class="muted">A quick check-in with new numbers will be ready ${esc(due)}. Checking back later is how it sticks.</p>`:""}
     <p class="muted lpgrown"><b>Grown-up:</b> ${lp.bp.talk}</p>
-    <div class="actions"><button class="btn primary" id="lphome">Home</button><button class="btn quiet" id="lpagain">Practice this lesson again</button></div></div>`; }
+    <div class="actions"><button class="btn primary" id="lphome">Home</button><button class="btn quiet" id="lpagain">${lp.focus?"Practice this focus again":"Practice this lesson again"}</button></div></div>`; }
 
 // ---- binding ----
 function lpBind(it){ const q=s=>app.querySelector(s);
   const vid=q("#lpvideo"); if(vid) vid.addEventListener("click", ()=>{ lpRecord({phase:"video"}, {kind:"video-link-tap", video:1, ok:0, methodOk:0, firstTry:0}); });
   if(it.phase==="intro"){ q("#lpgo").onclick=lpNext; q("#lpgo").focus({preventScroll:true}); return; }
   if(it.phase==="explain"){ q("#lpexpsave").onclick=()=>{ const t=String(q("#lpexp").value||"").trim().slice(0,280); if(!t){ q("#lpexpmsg").textContent="Type a thought, choose ‘I said it aloud,’ or skip."; return; } lpRecord(it, {kind:"explain", ok:1, text:t, mode:"typed", skipped:0}); lpNext(); }; q("#lpexpsaid").onclick=()=>{ lpRecord(it, {kind:"explain", ok:0, mode:"spoken", selfReported:1, skipped:0}); lpNext(); }; q("#lpexpskip").onclick=()=>{ lpRecord(it, {kind:"explain", ok:0, mode:"skipped", skipped:1}); lpNext(); }; return; }
-  if(it.phase==="summary"){ q("#lphome").onclick=()=>{ lp=null; home(); }; q("#lpagain").onclick=()=>lpStart(lp.id, false); return; }
+  if(it.phase==="summary"){ q("#lphome").onclick=()=>{ lp=null; home(); }; q("#lpagain").onclick=()=>lpStart(lp.id, false, null, lp.focus); return; }
   if(it.phase==="repair" && it.rep.stage==="spot"){ app.querySelectorAll("[data-lpr]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.lpr, r=it.rspec, rp=it.rep; rp.picked=i;
       if(i===r.wrongAt){ rp.stage="fix"; if(rp.tries) it.st.tries+=rp.tries; it.st.msg=`Yes: step ${i+1} is where it goes off track. ${r.whyWrong}`; it.st.msgKind="ok"; lpRender(); }
       else { rp.tries++; rp.msg = i<r.wrongAt ? `Step ${i+1} is right. Look further down.` : `Something goes off track before step ${i+1}. Look earlier.`; it.st.codes.push("spot"); lpRender(); } }); return; }
@@ -7455,7 +7485,7 @@ function lpHomeHTML(curL, opt){ opt=opt||{}; const reached=lpReached(); if(!reac
   const paused=lpResumeReady()?S.lessonResume:null;
   const pickLabel=here?"Other Unit 2 lessons":"Unit 2 lessons, step by step";
   const nowCls=paused?"quiet":opt.guess?"":"primary"; // v9.36: an estimated lesson is offered, not made the main button
-  return `<div class="lphome">${paused?`<button class="btn primary" id="lpresume">Resume Lesson ${LP_U2[paused.id].lesson}</button>`:""}${here?`<button class="btn ${nowCls}" id="lpnow" data-lp="${here}">Practice Lesson ${LP_U2[here].lesson} step by step</button>`:""}</div>${opt.mid||""}<div class="lphome"><button class="btn quiet small" id="lppick">${pickLabel}</button>
+  return `<div class="lphome">${paused?`<button class="btn primary" id="lpresume">${paused.focus?"Resume teacher's focus":"Resume Lesson "+LP_U2[paused.id].lesson}</button>`:""}${here?`<button class="btn ${nowCls}" id="lpnow" data-lp="${here}">Practice Lesson ${LP_U2[here].lesson} step by step</button>`:""}</div>${opt.mid||""}<div class="lphome"><button class="btn quiet small" id="lppick">${pickLabel}</button>
     ${due.length?`<div class="lpdue"><button class="btn quiet small lpcheckin" data-lpcheck="${due[0]}">Lesson ${LP_U2[due[0]].lesson} check-in: new numbers, on your own</button></div>`:""}</div>
     ${due.length>1?`<p class="muted lpmore">${due.length-1} more check-in${due.length===2?" is":"s are"} ready in “${pickLabel}.”</p>`:""}`; }
 function lpHomeBind(){ const q=s=>app.querySelector(s); const b=q("#lpnow"); if(b) b.onclick=()=>lpStart(b.dataset.lp, false); const r=q("#lpresume"); if(r) r.onclick=lpResume; const p=q("#lppick"); if(p) p.onclick=lpPicker;
