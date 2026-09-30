@@ -6939,8 +6939,8 @@ function lpReadInput(step, st){ const I=step.input||{type:"num"}, box=app.queryS
 
 // ---- session ----
 function lpBlueprint(id){ return LP_U2[id]||null; }
-// A teacher-requested route through the existing checked-step engine. It shares the
-// lesson's review schedule, while choosing the requested representation every time.
+// A teacher-requested route through the existing checked-step engine. Its load and
+// later check-in are separate from class lessons, since the requested method is more specific.
 function teacherFocusBlueprint(id){
   const base=lpBlueprint(id); if(!base) return null;
   if(id==="U2L8") return {...base, name:"Three-digit multiplication", goal:"Multiply a three-digit number by a two-digit number with the standard algorithm. Write each column, regroup when needed, and add the two rows.",
@@ -6950,14 +6950,17 @@ function teacherFocusBlueprint(id){
       return lpAlgorithm({a,b}); }};
   if(id==="U2L11") return {...base, name:"Division with an area model", goal:"Divide with bands in an area model. Put partial quotients on the right, products inside, and keep a subtraction ledger.",
     make:load=>{ const d=load<=1?lpRnd(3,9):load===2?lpPick([12,15,20,25,30]):lpPick([21,24,32,36,42,48,56,63,72]);
-      const q=load<=1?lpRnd(31,99):load===2?lpRnd(31,119):lpRnd(71,139);
+      const q=load<=1?lpRnd(31,99):load===2?lpRnd(31,119):lpRnd(71,Math.min(139,Math.floor(9999/d)));
       return lpAreaDiv({d,N:d*q,askWidth:load>=2,fewerClues:load>=3}); },
     repair:load=>load>=3?LP_REPAIR[14]():load===2?LP_REPAIR[13]():LP_REPAIR[11]()};
   return null;
 }
-function teacherFocusDueHTML(){ if(!S || !Array.isArray(S.lessonLog)) return "";
-  return ["multiply","divide"].map(kind=>{ const id=kind==="multiply"?"U2L8":"U2L11", o=S.lessons&&S.lessons[id];
-    return o && +o.due>0 && +o.due<=Date.now() && S.lessonLog.some(e=>e.id===id && e.teacherFocus) ? `<div class="actions"><button class="btn quiet small" data-teacher-check="${kind}">${kind==="multiply"?"Multiplication":"Division"} check-in: new numbers</button></div>` : ""; }).join(""); }
+function teacherFocusDueHTML(){ if(!S) return "";
+  return ["multiply","divide"].map(kind=>{ const id=kind==="multiply"?"U2L8":"U2L11", o=S.teacherFocus&&S.teacherFocus[id];
+    return o && +o.due>0 && +o.due<=Date.now() ? `<div class="actions"><button class="btn quiet small" data-teacher-check="${kind}">${kind==="multiply"?"Multiplication":"Division"} check-in: new numbers</button></div>` : ""; }).join(""); }
+function teacherFocusState(id){ S.teacherFocus=S.teacherFocus&&typeof S.teacherFocus==="object"&&!Array.isArray(S.teacherFocus)?S.teacherFocus:{};
+  const x=S.teacherFocus[id]&&typeof S.teacherFocus[id]==="object"?S.teacherFocus[id]:{};
+  return S.teacherFocus[id]={sessions:Math.max(0,Math.floor(+x.sessions||0)),load:Math.max(1,Math.min(3,Math.round(+x.load||1))),due:Math.max(0,+x.due||0),last:Math.max(0,+x.last||0),checked:Math.max(0,+x.checked||0),checkClean:x.checkClean?1:0}; }
 // Saved lesson data may come from a restore or an older build: keep only well-formed entries and plain numbers.
 function lpSanitize(){ if(!S) return; const L=S.lessons&&typeof S.lessons==="object"&&!Array.isArray(S.lessons)?S.lessons:{}; const out={};
   for(const id of Object.keys(LP_U2)){ const o=L[id]; if(!o||typeof o!=="object") continue; out[id]={sessions:Math.max(0,Math.floor(+o.sessions||0)), load:Math.max(1,Math.min(3,Math.round(+o.load||1))), due:Math.max(0,+o.due||0), last:+o.last||0, checked:+o.checked||0, checkClean:o.checkClean?1:0}; }
@@ -6974,9 +6977,9 @@ function lpSaveResume(){ if(!S||!lp||lp.items[lp.i].phase==="summary") return; c
 function lpResumeReady(){ const r=S&&S.lessonResume; return !!(r&&r.v===1&&LP_U2[r.id]&&Number.isInteger(r.i)&&r.i>=0&&r.i<9&&Number.isInteger(r.seed)&&Number.isInteger(r.load)&&r.load>=1&&r.load<=3&&Number.isFinite(+r.t)&&Date.now()-r.t<30*864e5); }
 function lpResume(){ if(!lpResumeReady()) return; const id=S.lessonResume.id, delayed=!!S.lessonResume.delayed, focus=!!S.lessonResume.focus; try{ lpStart(id,delayed,S.lessonResume,focus); }catch(e){ delete S.lessonResume; lp=null; save(); lpStart(id,delayed,null,focus); } }
 function lpStart(id, delayed, resume, focus){ focus=!!(focus || (resume&&resume.focus)); const bp=focus?teacherFocusBlueprint(id):lpBlueprint(id); if(!bp || !S) return; if(typeof home==="function" && cur && phase==="q") leaveProblem(); cur=null; mode="lesson:"+id;
-  const load=resume?resume.load:lpLoadFor(id), seed=resume?resume.seed:Math.floor(Math.random()*4294967296), items=[]; lpUsed=new Set();
+  const load=resume?resume.load:(focus?teacherFocusState(id).load:lpLoadFor(id)), seed=resume?resume.seed:Math.floor(Math.random()*4294967296), items=[]; lpUsed=new Set();
   lpSeeded(seed,()=>{ if(delayed){ items.push({phase:"delayed", spec:bp.make(load, "delayed", 0)});
-      const others=lpReached().filter(x=>x!==id && (S.lessons||{})[x] && +S.lessons[x].sessions>0); if(others.length){ const o=lpPick(others); items.push({phase:"mixed", lid:o, spec:LP_U2[o].make(lpLoadFor(o), "independent", 1)}); } }
+      const others=focus?[]:lpReached().filter(x=>x!==id && (S.lessons||{})[x] && +S.lessons[x].sessions>0); if(others.length){ const o=lpPick(others); items.push({phase:"mixed", lid:o, spec:LP_U2[o].make(lpLoadFor(o), "independent", 1)}); } }
     else { items.push({phase:"intro"}); items.push({phase:"model", spec:bp.model()}); items.push({phase:"guided", spec:bp.make(load, "guided", 0)}); items.push({phase:"guided", spec:bp.make(load, "guided", 1)});
       items.push({phase:"explain"}); items.push({phase:"repair", rspec:bp.repair(load)}); items.push({phase:"independent", spec:bp.make(load, "independent", 0)}); items.push({phase:"independent", spec:bp.make(load, "independent", 1)}); } });
   items.push({phase:"summary"}); lp={id,bp,items,i:0,delayed:!!delayed,focus,seed,load,t0:Date.now(),results:[]};
@@ -6997,7 +7000,7 @@ function lpRecord(it, extra){ if(it.recorded) return null; it.recorded=true; con
     helps:+st.helps||0, tries:+st.tries||0, firstTry:method&&!st.tries&&!st.helps&&!st.answerPreviewed?1:0,
     codes:[...new Set(st.codes||[])], video:st.videoOpened?1:0, steps:+st.k||0, route:sp.route&&st.done?sp.route(st):undefined}, extra||{});
   S.lessonLog=Array.isArray(S.lessonLog)?S.lessonLog:[]; S.lessonLog.push(e); while(S.lessonLog.length>LP_LOG_CAP) S.lessonLog.shift(); lp.results.push(e); lpSaveResume(); return e; }
-function lpFinish(){ const o=lpState(lp.id), own=lp.results.filter(e=>(e.phase==="independent"||e.phase==="delayed") && e.id===lp.id);
+function lpFinish(){ const o=lp.focus?teacherFocusState(lp.id):lpState(lp.id), own=lp.results.filter(e=>(e.phase==="independent"||e.phase==="delayed") && e.id===lp.id);
   o.sessions=(+o.sessions||0)+(lp.delayed?0:1); o.last=Date.now();
   if(own.length){ const clean=own.every(e=>e.firstTry&&e.methodOk); if(clean && o.load<3) o.load=(+o.load||1)+1; else if(!own.some(e=>e.ok) && o.load>1) o.load=o.load-1;
     o.due = lp.delayed ? (clean ? 0 : Date.now()+3*864e5) : Date.now()+LP_DELAY_MS; if(lp.delayed){ o.checked=Date.now(); o.checkClean=clean?1:0; } }
@@ -7042,7 +7045,7 @@ function lpRepairHTML(it){ const r=it.rspec, rp=it.rep;
     <div class="lpsteps" role="group" aria-label="Worked steps">${r.steps.map((s,i)=>`<button type="button" class="opt lprstep${i===rp.picked?" sel":""}" data-lpr="${i}">${i+1}. ${s}</button>`).join("")}</div>
     <div class="inline-err" id="lpmsg" role="status" aria-live="polite">${rp.msg||""}</div>${rp.tries>=2?`<div class="lpclue">${r.clue}</div>`:""}</div>`;
   return lpWorkHTML(it); }
-function lpSummaryHTML(){ const rs=lp.results, own=rs.filter(e=>e.phase==="independent"||e.phase==="delayed"||e.phase==="mixed"), clean=own.filter(e=>e.firstTry&&e.methodOk).length, o=lpState(lp.id);
+function lpSummaryHTML(){ const rs=lp.results, own=rs.filter(e=>e.phase==="independent"||e.phase==="delayed"||e.phase==="mixed"), clean=own.filter(e=>e.firstTry&&e.methodOk).length, o=lp.focus?teacherFocusState(lp.id):lpState(lp.id);
   const due=+o.due>0?new Date(+o.due).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}):"";
   return `<div class="card lpcard"><h2 style="margin-top:0">${lp.delayed?"Check-in done":lp.focus?"Teacher's focus practice done":"Lesson "+lp.bp.lesson+" practice done"}</h2>
     <p>${own.length?`You finished ${own.length} on your own${clean?`, and ${clean===own.length?"all":clean} of them with no clues and no do-overs`:""}.`:"You worked through the lesson steps."} ${rs.some(e=>e.phase==="repair"&&e.ok)?"You found the slip and fixed it.":""}</p>${walterNote("rest","You finished this lesson. Time for a rest.",true,true)}
@@ -7500,7 +7503,8 @@ function lpPicker(){ if(!S) return; mode="lesson"; cur=null; lpSanitize(); const
   app.querySelectorAll("[data-lpcheck]").forEach(x=>x.onclick=()=>lpStart(x.dataset.lpcheck, true)); }
 // Grown-ups: process evidence kept apart from answer evidence, per lesson.
 function lpGrownupsHTML(){ lpSanitize(); const log=S.lessonLog; if(!log.length && !lpReached().length) return "";
-  const rows=Object.keys(LP_U2).map(id=>{ const es=log.filter(e=>e.id===id); if(!es.length) return ""; const by=p=>es.filter(e=>e.phase===p);
+  const normalLog=log.filter(e=>!e.teacherFocus); if(!normalLog.length && !lpReached().length) return teacherFocusGrownupsHTML();
+  const rows=Object.keys(LP_U2).map(id=>{ const es=normalLog.filter(e=>e.id===id); if(!es.length) return ""; const by=p=>es.filter(e=>e.phase===p);
     const g=by("guided"), r=by("repair"), own=by("independent"), dl=es.filter(e=>e.phase==="delayed"||e.phase==="mixed"), ex=by("explain").filter(e=>e.text), spoken=by("explain").filter(e=>e.mode==="spoken").length;
     const cnt=a=>a.length?`${a.filter(e=>e.firstTry&&e.methodOk).length} clean / ${a.length}`:"–";
     const codes=[...new Set(es.flatMap(e=>e.codes||[]))].filter(c=>LP_CODE_NAMES[c]).map(c=>LP_CODE_NAMES[c]);
@@ -7508,7 +7512,15 @@ function lpGrownupsHTML(){ lpSanitize(); const log=S.lessonLog; if(!log.length &
     const checked=[...new Set([...own,...dl].filter(e=>e.methodOk).map(e=>LP_EVIDENCE_NAMES[e.methodEvidence]).filter(Boolean))];
     return `<tr><td>L${LP_U2[id].lesson}</td><td>${by("model").length}${opened?`<br><span class="muted">video link tapped ${opened}</span>`:""}</td><td>${g.length?`${g.length}${g.some(e=>e.helps)?`, ${g.reduce((s,e)=>s+(+e.helps||0),0)} clue${g.reduce((s,e)=>s+(+e.helps||0),0)===1?"":"s"}`:""}`:"–"}</td><td>${r.length?`${r.filter(e=>e.ok).length} fixed / ${r.length}`:"–"}</td><td>${cnt(own)}${ao?` (+${ao} answer only)`:""}${preview?` (+${preview} answer confirmed first)`:""}</td><td>${dl.length?cnt(dl):(+o.due>0?`due ${new Date(+o.due).toLocaleDateString(undefined,{month:"short",day:"numeric"})}`:"–")}</td><td style="text-align:left">${codes.length?esc(codes.join("; ")):"–"}${checked.length?`<br><span class="muted">Checked: ${esc(checked.join("; "))}</span>`:""}${ex.length?`<br><span class="muted">Typed: “${esc(ex[ex.length-1].text)}”</span>`:""}${spoken?`<br><span class="muted">${spoken} explanation${spoken===1?"":"s"} said aloud (self-reported)</span>`:""}</td></tr>`; }).join("");
   return `<div class="card"><h2 style="margin-top:0">Unit 2 lesson practice</h2><p class="muted" style="font-size:13px;margin:0 0 8px">Separate from the practice counts above. “Clean” means the checked steps were finished without clues, do-overs, or seeing a confirmed final answer first. The label describes only what the app checked: row totals alone do not prove digit-by-digit algorithm work. Answer-only and answer-confirmed-first attempts are shown separately. Guided work is practice; a later check-in with new numbers gives stronger evidence. “Model shown” counts app steps, while “video link tapped” records a tap, not whether a video played or was watched.</p>
-    ${rows?`<div style="overflow-x:auto"><table class="report"><tr><th>Lesson</th><th>Model shown</th><th>Guided</th><th>Slip found</th><th>On their own</th><th>Check-in</th><th>What came up</th></tr>${rows}</table></div>`:`<p class="muted">No lesson practice yet. With the class calendar on, it appears on Home under “This week in class.”</p>`}</div>`; }
+    ${rows?`<div style="overflow-x:auto"><table class="report"><tr><th>Lesson</th><th>Model shown</th><th>Guided</th><th>Slip found</th><th>On their own</th><th>Check-in</th><th>What came up</th></tr>${rows}</table></div>`:`<p class="muted">No lesson practice yet. With the class calendar on, it appears on Home under “This week in class.”</p>`}</div>`+teacherFocusGrownupsHTML(); }
+function teacherFocusGrownupsHTML(){ const log=Array.isArray(S.lessonLog)?S.lessonLog:[];
+  const rows=[["U2L8","Three-digit multiplication"],["U2L11","Area-model division"]].map(([id,name])=>{
+    const es=log.filter(e=>e.id===id&&e.teacherFocus), o=S.teacherFocus&&S.teacherFocus[id]; if(!es.length&&!o?.sessions) return "";
+    const own=es.filter(e=>e.phase==="independent"), checks=es.filter(e=>e.phase==="delayed");
+    const count=a=>a.length?`${a.filter(e=>e.firstTry&&e.methodOk).length} clean / ${a.length}`:"—";
+    const seen=[...new Set(es.filter(e=>e.methodOk).map(e=>LP_EVIDENCE_NAMES[e.methodEvidence]).filter(Boolean))];
+    return `<tr><td>${esc(name)}</td><td>${+o?.sessions||0}</td><td>${count(own)}</td><td>${count(checks)}${o&&+o.due>Date.now()?`<br><span class="muted">next ${new Date(+o.due).toLocaleDateString(undefined,{month:"short",day:"numeric"})}</span>`:""}</td><td>${seen.length?esc(seen.join("; ")):"—"}</td></tr>`; }).join("");
+  return rows?`<div class="card"><h2 style="margin-top:0">Teacher's focus practice</h2><p class="muted" style="font-size:13px">This route has its own difficulty and check-in schedule. “Clean” means the checked method steps were finished without clues, do-overs, or a confirmed answer shown first. A correct final answer alone is not counted as clean method work.</p><div style="overflow-x:auto"><table class="report"><tr><th>Focus</th><th>Sessions</th><th>On their own</th><th>Later check-in</th><th>What was checked</th></tr>${rows}</table></div></div>`:""; }
 const LP_EVIDENCE_NAMES={"area-cells-to-rows":"area cells to row totals","row-totals-and-size":"row totals and size","distributive-cells-to-rows":"four products to rows","expansion-to-column-bridge":"expansion to a written column","column-digits-regroup-and-sum":"algorithm digits, carries, and column sums","expanded-recombination":"expanded-form recombination","compatible-parts":"compatible parts and partial quotients","area-width-vs-product":"band widths versus products","area-bands-and-ledger":"area bands and subtraction ledger"};
 const LP_CODE_NAMES={trial:"tested a band that was too big, then chose a smaller one (a normal step)", "one-band":"wrote the whole answer as one band or part (counted as the answer, not the method)", structure:"an expression with the right value that didn't match the words", overshoot:"a band too big for what was left (then fixed)", "area-as-quotient":"used the amount left as a partial quotient", "product-as-quotient":"mixed up a product and a partial quotient", leftover:"tried to finish with something left",
   "missing-band":"left a partial quotient out of the sum", unprocessed:"left a part out of the sum", place:"a place-value slip (zeros)", "not-compatible":"chose a part the divisor doesn't divide evenly", "tens-row-zero":"tens row missing its 0",
