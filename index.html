@@ -109,6 +109,20 @@ h2{font-size:20px;margin:18px 0 6px}
 .hw .skill{margin:9px 0 0}
 .home-extra .actions{margin-top:8px!important}
 .home-extra .mix{margin-top:0}
+.home-focus{background:#FFFCF2;border-color:#D7C78E}
+.home-focus .tf-kicker{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#725C20;margin:0 0 2px}
+.home-focus h2{margin:0}
+.home-focus .tf-intro{font-size:15px;color:var(--graphite);margin:5px 0 0}
+.home-focus .walter-note{border:0;background:transparent;margin:8px 0 12px;padding:0;gap:10px}
+.home-focus .walter-note img{width:76px;height:76px}
+.home-focus .walter-note p{font-size:15px}
+.home-focus .skills{grid-template-columns:1fr;gap:8px}
+.home-focus .tf-choice{margin:0;background:#fff;border-color:#D5D9D8;min-height:72px}
+.home-focus .tf-choice:focus-visible{outline:3px solid var(--ink);outline-offset:2px;box-shadow:0 0 0 6px var(--hi)}
+.home-focus .tf-symbol{width:38px;height:38px;display:grid;place-items:center;border-radius:10px;background:#EAF0F6;font-size:24px;font-weight:800;flex:none}
+.home-focus .tf-arrow{margin-left:auto;font-size:22px;font-weight:700;color:#526780}
+.home-focus .tf-due{margin-top:10px}
+.home-focus .tf-due .btn{width:100%;min-height:44px;text-align:left;white-space:normal}
 @media (min-width:700px){.home-lead .lphome .btn{flex:1 1 220px}.home-intro{font-size:18px}}
 
 /* practice */
@@ -1654,7 +1668,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.41 · September 29, 2026";
+const BUILD="v9.42 · September 29, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -3786,6 +3800,8 @@ function normalize(p){ // fill in anything missing (older saves, imports)
   out.classCal = ("classCal" in p) ? p.classCal===true : (out.log.length>0 || (+p.attempted||0)>0 || !!out.classPin);
   delete out.classAt;
   out.foundations=foundNorm(p.foundations); if(typeof out.foundLast!=="string") delete out.foundLast; out.foundNudgeAt=Math.max(0,+out.foundNudgeAt||0); // v9.21 (Agent M): the grown-ups' foundation choices (all off by default), the last one served, the last nudge served
+  // A grown-up chooses teacher-feedback goals for each player; no personal school note is embedded in this shared app file.
+  out.teacherFeedback=Array.isArray(p.teacherFeedback) ? [...new Set(p.teacherFeedback.filter(x=>x==="multiply"||x==="divide"))] : [];
   return out;
 }
 let DB={profiles:{}, current:null};
@@ -4226,15 +4242,7 @@ function home(){
     ${doneLine}${pausedLesson && !lpHTML ? `
     <div class="card home-lead home-resume"><div class="lphome"><button class="btn primary" id="lpresume">${S.lessonResume.focus?"Resume teacher's focus":"Resume Lesson "+LP_U2[S.lessonResume.id].lesson}</button></div></div>` : ""}${guess&&!pausedLesson?todayHTML:""}${weekHTML}${guess&&!pausedLesson?"":todayHTML}
     ${nsHomeTile()}
-    <div class="card home-focus" aria-labelledby="teacher-focus-title">
-      <div class="week-head"><h2 id="teacher-focus-title" style="margin:0">Teacher's focus</h2><span class="std">Extra practice</span></div>
-      <p class="muted home-desc">Work through one example, try steps with help, then try new numbers on your own. Walter can sit with you.</p>
-      <div class="skills">
-        <button class="skill" data-teacher-focus="multiply"><div style="flex:1"><div class="name">Three-digit multiplication</div><div class="blurb">Use the standard algorithm: build each row by column, regroup, and add.</div></div></button>
-        <button class="skill" data-teacher-focus="divide"><div style="flex:1"><div class="name">Division with an area model</div><div class="blurb">Build bands, check each product, track what is left, and add partial quotients.</div></div></button>
-      </div>
-      ${teacherFocusDueHTML()}
-    </div>
+    ${teacherFeedbackHomeHTML()}
     <div class="card hw">
       <div class="week-head"><h2 style="margin:0">Homework practice</h2></div>
       <p class="muted home-desc">Have a problem from your page? Type it here to work through it.</p>
@@ -6798,7 +6806,7 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
       return `Last 7 days: ${wk.filter(e=>isFresh(e)&&!e.abandoned).length} problems${wk.filter(e=>e.abandoned).length?` (plus ${wk.filter(e=>e.abandoned).length} left before answering)`:""} on ${days} day${days===1?"":"s"}: independent ${wi.length?`${wiR} right of ${wi.length} (${Math.round(100*wiR/wi.length)}%)`:"none yet"}, ${wHelp} finished with help${wCopied?`, ${wCopied} with the answer shown`:""}. ${S.logTrimmed?`Saved history (the most recent ${log.length} records)`:"All time"}: independent ${c.independent||0} right of ${(c.independent||0)+(c["indep-miss"]||0)}; supported (tools or full coach on) ${c.supported||0}; prompted (a nudge opened) ${c.prompted||0}; guided ${c.guided||0}; copied (answer shown) ${c.copied||0}${c["placement-miss"]?`; quick checks or warm-ups on new skills missed (not scored) ${c["placement-miss"]}`:""}. Guided completions since the answer was last shown: ${sinceCopied}.`; })()}${(()=>{ const w=log.filter(e=>e.why!==undefined); return w.length?` "Say why" questions: ${w.filter(e=>e.why).length} of ${w.length} right.`:""; })()}</p>
     ${tiersHTML(log)}
     ${nsGrownupsHTML()}${quickGrownupsHTML()}${foundationsGrownupsHTML()}${factsGrownupsHTML()}
-    ${classHTML}${typeof lpGrownupsHTML==="function"?lpGrownupsHTML():""}
+    ${teacherFeedbackGrownupsHTML()}${classHTML}${typeof lpGrownupsHTML==="function"?lpGrownupsHTML():""}
     <div class="card">
       <h2 style="margin-top:0">By skill</h2>
       <div style="overflow-x:auto"><table class="report"><tr><th>Skill</th><th>Level</th><th>Independent<br><span style="text-transform:none;letter-spacing:0">right / tried, last 20</span></th><th>Supported<br><span style="text-transform:none;letter-spacing:0">right, supports or coach on (+ nudge opened)</span></th><th>Guided<br><span style="text-transform:none;letter-spacing:0">finished with help</span></th><th>Copied<br><span style="text-transform:none;letter-spacing:0">answer shown, typed in</span></th><th>Common mistake</th></tr>${rows}</table></div>
@@ -6846,6 +6854,7 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
   q("back").onclick=home; q("back").focus({preventScroll:true});
   const setClassMode=()=>{ const m=q("classmode"); if(m) m.innerHTML=classModeHTML(); };
   bindNsGrownups(); bindFoundations(); bindGuCard();
+  if(q("tfsave")) q("tfsave").onclick=()=>{ S.teacherFeedback=[q("tfmul").checked?"multiply":null,q("tfdiv").checked?"divide":null].filter(Boolean); const stored=save(); q("tfmsg").textContent=stored?"Saved for this player. Home now shows the selected practice goals.":"Selected for now, but this device could not save the change."; };
   if(q("paperSave")) q("paperSave").onclick=()=>{ const sk=q("paperSk").value; const qtxt=String(q("paperQ").value||"").trim(); const okv=(app.querySelector("input[name=paperOk]:checked")||{}).value==="1"; const helped=q("paperHelp").checked; const changedForm=q("paperForm").checked;
     if(!SKILLS[sk]) return; pushLog({t:Date.now(), sk, q: qtxt?`paper: ${qtxt}`:"paper problem", yours:"", ans:"", ok:okv?1:0, stage:"paper", hints:0, independent:0, transfer:1, parentScored:1, helped:helped?1:0, changedForm:changedForm?1:0, lvl:S.levels[sk]});
     if(!okv){ noteComp(sk, "*", false, {lvl:S.levels[sk]}); } // a paper miss opens the skill for Focus, like any miss
@@ -6955,9 +6964,20 @@ function teacherFocusBlueprint(id){
     repair:load=>load>=3?LP_REPAIR[14]():load===2?LP_REPAIR[13]():LP_REPAIR[11]()};
   return null;
 }
+function teacherFeedbackHomeHTML(){ const chosen=Array.isArray(S&&S.teacherFeedback)?S.teacherFeedback:[]; if(!chosen.length) return "";
+  const choice=(kind,symbol,name,detail)=>`<button class="skill tf-choice" data-teacher-focus="${kind}"><span class="tf-symbol" aria-hidden="true">${symbol}</span><span style="flex:1"><span class="name">${name}</span><span class="blurb">${detail}</span></span><span class="tf-arrow" aria-hidden="true">→</span></button>`;
+  return `<section class="card home-focus" aria-labelledby="teacher-focus-title"><p class="tf-kicker">From a teacher conversation</p><h2 id="teacher-focus-title">Teacher feedback</h2><p class="tf-intro">A grown-up added ${chosen.length===1?"this practice goal":"these practice goals"}. Pick one to work on.</p>
+    ${walterNote("work","Let's take one step at a time. I'll be right here.",true)}
+    <div class="skills">${chosen.includes("multiply")?choice("multiply","×","Three-digit multiplication","Build the ones and tens rows with the standard algorithm."):""}${chosen.includes("divide")?choice("divide","÷","Division with an area model","Make bands, keep a ledger, and add partial quotients."):""}</div>
+    ${teacherFocusDueHTML()}</section>`; }
+function teacherFeedbackGrownupsHTML(){ const chosen=Array.isArray(S&&S.teacherFeedback)?S.teacherFeedback:[];
+  return `<div class="card"><h2 style="margin-top:0">Teacher feedback on Home</h2><p class="muted" style="font-size:14px;margin:0 0 10px">Choose the methods a teacher has asked ${esc(S.name)} to practice. This is a grown-up's record of feedback; the app does not receive messages from a teacher. Each selected method appears on this player's Home page with Walter. Clearing a choice hides its Home button and keeps past work saved.</p>
+    <label class="row" style="font-size:15px;margin:8px 0"><input type="checkbox" id="tfmul"${chosen.includes("multiply")?" checked":""}> Three-digit multiplication using the standard algorithm</label>
+    <label class="row" style="font-size:15px;margin:8px 0"><input type="checkbox" id="tfdiv"${chosen.includes("divide")?" checked":""}> Division using the area model</label>
+    <div class="actions"><button class="btn" id="tfsave">Save teacher feedback goals</button><span class="muted" id="tfmsg" role="status" aria-live="polite"></span></div></div>`; }
 function teacherFocusDueHTML(){ if(!S) return "";
-  return ["multiply","divide"].map(kind=>{ const id=kind==="multiply"?"U2L8":"U2L11", o=S.teacherFocus&&S.teacherFocus[id];
-    return o && +o.due>0 && +o.due<=Date.now() ? `<div class="actions"><button class="btn quiet small" data-teacher-check="${kind}">${kind==="multiply"?"Multiplication":"Division"} check-in: new numbers</button></div>` : ""; }).join(""); }
+  return ["multiply","divide"].filter(kind=>Array.isArray(S.teacherFeedback)&&S.teacherFeedback.includes(kind)).map(kind=>{ const id=kind==="multiply"?"U2L8":"U2L11", o=S.teacherFocus&&S.teacherFocus[id];
+    return o && +o.due>0 && +o.due<=Date.now() ? `<div class="tf-due"><button class="btn quiet small" data-teacher-check="${kind}">${kind==="multiply"?"Multiplication":"Division"} check-in: new numbers</button></div>` : ""; }).join(""); }
 function teacherFocusState(id){ S.teacherFocus=S.teacherFocus&&typeof S.teacherFocus==="object"&&!Array.isArray(S.teacherFocus)?S.teacherFocus:{};
   const x=S.teacherFocus[id]&&typeof S.teacherFocus[id]==="object"?S.teacherFocus[id]:{};
   return S.teacherFocus[id]={sessions:Math.max(0,Math.floor(+x.sessions||0)),load:Math.max(1,Math.min(3,Math.round(+x.load||1))),due:Math.max(0,+x.due||0),last:Math.max(0,+x.last||0),checked:Math.max(0,+x.checked||0),checkClean:x.checkClean?1:0}; }
