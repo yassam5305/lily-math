@@ -396,6 +396,7 @@ details.more>div{padding:4px 0 2px;color:var(--graphite)}
 .exhead .yourq{font-size:16px}
 .exstep.cur{border-left:4px solid var(--ink);padding-left:10px}
 .exdone{font-size:15px}
+.lpwalter{margin-top:12px}.lpwalter section{margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fffdf5}.lpwalter .actions{flex-wrap:wrap}.lpwalter section>.btn{margin:8px 8px 0 0}
 </style>
 </head>
 <body>
@@ -1669,7 +1670,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.43 · September 29, 2026";
+const BUILD="v9.45 · October 5, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -4237,13 +4238,17 @@ function home(){
   const todayHTML=`<div class="card home-today" style="margin-top:0"><div class="week-head"><h2 style="margin:0">Start today</h2><span class="std" title="The app plans it">Planned for you</span></div>
       <p class="muted home-desc">${(()=>{ const P=buildTodayPlan(); return `About ${todayCountWords(P)} problems: ${P.map(todayLabel).filter((v,i,a)=>a.indexOf(v)===i).join(", ")}.`; })()}${guess?" We’ll use math you have practiced here, or a foundation builder, until a grown-up sets the class lesson.":""}</p>
       <div class="actions" style="margin-top:0"><button class="btn ${(!curL||guess)&&!pausedLesson?"primary":""} mix" data-skill="today" style="margin-top:0">Start today</button></div></div>`;
+  // v9.44: assigned teacher goals follow the first practice card, ahead of the check-up.
+  const feedbackHTML=teacherFeedbackHomeHTML();
+  const resumeHTML=pausedLesson&&!lpHTML ? `<div class="card home-lead home-resume"><div class="lphome"><button class="btn primary" id="lpresume">${S.lessonResume.focus?"Resume teacher's focus":"Resume Lesson "+LP_U2[S.lessonResume.id].lesson}</button></div></div>` : "";
+  const practiceCards=guess&&!pausedLesson ? todayHTML+feedbackHTML+weekHTML
+    : resumeHTML ? resumeHTML+feedbackHTML+weekHTML+todayHTML
+    : weekHTML ? weekHTML+feedbackHTML+todayHTML : todayHTML+feedbackHTML;
   app.innerHTML=`
     <div class="topbar"><div class="walter-heading"><img class="walter-home" src="${WALTER_ART.work}" alt="" width="112" height="112"><h1 style="margin:0" tabindex="-1">Hi, ${esc(S.name)}.</h1></div><button class="btn quiet small" id="switch">Not ${esc(S.name)}?</button></div>${warnHTML()}
     <p class="home-intro">Pick one way to practice. You can ask for help along the way.</p>
-    ${doneLine}${pausedLesson && !lpHTML ? `
-    <div class="card home-lead home-resume"><div class="lphome"><button class="btn primary" id="lpresume">${S.lessonResume.focus?"Resume teacher's focus":"Resume Lesson "+LP_U2[S.lessonResume.id].lesson}</button></div></div>` : ""}${guess&&!pausedLesson?todayHTML:""}${weekHTML}${guess&&!pausedLesson?"":todayHTML}
+    ${doneLine}${practiceCards}
     ${nsHomeTile()}
-    ${teacherFeedbackHomeHTML()}
     <div class="card hw">
       <div class="week-head"><h2 style="margin:0">Homework practice</h2></div>
       <p class="muted home-desc">Have a problem from your page? Type it here to work through it.</p>
@@ -6922,7 +6927,7 @@ const lpShow=s=>String(s).replace(/\s*([+−×÷])\s*/g," $1 ").replace(/\(\s*/g
 // A step: {id, prompt, short, input:{type, ...}, check(v, st)->{ok, msg, code, apply()}, help:[clues], why (model narration)}.
 function lpItemStart(item){ const sp=item.spec; item.st=Object.assign({k:0, helps:0, tries:0, codes:[], helpShown:[], msg:"", msgKind:"", done:false, answerOnly:null, answerPreviewed:false, skipped:false, videoOpened:false, draft:null, badIndex:-1}, sp.init?sp.init():{}); item.step=sp.next(item.st); item.shown=0; }
 function lpApply(item, v){ const st=item.st, step=item.step; if(!step) return; const r=step.check(v, st)||{ok:false};
-  if(r.ok){ if(r.apply) r.apply(); st.k++; st.draft=null; st.badIndex=-1; st.msg=r.msg||""; st.msgKind="ok"; st.helpShown=[]; item.step=item.spec.next(st); if(!item.step){ st.done=true; } return true; }
+  if(r.ok){ if(r.apply) r.apply(); st.k++; st.draft=null; st.badIndex=-1; st.walterOpen=false; st.walterChoice=null; st.msg=r.msg||""; st.msgKind="ok"; st.helpShown=[]; item.step=item.spec.next(st); if(!item.step){ st.done=true; } return true; }
   if(item.phase!=="model" && !r.fmt){ if(r.safe){ if(r.code) st.codes.push(r.code); } else { st.tries++; if(r.code) st.codes.push(r.code); } } st.badIndex=Number.isInteger(r.badIndex)?r.badIndex:-1; st.msg=r.msg||"Not yet. Check that step and try again."; st.msgKind=r.safe?"":"no"; return false; }
 
 // ---- input widgets ----
@@ -6930,7 +6935,7 @@ function lpInputHTML(step, st, locked){ const I=step.input||{type:"num"}, dis=lo
   if(I.type==="text") return `<label class="vh" for="lpin">${esc(lpPlain(step.short||step.prompt))}</label><input class="ans text lpans" id="lpin" inputmode="text" autocapitalize="off" spellcheck="false" autocomplete="off" placeholder="${esc(I.ph||"")}" value="${esc(draft[0]||"")}"${dis}>`;
   if(I.type==="num") return `<label class="vh" for="lpin">${esc(lpPlain(step.short||step.prompt))}</label><input class="ans lpans" id="lpin" inputmode="decimal" autocomplete="off" placeholder="${esc(I.ph||"Type a number")}" value="${esc(draft[0]||"")}"${dis}>`;
   if(I.type==="nums") return `<div class="lpnums">${I.labels.map((l,i)=>`<label class="lpnum"><span>${l}</span><input class="ans small lpans" data-lpi="${i}" inputmode="decimal" autocomplete="off" value="${esc(draft[i]||"")}"${dis}></label>`).join("")}</div>`;
-  if(I.type==="mc") return `<div class="opts" role="radiogroup" aria-label="Choices">${I.options.map((o,i)=>`<button type="button" class="opt lpopt" role="radio" aria-checked="false" data-lpo="${i}"${dis}><b aria-hidden="true">${"abcdef"[i]}.</b>&nbsp; ${o}</button>`).join("")}</div>`;
+  if(I.type==="mc") return `<div class="opts" role="radiogroup" aria-label="Choices">${I.options.map((o,i)=>`<button type="button" class="opt lpopt${st.draft?.k===st.k&&st.draft.selected===i?" sel":""}" role="radio" aria-checked="${st.draft?.k===st.k&&st.draft.selected===i}" data-lpo="${i}"${dis}><b aria-hidden="true">${"abcdef"[i]}.</b>&nbsp; ${o}</button>`).join("")}</div>`;
   if(I.type==="multi") return `<div class="lpchips" role="group" aria-label="Choose all that fit">${I.options.map((o,i)=>`<button type="button" class="btn quiet small lpchip" aria-pressed="false" data-lpm="${i}"${dis}>${o}</button>`).join("")}</div>`;
   if(I.type==="group") return `<div class="lpgroup" role="group" aria-label="Tap the first and last number to put inside parentheses">${I.tokens.map((t,i)=>typeof t==="number"?`<button type="button" class="btn quiet small lptok" aria-pressed="false" data-lpt="${i}"${dis}>${lpN(t)}</button>`:`<span class="lpop">${t}</span>`).join("")}</div><p class="muted lptip">Tap the first number, then the last number, to go inside the parentheses.</p>`;
   if(I.type==="tiles") return `<div class="lptiles-show" id="lptshow" aria-live="polite">${st.tiles&&st.tiles.length?esc(lpShow(st.tiles.join(" "))):"<span class='muted'>Tap tiles to build it</span>"}</div><div class="lptiles" role="group" aria-label="Expression tiles">${I.tiles.map(t=>`<button type="button" class="btn quiet small lptile" data-lptile="${esc(t)}"${dis}>${esc(typeof t==="number"?lpN(t):t)}</button>`).join("")}<button type="button" class="btn quiet small lptile" data-lptile="⌫"${dis} aria-label="Take back the last tile">⌫</button><button type="button" class="btn quiet small lptile" data-lptile="clear"${dis}>Clear</button></div><label class="lptype"><span class="muted">Or type it:</span> <input class="ans text small lpans" id="lptype" inputmode="text" autocapitalize="off" spellcheck="false" autocomplete="off" placeholder="use ( ) + − × ÷" value="${esc(draft[0]||"")}"${dis}></label>`;
@@ -7019,7 +7024,10 @@ function lpRecord(it, extra){ if(it.recorded) return null; it.recorded=true; con
   const e=Object.assign({t:Date.now(), id:lid, lesson:(LP_U2[lid]||lp.bp).lesson, phase:it.phase, kind:sp.kind||it.phase, q:it.spec?lpPlain(sp.title||""):"",
     ok:st.done?1:0, methodOk:method, methodEvidence:sp.methodEvidence||sp.kind||it.phase, teacherFocus:!!lp.focus, answerOnly:oneShot?1:(st.answerOnly===null||st.answerOnly===undefined?null:(st.answerOnly?1:0)), answerPreviewed:st.answerPreviewed?1:0,
     helps:+st.helps||0, tries:+st.tries||0, firstTry:method&&!st.tries&&!st.helps&&!st.answerPreviewed?1:0,
-    codes:[...new Set(st.codes||[])], video:st.videoOpened?1:0, steps:+st.k||0, route:sp.route&&st.done?sp.route(st):undefined}, extra||{});
+    codes:[...new Set(st.codes||[])], video:st.videoOpened?1:0, steps:+st.k||0,
+    ...(Array.isArray(st.walterEvents)&&st.walterEvents.length?{walterHelp:st.walterEvents.map(x=>({...x})),probeStatus:st.walterProbe||null}:{}),
+    supportClass:model?"model":!method?"incomplete-method":st.answerPreviewed?"answer-confirmed":st.helps?"supported":st.tries?"retried":"clean-checked",
+    route:sp.route&&st.done?sp.route(st):undefined}, extra||{});
   S.lessonLog=Array.isArray(S.lessonLog)?S.lessonLog:[]; S.lessonLog.push(e); while(S.lessonLog.length>LP_LOG_CAP) S.lessonLog.shift(); lp.results.push(e); lpSaveResume(); return e; }
 function lpFinish(){ const o=lp.focus?teacherFocusState(lp.id):lpState(lp.id), own=lp.results.filter(e=>(e.phase==="independent"||e.phase==="delayed") && e.id===lp.id);
   o.sessions=(+o.sessions||0)+(lp.delayed?0:1); o.last=Date.now();
@@ -7048,17 +7056,42 @@ function lpExplainHTML(){ const bp=lp.bp; return `<div class="card lpcard"><h2 s
   <p class="muted" style="font-size:14px">Say it out loud to a grown-up, or type it. A sentence start: <i>${esc(bp.explain[1])}</i></p>
   <label class="vh" for="lpexp">Your explanation</label><textarea id="lpexp" class="lpexp" maxlength="280" rows="3" placeholder="${esc(bp.explain[1])}"></textarea>
   <div class="inline-err" id="lpexpmsg" role="status" aria-live="polite"></div><div class="actions"><button class="btn primary" id="lpexpsave">Save what I typed</button><button class="btn quiet" id="lpexpsaid">I said it aloud</button><button class="btn quiet" id="lpexpskip">Skip</button></div></div>`; }
+// Ask Walter stage 1: authored relationships only; never reuse step.why or auto.
+function lpWalterEligible(it){ return !!(lp && lp.focus && lp.id==="U2L8" && it.spec?.kind==="algorithm" && it.step?.walter && !it.st.done && ["guided","independent","delayed"].includes(it.phase)); }
+function lpWalterQuestions(it){
+  const w=it.step.walter, last=w.last;
+  const place={id:"place",label:"Which place am I working in?",type:"explanation",texts:["Look at the column named above the box. Keep each digit in its own place.","Each place to the left is worth ten times as much. Use the column labels to keep the places lined up.","Point to the current column, then the column immediately to its left. Compare what each place is worth."]};
+  const carry={id:"carry",label:"What do I do with the carry?",type:"clue",texts:[last?"Include any carry from the previous column. This is the last column, so write the remaining digits together.":"Include any carry from the previous column. Separate the ones from the full tens.",last?"Work out this column's total, including its incoming carry. There is no further column to split it into.":"The ones stay in this column. Full tens belong one place to the left.",last?"Use scratch paper: calculate the column, include its incoming carry, then write the remaining digits.":"Use scratch paper to separate the total into full tens and leftover ones. Put each part in its place."]};
+  const start={id:"start",label:"Where do I start?",type:"clue",texts:w.role==="sum"?["Add the two row digits in this column, including any carry from the addition.","Keep multiplication-row carries separate from the carry made when you add the rows.","On scratch paper, copy this column's two digits. Add them and any incoming addition carry; then place the result."]:["Multiply the digits shown for this column, then include any carry from the previous column.","The carried amount belongs to the previous column's work. Include it after multiplying the current digits.","On scratch paper, write the multiplication first. Include the incoming carry next; then place the result."]};
+  if(w.role==="estimate") return [{id:"tens",label:"What does the tens digit mean?",type:"vocabulary",texts:["The tens digit counts groups of ten, rather than single ones.","Use the digit's place value when estimating this row's size.","On scratch paper, round the larger number first. Multiply the rounded number by the tens part of the multiplier."]},place];
+  if(w.role==="placeholder") return [{id:"row",label:"Why does this row move left?",type:"explanation",texts:["This row multiplies by tens. Look at how the multiplier's tens place differs from its ones place.","A new row starts a new calculation. Carries from the previous multiplication row stay with that row.","Draw a place-value chart on scratch paper. Label the ones and tens places, then locate where a row for tens begins."]},place];
+  return it.st.badIndex===1 ? [carry,start,place] : [start,carry,place];
+}
+function lpWalterHTML(it){ if(!lpWalterEligible(it)) return "";
+  const st=it.st, selected=st.walterChoice?.step===st.k?st.walterChoice:null, qs=lpWalterQuestions(it), picked=selected&&qs.find(x=>x.id===selected.id);
+  const depth=picked?Math.min(2,selected.depth||0):0;
+  return `<div class="lpwalter"><button type="button" class="btn quiet" id="lpask" aria-expanded="${!!st.walterOpen}" aria-controls="lpaskpanel">Ask Walter</button>${st.walterOpen?`<section id="lpaskpanel" aria-label="Ask Walter help"><p><b>What would help with this step?</b></p><div class="actions">${qs.map(x=>`<button type="button" class="btn quiet small" data-walter-question="${x.id}" aria-pressed="${picked?.id===x.id}">${esc(x.label)}</button>`).join("")}</div>${picked?`<div id="lpaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote("work",picked.texts[depth],true)}</div>${depth<2?`<button type="button" class="btn quiet small" id="lpaskmore">${depth===0?"Explain the relationship":"Break it into actions"}</button>`:`<p class="muted">Try that on your work, or pause when you need a break.</p>`}<button type="button" class="btn quiet small" id="lpaskreturn">Back to my step</button>`:""}</section>`:""}</div>`;
+}
+function lpWalterDeliver(it,id,depth){ if(!lpWalterEligible(it)) return;
+  const st=it.st, q=lpWalterQuestions(it).find(x=>x.id===id); if(!q) return;
+  depth=Math.max(0,Math.min(2,depth|0)); st.walterEvents=Array.isArray(st.walterEvents)?st.walterEvents:[];
+  if(!st.walterEvents.some(e=>e.step===st.k && e.id===id && e.depth===depth)){
+    st.walterEvents.push({step:st.k,stepId:it.step.walter.id,id,type:q.type,depth,tries:+st.tries||0}); st.helps++;
+    if(it.phase==="delayed" && !st.walterProbe) st.walterProbe=st.tries?"miss-before-help":"help-before-miss";
+  }
+  st.walterChoice={step:st.k,id,depth}; st.walterOpen=true;
+}
 function lpWorkHTML(it){ const sp=it.spec, st=it.st, ph=it.phase, model=ph==="model", own=ph==="independent"||ph==="delayed"||ph==="mixed";
   const step=it.step; const visual=sp.visual?sp.visual(st, ph):"";
-  const intro = ph==="repair" ? `<p class="lpmodel-note"><b>Fix it.</b> ${esc(lpPlain(it.rspec?it.rspec.story:""))} Clues are there if you want one.</p>` : model ? `<p class="lpmodel-note"><b>Watch one.</b> Each step shows what to do and why. Think about what you would do before you tap.</p>` : own ? `<p class="lpmodel-note"><b>On your own.</b> The steps get checked, but the clues are off unless you ask.</p>` : `<p class="lpmodel-note"><b>Together.</b> Do each step; ask for a clue any time.</p>`;
+  const intro = st.walterProbe ? `<p class="lpmodel-note"><b>Practice with help.</b> Try the step with Walter, then check back with new numbers another day.</p>` : ph==="repair" ? `<p class="lpmodel-note"><b>Fix it.</b> ${esc(lpPlain(it.rspec?it.rspec.story:""))} Clues are there if you want one.</p>` : model ? `<p class="lpmodel-note"><b>Watch one.</b> Each step shows what to do and why. Think about what you would do before you tap.</p>` : own ? `<p class="lpmodel-note"><b>On your own.</b> The steps get checked, but the clues are off unless you ask.</p>` : `<p class="lpmodel-note"><b>Together.</b> Do each step; ask for a clue any time.</p>`;
   let work="";
   if(st.done){ work=`<div class="lpdone" role="status">${sp.done?sp.done(st):"Done."}</div><div class="actions"><button class="btn primary" id="lpnext">${lp.i+1<lp.items.length-1?"Next":"Finish"}</button></div>`; }
   else if(model){ const hist=(it.narr||[]).map(x=>`<li>${x}</li>`).join(""); work=`<ol class="lpnarr">${hist}</ol><p class="lpstep"><b>Next:</b> ${step.prompt}</p><div class="actions"><button class="btn primary" id="lpshow">Show this step</button></div>`; }
   else { const prompt = own && step.short ? step.short : step.prompt;
     const clues=(st.helpShown||[]).map(t=>`<div class="lpclue">${t}</div>`).join("");
     work=`<p class="lpstep">${prompt}</p>${lpInputHTML(step, st, false)}<div class="inline-err lpmsg${st.msgKind==="ok"?" ok":""}" id="lpmsg" role="status" aria-live="polite">${st.msg||""}</div>${clues}
-      <div class="actions"><button class="btn primary" id="lpcheck">${step.input&&step.input.type==="button"?esc(step.input.label||"Next"):"Check"}</button>${(step.help||[]).length>(st.helpShown||[]).length?`<button class="btn quiet" id="lphelp">${own?"I need a clue":"Clue"}</button>`:""}${own&&sp.answer!==undefined&&st.answerOnly===null?`<button class="btn quiet small" id="lpknow">I know the answer</button>`:""}${own&&st.answerOnly===true?`<button class="btn quiet small" id="lpskip">Skip building it</button>`:""}</div>
-      ${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
+      <div class="actions"><button class="btn primary" id="lpcheck">${step.input&&step.input.type==="button"?esc(step.input.label||"Next"):"Check"}</button>${!lpWalterEligible(it)&&(step.help||[]).length>(st.helpShown||[]).length?`<button class="btn quiet" id="lphelp">${own?"I need a clue":"Clue"}</button>`:""}${own&&sp.answer!==undefined&&st.answerOnly===null?`<button class="btn quiet small" id="lpknow">I know the answer</button>`:""}${own&&st.answerOnly===true?`<button class="btn quiet small" id="lpskip">Skip building it</button>`:""}</div>
+      ${lpWalterHTML(it)}${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
   const walterLesson=st.done && ph!=="model" && !st.skipped && (st.tries>0 || st.helps>0) ? walterNote("nice","You worked through the steps and finished this one.",true) : ph==="delayed" ? walterNote("checkin","Here are new numbers. Show what you remember.",true) : ph==="guided" || (st.helpShown||[]).length ? walterNote("work","Let's check one step at a time.",true) : "";
   return `<div class="card lpcard"><h2 style="margin-top:0" class="lptitle">${sp.title}</h2>${sp.prompt?`<p class="muted lpsub">${sp.prompt}</p>`:""}${intro}${walterLesson}<div class="lpboard" id="lpboard">${visual}</div><div id="lpwork" class="lpwork">${work}</div>${model||own?"":lpVideoHTML()}</div>`; }
 function lpRepairHTML(it){ const r=it.rspec, rp=it.rep;
@@ -7069,7 +7102,7 @@ function lpRepairHTML(it){ const r=it.rspec, rp=it.rep;
 function lpSummaryHTML(){ const rs=lp.results, own=rs.filter(e=>e.phase==="independent"||e.phase==="delayed"||e.phase==="mixed"), clean=own.filter(e=>e.firstTry&&e.methodOk).length, o=lp.focus?teacherFocusState(lp.id):lpState(lp.id);
   const due=+o.due>0?new Date(+o.due).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}):"";
   return `<div class="card lpcard"><h2 style="margin-top:0">${lp.delayed?"Check-in done":lp.focus?"Teacher's focus practice done":"Lesson "+lp.bp.lesson+" practice done"}</h2>
-    <p>${own.length?`You finished ${own.length} on your own${clean?`, and ${clean===own.length?"all":clean} of them with no clues and no do-overs`:""}.`:"You worked through the lesson steps."} ${rs.some(e=>e.phase==="repair"&&e.ok)?"You found the slip and fixed it.":""}</p>${walterNote("rest","You finished this lesson. Time for a rest.",true,true)}
+    <p>${own.length?`You finished ${own.length} practice problem${own.length===1?"":"s"}${clean?`, and ${clean===own.length?"all":clean} of them with no clues and no do-overs`:""}.`:"You worked through the lesson steps."} ${rs.some(e=>e.phase==="repair"&&e.ok)?"You found the slip and fixed it.":""}</p>${walterNote("rest","You finished this lesson. Time for a rest.",true,true)}
     ${due?`<p class="muted">A quick check-in with new numbers will be ready ${esc(due)}. Checking back later is how it sticks.</p>`:""}
     <p class="muted lpgrown"><b>Grown-up:</b> ${lp.bp.talk}</p>
     <div class="actions"><button class="btn primary" id="lphome">Home</button><button class="btn quiet" id="lpagain">${lp.focus?"Practice this focus again":"Practice this lesson again"}</button></div></div>`; }
@@ -7090,15 +7123,20 @@ function lpBind(it){ const q=s=>app.querySelector(s);
       const shown=esc(stp.showVal?stp.showVal(v):Array.isArray(v)?v.join(", "):(v&&v.prime)?"prime: circle it":String(v));
       it.narr.push(ok ? `${stp.prompt} <b class="good">→ ${shown}</b>${stp.why?`<br><span class="muted">${stp.why}</span>`:""}` : `${stp.prompt} Try <b>${shown}</b>: <span class="muted">${st.msg}</span>`); st.msg=""; lpRender(); const b=q("#lpshow")||q("#lpnext"); if(b) b.focus({preventScroll:true}); }; q("#lpshow").focus({preventScroll:true}); return; }
   const I=step.input||{type:"num"};
-  const keepDraft=()=>{ if(I.type==="num"||I.type==="text"||I.type==="nums"||I.type==="tree"||I.type==="tiles") st.draft={k:st.k, values:[...app.querySelectorAll("#lpwork .lpans")].map(x=>x.value)}; };
+  const keepDraft=()=>{ if(I.type==="mc") st.draft={k:st.k,selected:+(q(".lpopt[aria-checked=true]")?.dataset.lpo??-1)}; if(I.type==="num"||I.type==="text"||I.type==="nums"||I.type==="tree"||I.type==="tiles") st.draft={k:st.k, values:[...app.querySelectorAll("#lpwork .lpans")].map(x=>x.value)}; lpSaveResume(); };
   app.querySelectorAll("#lpwork .lpans").forEach(el=>el.addEventListener("input", keepDraft));
-  app.querySelectorAll(".lpopt").forEach(b=>b.onclick=()=>{ app.querySelectorAll(".lpopt").forEach(x=>{ x.setAttribute("aria-checked", String(x===b)); x.classList.toggle("sel", x===b); }); });
+  app.querySelectorAll(".lpopt").forEach(b=>b.onclick=()=>{ app.querySelectorAll(".lpopt").forEach(x=>{ x.setAttribute("aria-checked", String(x===b)); x.classList.toggle("sel", x===b); }); keepDraft(); });
   app.querySelectorAll(".lpchip").forEach(b=>b.onclick=()=>{ const on=b.getAttribute("aria-pressed")!=="true"; b.setAttribute("aria-pressed", String(on)); b.classList.toggle("on", on); });
   app.querySelectorAll(".lptok").forEach(b=>b.onclick=()=>{ st.grp=st.grp||[]; const i=+b.dataset.lpt; if(st.grp.length>=2) st.grp=[]; if(st.grp[0]===i) st.grp=[]; else st.grp.push(i); st.grp.sort((a,b2)=>a-b2);
     app.querySelectorAll(".lptok").forEach(x=>{ const on=st.grp.includes(+x.dataset.lpt); x.setAttribute("aria-pressed", String(on)); x.classList.toggle("on", on); }); });
   app.querySelectorAll(".lptile").forEach(b=>b.onclick=()=>{ st.tiles=st.tiles||[]; const t=b.dataset.lptile; if(t==="⌫") st.tiles.pop(); else if(t==="clear") st.tiles=[]; else st.tiles.push(t);
     const typed=q("#lptype"); if(typed && typed.value){ typed.value=""; keepDraft(); } // choosing a tile switches away from the typed alternative
     const sh=q("#lptshow"); if(sh) sh.innerHTML=st.tiles.length?esc(lpShow(st.tiles.join(" "))):"<span class='muted'>Tap tiles to build it</span>"; });
+  const ask=q("#lpask"); if(ask) ask.onclick=()=>{ keepDraft(); st.walterOpen=!st.walterOpen; lpRender(); (q("[data-walter-question]")||q("#lpask")).focus({preventScroll:true}); };
+  const reply=()=>{ lpRender(); q("#lpaskreply")?.focus({preventScroll:true}); };
+  app.querySelectorAll("[data-walter-question]").forEach(b=>b.onclick=()=>{ keepDraft(); const old=st.walterChoice; lpWalterDeliver(it,b.dataset.walterQuestion,old?.step===st.k&&old.id===b.dataset.walterQuestion?old.depth:0); reply(); });
+  const more=q("#lpaskmore"); if(more) more.onclick=()=>{ keepDraft(); lpWalterDeliver(it,st.walterChoice.id,st.walterChoice.depth+1); reply(); };
+  const ret=q("#lpaskreturn"); if(ret) ret.onclick=()=>{ keepDraft(); st.walterOpen=false; lpRender(); (q("#lpin")||q("[data-lpi]")||q(".lpopt")||q("#lpcheck"))?.focus({preventScroll:true}); };
   const go=()=>{ keepDraft(); const typedTile=I.type==="tiles"&&!!q("#lptype")?.value.trim(); const v=lpReadInput(step, st); const ok=lpApply(it, v); if(ok && I.type==="tiles") st.tiles=[]; if(ok) st.grp=[]; lpRender(); const f=(!ok&&st.badIndex>=0?q(`[data-lpi="${st.badIndex}"]`):null)||(!ok&&typedTile?q("#lptype"):null)||q("#lpin")||q("[data-lpi]")||q(".lpopt")||q(".lpchip")||q(".lptok")||q(".lptile")||q("#lpnext"); if(f) f.focus({preventScroll:true}); };
   q("#lpcheck").onclick=go; const pb=q("#lpprime"); if(pb) pb.onclick=()=>{ const ok=lpApply(it, {prime:true}); lpRender(); const f=q("[data-lpi]")||q("#lpnext")||q("#lpcheck"); if(f) f.focus({preventScroll:true}); };
   app.querySelectorAll("#lpwork input.ans:not(#lpknowin)").forEach(el=>el.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); if(!e.repeat) go(); } }));
@@ -7248,12 +7286,14 @@ function lpAlgorithm(o){ const a=o.a, b=o.b, ones=b%10, tens=Math.floor(b/10), R
   const est=Math.round(R2/Math.pow(10,String(R2).length-1))*Math.pow(10,String(R2).length-1), opts=[lpN(est/10),lpN(est),lpN(est*10)].sort(()=>Math.random()-.5);
   steps.push(lpMcStep({prompt:`Before multiplying: about how big should the tens row, <b>${lpN(a)} × ${tens*10}</b>, be?`, short:"Estimate the tens row",options:opts,right:opts.indexOf(lpN(est)),why:"The tens row is ten times the row for the tens digit alone.",help:[`Round ${lpN(a)}, then multiply by ${tens*10}.`],diag:()=>({code:"row-size",msg:"The multiplier digit is tens, so the row is ten times the ones-sized calculation."})}));
   row(ones,"ones"); const row1End=steps.length;
-  steps.push(lpNumStep({prompt:`Before the ${tens} tens row, what digit holds the <b>ones place</b>?`,short:"Tens row: ones-place placeholder",ans:0,why:"A row for tens starts with 0 in the ones place.",help:["There are no single ones in a tens row. Which digit marks that place?"],diag:()=>({code:"tens-row-zero",msg:"The tens row starts one place left, with 0 in the ones place."})}));
+  steps.push(lpNumStep({prompt:`Before the ${tens} tens row, what digit holds the <b>ones place</b>?`,short:"Tens row: ones-place placeholder",ans:0,why:"A row for tens starts with 0 in the ones place.",help:["There are no single ones in a tens row. Which digit marks that place?"],diag:()=>({code:"tens-row-zero",msg:"This row represents tens. Compare the ones and tens places before choosing the placeholder."})}));
   row(tens,"tens"); const row2End=steps.length;
   let addCarry=0; const width=Math.max(String(R1).length,String(R2).length);
   for(let j=0;j<width;j++){ const x=Math.floor(R1/10**j)%10,y=Math.floor(R2/10**j)%10,inc=addCarry,sum=x+y+inc,last=j===width-1,written=last?sum:sum%10; addCarry=last?0:Math.floor(sum/10); const expected=last?[written]:[written,addCarry];
     steps.push({prompt:`Add the ${places[j]} column: <b>${x} + ${y}${inc?` + ${inc} carried`:""}</b>. What do you write${last?"":" and carry"}?`,short:`Add ${places[j]} column`,input:{type:"nums",labels:last?[`Write in ${places[j]}`]:[`Write in ${places[j]}`,`Carry to ${places[j+1]}`]},auto:expected.map(String),why:`The column totals ${sum}. Write ${written}${last?".":` and carry ${expected[1]}.`}`,help:["Add the two row digits in this column, plus any carried ten from the column to the right."],
       check:(v,st)=>{ const n=v.map(lpNum), missing=n.findIndex(isNaN); if(missing>=0) return {ok:false,fmt:true,badIndex:missing,msg:"Fill in this column before checking."}; const bad=n.findIndex((z,i)=>z!==expected[i]); if(bad>=0) return {ok:false,badIndex:bad,code:bad===1?"regroup":"column-add",msg:"Check this column's sum and any ten carried left."}; return {ok:true,apply:()=>st.trace.push(`Sum · ${places[j]}: write ${written}${last?"":`, carry ${expected[1]}`}`)}; }}); }
+  steps.forEach((step,k)=>{ const role=k===0?"estimate":step.short==="Tens row: ones-place placeholder"?"placeholder":step.short.startsWith("Add ")?"sum":"column";
+    step.walter={id:`multiply:${k}:${role}`,role,last:step.input?.type==="nums"&&step.input.labels.length===1}; });
   return {kind:"algorithm",methodEvidence:"column-digits-regroup-and-sum",methodName:"standard algorithm",title:`${lpN(a)} × ${lpN(b)}`,answer:T,init:()=>({trace:[]}),next:st=>steps[st.k]||null,
     visual:st=>`<p class="muted" style="font-size:14px">Work from right to left. Write each digit in its column and carry full tens to the next.</p>${lpStack(a,b,st.k>=row1End?R1:null,st.k>=row2End?R2:null,st.k>=steps.length?T:null)}${st.trace&&st.trace.length?`<p class="muted" style="font-size:14px">Checked: ${esc(st.trace.slice(-3).join(" · "))}</p>`:""}`,
     done:()=>`${lpN(a)} × ${lpN(b)} = <b>${lpN(T)}</b>. Both rows were built by column and then added.`}; }
@@ -7541,7 +7581,9 @@ function teacherFocusGrownupsHTML(){ const log=Array.isArray(S.lessonLog)?S.less
     const count=a=>a.length?`${a.filter(e=>e.firstTry&&e.methodOk).length} clean / ${a.length}`:"—";
     const seen=[...new Set(es.filter(e=>e.methodOk).map(e=>LP_EVIDENCE_NAMES[e.methodEvidence]).filter(Boolean))];
     return `<tr><td>${esc(name)}</td><td>${+o?.sessions||0}</td><td>${count(own)}</td><td>${count(checks)}${o&&+o.due>Date.now()?`<br><span class="muted">next ${new Date(+o.due).toLocaleDateString(undefined,{month:"short",day:"numeric"})}</span>`:""}</td><td>${seen.length?esc(seen.join("; ")):"—"}</td></tr>`; }).join("");
-  return rows?`<div class="card"><h2 style="margin-top:0">Teacher's focus practice</h2><p class="muted" style="font-size:13px">This route has its own difficulty and check-in schedule. “Clean” means the checked method steps were finished without clues, do-overs, or a confirmed answer shown first. A correct final answer alone is not counted as clean method work.</p><div style="overflow-x:auto"><table class="report"><tr><th>Focus</th><th>Sessions</th><th>On their own</th><th>Later check-in</th><th>What was checked</th></tr>${rows}</table></div></div>`:""; }
+  const aw=log.filter(e=>e.teacherFocus&&e.walterHelp?.length), probes=aw.filter(e=>e.probeStatus==="help-before-miss").length;
+  const awReport=aw.length?`<p class="muted" style="font-size:13px">Ask Walter: ${aw.length} problem${aw.length===1?"":"s"} with help; ${aw.reduce((n,e)=>n+e.walterHelp.length,0)} distinct help deliveries. ${probes} delayed probe${probes===1?"":"s"} changed to supported practice before an independent miss. Vocabulary, explanation, and clue use are saved separately. These completions are not clean checks.</p>`:"";
+  return rows?`<div class="card"><h2 style="margin-top:0">Teacher's focus practice</h2>${awReport}<p class="muted" style="font-size:13px">This route has its own difficulty and check-in schedule. “Clean” means the checked method steps were finished without clues, do-overs, or a confirmed answer shown first. A correct final answer alone is not counted as clean method work.</p><div style="overflow-x:auto"><table class="report"><tr><th>Focus</th><th>Sessions</th><th>On their own</th><th>Later check-in</th><th>What was checked</th></tr>${rows}</table></div></div>`:""; }
 const LP_EVIDENCE_NAMES={"area-cells-to-rows":"area cells to row totals","row-totals-and-size":"row totals and size","distributive-cells-to-rows":"four products to rows","expansion-to-column-bridge":"expansion to a written column","column-digits-regroup-and-sum":"algorithm digits, carries, and column sums","expanded-recombination":"expanded-form recombination","compatible-parts":"compatible parts and partial quotients","area-width-vs-product":"band widths versus products","area-bands-and-ledger":"area bands and subtraction ledger"};
 const LP_CODE_NAMES={trial:"tested a band that was too big, then chose a smaller one (a normal step)", "one-band":"wrote the whole answer as one band or part (counted as the answer, not the method)", structure:"an expression with the right value that didn't match the words", overshoot:"a band too big for what was left (then fixed)", "area-as-quotient":"used the amount left as a partial quotient", "product-as-quotient":"mixed up a product and a partial quotient", leftover:"tried to finish with something left",
   "missing-band":"left a partial quotient out of the sum", unprocessed:"left a part out of the sum", place:"a place-value slip (zeros)", "not-compatible":"chose a part the divisor doesn't divide evenly", "tens-row-zero":"tens row missing its 0",
