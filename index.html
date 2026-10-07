@@ -254,6 +254,9 @@ pre.stack .cr{color:#B45309;font-weight:600}
 .walter-heading{display:flex;align-items:center;gap:10px;min-width:0;flex:1 1 auto}
 .walter-heading h1{min-width:0;overflow-wrap:anywhere}
 .walter-heading+.btn{flex:none}
+.home-bar{flex-wrap:wrap}
+.home-bar .walter-heading{flex-basis:220px}
+.home-bar #switch{margin-left:auto;max-width:100%;min-height:32px;overflow-wrap:anywhere}
 @media (max-width:380px){.walter-home{width:88px;height:88px}.walter-note img{width:96px;height:96px}.walter-note.compact img{width:88px;height:88px}}
 /* Walter moves for a moment when an effort cue appears. Only a finished session gets a slow idle breath. */
 .walter-note img,.walter-home{transform-origin:50% 85%}
@@ -397,6 +400,8 @@ details.more>div{padding:4px 0 2px;color:var(--graphite)}
 .exstep.cur{border-left:4px solid var(--ink);padding-left:10px}
 .exdone{font-size:15px}
 .lpwalter{margin-top:12px}.lpwalter section{margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fffdf5}.lpwalter .actions{flex-wrap:wrap}.lpwalter section>.btn{margin:8px 8px 0 0}
+/* v9.54: one daily action, readable optional sections, and current-task proximity. */
+#dailygo{width:100%;min-height:48px}.home-fold>summary,.lpcontext>summary,.gu-section>summary{cursor:pointer;font-weight:700;padding:10px 0;min-height:44px}.gu-section{margin:16px 0;border:1px solid var(--line);border-radius:12px;padding:8px 14px}.gu-overview h2{font-size:20px}.gu-observation{padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}.hwmethod{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:15px;margin:12px 0}.hwmethod select{max-width:100%;font-size:16px;padding:8px}.lpcontext{margin:12px 0 0}.lpboard .cxpolygon{max-width:240px}.lpboard .cxpolygon+p{font-size:15px;margin:6px 0}.lpcard .lptitle{font-size:22px;overflow-wrap:anywhere}.gu-overview .muted{font-size:14px}
 </style>
 </head>
 <body>
@@ -1670,7 +1675,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.52 · October 7, 2026";
+const BUILD="v9.54 · October 7, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -3709,6 +3714,30 @@ Object.assign(NOTES, {
 
 </script>
 <script>
+// Pure evidence policy: no storage, DOM, clock reads, or active learner globals.
+const ctxMatches=(wantKey, haveKey)=>{ const have=Object.fromEntries(String(haveKey||"").split(",").filter(Boolean).map(kv=>kv.split("="))); return String(wantKey||"").split(",").filter(Boolean).every(kv=>{ const [k,v]=kv.split("="); return have[k]===v; }); }; // Missing context is not evidence for a named method; context-free legacy targets still accept any context.
+// Aggregate observations at the difficulty actually checked; never infer readiness.
+// Time and legacy classification are supplied by the caller so this is directly testable.
+function summarizeEvidence(profile,now,classify){
+  const since=now-7*864e5,groups=new Map(),lessons=new Map();
+  for(const e of Array.isArray(profile.log)?profile.log:[]){
+    if(!e||!Number.isFinite(e.t)||e.t<since||e.t>now||e.hw||e.page||e.abandoned||e.transfer)continue;
+    const kind=classify(e);if(!['independent','indep-miss'].includes(kind))continue;
+    const level=Number.isInteger(e.lvl)&&e.lvl>0?e.lvl:null,key=JSON.stringify([e.sk,level,e.ctx||'']);
+    if(!groups.has(key))groups.set(key,{sk:e.sk,level,context:e.ctx||'',right:0,tried:0,distinct:new Set(),last:0});
+    const g=groups.get(key);g.tried++;g.right+=kind==='independent'?1:0;g.last=Math.max(g.last,e.t);if(e.q)g.distinct.add(e.q);
+  }
+  for(const e of Array.isArray(profile.lessonLog)?profile.lessonLog:[]){
+    if(!e||!Number.isFinite(e.t)||e.t<since||e.t>now||!['independent','delayed','mixed'].includes(e.phase))continue;
+    const load=Number.isInteger(e.load)&&e.load>0?e.load:null,key=JSON.stringify([e.id,load,!!e.teacherFocus]);
+    if(!lessons.has(key))lessons.set(key,{id:e.id,load,focus:!!e.teacherFocus,clean:0,tried:0,delayed:0,delayedClean:0,distinct:new Set(),last:0});
+    const g=lessons.get(key),clean=!!(e.firstTry&&e.methodOk&&!e.helps&&!e.tries&&!e.answerPreviewed&&!e.repeated);
+    g.tried++;g.clean+=clean?1:0;g.last=Math.max(g.last,e.t);if(e.fingerprint)g.distinct.add(e.fingerprint);
+    if(['delayed','mixed'].includes(e.phase)){g.delayed++;g.delayedClean+=clean?1:0;}
+  }
+  const finish=m=>[...m.values()].map(g=>({...g,distinct:g.distinct.size})).sort((a,b)=>b.last-a.last);
+  return {ordinary:finish(groups),lessons:finish(lessons)};
+}
 // ===== State & storage =====
 // DB = {profiles:{name:S}, current:name}. S = one player's progress.
 const KEY="math-practice-v2", OLD_KEY="math-practice-v1", LOG_CAP=500;
@@ -3805,9 +3834,13 @@ function normalize(p){ // fill in anything missing (older saves, imports)
   out.foundations=foundNorm(p.foundations); if(typeof out.foundLast!=="string") delete out.foundLast; out.foundNudgeAt=Math.max(0,+out.foundNudgeAt||0); // v9.21 (Agent M): the grown-ups' foundation choices (all off by default), the last one served, the last nudge served
   // A grown-up chooses teacher-feedback goals for each player; no personal school note is embedded in this shared app file.
   out.teacherFeedback=Array.isArray(p.teacherFeedback) ? [...new Set(p.teacherFeedback.filter(x=>x==="multiply"||x==="divide"))] : [];
+  out.homeworkLog=fractionHomeworkLogNorm(p.homeworkLog);
+  out.homeworkResume=fractionHomeworkResumeNorm(p.homeworkResume);
   return out;
 }
-let DB={profiles:{}, current:null};
+// Player names are data, including names that happen to match Object prototype keys.
+const profileMap=profiles=>Object.assign(Object.create(null),profiles||{});
+let DB={profiles:profileMap(), current:null};
 let S=null;
 
 // ===== Weakness profile =====
@@ -3853,7 +3886,6 @@ function hasTrap(p, comp){
   return true;
 }
 const ctxKey=ctx=>Object.keys(ctx||{}).filter(k=>ctx[k]!==undefined&&ctx[k]!=="").sort().map(k=>`${k}=${ctx[k]}`).join(",");
-const ctxMatches=(wantKey, haveKey)=>{ const have=Object.fromEntries(String(haveKey).split(",").map(kv=>kv.split("="))); return wantKey.split(",").every(kv=>{ const [k,v]=kv.split("="); return have[k]===undefined || have[k]===v; }); }; // every field the weakness names must agree with the entry
 const weakKey=(sk,comp,ctx)=>{ const ck=ctxKey(ctx); return `${sk}:${comp||"*"}${ck?"|"+ck:""}`; };
 function parseWeakKey(key){ const [head,ck=""]=key.split("|"); const [sk,comp]=head.split(":"); const ctx={}; if(ck) for(const kv of ck.split(",")){ const [k,v]=kv.split("="); ctx[k]=v; } return {sk, comp, ctx}; }
 // The focus a generator needs to produce a problem in this context (the same fields focusFor() uses for follow-ups).
@@ -3873,7 +3905,7 @@ function eligible(key, p){
   else if(comp!=="*" && STEP_COMPS[sk] && STEP_COMPS[sk].has(comp)){ if(!problemComps(p).has(comp) || !hasTrap(p, comp)) return false; } // a step-level component must be assessed by the problem
   else if(p.type==="mc" && Array.isArray(p.optionTags) && comp!=="*" && comp!=="other"){ if(!p.optionTags.includes(comp)) return false; } // a multiple-choice trap counts only when that wrong answer was on offer
   else if(!hasTrap(p, comp)) return false;
-  const pc=ctxOf(p); for(const k in ctx){ if(ctx[k]!=="" && pc[k]!==undefined && String(pc[k])!==String(ctx[k])) return false; }
+  if(!ctxMatches(ctxKey(ctx),ctxKey(ctxOf(p)))) return false;
   if((+p.level||1) < (e.lvl||1)) return false;
   return true;
 }
@@ -3906,7 +3938,7 @@ function noteComp(sk, comp, ok, o){
 }
 // What "Focus on where I missed" should serve next: a review that has come due, else the open weakness served least recently. null → nothing.
 function recoveryTarget(o){
-  const W=S.weak, now=Date.now(); const okKey=k=>SKILLS[parseWeakKey(k).sk] && taughtSk(parseWeakKey(k).sk); // v9.25: nothing ahead of the class calendar
+  const W=S.weak, now=Date.now(); const okKey=k=>SKILLS[parseWeakKey(k).sk] && taughtSk(parseWeakKey(k).sk,parseWeakKey(k).ctx); // v9.25: nothing ahead of the class calendar
   const open=Object.keys(W).filter(k=>W[k].state==="weak" && okKey(k)).sort((a,b)=>(W[a].served||0)-(W[b].served||0) || (W[b].misses-W[b].wins)-(W[a].misses-W[a].wins));
   const due=Object.keys(W).filter(k=>W[k].state==="review" && W[k].due<=now && okKey(k)).sort((a,b)=>W[a].due-W[b].due);
   const key=(o&&o.openFirst) ? (open[0]||due[0]) : (due[0]||open[0]); if(!key) return null; /* openFirst: the planned sitting's "weakest spot" slot wants an open weakness even when a review is also due (the review has its own slot) */
@@ -3932,10 +3964,11 @@ function weakSummary(){ const W=S.weak; const out={weak:[],review:[],ok:[]}; for
 let loadProblem=""; // v9.12: shown once if the save could not be read
 let otherTab=false; // v9.12: another tab saved progress while this one was open
 let saveFailed=false; // set when localStorage refuses to write (quota, private mode)
+let storedSnapshot=null, saveConflict=false;
 function load(){
   try{
-    const raw=localStorage.getItem(KEY);
-    if(raw){ const o=JSON.parse(raw); if(o && o.profiles){ DB=o; } }
+    const raw=localStorage.getItem(KEY); storedSnapshot=raw; saveConflict=false;
+    if(raw){ const o=JSON.parse(raw); if(!o||typeof o!=="object"||Array.isArray(o)||!o.profiles||typeof o.profiles!=="object"||Array.isArray(o.profiles)) throw new Error("Invalid saved players"); DB={...o,profiles:profileMap(o.profiles)}; }
     else { // migrate the old single-player save, if there is one
       const old=localStorage.getItem(OLD_KEY);
       if(old){ const o=JSON.parse(old); if(o && o.name){ DB.profiles[o.name]=normalize({name:o.name, levels:o.levels, correct:o.correct, attempted:o.attempted, best:o.best}); DB.current=o.name; save(); } }
@@ -3943,19 +3976,22 @@ function load(){
   }catch(e){ // v9.12: never overwrite a save we could not read; keep a copy so a grown-up can recover it
     let kept=false; try{ const raw=localStorage.getItem(KEY); if(raw){ let dup=false; for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && k.startsWith(KEY+".unreadable") && localStorage.getItem(k)===raw){ dup=true; break; } } if(!dup){ const k2=localStorage.getItem(KEY+".unreadable") ? KEY+".unreadable."+Date.now() : KEY+".unreadable"; localStorage.setItem(k2, raw); } kept=true; } }catch(e2){}
     loadProblem = kept ? "The saved progress on this device could not be read. A copy of it was kept on this device (under the name "+KEY+".unreadable) so a grown-up or a tech helper can try to recover it. New progress starts fresh." : "The saved progress on this device could not be read, and this device would not let the app keep a copy. New progress starts fresh.";
-    DB={profiles:{}, current:null}; }
+    DB={profiles:profileMap(), current:null}; }
   if(!DB.profiles || typeof DB.profiles!=="object" || Array.isArray(DB.profiles)){ DB.profiles={}; loadProblem=loadProblem||"Part of the saved progress could not be read and was skipped."; }
-  for(const n of Object.keys(DB.profiles)){ const pr=DB.profiles[n]; if(!pr || typeof pr!=="object" || Array.isArray(pr)){ delete DB.profiles[n]; continue; } try{ DB.profiles[n]=normalize({...pr, name:pr.name||n}); }catch(e){ delete DB.profiles[n]; } }
+  DB.profiles=profileMap(DB.profiles);
+  for(const n of Object.keys(DB.profiles)){ const pr=DB.profiles[n]; if(!pr || typeof pr!=="object" || Array.isArray(pr)){ delete DB.profiles[n]; continue; } try{ DB.profiles[n]=normalize({...pr, name:n}); }catch(e){ delete DB.profiles[n]; } }
   if(DB.current && !DB.profiles[DB.current]) DB.current=null;
   S = DB.current ? DB.profiles[DB.current] : null;
 }
 function save(){
-  try{ if(S) DB.profiles[S.name]=S; localStorage.setItem(KEY, JSON.stringify(DB)); saveFailed=false; return true; }
+  try{ if(S) DB.profiles[S.name]=S;
+    // Guard against stale tabs even when their storage event has not arrived yet.
+    if(saveConflict||localStorage.getItem(KEY)!==storedSnapshot){ saveConflict=true; otherTab=true; showSaveConflict(); return false; }
+    const raw=JSON.stringify(DB); localStorage.setItem(KEY,raw); storedSnapshot=raw; saveFailed=false; return true; }
   catch(e){ saveFailed=true; return false; }
 }
-load();
-// v9.12: two tabs used to overwrite each other silently (last save wins). When another tab saves, this one reloads from storage instead.
-try{ window.addEventListener("storage", ev=>{ if(ev.key!==KEY) return; const name=S&&S.name; const keepQ=S&&S.pendingQ; load(); if(name && DB.profiles[name]){ S=DB.profiles[name]; DB.current=name; if(keepQ) S.pendingQ=keepQ; } otherTab=true; }); }catch(e){} // no navigation and no save here, so two tabs cannot ping-pong; this tab simply continues from the latest saved progress
+// Do not replace the profile underneath live lesson/practice state or promise a merge.
+try{ window.addEventListener("storage", ev=>{ if(ev.key!==KEY&&ev.key!==null) return; try{ if(localStorage.getItem(KEY)!==storedSnapshot){ saveConflict=true; otherTab=true; showSaveConflict(); } }catch(e){ saveFailed=true; } }); }catch(e){}
 
 // ===== View helpers =====
 const app=document.getElementById("app");
@@ -3963,7 +3999,9 @@ const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"
 const plain=h=>String(h).replace(/<br\s*\/?>/g," ").replace(/<[^>]+>/g,"").replace(/&nbsp;/g," ").replace(/&lt;/g,"<").replace(/&amp;/g,"&").replace(/\s+/g," ").trim();
 const cap=s=>s.replace(/(^|\s)\S/g,c=>c.toUpperCase());
 const ucfirst=s=>String(s).charAt(0).toUpperCase()+String(s).slice(1);
-const warnHTML=()=>(saveFailed?`<div class="warn" role="status">Progress could not be saved on this device. Use the backup on the grown-ups page.</div>`:"")+(loadProblem?(()=>{ const m=loadProblem; setTimeout(()=>{ loadProblem=""; },0); return `<div class="warn" role="status">${esc(m)}</div>`; })():"")+(otherTab?(()=>{ setTimeout(()=>{ otherTab=false; },0); return `<div class="warn" role="status">This app is also open in another tab or window. Progress from both is kept, but it is best to use just one.</div>`; })():"");
+function saveConflictHTML(){ return `<div id="saveconflict" class="warn" role="status">Another tab changed the saved progress. New work in this tab has not been saved. Ask a grown-up to back up this tab on the grown-ups page before reloading, and use one tab at a time.</div>`; }
+function showSaveConflict(){ const root=document.getElementById("app"); if(root&&!root.querySelector("#saveconflict")) root.insertAdjacentHTML("afterbegin",saveConflictHTML()); }
+const warnHTML=()=>(saveConflict?saveConflictHTML():saveFailed?`<div class="warn" role="status">Progress could not be saved on this device. Use the backup on the grown-ups page.</div>`:"")+(loadProblem?(()=>{ const m=loadProblem; setTimeout(()=>{ loadProblem=""; },0); return `<div class="warn" role="status">${esc(m)}</div>`; })():"");
 
 function chartHTML(num, hl, minCols, compact){
   if(num==="blank"||!num) return `<div class="chart"><table>${chartHeader(3)}<tr>${"<td></td>".repeat(3)}<td class="point">•</td>${"<td></td>".repeat(3)}</tr></table></div>`;
@@ -3994,10 +4032,11 @@ function chartsHTML(s){ // a step or hint may carry one chart or several
   return s.chart ? chartHTML(s.chart, s.hl, s.minCols) : "";
 }
 function dots(level){ return `<div class="dots" role="img" aria-label="level ${level} of ${MAX_LEVEL}">${Array.from({length:MAX_LEVEL},(_,i)=>i+1).map(i=>`<span class="dot ${i<=level?(level===MAX_LEVEL?"max":"on"):""}"></span>`).join("")}</div>`; }
+const choiceLabel=i=>i<26?String.fromCharCode(97+i):String(i+1);
 const optsHTML=(id, options, sel, answer, done, cls, mark, crossed)=>{ // MC radiogroup. done => show right/wrong and disable. mark => this option shows as right while still enabled. crossed => wrong picks already tried, shown crossed off and disabled
   const longOpts=options.some(o=>String(o).length>34); const x=Array.isArray(crossed)?crossed:[];
   return `<div class="opts ${longOpts?"long":""}" id="${id}" role="radiogroup" aria-label="Answer choices">${options.map((o,i)=>{ let c=cls; const off=!done && x.includes(i); if(done){ if(i===answer) c+=" right"; else if(i===sel) c+=" wrong"; } else { if(i===sel) c+=" sel"; if(mark!==undefined&&mark>=0&&i===mark) c+=" right"; if(off) c+=" crossed"; }
-    return `<button type="button" class="${c}" role="radio" aria-checked="${i===sel}" data-i="${i}" ${done||off?"disabled":""}><b aria-hidden="true">${"abcd"[i]}.</b>&nbsp; ${esc(o)}</button>`; }).join("")}</div>`; };
+    return `<button type="button" class="${c}" role="radio" aria-checked="${i===sel}" data-i="${i}" ${done||off?"disabled":""}><b aria-hidden="true">${choiceLabel(i)}.</b>&nbsp; ${esc(o)}</button>`; }).join("")}</div>`; };
 
 // ===== Screens =====
 let mode=null;   // skill key or "mix"
@@ -4017,13 +4056,13 @@ let pendingTransfer=null, helpPrompts=[], pendingStretch=null; // pendingStretch
  // after a help chain (miss → walkthrough → one like it), the next fresh problem is the same skill with the coach hidden: an immediate, unprompted transfer check
 let todayPlan=null, todayIdx=0, todayExtra=0, todaySid=0; /* todaySid: this sitting's id; every fresh problem served in it is tagged, so the summary counts the sitting's own problems and nothing else */ // "Start today": the planned slots for this sitting, and how many extra problems were added to end on a win
 // A pinned lesson supplies two week slots. An unpinned calendar date is only a guess, so Today uses prior practice or foundations instead.
-function buildTodayPlan(){ const plan=[]; const now=Date.now(); const W=S.weak||{}; const okKey=k=>SKILLS[parseWeakKey(k).sk] && taughtSk(parseWeakKey(k).sk);
-  const dueCheck=Object.keys(S.checkins||{}).some(k=>SKILLS[k.split("|")[0]] && taughtSk(k.split("|")[0]) && S.checkins[k].due<=now); const dueReview=Object.keys(W).some(k=>W[k].state==="review" && W[k].due<=now && okKey(k)); const openWeak=Object.keys(W).some(k=>W[k].state==="weak" && okKey(k)); /* asked separately: a due review must not crowd out an open weakness */
+function buildTodayPlan(){ if(!classCalOn()&&!foundActive().length&&!nsUnit1Active()&&!Object.values(S.weak||{}).some(o=>o&&o.state!=="ok")&&!Object.keys(S.checkins||{}).length&&!S.log.some(e=>e&&!e.hw&&!e.abandoned)&&!(S.lessonLog||[]).some(e=>e.methodOk&&!e.teacherFocus)) return ["starter","starter","starter"]; const plan=[]; const now=Date.now(); const W=S.weak||{}; const okKey=k=>SKILLS[parseWeakKey(k).sk] && taughtSk(parseWeakKey(k).sk,parseWeakKey(k).ctx);
+  const dueCheck=Object.keys(S.checkins||{}).some(k=>SKILLS[k.split("|")[0]] && taughtSk(k.split("|")[0],S.checkins[k].ctx) && S.checkins[k].due<=now); const dueReview=Object.keys(W).some(k=>W[k].state==="review" && W[k].due<=now && okKey(k)); const openWeak=Object.keys(W).some(k=>W[k].state==="weak" && okKey(k)); /* asked separately: a due review must not crowd out an open weakness */
   if(dueCheck || dueReview) plan.push("review");
   if(classCalOn() && S.classPin && Object.keys(weekWeights()).length){ plan.push("week"); plan.push("week"); } else plan.push("mix");
   if(openWeak) plan.push("focus");
   plan.push("mix"); while(plan.length<5) plan.push("mix"); if(plan.length>6) plan.length=6; return foundPlanSlots(plan); } // v9.21: foundPlanSlots adds the "found" slot only when a grown-up switched a foundation on
-const todayLabel=k=>({review:"a check-in on something you have shown before", week:"this week's lesson", focus:"one from your practice list", mix:"mixed practice", found:"a foundation builder"})[k]||k; // v9.19 review: kid-facing, so no labels ("weakest" is not a word she sees)
+const todayLabel=k=>({review:"a check-in on something you have shown before", week:"this week's lesson", focus:"one from your practice list", mix:"mixed practice", starter:"a gentle place-value warm-up", found:"a foundation builder"})[k]||k; // v9.19 review: kid-facing, so no labels ("weakest" is not a word she sees)
 function todaySummaryHTML(){ const done=S.log.filter(e=>e.today===todaySid && isFresh(e) && !(e.placement && !e.ok)); const n=done.length; const right=done.filter(e=>e.ok).length, ind=done.filter(e=>classifyEntry(e)==="independent").length; const last=done[done.length-1]; const endedSolo=!!(last && classifyEntry(last)==="independent"); const t=recoveryTarget(); /* the sitting's own primary problems, by session id; a missed quick check is not scored */
   return `<div class="stop" role="status"><b>That is today.</b> ${n} problem${n===1?"":"s"}: ${right} right, ${ind} on your own.${endedSolo?"":" The last ones took some help, and that is fine: next time starts fresh."} ${t?(()=>{ const nm=t.why.split(" · ")[0], skn=SKILLS[t.sk].name.toLowerCase(); return `Next time: ${esc(nm.toLowerCase().startsWith(skn)?nm:`${skn}, ${nm}`)}.`; })():"Nothing on the watch list right now."}${walterNote("rest","You worked through today's practice. A break is part of learning.",true)}<div class="actions" style="margin-top:8px"><button class="btn primary" id="stopnow">Done for today</button><button class="btn quiet" id="onemore">One more anyway</button></div></div>`; } // fresh problems answered since the app opened; the last count at which the stopping point was offered; she tapped "Done for today"
 let ws=null;         // multiplication workspace state for the current problem: {vals:{cellKey:digit}, sel:cellKey}
@@ -4040,7 +4079,7 @@ const PRE_NAMES={partition:"break it into parts", benchmark:"pick the benchmark"
 // The card now says that Check looks at both parts, confirms the pick, and moves to the answer box; the letters pick a choice.
 function preNextText(){ const c=cur && cur.pre && cur.pre.check; if(!c) return "";
   if(c.type!=="mc") return "Do this step here, then work out the answer below. Check looks at both.";
-  return preSel>=0 ? `You picked ${"abcd"[preSel]}. Now work out the answer below and press Check. You can still change your pick.` : "Pick one. Then work out the answer below and press Check. Check looks at both."; }
+  return preSel>=0 ? `You picked ${choiceLabel(preSel)}. Now work out the answer below and press Check. You can still change your pick.` : "Pick one. Then work out the answer below and press Check. Check looks at both."; }
 function preHTML(){ if(!cur.pre || phase!=="q") return ""; const c=cur.pre.check; const nm=PRE_NAMES[cur.pre.comp]||compName(cur.skill,cur.pre.comp);
   return `<div class="substep pre" id="pre"><div class="cq"><b>First step: ${esc(nm)}.</b> ${c.q}</div>${c.type==="mc" ? optsHTML("preopts", c.options||[], preSel, c.answer, false, "opt copt") : `<label class="vh" for="preans">Your answer for this step</label><input class="ans small${isTextTarget(c)?" text":""}" id="preans" ${ansAttrs(c)} autocomplete="off" placeholder="this step first" value="${esc(preVal)}">`}<p class="prenext" id="prenext" aria-live="polite">${esc(preNextText())}</p></div>`; }
 function gradePre(){ if(!cur.pre) return null; const c=cur.pre.check; if(c.type==="mc"){ if(preSel<0) return {missing:true}; return {ok:preSel===c.answer, yours:String((c.options||[])[preSel])}; } const inp=app.querySelector("#preans"); const v=inp?inp.value:preVal; preVal=v; if(!String(v).trim()) return {missing:true}; const iss=issueFor(c,v); if(iss) return {missing:true, issue:iss}; return {ok:!!checkAccepts(c,v), yours:String(v).trim()}; }
@@ -4142,12 +4181,13 @@ function homeEffortHTML(){ try{
   const log=Array.isArray(S.log)?S.log:[]; const now=new Date(); const day0=new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const w0=new Date(now.getFullYear(), now.getMonth(), now.getDate()-((now.getDay()+6)%7)).getTime(); // this school week, from Monday
   const dk=t=>{ const d=new Date(t); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; };
-  const stamps=[...log.filter(e=>e && !e.abandoned).map(e=>+e.t), ...(Array.isArray(S.nsChecks)?S.nsChecks.filter(c=>c && Array.isArray(c.items) && c.items.length).map(c=>+c.t):[]), ...((S.quick && Array.isArray(S.quick.history))?S.quick.history.map(h=>h&&+h.t):[])].filter(t=>Number.isFinite(t) && t>=w0);
+  const otherWork=[...(S.homeworkLog||[]).filter(e=>e&&e.ok), ...(S.lessonLog||[]).filter(e=>e&&e.methodOk&&e.phase!=='model')];
+  const stamps=[...log.filter(e=>e && !e.abandoned).map(e=>+e.t), ...otherWork.map(e=>+e.t), ...(Array.isArray(S.nsChecks)?S.nsChecks.filter(c=>c && Array.isArray(c.items) && c.items.length).map(c=>+c.t):[]), ...((S.quick && Array.isArray(S.quick.history))?S.quick.history.map(h=>h&&+h.t):[])].filter(t=>Number.isFinite(t) && t>=w0 && t<=now.getTime());
   const days=new Set(stamps.map(dk)).size;
   const todayN=Math.max(new Set(log.filter(e=>e && !e.abandoned && +e.t>=day0).map(e=>String(e.q||e.t))).size, (S.today&&S.today.a)||0); // distinct problems today, so a miss and its walkthrough count once
   let own=""; for(let i=log.length-1;i>=0;i--){ const e=log[i]; if(e && e.q && classifyEntry(e)==="independent"){ own=String(e.q).replace(/\s*=\s*\?\s*$/,"").replace(/\s+/g," ").trim(); break; } }
   if(own.length>60) own=own.slice(0,58).trim()+"…";
-  const parts=[todayN ? `Today you worked on ${todayN} problem${todayN===1?"":"s"}.` : "Nothing tried yet today."];
+  const parts=[todayN ? `Today you worked on ${todayN} problem${todayN===1?"":"s"}.` : otherWork.some(e=>+e.t>=day0&&+e.t<=now.getTime()) ? "Your homework or lesson practice today is saved." : "No practice problems recorded yet today."];
   if(days) parts.push(`This week you practiced on ${days} day${days===1?"":"s"}.`);
   if(own) parts.push(`Last one you got on your own: <b>${esc(own)}</b>`);
   if(!log.length) parts.push("The dots fill in as you level up; gold means maxed out.");
@@ -4236,20 +4276,16 @@ function home(){
   const focusLine = target ? `Next up: <b>${esc(SKILLS[target.sk].name)}</b>, ${esc(target.kid||target.why)}${/* v9.19 review: no "0 of 2 on your own" and no "N more on the list" on her screen */""}${wsum.review.length?`; ${wsum.review.length} in review`:""}.` : wsum.review.length ? `Nothing to focus on right now: ${wsum.review.length} thing${wsum.review.length===1?"":"s"} in review. Next check-in ${new Date(nextDue).toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}.` : "";
   const showFocus = !!target; // with nothing open or due, Focus would just be Mix; the note below says when the next check-in is
   const doneLine = sessionDone ? `${walterNote("rest","You reached a stopping point. Rest now, and come back when you're ready.",true,true)}<p class="muted week-note" style="margin:0 0 10px"><b>Nice stopping point.</b> ${/* v9.20: effort, not "x right of y" */""}You worked on ${S.today.a||"some"} problem${S.today.a===1?"":"s"} today.${S.today.c ? "" : " Hard ones are how brains grow."} Come back tomorrow, or pick something below if you want more.</p>` : "";
-  const todayHTML=`<div class="card home-today" style="margin-top:0"><div class="week-head"><h2 style="margin:0">Start today</h2><span class="std" title="The app plans it">Planned for you</span></div>
-      <p class="muted home-desc">${(()=>{ const P=buildTodayPlan(); return `About ${todayCountWords(P)} problems: ${P.map(todayLabel).filter((v,i,a)=>a.indexOf(v)===i).join(", ")}.`; })()}${guess?" We’ll use math you have practiced here, or a foundation builder, until a grown-up sets the class lesson.":""}</p>
-      <div class="actions" style="margin-top:0"><button class="btn ${(!curL||guess)&&!pausedLesson?"primary":""} mix" data-skill="today" style="margin-top:0">Start today</button></div></div>`;
-  // v9.44: assigned teacher goals follow the first practice card, ahead of the check-up.
+  const homeworkPaused=fractionHomeworkResumeReady();
+  const primary=homePrimaryAction();
+  const todayHTML=`<div class="card home-today home-lead" id="dailycard" style="margin-top:0"><h2 style="margin-top:0">${primary.title}</h2><p class="muted home-desc">${primary.description}</p>${stale?`<p class="muted week-guess" id="stalepin">A grown-up set the class lesson ${esc(pinDayText())}. If your homework shows a newer lesson, ask a grown-up to update it.</p>`:""}<button class="btn primary mix" id="${primary.kind==='lesson'?'lpresume':'dailygo'}" data-dailygo ${primary.kind==='today'?'data-skill="today"':''}>${primary.label}</button></div>`;
   const feedbackHTML=teacherFeedbackHomeHTML();
-  const resumeHTML=pausedLesson&&!lpHTML ? `<div class="card home-lead home-resume"><div class="lphome"><button class="btn primary" id="lpresume">${S.lessonResume.focus?"Resume teacher's focus":"Resume "+lpLessonLabel(S.lessonResume.id)}</button></div></div>` : "";
-  const practiceCards=guess&&!pausedLesson ? todayHTML+feedbackHTML+weekHTML
-    : resumeHTML ? resumeHTML+feedbackHTML+weekHTML+todayHTML
-    : weekHTML ? weekHTML+feedbackHTML+todayHTML : todayHTML+feedbackHTML;
+  const practiceCards=todayHTML;
   app.innerHTML=`
-    <div class="topbar"><div class="walter-heading"><img class="walter-home" src="${WALTER_ART.work}" alt="" width="112" height="112"><h1 style="margin:0" tabindex="-1">Hi, ${esc(S.name)}.</h1></div><button class="btn quiet small" id="switch">Not ${esc(S.name)}?</button></div>${warnHTML()}
-    <p class="home-intro">Pick one way to practice. You can ask for help along the way.</p>
+    <div class="topbar home-bar"><div class="walter-heading"><img class="walter-home" src="${WALTER_ART.work}" alt="" width="112" height="112"><h1 style="margin:0" tabindex="-1">Hi, ${esc(S.name)}.</h1></div><button class="btn quiet small" id="switch">Not ${esc(S.name)}?</button></div>${warnHTML()}
+    <p class="home-intro">One step at a time. You can ask for help or stop whenever you need.</p>
     ${doneLine}${practiceCards}
-    ${nsHomeTile()}
+    
     <div class="card hw">
       <div class="week-head"><h2 style="margin:0">Homework practice</h2></div>
       <p class="muted home-desc">Have a problem from your page? Type it here to work through it.</p>
@@ -4260,7 +4296,7 @@ function home(){
         <p class="muted week-note">Want to build up to a homework problem? Choose a math topic below for practice that grows with you.</p>
       </div></details>
     </div>
-    ${foundationsHomeHTML()}
+    <details class="card home-fold" id="homealternatives"${foldAttr("alternatives")}><summary>Choose another way to practice</summary><div class="home-more-body">${primary.kind!=='today'?`<div class="actions"><button class="btn quiet" data-skill="today">Start new daily practice</button></div>`:""}${weekHTML.replace(/btn primary/g,'btn quiet').replace(/id="lpresume"/g,'id="lpsecondaryresume"')}${feedbackHTML.replace(/btn primary/g,'btn quiet')}${nsHomeTile()}${foundationsHomeHTML()}
     <details class="card home-fold home-topics"${foldAttr("topics")}><summary>Choose a math topic</summary><div class="home-more-body">
       <p class="muted home-desc">Pick one thing you want to work on.</p>
       <div class="skills">${SKILL_ORDER.filter(k=>!SKILLS[k].foundation)/* v9.21: foundation skills live only in "Build your foundations" */.map(k=>`<button class="skill" data-skill="${k}"><div style="flex:1"><div class="name">${SKILLS[k].name}</div><div class="blurb">${esc(SKILLS[k].blurb)}</div>${tagsHTML(k)}</div>${dots(S.levels[k])}</button>`).join("")}</div>
@@ -4269,6 +4305,7 @@ function home(){
       <div class="actions" style="margin-top:0"><button class="btn mix" data-skill="mix">Mix it up</button>${showFocus?`<button class="btn mix" data-skill="miss" title="Practice a spot that needs another try, then check it later with new numbers.">Focus on where I missed</button>`:""}</div>
       ${focusLine?`<p class="focus-note">${focusLine}</p>`:showFocus?`<p class="focus-note">Focus draws from: ${missSkills.map(k=>esc(SKILLS[k].name)).join(", ")}.</p>`:""}
     </div>
+    </div></details>
     <div class="stats muted">${homeEffortHTML()}</div>
     <div class="footer"><button class="btn quiet small" id="grown">For grown-ups</button><span class="muted build">Build ${esc(BUILD)}</span></div>`;
   app.querySelectorAll("[data-skill]").forEach(b=>b.onclick=()=>start(b.dataset.skill));
@@ -4276,10 +4313,13 @@ function home(){
   app.querySelectorAll("[data-teacher-check]").forEach(b=>b.onclick=()=>lpStart(b.dataset.teacherCheck==="multiply"?"U2L8":"U2L11",true,null,true));
   app.querySelector("#switch").onclick=players;
   app.querySelector("#grown").onclick=grownups; if(typeof lpHomeBind==="function") lpHomeBind(); // v9.33: Unit 2 lesson practice
+  if(primary.kind==='lesson') app.querySelector('#lpresume').onclick=lpResume;
+  if(primary.kind==='homework') app.querySelector('#dailygo').onclick=fractionHomeworkResume;
+  if(primary.kind==='check') app.querySelector('#dailygo').onclick=()=>lpStart(primary.id,true,null,primary.focus);
+  const secondaryResume=app.querySelector('#lpsecondaryresume');if(secondaryResume)secondaryResume.onclick=lpResume;
   bindFolds(); armWalterMotion();
   app.querySelector(".topbar h1").focus({preventScroll:true});
 }
-
 // Homework practice: the exact problem shapes on the worksheet, whatever the adaptive level says. Level-neutral (never moves the dots).
 const HW_MODES={
   hwmul:{skill:"multiply", name:"Standard algorithm — homework practice", std:"5.NBT.5 · U2 L8, and the L9 spiral review",
@@ -4332,6 +4372,7 @@ function parseExprWords(str){
   try{ const tk=parseBack(e); if(!validTokens(tk)) return {err:`That reads as ${e}, and one of its steps does not come out a whole number, so the app cannot check it. Check the numbers, or type the expression itself.`}; return {expr:tokStr(tk), ops:(e.match(/[+−×÷]/g)||[]).length, sentence:s}; }catch(err){ return null; } }
 // "Check my homework": read a problem typed from the page. Returns {skill, focus, level, label} or {err}.
 function parseHomework(text, depth){
+  const fraction=parseFractionHomework(text); if(fraction) return fraction;
   let t=String(text||"").trim().toLowerCase().replace(/\s+/g," ").replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g,m=>"^"+[...m].map(ch=>"⁰¹²³⁴⁵⁶⁷⁸⁹".indexOf(ch)).join("")).replace(/=\s*[\d,.\s?_]*$/,"").trim(); // "= ?", "= ____", or an answer she already wrote after the equals sign are all dropped
   // v9.17: Unit 2 homework shapes typed as printed.
   t=t.replace(/[–—‒]/g,"−").replace(/[.!]+$/,"").trim(); // an en dash from an iPad keyboard is a minus sign
@@ -4476,7 +4517,9 @@ function missWeights(){
 // has no way to know what was taught. A skill button on Home still opens any skill on purpose.
 // With the calendar on, a skill ahead of the class (for example one opened from Home on purpose) keeps its history, but its practice-list
 // items and check-ins wait until the class reaches it, so "Start today" does not keep serving it.
-function taughtSk(sk){ if(!classCalOn() || (SKILLS[sk] && SKILLS[sk].foundation)) return true; return mixPool().includes(sk); }
+function taughtSk(sk,ctx){ if(!classCalOn() || (SKILLS[sk] && SKILLS[sk].foundation)) return true;
+  if(ctx?.lessonId){ const at=lessonIdx(effectiveClassAt()), i=lessonIdx(ctx.lessonId); if(at<0||i<0||i>at) return false; }
+  return mixPool().includes(sk); }
 function mixPool(){ const all=SKILL_ORDER.filter(k=>SKILLS[k] && !SKILLS[k].foundation);
   if(classCalOn()){ const L=lessonList(), ci=lessonIdx(effectiveClassAt()); if(ci>=0){ const t=new Set(); for(let i=0;i<=ci;i++) for(const k of lessonSkills(L[i])) t.add(k);
     const pool=all.filter(k=>t.has(k)); if(pool.length) return pool; } }
@@ -4486,9 +4529,11 @@ function mixPool(){ const all=SKILL_ORDER.filter(k=>SKILLS[k] && !SKILLS[k].foun
 // Use skills the learner has already practiced here; if there are none, begin with foundational work.
 function todayFamiliarPool(){ const seen=new Set(((S&&S.log)||[]).filter(e=>e&&e.sk&&!e.hw&&!e.page&&!e.placement).map(e=>e.sk));
   const prior=SKILL_ORDER.filter(k=>SKILLS[k]&&!SKILLS[k].foundation&&seen.has(k));
-  return prior.length?prior:["wholepv","facts"].filter(k=>SKILLS[k]); }
+  const foundation=SKILL_ORDER.filter(k=>SKILLS[k]?.foundation&&seen.has(k));
+  return prior.length?prior:foundation.length?foundation:["wholepv","facts"].filter(k=>SKILLS[k]); }
 function pickSkill(){
   const slot = todaySlotNow(); const eff = slot==="week" ? "week" : slot==="focus" ? "miss" : slot ? "mix" : mode;
+  if(slot==="starter") return "wholepv";
   if(slot==="found"){ const fk=foundSlotSkill(); if(fk) return fk; } // v9.21: a foundation builder (a foundation that is not in this build falls through to mixed practice)
   if(eff==="week"){ const w=weekWeights(), keys=Object.keys(w); if(keys.length) return drawWeighted(keys, keys.map(k=>w[k])); }
   else if(eff==="miss"){ const tg=recoveryTarget(slot==="focus"?{openFirst:true}:undefined); if(tg) return tg.sk; } // nothing open or due → plain mix; a component in review is left alone until its check-in
@@ -4496,7 +4541,7 @@ function pickSkill(){
   else if(hwMode()) return hwMode().skill;
   else if(eff!=="mix" && eff!=="week" && eff!=="miss") return eff;
   if(slot==="mix" && todayPlan && todayPlan.indexOf("mix")===todayIdx && typeof nsUnit1Pick==="function"){ const u1=nsUnit1Pick(); if(u1) return u1; } // v9.19/v9.20 (check-up): the grown-ups "Extra Unit 1 review" setting on → for 4 weeks from its start date, the first "mix" slot of Start today draws from the Unit 1 skills only; off → unchanged
-  if(mode==="today" && classCalOn() && !S.classPin){ const familiar=todayFamiliarPool(); return drawWeighted(familiar, familiar.map(k=>(MAX_LEVEL+1-S.levels[k])*2+1)); }
+  if(mode==="today" && ((classCalOn()&&!S.classPin)||(!classCalOn()&&!foundActive().length&&!nsUnit1Active()))){ const familiar=todayFamiliarPool(); return drawWeighted(familiar, familiar.map(k=>(MAX_LEVEL+1-S.levels[k])*2+1)); }
   const mixKeys=mixPool(); // v9.21: foundation skills come only through their own slot, their own buttons, or a practice spot; v9.25: only skills taught so far
   return drawWeighted(mixKeys, mixKeys.map(k=>(MAX_LEVEL+1-S.levels[k])*2+1)); // mix (and week with nothing to draw from)
 }
@@ -5310,21 +5355,24 @@ function hwEntry(prefill, err){
     <div class="topbar"><button class="btn quiet" id="back">Home</button><div class="row"><span class="pill week">Homework</span></div></div>${warnHTML()}
     <div class="card">
       <h2 style="margin-top:0">Check a problem from the page</h2>
-      <p class="muted" style="margin:0 0 10px">Type the problem from the worksheet, like <b>16 × 24</b>. Extra words are fine ("What is 16 × 24?", "4. 421 x 17", "16 times 24 area model"). You can try it yourself or work through <b>that</b> problem step by step. Nothing here changes your levels.</p>
+      <p class="muted" style="margin:0 0 10px">Copy the expression, including fractions or mixed numbers, like <b>3/4 + 5/6</b> or <b>2 1/3 − 3/4</b>. You do the arithmetic; Walter can help with each step. Homework does not change levels.</p>
       <label class="vh" for="hwq">The problem</label>
-      <input class="ans text" id="hwq" type="text" inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="like 148 × 19" value="${esc(prefill||"")}">
+      <input class="ans text" id="hwq" type="text" inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="like 3/4 + 5/6 or 148 × 19" value="${esc(prefill||"")}">
+      <label class="hwmethod" for="hwfractionmethod">For fraction addition or subtraction, use <select id="hwfractionmethod"><option value="algorithm">Equivalent fractions</option><option value="area">Equal-part area model</option><option value="line">Number line</option></select></label>
       <div class="inline-err" id="hwerr" role="status" aria-live="polite">${esc(err||"")}</div>
       <div class="actions"><button class="btn primary" id="hwgo">Set it up</button></div>
       <details class="lpwalter"><summary class="btn quiet">Ask Walter</summary>${walterNote('work','Copy the expression from your page, including decimal points and operation signs. If your teacher asks for an area model, add “area model” after it. For a story problem, type the expression you wrote. After setting it up, I can help with the method while you do the arithmetic.',true)}</details>
-      <p class="muted" style="font-size:14px;margin:14px 0 0">Shapes the app knows: <b>148 × 19</b> (standard algorithm), <b>3,660 ÷ 30</b> (place value strategy), <b>8 × 10^5 × 6</b> or <b>47 × 10^6</b> (powers of ten), <b>4.5 × 1,000</b> or <b>36.5 ÷ 10^2</b> (moving the decimal point), <b>round 2.98 to the nearest tenth</b>, <b>3.45 + 2.7</b> or <b>12.5 − 3.75</b> (adding and subtracting decimals), <b>3.4 × 6</b>, <b>2.5 × 1.2</b> or <b>4.8 ÷ 0.6</b> (multiplying and dividing decimals), <b>2 + 3 × 4</b> or <b>49 ÷ (34 − 27) × 9</b> (order of operations), <b>1,144 ÷ 11</b> or <b>40)8,760</b> (dividing; add <b>area model</b> for the area model), <b>(24 ÷ 4) × 2 vs 12</b> (less than, equal to, or greater than), <b>A: 8 + 4 B: (8 + 4) ÷ 2</b> (the relationship), <b>half of the sum of 17 and 9</b> (write the expression), <b>six hundred forty-seven and eight hundred ninety-two thousandths</b> (standard form). Use x or × for times, ÷ or / for divide, ^ for the exponent. Add <b>area model</b> after a multiplication or division to walk through it as an area model. For a story problem, type the expression you wrote, like <b>3 × 12 − 2</b>.</p>
+      <details class="home-more"><summary>Examples and supported problems</summary><p class="muted" style="font-size:14px;margin:14px 0 0">Fractions: <b>3/4 + 5/6</b>, <b>2 1/3 − 3/4</b>, <b>2/3 × 3/5</b>, <b>3 ÷ 1/4</b>, and <b>1/4 ÷ 3</b>. Other shapes the app knows: <b>148 × 19</b> (standard algorithm), <b>3,660 ÷ 30</b> (place value strategy), <b>8 × 10^5 × 6</b> or <b>47 × 10^6</b> (powers of ten), <b>4.5 × 1,000</b> or <b>36.5 ÷ 10^2</b> (moving the decimal point), <b>round 2.98 to the nearest tenth</b>, <b>3.45 + 2.7</b> or <b>12.5 − 3.75</b> (adding and subtracting decimals), <b>3.4 × 6</b>, <b>2.5 × 1.2</b> or <b>4.8 ÷ 0.6</b> (multiplying and dividing decimals), <b>2 + 3 × 4</b> or <b>49 ÷ (34 − 27) × 9</b> (order of operations), <b>1,144 ÷ 11</b> or <b>40)8,760</b> (dividing; add <b>area model</b> for the area model), <b>(24 ÷ 4) × 2 vs 12</b> (less than, equal to, or greater than), <b>A: 8 + 4 B: (8 + 4) ÷ 2</b> (the relationship), <b>half of the sum of 17 and 9</b> (write the expression), <b>six hundred forty-seven and eight hundred ninety-two thousandths</b> (standard form). Use x or × for times, ÷ or / for divide, ^ for the exponent. Add <b>area model</b> after a multiplication or division to walk through it as an area model. For a story problem, type the expression you wrote, like <b>3 × 12 − 2</b>.</p></details>
     </div>`;
   const q=id=>app.querySelector("#"+id); const inp=q("hwq");
   q("back").onclick=home;
-  const go=()=>{ const r=parseHomework(inp.value); if(r.err){ q("hwerr").textContent=r.err; inp.focus(); return; } pendingHW=r; next(); };
+  const go=()=>{ const r=parseHomework(inp.value); if(r.err){ q("hwerr").textContent=r.err; inp.focus(); return; } if(r.fraction){if(!r.explicitMethod)r.method=q("hwfractionmethod").value;fractionHomeworkStart(r);return;} pendingHW=r; next(); };
   q("hwgo").onclick=go; inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); go(); } });
   inp.focus({preventScroll:true});
 }
 function next(){ // a fresh problem: new help chain
+  if(mode==='hw:check'&&pendingHW?.fraction){const task=pendingHW;pendingHW=null;fractionHomeworkStart(task);return;}
+  if(mode==='hw:check'&&pendingHW?.err){const message=pendingHW.err;pendingHW=null;hwEntry();document.getElementById('hwerr').textContent=message;return;}
   if(pendingStretch && SKILLS[pendingStretch] && mode!=="hw:check" && !hwMode()){ const sk0=pendingStretch; pendingStretch=null; const trial=SKILLS[sk0].gen(3); // v9.13: the old level-3 quick check, now her choice and only after a warm-up success
     if(trial && trial.skill===sk0){ stage="fresh"; chain=0; cur=trial; cur.placement=true; cur.stretch=true; if(!cur.pre){ const rc=REP_COMP[`${cur.skill}:${cur.meta&&cur.meta.variant}`]; if(rc) attachPre(cur, rc); }
       if(mode==="today" && todayPlan) todayAdvance(); // v9.21: moves the plan on (a facts round stays in one slot)
@@ -5336,11 +5384,11 @@ function next(){ // a fresh problem: new help chain
   const slot = todaySlotNow(); const eff = slot==="week" ? "week" : slot==="focus" ? "miss" : slot==="review" ? "review" : slot ? "mix" : mode;
   if(eff==="week" && classCalOn()){ const l=lessonById(effectiveClassAt()); if(l && l.focus && typeof l.focus==="object" && l.focus[sk]) focus=l.focus[sk]; }
   let target=null, checkinSk=null;
-  if(eff==="review"){ const t=recoveryTarget(); if(t && t.state==="review"){ target=t; sk=t.sk; focus=t.focus; S.weak[t.key].served=Date.now(); } else { const due=Object.keys(S.checkins||{}).filter(k=>SKILLS[k.split("|")[0]] && taughtSk(k.split("|")[0]) && S.checkins[k].due<=Date.now()).sort((a,b)=>S.checkins[a].due-S.checkins[b].due)[0]; if(due){ checkinSk=due; sk=due.split("|")[0]; } } }
+  if(eff==="review"){ const t=recoveryTarget(); if(t && t.state==="review"){ target=t; sk=t.sk; focus=t.focus; S.weak[t.key].served=Date.now(); } else { const due=Object.keys(S.checkins||{}).filter(k=>SKILLS[k.split("|")[0]] && taughtSk(k.split("|")[0],S.checkins[k].ctx) && S.checkins[k].due<=Date.now()).sort((a,b)=>S.checkins[a].due-S.checkins[b].due)[0]; if(due){ checkinSk=due; sk=due.split("|")[0]; } } }
   else if(eff==="miss"){ target=recoveryTarget(slot==="focus"?{openFirst:true}:undefined); if(target && target.sk===sk){ focus=target.focus; S.weak[target.key].served=Date.now(); } else target=null; } // the recovery cycle; with nothing open or due this is an ordinary mix problem
   else if(mode==="week"||mode==="mix"){ // a small, visible review allocation in ordinary sessions (the planned session handles this through its own "review" slot): every third fresh problem, a due review or a due check-in takes the slot
     if(sessionN%3===2){ const t=recoveryTarget(); if(t && t.state==="review"){ target=t; sk=t.sk; focus=t.focus; S.weak[t.key].served=Date.now(); }
-      else { const due=Object.keys(S.checkins||{}).filter(k=>SKILLS[k.split("|")[0]] && taughtSk(k.split("|")[0]) && S.checkins[k].due<=Date.now()).sort((a,b)=>S.checkins[a].due-S.checkins[b].due)[0]; if(due){ checkinSk=due; sk=due.split("|")[0]; } } } }
+      else { const due=Object.keys(S.checkins||{}).filter(k=>SKILLS[k.split("|")[0]] && taughtSk(k.split("|")[0],S.checkins[k].ctx) && S.checkins[k].due<=Date.now()).sort((a,b)=>S.checkins[a].due-S.checkins[b].due)[0]; if(due){ checkinSk=due; sk=due.split("|")[0]; } } } }
   const hw=hwMode();
   // v9.21 review #1: in the foundation slot (or mid facts round) a queued fresh one of another skill waits for the next slot, so a miss just
   // before it cannot erase the foundation builder, the facts round, or a nudge; the sitting still ends on that fresh one (the last slot).
@@ -6169,8 +6217,8 @@ app.addEventListener("keydown", e=>{ // keyboard for the practice screen: Enter 
   }
   if(tag==="INPUT"||!g) return;
   const k=e.key.toLowerCase(); let idx=-1;
-  if(/^[1-4]$/.test(k)) idx=+k-1;
-  else if(/^[a-d]$/.test(k)) idx="abcd".indexOf(k);
+  if(/^[1-9]$/.test(k)) idx=+k-1;
+  else if(/^[a-z]$/.test(k)) idx=k.charCodeAt(0)-97;
   else if(k==="arrowdown"||k==="arrowright") idx=(g.get()+1)%g.n;
   else if(k==="arrowup"||k==="arrowleft") idx=(g.get()-1+g.n)%g.n;
   else return;
@@ -6190,7 +6238,7 @@ function submit(){
   if(cur.pre && cur.pre.check.type==="mc" && cur.type==="input" && !isTextTarget(cur)){ const inp=app.querySelector("#ans"), v=inp?inp.value.trim().toLowerCase().replace(/[.)]$/,""):"", li="abcd".indexOf(v);
     if(v.length===1 && li>=0 && li<(cur.pre.check.options||[]).length){ // v9.25 (user report): "c" typed into the answer box meant the first-step choice
       if(preSel<0){ preSel=li; inp.value=""; lastAnswer=""; inlineErr=`You picked ${v} for the first step. Now type the answer to the problem as a number.`; }
-      else inlineErr=`The letters are for the first step, and you picked ${"abcd"[preSel]} there. Type the answer to the problem as a number.`;
+      else inlineErr=`The letters are for the first step, and you picked ${choiceLabel(preSel)} there. Type the answer to the problem as a number.`;
       render(); const f=app.querySelector("#ans"); if(f) f.focus(); return; } }
   let preRes=null; if(cur.pre){ preRes=gradePre(); if(preRes.missing){ inlineErr=preRes.issue||`First, do the first step at the top: ${plain(cur.pre.check.q)}${cur.pre.check.type==="mc"?" Tap a choice or press its letter.":""}`; render(); const f=app.querySelector("#preans")||app.querySelector("#preopts .opt"); if(f) f.focus(); return; } }
   if(cur.ws){ const g=gradeWS(); if(g.err){ if(!g.swap && !g.reason) cur.unfinished=(cur.unfinished||0)+1; inlineErr=g.err; render(); return; } wsGrade=g; ok=g.ok; yours=g.yours; raw=g.product; } // an incomplete grid is sent back, not graded: unfinished is not the same as wrong
@@ -6532,7 +6580,6 @@ function finishStepCheck(c, last){
   }
   save(); render();
 }
-
 // ===== v9.19 "Show what you know" check-up (Agent A) =====
 // A short, low-stakes check of the Unit 1 place-value ideas (5.NBT.1–4; since the v9.19 review also expanded form and exponents, see NS_ORDER) plus number-sense items (a number line, estimating, breaking a
 // number apart, does-it-make-sense). Kid-facing words never label her: she sees what she showed and what comes next. Self-contained: it does
@@ -6672,7 +6719,7 @@ const nsCur=()=>nsRun ? (nsRun.fu || nsRun.items[nsRun.idx]) : null;
 function nsRender(){ if(!nsRun){ home(); return; } if(nsRun.idx>=nsRun.items.length){ nsEnd(); return; }
   const it=nsCur(), n=nsRun.items.length, fb=nsRun.fb, done=!!fb, off=nsRun.off||0;
   const answerHTML = it.kind==="mc"
-    ? `<div class="opts${it.options.some(o=>String(o).length>34)?" long":""}" id="nsopts" role="radiogroup" aria-label="Answer choices">${it.options.map((o,i)=>{ let c="opt"; if(i===nsRun.sel) c+=" sel"; if(done && i===it.answer) c+=" right"; return `<button type="button" class="${c}" role="radio" aria-checked="${i===nsRun.sel}" data-i="${i}" ${done?"disabled":""}><b aria-hidden="true">${"abcd"[i]}.</b>&nbsp; ${esc(o)}</button>`; }).join("")}</div>`
+    ? `<div class="opts${it.options.some(o=>String(o).length>34)?" long":""}" id="nsopts" role="radiogroup" aria-label="Answer choices">${it.options.map((o,i)=>{ let c="opt"; if(i===nsRun.sel) c+=" sel"; if(done && i===it.answer) c+=" right"; return `<button type="button" class="${c}" role="radio" aria-checked="${i===nsRun.sel}" data-i="${i}" ${done?"disabled":""}><b aria-hidden="true">${choiceLabel(i)}.</b>&nbsp; ${esc(o)}</button>`; }).join("")}</div>`
     : `<label class="vh" for="nsans">Your answer</label><input class="ans" id="nsans" type="text" inputmode="decimal" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type your answer" value="${esc(nsRun.val)}" ${done?"disabled":""}>`;
   const fbHTML = done ? `<div class="nsfb" role="status" aria-live="polite" style="margin-top:12px;padding:10px 12px;border-radius:12px;border:2px solid ${fb.ok?"var(--ok)":"var(--line)"};background:${fb.ok?"var(--ok-bg)":"#F7F9FC"}">${fb.html}</div>` : "";
   const actions = done ? `<div class="actions"><button class="btn primary" id="nsnext">${nsRun.idx+1>=n && !nsRun.fuNext?"See what you showed":"Next"}</button></div>`
@@ -6805,7 +6852,7 @@ function bindNsGrownups(){ const q=id=>app.querySelector("#"+id); if(!q("nscard"
     S.unit1Review={on:q("nsu1on").value==="1", start:/^\d{4}-\d{2}-\d{2}$/.test(dv)?dv:todayStr(), source:nsHas(U1_SOURCES,src)?src:"choice"}; const okSave=save(); rerender(okSave?"Saved.":"Saved for now, but this device would not store it."); };
 }
 // Existing saves: migrate old school notes once, at load (nsHomeTile, nsU1 and grownups() also migrate, for restored backups).
-try{ let ch=false; for(const n of Object.keys(DB.profiles||{})) if(nsMigrateNotes(DB.profiles[n])) ch=true; if(ch) save(); }catch(e){}
+// Existing saves are migrated once in the final bootstrap, after every skill registers.
 
 // ===== v9.20 grown-up PIN (Agent A) =====
 // Review #1: folding a section is not a boundary. An optional 4-digit PIN guards the whole grown-ups page. Every way in goes through
@@ -6919,10 +6966,11 @@ async function readTransferCode(text){ // → backup JSON text, or null if it is
 async function importBackupText(text){
   let json=text; try{ const j=await readTransferCode(text); if(j!==null) json=j; }catch(e){ return {ok:false, err:e.message||"That transfer code could not be opened."}; }
   const r=validateBackup(json); if(!r.ok) return r;
+  let restored; try{ restored=profileMap(Object.fromEntries(r.names.map(n=>[n,normalize({...r.db.profiles[n],name:n})]))); }catch(e){ return {ok:false,err:"A player record could not be restored. The players on this device were kept."}; }
   if(!confirm(`Restore ${r.names.length} player${r.names.length>1?"s":""}?\n\n${r.summary.join("\n")}\n\nPlayers with the same name on this device will be replaced.`)) return {ok:false, err:""};
-  for(const n of r.names){ DB.profiles[n]=normalize({...r.db.profiles[n], name:n}); }
+  for(const n of r.names){ DB.profiles[n]=restored[n]; }
   DB.current = r.db.current && DB.profiles[r.db.current] ? r.db.current : (r.names[0]||DB.current); S=DB.profiles[DB.current]||S;
-  if(!save()) return {ok:true, err:"Restored in memory, but this device refused to save it. Progress will be lost when the page closes."};
+  if(!save()) return {ok:true, err:saveConflict?"Restored in this tab only. Another tab changed the saved progress. Back up this tab before reloading.":"Restored in memory, but this device refused to save it. Progress will be lost when the page closes."};
   return {ok:true, err:""};
 }
 function validateBackup(text){ // returns {ok:true, db, summary} or {ok:false, err}
@@ -6932,7 +6980,7 @@ function validateBackup(text){ // returns {ok:true, db, summary} or {ok:false, e
   const names=Object.keys(o.profiles); if(!names.length) return {ok:false, err:"The backup has no players in it."};
   const summary=[];
   for(const n of names){ const p=o.profiles[n];
-    if(!p||typeof p!=="object") return {ok:false, err:`Player "${n}" is not a valid record.`};
+    if(!n.trim()||!p||typeof p!=="object"||Array.isArray(p)) return {ok:false, err:`Player "${n}" is not a valid record.`};
     if(!p.levels||typeof p.levels!=="object"||Array.isArray(p.levels)) return {ok:false, err:`Player "${n}" has no levels.`};
     for(const k of SKILL_ORDER){ if(k in p.levels){ const v=p.levels[k]; if(typeof v!=="number"||!Number.isInteger(v)||v<1||v>MAX_LEVEL) return {ok:false, err:`Player "${n}" has an impossible level for ${SKILLS[k].name} (${String(v)}). Levels are whole numbers from 1 to ${MAX_LEVEL}.`}; } }
     if(p.log!==undefined && !Array.isArray(p.log)) return {ok:false, err:`Player "${n}" has a history that is not a list.`};
@@ -6974,7 +7022,7 @@ function tiersHTML(log){
       return `<div style="overflow-x:auto"><table class="report"><tr><th>Evidence</th><th>What the app has seen</th></tr>
         ${row("Independent calculation", distinct?`${distinct} different problem${distinct===1?"":"s"} right without hints, examples, an opened nudge, the full coach card, or answer cues`:"none yet")}
         ${row("Supported completion", sup?`${sup} right with supports on (the multiplication tools, or the full coach card)`:"none")}
-        ${(()=>{ const asked=log.reduce((a,e)=>a+(+e.explainAsked||0),0), okX=log.reduce((a,e)=>a+(+e.explainOk||0),0); const skipped=log.reduce((a,e)=>a+(+e.explainSkipped||0),0), helps=log.reduce((a,e)=>a+(+e.helpTaps||0),0), breaks=log.filter(e=>e.breakTaken).length; return row("Reason after a shown step", asked||skipped?`${asked?`${okX} of ${asked} right reasons picked after a walkthrough step had to be shown`:"no reasons picked yet"}${skipped?`; ${skipped} time${skipped===1?"":"s"} the learner tapped “Just tell me why” instead`:""}`:"none yet")+row("Asked for help in a walkthrough", helps||breaks?`${helps} “Help me” tap${helps===1?"":"s"}${breaks?`; took a break from a walkthrough ${breaks} time${breaks===1?"":"s"}`:""}. Asking counts like a miss on that step, so the evidence stays honest.`:"none yet"); })()}
+        ${(()=>{ const asked=log.reduce((a,e)=>a+(+e.explainAsked||0),0), okX=log.reduce((a,e)=>a+(+e.explainOk||0),0); const skipped=log.reduce((a,e)=>a+(+e.explainSkipped||0),0), helps=log.reduce((a,e)=>a+(+e.helpTaps||0),0), breaks=log.filter(e=>e.breakTaken).length; return row("Reason after a shown step", asked||skipped?`${asked?`${okX} of ${asked} right reasons picked after a walkthrough step had to be shown`:"no reasons picked yet"}${skipped?`; ${skipped} time${skipped===1?"":"s"} the learner tapped “Just tell me why” instead`:""}`:"none yet")+row("Asked for help in a walkthrough", helps||breaks?`${helps} “Help me” tap${helps===1?"":"s"}${breaks?`; took a break from a walkthrough ${breaks} time${breaks===1?"":"s"}`:""}. Delivered help is recorded as support. It does not count as a wrong answer or independent readiness.`:"none yet"); })()}
         ${(()=>{ const pr=log.filter(e=>cls(e)==="prompted").length; return row("Prompted", pr?`${pr} right after a nudge: the one-line reminder the learner opened, or the “does that make sense?” check against their estimate`:"none"); })()}
         ${(()=>{ const ft=log.filter(e=>e.freshAfterHelp); const fr=ft.filter(e=>cls(e)==="independent").length; return row("Fresh problem right after help", ft.length?`${fr} of ${ft.length} right with no help, new numbers, coach hidden (immediate transfer)`:"none yet"); })()}
         ${row("Studied first", studied?`${studied} right after looking at a worked example`:"none")}
@@ -6984,7 +7032,7 @@ function tiersHTML(log){
       </table></div><p class="muted" style="font-size:13px;margin:8px 0 14px">Recognizing a reason on a multiple-choice question is a weaker signal than explaining it in their own words; a delayed check is stronger than recent accuracy. Item counts and gaps (two wins, then 3 and 7 days) are the app's working defaults, not proven thresholds.</p>`; })()}
     <div class="card" style="margin-top:0">
       <h3 style="margin:0 0 6px">Record a paper check</h3>
-      <p class="muted" style="font-size:14px;margin:0 0 8px">One worksheet problem the learner has not seen in the app, in the form their class uses. Score it yourself; note whether an adult helped. This is the strongest evidence the app can hold, and it is kept separate from app scoring.</p>
+      <p class="muted" style="font-size:14px;margin:0 0 8px">One worksheet problem the learner has not seen in the app, in the form their class uses. Score it yourself; note whether an adult helped. A fresh paper check can show whether app practice transfers. Its value depends on the task and the help given; it is kept separate from app scoring.</p>
       <div class="row"><select class="sel" id="paperSk">${SKILL_ORDER.map(k=>`<option value="${k}">${esc(SKILLS[k].name)}</option>`).join("")}</select>
         <input class="ans small text" id="paperQ" type="text" placeholder="the problem, like 148 × 19 or 3.45 + 2.7" style="flex:1 1 220px;font-size:16px;padding:8px 10px">
         <label class="row" style="gap:6px"><input type="radio" name="paperOk" value="1" checked> right</label><label class="row" style="gap:6px"><input type="radio" name="paperOk" value="0"> wrong</label>
@@ -6994,7 +7042,7 @@ function tiersHTML(log){
     <h2 style="margin-top:0">What to do next</h2>
     <p class="muted" style="font-size:14px;margin:0 0 6px">Built from what the learner actually missed (down to the step, for multiplication), not from which pages they have done. "Focus on where I missed" on the home screen works this list from the top.</p>
     <div class="tiers">
-      <div class="tier help"><h3>Still needs help</h3><ul>${help.join("")||empty("Nothing open. Every miss has been worked back to two clean wins.")}</ul></div>
+      <div class="tier help"><h3>Still needs help</h3><ul>${help.join("")||empty("No open practice spots are recorded. This does not establish readiness for untried skills.")}</ul></div>
       <div class="tier next"><h3>Worth practicing next</h3><ul>${next.join("")||empty("Nothing waiting for review.")}</ul></div>
       <div class="tier ready"><h3>Ready independently</h3><ul>${ready.join("")||empty("Shows up after a few fresh problems done right without hints.")}</ul></div>
     </div>
@@ -7002,7 +7050,8 @@ function tiersHTML(log){
   </div>`;
 }
 function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate) or from the PIN screen itself
-  cur=null; S=normalize(S);
+  const openSections=Object.fromEntries(["gurecords","gusettings","gubackup"].map(id=>[id,app.querySelector("#"+id)?.open||false]));
+  cur=null; S=normalize(S); lpSanitize();
   const log=S.log.filter(e=>e&&typeof e==="object"); // normalize() already did this; belt and braces so nothing below can throw
   const str=v=>v==null?"":String(v); // a missing field shows as blank, never "undefined"
   const rows=SKILL_ORDER.map(k=>{ const a=log.filter(e=>e.sk===k);
@@ -7047,7 +7096,7 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
       <h2 style="margin-top:0">Class position</h2>
       ${calChoiceHTML}${calOn?`
       <p class="muted" style="font-size:14px;margin:12px 0 8px">The app follows the pacing calendar unless you pin a lesson. The calendar's lesson is an estimate from the unit dates; Home labels it “Estimate” and says it is a guess. If the homework header says otherwise ("Homework · Unit 2 Lesson 5"), pick that lesson and pin it. A pin stays on that lesson until you change it or choose “Follow the calendar”; after ${PIN_STALE_SCHOOL_DAYS} school days, Home and this page ask you to check it.</p>
-      <p class="muted" style="font-size:14px;margin:0 0 8px">On Home, an unpinned estimate follows “Start today”; a pinned class lesson normally leads. For instructional lessons in Units 2–11, the class card offers “Practice Lesson N step by step”; mixed review of the lesson (mostly this lesson, some from the two before it) is under “More class options” as “Mixed review: this week.” For a lesson without a step-by-step route, the card shows “Practice this week,” with the same mix.</p>
+      <p class="muted" style="font-size:14px;margin:0 0 8px">On Home, one main action resumes unfinished work, offers a due lesson check-in, or starts the daily plan. Class lessons and other choices are under “Choose another way to practice”. For instructional lessons in Units 2–11, the class card offers “Practice Lesson N step by step”; mixed review of the lesson (mostly this lesson, some from the two before it) is under “More class options” as “Mixed review: this week.” For a lesson without a step-by-step route, the card shows “Practice this week,” with the same mix.</p>
       <p class="muted" style="font-size:14px;margin:0 0 8px"><b>Pin the topic, not just the page number.</b> A page titled "Spiral Review U2 L7" practices Lesson 7's skill even when it sits in Lesson 9's homework. Pin the lesson whose name matches what the page is actually doing; for tonight's exact problem shapes, use "Homework practice" on the home screen, which ignores levels and the calendar.</p>
       <p class="muted classmode" id="classmode" style="font-size:14px;margin:0 0 8px" role="status" aria-live="polite">${classModeHTML()}</p>
       <label class="vh" for="classat">Lesson the class is on</label>
@@ -7061,23 +7110,27 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
   const notYet = !calOn ? `The unit-by-unit lesson list appears here when the class pacing calendar is on (see "Class position").` // v9.24: the unit list belongs to the pacing calendar
     : typeof NOT_YET_COVERED==="string" && NOT_YET_COVERED.trim() ? NOT_YET_COVERED : `See the lesson map above for what each skill covers.`;
   app.innerHTML=`
-    <div class="topbar" id="gupage"><button class="btn quiet" id="back">Home</button><h1 style="margin:0">${esc(S.name)}'s progress</h1><span class="muted build">Build ${esc(BUILD)}</span></div>${warnHTML()}${guBannerHTML()}${guCardHTML()}
+    <div class="topbar" id="gupage"><button class="btn quiet" id="back">Home</button><h1 style="margin:0">${esc(S.name)}'s progress</h1><span class="muted build">Build ${esc(BUILD)}</span></div>${warnHTML()}${guBannerHTML()}${evidenceOverviewHTML()}
+    <details class="gu-section" id="gurecords"><summary>Detailed practice and lesson records</summary>
     <p class="muted" style="margin:6px 0 0">${(()=>{ const cls=e=>classifyEntry(e); const wk=log.filter(e=>Number.isFinite(e.t)&&e.t>=weekAgo); const wi=wk.filter(e=>["independent","indep-miss"].includes(cls(e))); const wiR=wi.filter(e=>cls(e)==="independent").length; const wHelp=wk.filter(e=>["supported","prompted","guided"].includes(cls(e))).length; const wCopied=wk.filter(e=>cls(e)==="copied").length;
       const c={}; for(const e of log){ const k=cls(e); c[k]=(c[k]||0)+1; } let lastCopied=-1; log.forEach((e,i)=>{ if(cls(e)==="copied") lastCopied=i; }); const sinceCopied=log.slice(lastCopied+1).filter(e=>cls(e)==="guided").length;
       return `Last 7 days: ${wk.filter(e=>isFresh(e)&&!e.abandoned).length} problems${wk.filter(e=>e.abandoned).length?` (plus ${wk.filter(e=>e.abandoned).length} left before answering)`:""} on ${days} day${days===1?"":"s"}: independent ${wi.length?`${wiR} right of ${wi.length} (${Math.round(100*wiR/wi.length)}%)`:"none yet"}, ${wHelp} finished with help${wCopied?`, ${wCopied} with the answer shown`:""}. ${S.logTrimmed?`Saved history (the most recent ${log.length} records)`:"All time"}: independent ${c.independent||0} right of ${(c.independent||0)+(c["indep-miss"]||0)}; supported (tools or full coach on) ${c.supported||0}; prompted (a nudge opened) ${c.prompted||0}; guided ${c.guided||0}; copied (answer shown) ${c.copied||0}${c["placement-miss"]?`; quick checks or warm-ups on new skills missed (not scored) ${c["placement-miss"]}`:""}. Guided completions since the answer was last shown: ${sinceCopied}.`; })()}${(()=>{ const w=log.filter(e=>e.why!==undefined); return w.length?` "Say why" questions: ${w.filter(e=>e.why).length} of ${w.length} right.`:""; })()}</p>
     ${tiersHTML(log)}
-    ${nsGrownupsHTML()}${quickGrownupsHTML()}${foundationsGrownupsHTML()}${factsGrownupsHTML()}
-    ${hwWalterReportHTML()}${teacherFeedbackGrownupsHTML()}${classHTML}${typeof lpGrownupsHTML==="function"?lpGrownupsHTML():""}
+    ${nsGrownupsHTML()}${quickGrownupsHTML()}${factsGrownupsHTML()}
+    ${hwWalterReportHTML()}${fractionHomeworkReportHTML()}${typeof lpGrownupsHTML==="function"?lpGrownupsHTML():""}
     <div class="card">
       <h2 style="margin-top:0">By skill</h2>
       <div style="overflow-x:auto"><table class="report"><tr><th>Skill</th><th>Level</th><th>Independent<br><span style="text-transform:none;letter-spacing:0">right / tried, last 20</span></th><th>Supported<br><span style="text-transform:none;letter-spacing:0">right, supports or coach on (+ nudge opened)</span></th><th>Guided<br><span style="text-transform:none;letter-spacing:0">finished with help</span></th><th>Copied<br><span style="text-transform:none;letter-spacing:0">answer shown, typed in</span></th><th>Common mistake</th></tr>${rows}</table></div>
-      <p class="muted" style="font-size:13px;margin:10px 0 0">Only problems done fresh with no hints, no opened nudge, and no coach card or tools on screen move levels: up after 3 right out of the last 4, down after 2 wrong out of the last 3. Hints, follow-ups, walkthroughs, and homework practice never move levels, up or down. Level ${MAX_LEVEL} mixes every trap at once. A guided completion is a problem finished with hints, inside a walkthrough, or on the follow-up. After a right answer, some skills ask one "say why" question in SWUN-style explain-and-prove wording; it is recorded but never moves a level. "Finished with the answer shown" means the answer was displayed after a third miss and typed in to move on; it is recorded, but it is not a right answer or a guided completion.</p>
+      <p class="muted" style="font-size:13px;margin:10px 0 0">Only problems done fresh with no hints, no opened nudge, and no coach card or tools on screen move levels: up after 3 right out of the last 4, down after 2 wrong out of the last 3. Hints, follow-ups, walkthroughs, and homework practice never move levels, up or down. Level ${MAX_LEVEL} mixes every trap at once. A guided completion is a problem finished with hints, inside a walkthrough, or on the follow-up. After a right answer, some skills ask one "say why" question in SWUN-style explain-and-prove wording; it is recorded but never moves a level. "Finished with the answer shown" identifies an answer that was displayed and then entered; it is separate from independent work. Current practice keeps the check open after misses and offers authored help or a different worked example.</p>
       ${S.logTrimmed>0?`<p class="muted" style="font-size:13px;margin:6px 0 0">History shows the most recent ${LOG_CAP} attempts; older entries were trimmed.</p>`:""}
     </div>
     <div class="card">
       <h2 style="margin-top:0">Recent misses</h2>
       ${misses.length?misses.map(e=>`<div class="miss"><div class="meta">${missMeta(e)}${e.whyMiss?" · <span class=\"tag\">reason</span>":""}</div><div class="q">${esc(str(e.q))||"<span class=\"muted\">(question not recorded)</span>"}</div>${e.whyMiss?`<div class="a">Answer <span class="good">${esc(str(e.ans))}</span> was right. Reason picked: <span class="bad">${esc(str(e.whyPick))||"—"}</span><br>The reason: <span class="good">${esc(str(e.whyRight))||"—"}</span></div>`:`<div class="a">Answered <span class="bad">${esc(str(e.yours))||"—"}</span> · correct: <span class="good">${esc(str(e.ans))||"—"}</span></div>`}</div>`).join(""):`<p class="muted">No misses logged yet.</p>`}
     </div>
+    </details>
+    <details class="gu-section" id="gusettings"><summary>Practice settings and privacy</summary>${guCardHTML()}${foundationsGrownupsHTML()}${teacherFeedbackGrownupsHTML()}${classHTML}</details>
+    <details class="gu-section" id="gubackup"><summary>Backups and app information</summary>
     <div class="card">
       <h2 style="margin-top:0">Move to a new iPad</h2>
       <p class="muted" style="font-size:14px;margin:0 0 8px">Progress lives only inside the copy of the app it was made in. The <b>Home Screen icon</b> and <b>Safari</b> each keep their own copy, so do both steps inside the copy your child actually uses.</p>
@@ -7110,7 +7163,9 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
     <div class="card">
       <h2 style="margin-top:0">Danger zone</h2>
       <div class="actions" style="margin-top:0"><button class="btn danger" id="reset">Reset ${esc(S.name)}'s levels</button><button class="btn danger" id="remove">Remove player ${esc(S.name)}</button></div>
-    </div>`;
+    </div>
+    </details>`;
+  for(const [id,open] of Object.entries(openSections)){const section=app.querySelector("#"+id);if(section)section.open=open;}
   const q=id=>app.querySelector("#"+id);
   q("back").onclick=home; q("back").focus({preventScroll:true});
   const setClassMode=()=>{ const m=q("classmode"); if(m) m.innerHTML=classModeHTML(); };
@@ -7215,9 +7270,9 @@ function lpInputHTML(step, st, locked){ const I=step.input||{type:"num"}, dis=lo
   if(I.type==="text") return `<label class="vh" for="lpin">${esc(lpPlain(step.short||step.prompt))}</label><input class="ans text lpans" id="lpin" inputmode="text" autocapitalize="off" spellcheck="false" autocomplete="off" placeholder="${esc(I.ph||"")}" value="${esc(draft[0]||"")}"${dis}>`;
   if(I.type==="num") return `<label class="vh" for="lpin">${esc(lpPlain(step.short||step.prompt))}</label><input class="ans lpans" id="lpin" inputmode="decimal" autocomplete="off" placeholder="${esc(I.ph||"Type a number")}" value="${esc(draft[0]||"")}"${dis}>`;
   if(I.type==="nums") return `<div class="lpnums">${I.labels.map((l,i)=>`<label class="lpnum"><span>${l}</span><input class="ans small lpans" data-lpi="${i}" inputmode="decimal" autocomplete="off" value="${esc(draft[i]||"")}"${dis}></label>`).join("")}</div>`;
-  if(I.type==="mc") return `<div class="opts" role="radiogroup" aria-label="Choices">${I.options.map((o,i)=>`<button type="button" class="opt lpopt${st.draft?.k===st.k&&st.draft.selected===i?" sel":""}" role="radio" aria-checked="${st.draft?.k===st.k&&st.draft.selected===i}" data-lpo="${i}"${dis}><b aria-hidden="true">${"abcdef"[i]}.</b>&nbsp; ${o}</button>`).join("")}</div>`;
-  if(I.type==="multi") return `<div class="lpchips" role="group" aria-label="Choose all that fit">${I.options.map((o,i)=>`<button type="button" class="btn quiet small lpchip" aria-pressed="false" data-lpm="${i}"${dis}>${o}</button>`).join("")}</div>`;
-  if(I.type==="group") return `<div class="lpgroup" role="group" aria-label="Tap the first and last number to put inside parentheses">${I.tokens.map((t,i)=>typeof t==="number"?`<button type="button" class="btn quiet small lptok" aria-pressed="false" data-lpt="${i}"${dis}>${lpN(t)}</button>`:`<span class="lpop">${t}</span>`).join("")}</div><p class="muted lptip">Tap the first number, then the last number, to go inside the parentheses.</p>`;
+  if(I.type==="mc") return `<div class="opts" role="radiogroup" aria-label="Choices">${I.options.map((o,i)=>`<button type="button" class="opt lpopt${st.draft?.k===st.k&&st.draft.selected===i?" sel":""}" role="radio" aria-checked="${st.draft?.k===st.k&&st.draft.selected===i}" data-lpo="${i}"${dis}><b aria-hidden="true">${choiceLabel(i)}.</b>&nbsp; ${o}</button>`).join("")}</div>`;
+  if(I.type==="multi") return `<div class="lpchips" role="group" aria-label="Choose all that fit">${I.options.map((o,i)=>{const on=st.draft?.k===st.k&&Array.isArray(st.draft.selected)&&st.draft.selected.includes(i);return `<button type="button" class="btn quiet small lpchip${on?" on":""}" aria-pressed="${!!on}" data-lpm="${i}"${dis}>${o}</button>`;}).join("")}</div>`;
+  if(I.type==="group") return `<div class="lpgroup" role="group" aria-label="Tap the first and last number to put inside parentheses">${I.tokens.map((t,i)=>typeof t==="number"?`<button type="button" class="btn quiet small lptok${st.grp?.includes(i)?" on":""}" aria-pressed="${!!st.grp?.includes(i)}" data-lpt="${i}"${dis}>${lpN(t)}</button>`:`<span class="lpop">${t}</span>`).join("")}</div><p class="muted lptip">Tap the first number, then the last number, to go inside the parentheses.</p>`;
   if(I.type==="tiles") return `<div class="lptiles-show" id="lptshow" aria-live="polite">${st.tiles&&st.tiles.length?esc(lpShow(st.tiles.join(" "))):"<span class='muted'>Tap tiles to build it</span>"}</div><div class="lptiles" role="group" aria-label="Expression tiles">${I.tiles.map(t=>`<button type="button" class="btn quiet small lptile" data-lptile="${esc(t)}"${dis}>${esc(typeof t==="number"?lpN(t):t)}</button>`).join("")}<button type="button" class="btn quiet small lptile" data-lptile="⌫"${dis} aria-label="Take back the last tile">⌫</button><button type="button" class="btn quiet small lptile" data-lptile="clear"${dis}>Clear</button></div><label class="lptype"><span class="muted">Or type it:</span> <input class="ans text small lpans" id="lptype" inputmode="text" autocapitalize="off" spellcheck="false" autocomplete="off" placeholder="use ( ) + − × ÷" value="${esc(draft[0]||"")}"${dis}></label>`;
   if(I.type==="tree") return `<div class="lpnums"><label class="lpnum"><span>${lpN(I.v)} =</span><input class="ans small lpans" data-lpi="0" inputmode="numeric" autocomplete="off" aria-label="first factor" value="${esc(draft[0]||"")}"${dis}></label><label class="lpnum"><span>×</span><input class="ans small lpans" data-lpi="1" inputmode="numeric" autocomplete="off" aria-label="second factor" value="${esc(draft[1]||"")}"${dis}></label></div><div class="actions" style="margin-top:6px"><button type="button" class="btn quiet small" id="lpprime"${dis}>${lpN(I.v)} is prime: circle it</button></div>`;
   if(I.type==="button") return "";
@@ -7278,7 +7333,7 @@ function lpState(id){ S.lessons=S.lessons&&typeof S.lessons==="object"?S.lessons
 function lpDue(){ const now=Date.now(); return lpReached().filter(id=>{ const o=(S.lessons||{})[id]; return o && +o.due>0 && +o.due<=now; }); }
 function lpLoadFor(id){ const o=lpState(id); return Math.max(1, Math.min(3, Math.round(+o.load)||1)); }
 function lpSeeded(seed, work){ const old=Math.random; let state=seed>>>0; Math.random=()=>{ state=(Math.imul(1664525,state)+1013904223)>>>0; return state/4294967296; }; try{ return work(); } finally { Math.random=old; } }
-function lpSaveResume(){ if(!S||!lp||lp.items[lp.i].phase==="summary") return; const it=lp.items[lp.i], st=it.st||null;
+function lpSaveResume(){ if(!S||!lp||lp.items[lp.i].phase==="summary") return; if(lp.homework){fractionHomeworkSave();return;} const it=lp.items[lp.i], st=it.st||null;
   S.lessonResume={v:lp.generationVersion||1,blocked:lp.blocked||[],mixedChoices:lp.mixedChoices||[],focusSupport:lp.focusSupport||null,id:lp.id,delayed:lp.delayed,focus:!!lp.focus,seed:lp.seed,load:lp.load,i:lp.i,phase:it.phase,lid:it.lid||null,t:Date.now(),
     st,rep:it.rep||null,recorded:!!it.recorded,results:lp.results}; save(); }
 function lpResumeReady(){ const r=S&&S.lessonResume; return !!(r&&[1,2].includes(r.v)&&LP_LESSONS[r.id]&&Number.isInteger(r.i)&&r.i>=0&&r.i<9&&Number.isInteger(r.seed)&&Number.isInteger(r.load)&&r.load>=1&&r.load<=3&&Number.isFinite(+r.t)&&Date.now()-r.t<30*864e5); }
@@ -7304,7 +7359,7 @@ function lpStart(id, delayed, resume, focus){ focus=!!(focus || (resume&&resume.
 function lpEnter(){ const it=lp.items[lp.i]; if(it.phase==="repair"){ it.spec=it.rspec.fix; it.rep={stage:"spot", picked:-1, tries:0}; } if(it.spec) lpItemStart(it); lpRender(); try{ window.scrollTo(0,0); }catch(e){} }
 function lpNext(){ if(lp.i<lp.items.length-1){ lp.i++; lpEnter(); } }
 const LP_PHASE_NAME={intro:"The goal", model:"Watch one", guided:"Try it together", explain:"Explain it", repair:"Find the slip", independent:"On your own", delayed:"Check-in", mixed:"Check-in: a mixed one", summary:"Done"};
-function lpRecord(it, extra){ if(it.recorded) return null; it.recorded=true; const st=it.st||{}, sp=it.spec||{}, lid=it.lid||lp.id, oneShot=!!(st.done && sp.oneShot && sp.oneShot(st)), model=it.phase==="model";
+function lpRecord(it, extra){ if(lp.homework)return fractionHomeworkRecord(it,extra); if(it.recorded) return null; it.recorded=true; const st=it.st||{}, sp=it.spec||{}, lid=it.lid||lp.id, oneShot=!!(st.done && sp.oneShot && sp.oneShot(st)), model=it.phase==="model";
   const method=st.done&&!st.skipped&&!oneShot&&!model?1:0;
   const fingerprint=lpFingerprint(sp), repeated=!!it.repeated||!!(fingerprint&&!model&&(S.lessonLog||[]).slice(-80).some(e=>lpRecordFingerprint(e)===fingerprint));
   const e=Object.assign({t:Date.now(), id:lid, lesson:(LP_LESSONS[lid]||lp.bp).lesson, phase:it.phase, kind:sp.kind||it.phase, q:it.spec?lpPlain(sp.title||""):"",
@@ -7316,7 +7371,7 @@ function lpRecord(it, extra){ if(it.recorded) return null; it.recorded=true; con
     supportClass:model?"model":!method?"incomplete-method":st.answerPreviewed?"answer-confirmed":st.helps?"supported":st.tries?"retried":repeated?"repeated":"clean-checked",
     route:sp.route&&st.done?sp.route(st):undefined}, extra||{});
   S.lessonLog=Array.isArray(S.lessonLog)?S.lessonLog:[]; S.lessonLog.push(e); while(S.lessonLog.length>LP_LOG_CAP) S.lessonLog.shift(); lp.results.push(e); lpSaveResume(); return e; }
-function lpFinish(){ const o=lp.focus?teacherFocusState(lp.id):lpState(lp.id), own=lp.results.filter(e=>(e.phase==="independent"||e.phase==="delayed") && e.id===lp.id);
+function lpFinish(){ if(lp.homework){delete S.homeworkResume;save();return;} const o=lp.focus?teacherFocusState(lp.id):lpState(lp.id), own=lp.results.filter(e=>(e.phase==="independent"||e.phase==="delayed") && e.id===lp.id);
   o.sessions=(+o.sessions||0)+(lp.delayed?0:1); o.last=Date.now();
   if(own.length){ const keys=own.map(lpRecordFingerprint), distinct=keys.every(Boolean)&&new Set(keys).size===own.length, clean=distinct&&own.every(e=>e.firstTry&&e.methodOk&&!e.repeated);
     o.adjustment="held";
@@ -7329,8 +7384,8 @@ function lpFinish(){ const o=lp.focus?teacherFocusState(lp.id):lpState(lp.id), o
 
 // ---- rendering ----
 function lpRender(){ const it=lp.items[lp.i], bp=lp.bp, n=lp.items.length;
-  const head=`<div class="topbar"><button class="btn quiet" id="back">${it.phase==="summary"?"Home":"Pause & Home"}</button><div class="row"><span class="pill week">${lp.focus?"Teacher's focus":lpLessonLabel(it.lid||lp.id)}</span></div></div>${warnHTML()}
-    <div class="lpprog" aria-label="Lesson steps">${lp.items.map((x,j)=>`<span class="lpdot${j<lp.i?" done":j===lp.i?" now":""}" title="${esc(LP_PHASE_NAME[x.phase])}"></span>`).join("")}<span class="muted lpprogtxt">${esc(LP_PHASE_NAME[it.phase])}${lp.delayed?"":` · ${lp.i+1} of ${n}`}</span></div>`;
+  const head=`<div class="topbar"><button class="btn quiet" id="back">${it.phase==="summary"?"Home":"Pause & Home"}</button><div class="row"><span class="pill week">${lp.homework?"From your page":lp.focus?"Teacher's focus":lpLessonLabel(it.lid||lp.id)}</span></div></div>${warnHTML()}
+    <div class="lpprog" aria-label="${lp.homework?'Homework progress':'Lesson steps'}">${lp.items.map((x,j)=>`<span class="lpdot${j<lp.i?" done":j===lp.i?" now":""}" title="${esc(LP_PHASE_NAME[x.phase])}"></span>`).join("")}<span class="muted lpprogtxt">${esc(LP_PHASE_NAME[it.phase])}${lp.delayed?"":` · ${lp.i+1} of ${n}`}</span></div>`;
   let body="";
   if(it.phase==="intro") body=lpIntroHTML();
   else if(it.phase==="explain") body=lpExplainHTML();
@@ -7387,7 +7442,7 @@ function lpPrepareStep(it){
   it.step={...it.step,help:lpStrategyGuide(it)};
 }
 function lpDifferentExample(it){
-  const bp=LP_LESSONS[it.lid||lp.id];if(!bp)return;
+  const bp=lp.homework?lp.bp:LP_LESSONS[it.lid||lp.id];if(!bp)return;
   let sp=bp.model();
   const different=s=>lpFingerprint(s)!==lpFingerprint(it.spec)&&(s.answer===undefined||it.spec.answer===undefined||s.answer!==it.spec.answer);
   for(let n=0;n<8&&!different(sp);n++)sp=bp.make(it.load||lp.load,'model',n%2);
@@ -7427,13 +7482,13 @@ function lpWorkHTML(it){ lpPrepareStep(it); const sp=it.spec, st=it.st, ph=it.ph
       <div class="actions"><button class="btn primary" id="lpcheck">${step.input&&step.input.type==="button"?esc(step.input.label||"Next"):"Check"}</button>${!lpWalterEligible(it)&&(step.help||[]).length>(st.helpShown||[]).length?`<button class="btn quiet" id="lphelp">${own?"I need a clue":"Clue"}</button>`:""}${own&&sp.answer!==undefined&&st.answerOnly===null?`<button class="btn quiet small" id="lpknow">I know the answer</button>`:""}${own&&st.answerOnly===true?`<button class="btn quiet small" id="lpskip">Skip building it</button>`:""}</div>
       ${lpWalterHTML(it)}${st.exampleNarr||""}${st.exampleNote?`<p class="muted">${esc(st.exampleNote)}</p>`:""}${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
   const walterLesson=st.done && ph!=="model" && !st.skipped && (st.tries>0 || st.helps>0) ? walterNote("nice","You worked through the steps and finished this one.",true) : ph==="delayed" ? walterNote("checkin","Here are new numbers. Show what you remember.",true) : ph==="guided" || (st.helpShown||[]).length ? walterNote("work","Let's check one step at a time.",true) : "";
-  return `<div class="card lpcard"><h2 style="margin-top:0" class="lptitle">${sp.title}</h2>${sp.prompt?`<p class="muted lpsub">${sp.prompt}</p>`:""}${intro}${walterLesson}<div class="lpboard" id="lpboard">${visual}</div><div id="lpwork" class="lpwork">${work}</div>${model||own?"":lpVideoHTML()}</div>`; }
+  return `<div class="card lpcard"><h2 style="margin-top:0" class="lptitle">${sp.title}</h2>${intro}<div class="lpboard" id="lpboard">${visual}</div><div id="lpwork" class="lpwork">${work}</div>${walterLesson}${sp.prompt?`<details class="lpcontext"><summary>About this problem</summary><p class="muted lpsub">${sp.prompt}</p></details>`:""}${model||own||lp.homework?"":lpVideoHTML()}</div>`; }
 function lpRepairHTML(it){ const r=it.rspec, rp=it.rep;
   if(rp.stage==="spot") return `<div class="card lpcard"><h2 style="margin-top:0">Find the slip</h2><p>${r.story}</p>${walterNote("keep","Find the first step that changed the result.",true)}<p class="lpstep"><b>Tap the first step that is not right.</b></p>
     <div class="lpsteps" role="group" aria-label="Worked steps">${r.steps.map((s,i)=>`<button type="button" class="opt lprstep${i===rp.picked?" sel":""}" data-lpr="${i}">${i+1}. ${s}</button>`).join("")}</div>
     <div class="inline-err" id="lpmsg" role="status" aria-live="polite">${rp.msg||""}</div>${rp.tries>=2?`<div class="lpclue">${r.clue}</div>`:""}</div>`;
   return lpWorkHTML(it); }
-function lpSummaryHTML(){ const rs=lp.results, own=rs.filter(e=>e.phase==="independent"||e.phase==="delayed"||e.phase==="mixed"), clean=own.filter(e=>e.firstTry&&e.methodOk).length, o=lp.focus?teacherFocusState(lp.id):lpState(lp.id);
+function lpSummaryHTML(){ if(lp.homework)return fractionHomeworkSummaryHTML(); const rs=lp.results, own=rs.filter(e=>e.phase==="independent"||e.phase==="delayed"||e.phase==="mixed"), clean=own.filter(e=>e.firstTry&&e.methodOk).length, o=lp.focus?teacherFocusState(lp.id):lpState(lp.id);
   const due=+o.due>0?new Date(+o.due).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}):"";
   return `<div class="card lpcard"><h2 style="margin-top:0">${lp.delayed?"Check-in done":lp.focus?"Teacher's focus practice done":"Lesson "+lp.bp.lesson+" practice done"}</h2>
     <p>${own.length?`You finished ${own.length} practice problem${own.length===1?"":"s"}${clean?`, and ${clean===own.length?"all":clean} of them with no clues and no do-overs`:""}.`:"You worked through the lesson steps."} ${rs.some(e=>e.phase==="repair"&&e.ok)?"You found the slip and fixed it.":""}</p>${walterNote("rest","You finished this lesson. Time for a rest.",true,true)}
@@ -7446,7 +7501,7 @@ function lpBind(it){ const q=s=>app.querySelector(s);
   app.querySelectorAll(".lpvideo .video-link").forEach(vid=>vid.addEventListener("click", ()=>{ lpRecord({phase:"video"}, {kind:"video-link-tap", video:1, videoType:vid.dataset.videoType, ok:0, methodOk:0, firstTry:0}); }));
   if(it.phase==="intro"){ q("#lpgo").onclick=lpNext; q("#lpgo").focus({preventScroll:true}); return; }
   if(it.phase==="explain"){ q("#lpexpsave").onclick=()=>{ const t=String(q("#lpexp").value||"").trim().slice(0,280); if(!t){ q("#lpexpmsg").textContent="Type a thought, choose ‘I said it aloud,’ or skip."; return; } lpRecord(it, {kind:"explain", ok:1, text:t, mode:"typed", skipped:0}); lpNext(); }; q("#lpexpsaid").onclick=()=>{ lpRecord(it, {kind:"explain", ok:0, mode:"spoken", selfReported:1, skipped:0}); lpNext(); }; q("#lpexpskip").onclick=()=>{ lpRecord(it, {kind:"explain", ok:0, mode:"skipped", skipped:1}); lpNext(); }; return; }
-  if(it.phase==="summary"){ q("#lphome").onclick=()=>{ lp=null; home(); }; q("#lpagain").onclick=()=>lpStart(lp.id, false, null, lp.focus); return; }
+  if(it.phase==="summary"){ q("#lphome").onclick=()=>{ lp=null; home(); }; q("#lpagain").onclick=()=>{if(lp.homework)hwEntry();else lpStart(lp.id, false, null, lp.focus);}; return; }
   if(it.phase==="repair" && it.rep.stage==="spot"){ app.querySelectorAll("[data-lpr]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.lpr, r=it.rspec, rp=it.rep; rp.picked=i;
       if(i===r.wrongAt){ rp.stage="fix"; if(rp.tries) it.st.tries+=rp.tries; it.st.msg=`Yes: step ${i+1} is where it goes off track. ${r.whyWrong}`; it.st.msgKind="ok"; lpRender(); }
       else { rp.tries++; rp.msg = i<r.wrongAt ? `Step ${i+1} is right. Look further down.` : `Something goes off track before step ${i+1}. Look earlier.`; it.st.codes.push("spot"); lpRender(); } }); return; }
@@ -7457,15 +7512,15 @@ function lpBind(it){ const q=s=>app.querySelector(s);
       const shown=esc(stp.showVal?stp.showVal(v):Array.isArray(v)?v.join(", "):(v&&v.prime)?"prime: circle it":String(v));
       it.narr.push(ok ? `${stp.prompt} <b class="good">→ ${shown}</b>${stp.why?`<br><span class="muted">${stp.why}</span>`:""}` : `${stp.prompt} Try <b>${shown}</b>: <span class="muted">${st.msg}</span>`); st.msg=""; lpRender(); const b=q("#lpshow")||q("#lpnext"); if(b) b.focus({preventScroll:true}); }; q("#lpshow").focus({preventScroll:true}); return; }
   const I=step.input||{type:"num"};
-  const keepDraft=()=>{ if(I.type==="mc") st.draft={k:st.k,selected:+(q(".lpopt[aria-checked=true]")?.dataset.lpo??-1)}; if(I.type==="num"||I.type==="text"||I.type==="nums"||I.type==="tree"||I.type==="tiles") st.draft={k:st.k, values:[...app.querySelectorAll("#lpwork .lpans")].map(x=>x.value)}; lpSaveResume(); };
+  const keepDraft=()=>{ if(I.type==="multi") st.draft={k:st.k,selected:[...app.querySelectorAll('.lpchip[aria-pressed="true"]')].map(x=>+x.dataset.lpm)}; if(I.type==="mc") st.draft={k:st.k,selected:+(q(".lpopt[aria-checked=true]")?.dataset.lpo??-1)}; if(I.type==="num"||I.type==="text"||I.type==="nums"||I.type==="tree"||I.type==="tiles") st.draft={k:st.k, values:[...app.querySelectorAll("#lpwork .lpans")].map(x=>x.value)}; lpSaveResume(); };
   app.querySelectorAll("#lpwork .lpans").forEach(el=>el.addEventListener("input", keepDraft));
-  app.querySelectorAll(".lpopt").forEach(b=>b.onclick=()=>{ app.querySelectorAll(".lpopt").forEach(x=>{ x.setAttribute("aria-checked", String(x===b)); x.classList.toggle("sel", x===b); }); keepDraft(); });
-  app.querySelectorAll(".lpchip").forEach(b=>b.onclick=()=>{ const on=b.getAttribute("aria-pressed")!=="true"; b.setAttribute("aria-pressed", String(on)); b.classList.toggle("on", on); });
+  app.querySelectorAll(".lpopt").forEach(b=>{ b.addEventListener("keydown",e=>{ if(e.altKey||e.ctrlKey||e.metaKey)return; const buttons=[...app.querySelectorAll(".lpopt:not(:disabled)")],i=buttons.indexOf(b); let target;if(["ArrowRight","ArrowDown"].includes(e.key))target=buttons[(i+1)%buttons.length];else if(["ArrowLeft","ArrowUp"].includes(e.key))target=buttons[(i-1+buttons.length)%buttons.length];else if(/^[a-z]$/i.test(e.key))target=buttons.find(x=>+x.dataset.lpo===e.key.toLowerCase().charCodeAt(0)-97);if(target){e.preventDefault();target.click();target.focus({preventScroll:true});} }); b.onclick=()=>{ app.querySelectorAll(".lpopt").forEach(x=>{ x.setAttribute("aria-checked", String(x===b)); x.classList.toggle("sel", x===b); }); keepDraft(); }; });
+  app.querySelectorAll(".lpchip").forEach(b=>b.onclick=()=>{ const on=b.getAttribute("aria-pressed")!=="true"; b.setAttribute("aria-pressed", String(on)); b.classList.toggle("on", on); keepDraft(); });
   app.querySelectorAll(".lptok").forEach(b=>b.onclick=()=>{ st.grp=st.grp||[]; const i=+b.dataset.lpt; if(st.grp.length>=2) st.grp=[]; if(st.grp[0]===i) st.grp=[]; else st.grp.push(i); st.grp.sort((a,b2)=>a-b2);
-    app.querySelectorAll(".lptok").forEach(x=>{ const on=st.grp.includes(+x.dataset.lpt); x.setAttribute("aria-pressed", String(on)); x.classList.toggle("on", on); }); });
+    app.querySelectorAll(".lptok").forEach(x=>{ const on=st.grp.includes(+x.dataset.lpt); x.setAttribute("aria-pressed", String(on)); x.classList.toggle("on", on); }); keepDraft(); });
   app.querySelectorAll(".lptile").forEach(b=>b.onclick=()=>{ st.tiles=st.tiles||[]; const t=b.dataset.lptile; if(t==="⌫") st.tiles.pop(); else if(t==="clear") st.tiles=[]; else st.tiles.push(t);
     const typed=q("#lptype"); if(typed && typed.value){ typed.value=""; keepDraft(); } // choosing a tile switches away from the typed alternative
-    const sh=q("#lptshow"); if(sh) sh.innerHTML=st.tiles.length?esc(lpShow(st.tiles.join(" "))):"<span class='muted'>Tap tiles to build it</span>"; });
+    const sh=q("#lptshow"); if(sh) sh.innerHTML=st.tiles.length?esc(lpShow(st.tiles.join(" "))):"<span class='muted'>Tap tiles to build it</span>"; keepDraft(); });
   const ask=q("#lpask"); if(ask) ask.onclick=()=>{ keepDraft(); st.walterOpen=!st.walterOpen; lpRender(); (q("[data-walter-question]")||q("#lpask")).focus({preventScroll:true}); };
   const reply=()=>{ lpRender(); q("#lpaskreply")?.focus({preventScroll:true}); };
   app.querySelectorAll("[data-walter-question]").forEach(b=>b.onclick=()=>{ keepDraft(); const old=st.walterChoice; lpWalterDeliver(it,b.dataset.walterQuestion,old?.step===st.k&&old.id===b.dataset.walterQuestion?old.depth:0); reply(); });
@@ -8079,8 +8134,8 @@ const CX_SHAPES=[
  {name:'rectangle',sides:4,parallel:2,right:4,equal:2,points:'45,30 245,30 245,120 45,120',family:['quadrilateral','trapezoid','parallelogram','rectangle']},
  {name:'rhombus',sides:4,parallel:2,right:0,equal:4,points:'145,15 235,80 145,145 55,80',family:['quadrilateral','trapezoid','parallelogram','rhombus']},
  {name:'parallelogram',sides:4,parallel:2,right:0,equal:2,points:'85,25 245,25 200,125 40,125',family:['quadrilateral','trapezoid','parallelogram']},
- {name:'trapezoid',sides:4,parallel:1,right:0,equal:0,points:'90,25 190,25 250,125 30,125',family:['quadrilateral','trapezoid']},
- {name:'kite',sides:4,parallel:0,right:0,equal:'adjacent',points:'145,15 205,75 145,150 85,75',family:['polygon','quadrilateral','kite']},
+ {name:'trapezoid',sides:4,parallel:1,right:0,equal:0,points:'90,25 190,25 250,125 40,125',family:['quadrilateral','trapezoid']},
+ {name:'kite',sides:4,parallel:0,right:0,equal:'adjacent',points:'145,15 205,80 145,150 85,80',family:['polygon','quadrilateral','kite']},
  {name:'isosceles trapezoid',sides:4,parallel:1,right:0,equal:'legs',points:'90,25 200,25 260,125 30,125',family:['polygon','quadrilateral','trapezoid','isosceles trapezoid']},
  {name:'triangle',sides:3,parallel:0,right:0,equal:3,sideType:'equilateral',angleType:'acute',points:'140,15 206,130 74,130',family:['polygon','triangle']},
  {name:'triangle',sides:3,parallel:0,right:1,equal:0,sideType:'scalene',angleType:'right',points:'50,20 50,130 235,130',family:['polygon','triangle']},
@@ -8092,7 +8147,7 @@ function cxPolygon(o){const {shape,mode}=o,props=`${shape.sides} straight sides;
  if(shape.sides===3){steps.push(cxChoice('Classify by side lengths.',['equilateral','isosceles','scalene'],['equilateral','isosceles','scalene'].indexOf(shape.sideType),'polygon-properties'));steps.push(cxChoice('Classify by angles.',['acute','right','obtuse'],['acute','right','obtuse'].indexOf(shape.angleType),'polygon-properties'));}
  else steps.push(cxChoice('Is this a regular polygon? Every side and every angle must be equal.',['Yes','No'],shape.name==='square'||shape.regular===true?0:1,'polygon-properties'));
  if(mode==='hierarchy'){const category=lpPick(['polygon','triangle','quadrilateral','rectangle','rhombus','parallelogram','trapezoid','kite','isosceles trapezoid']);steps.push(cxChoice(`Does the figure also belong to the ${category} family?`,['Yes','No'],category==='polygon'||shape.family.includes(category)?0:1,'polygon-properties'));steps.push(cxChoice('Which statement about shape families is always true?',['Every square is a rectangle','Every rectangle is a square','Every quadrilateral is a rectangle'],0,'polygon-properties'));}
- return cxSeq({kind:'polygon-'+mode,title:`Classify this polygon: ${props}`,prompt:'Use the stated properties; drawings are not to scale. Here, a trapezoid has at least one pair of parallel sides. The supplied source treats a kite as having no parallel sides and two pairs of adjacent equal sides.',steps,audit:{family:'polygon',name:shape.name,mode,props},visual:()=>`<svg viewBox="0 0 290 165" role="img" aria-label="Polygon with ${esc(props)}"><polygon points="${shape.points}" fill="#d7e9f4" stroke="#1b2a41" stroke-width="3"/></svg><p>${props}</p>`,done:()=>`Most specific polygon name: <b>${shape.name}</b>. ${shape.sideType?`Triangle: ${shape.sideType} and ${shape.angleType}.`:''} Families: ${shape.family.join(', ')}.`});}
+ return cxSeq({kind:'polygon-'+mode,title:`Classify this polygon`,prompt:'Use the stated properties; drawings are not to scale. Here, a trapezoid has at least one pair of parallel sides. The supplied source treats a kite as having no parallel sides and two pairs of adjacent equal sides.',steps,audit:{family:'polygon',name:shape.name,mode,props},visual:()=>`<svg class="cxpolygon" viewBox="0 0 290 165" role="img" aria-label="Polygon with ${esc(props)}"><polygon points="${shape.points}" fill="#d7e9f4" stroke="#1b2a41" stroke-width="3"/></svg><p>${props}</p>`,done:()=>`Most specific polygon name: <b>${shape.name}</b>. ${shape.sideType?`Triangle: ${shape.sideType} and ${shape.angleType}.`:''} Families: ${shape.family.join(', ')}.`});}
 
 function cxPrism(d,label,cubes){const [l,w,h]=d,unit=cubes?'Count equal unit cubes in layers.':'Dimensions are labelled; the drawing is not to scale.';return `<svg viewBox="0 0 340 210" role="img" aria-label="${esc(label)} rectangular prism with dimensions ${l}, ${w}, and ${h}"><path d="M50 65 L220 65 L220 175 L50 175 Z M50 65 L100 25 L270 25 L220 65 M220 65 L270 25 L270 135 L220 175" fill="#d7e9f4" stroke="#1b2a41" stroke-width="2"/>${cubes?Array.from({length:l-1},(_,i)=>`<line x1="${50+(i+1)*170/l}" y1="65" x2="${50+(i+1)*170/l}" y2="175" stroke="#6c8799"/>`).join('')+Array.from({length:h-1},(_,i)=>`<line x1="50" y1="${65+(i+1)*110/h}" x2="220" y2="${65+(i+1)*110/h}" stroke="#6c8799"/>`).join(''):''}<text x="120" y="199" font-size="16">${l} units</text><text x="275" y="94" font-size="16">${w} units</text><text x="4" y="127" font-size="16">${h}</text></svg><p>${esc(label)}: length ${l}, width ${w}, height ${h}. ${unit}</p>`;}
 function cxVolume(o){const {dims,other,method}=o,[l,w,h]=dims,A=l*w,V=A*h,B=other?other[0]*other[1]*other[2]:0,steps=[];
@@ -8158,7 +8213,7 @@ function cxChooseFractions(load,subtract,regroup){let da=lpPick(load<=1?[2,3,4]:
  else if(load>=2){a=cxAdd(a,cxF(lpRnd(1,2)));if(load>=3)b=cxAdd(b,cxF(1));}
  return {a,b};}
 const LP_CURRICULUM={};
-function cxRegister(unit,n,skill,domain,goal,component,maker){const id=`U${unit}L${n}`,l=lessonById(id);if(!l)throw Error('Unknown lesson '+id);const bp={unit,lesson:n,name:l.name,skill,goal,vocab:CX_VOCAB[domain],explain:[`Explain how you checked the units and relationships in this lesson.${unit===8&&(n===2||n===5)?' Write your own matching story if you want to. Your writing is saved as an explanation, not automatically graded.':''}`,'My plan was… I checked it by…'],talk:'Use a fresh paper problem later. Ask for the method and units before the answer. The app checks prompted steps; it does not score spoken reasoning.',model:()=>lpSeeded(52000+unit*100+n,()=>maker(1,'model',0)),make:maker};bp.repair=load=>cxRepair(bp,component,load);LP_CURRICULUM[id]=bp;l.skills=[skill];l.focus={[skill]:{lessonId:id}};if(unit===4){if(n<=8)Object.assign(l.focus[skill],{variant:n<=2||n===5||n===6?'area':'distributive',kind:n<=4?'whole':'decimal'});else if(n<=10)l.focus[skill].variant=n===9?'measuring':'dealing';}if(unit===5&&n<=4)l.focus[skill].variant=n<=2?'simplify':n===3?'estimate':'mixed';}
+function cxRegister(unit,n,skill,domain,goal,component,maker){const id=`U${unit}L${n}`,l=lessonById(id);if(!l)throw Error('Unknown lesson '+id);const bp={unit,lesson:n,name:l.name,skill,goal,vocab:domain==='geometry'&&n<=5?[['property','a side or angle fact about a shape'],['parallel','straight sides that stay the same distance apart'],['right angle','a square corner']]:CX_VOCAB[domain],explain:[`Explain how you checked the units and relationships in this lesson.${unit===8&&(n===2||n===5)?' Write your own matching story if you want to. Your writing is saved as an explanation, not automatically graded.':''}`,'My plan was… I checked it by…'],talk:'Use a fresh paper problem later. Ask for the method and units before the answer. The app checks prompted steps; it does not score spoken reasoning.',model:()=>lpSeeded(52000+unit*100+n,()=>maker(1,'model',0)),make:maker};bp.repair=load=>cxRepair(bp,component,load);LP_CURRICULUM[id]=bp;l.skills=[skill];l.focus={[skill]:{lessonId:id}};if(unit===4){if(n<=8)Object.assign(l.focus[skill],{variant:n<=2||n===5||n===6?'area':'distributive',kind:n<=4?'whole':'decimal'});else if(n<=10)l.focus[skill].variant=n===9?'measuring':'dealing';}if(unit===5&&n<=4)l.focus[skill].variant=n<=2?'simplify':n===3?'estimate':'mixed';}
 for(let n=1;n<=11;n++){
  const mul=n<=8,method=n<=2||n===5||n===6?'area':n<=8?'distributive':n===10?'dealing':n===11?'mixed':'measuring';
  cxRegister(4,n,mul?'decmul':'decdiv','decimal',mul?`Multiply the place-value parts with the ${method==='area'?'area model':'distributive property'} and combine all products.`:`${method==='dealing'?'Share the decimal using equal-value exchanges.':'Count equal groups using matching decimal units.'} Check the quotient by multiplication.`,mul?'decimal-parts':method==='dealing'?'decimal-deal':'decimal-share',(load)=>{const chosenMethod=method==='mixed'?(Math.random()<.5?'dealing':'measuring'):method;
@@ -8201,7 +8256,7 @@ for(const n of [1,2,3,4,5,6,8,9,10,11])cxRegister(11,n,'measurement','measure',n
 });
 // Ordinary mixed practice uses static computation/property checks. Exact representations
 // and learner-chosen trials are served by the explicitly labelled lesson routes.
-function cxOrdinary(skill,level,focus){let id=focus?.lessonId;if(!id||!LP_CURRICULUM[id]||LP_CURRICULUM[id].skill!==skill){const pool=Object.keys(LP_CURRICULUM).filter(id=>LP_CURRICULUM[id].skill===skill);id=lpPick(pool);}
+function cxOrdinary(skill,level,focus){let id=focus?.lessonId;if(!id||!LP_CURRICULUM[id]||LP_CURRICULUM[id].skill!==skill){const all=Object.keys(LP_CURRICULUM).filter(id=>LP_CURRICULUM[id].skill===skill),reached=classCalOn()?all.filter(id=>taughtSk(skill,{lessonId:id})):all;if(!reached.length)throw Error('No reached lesson for '+skill);id=lpPick(reached);}
  const sp=LP_CURRICULUM[id].make(Math.min(3,Math.ceil(level/2)),'mixed',0),st={k:0,...sp.init()},cards=[];let guard=0;
  while(guard++<80){const step=sp.next(st);if(!step)break;const value=step.auto;if(value===undefined)throw Error('No static candidate '+id);if(st.stage==='denominator')step.prompt='Find the least common denominator for the original fractions.';if(st.stage==='jump')step.prompt=`Use one jump for the entire remaining amount ${cxText(st.remaining)}. How large is that jump?`;cards.push(step);const r=step.check(value,st);if(!r.ok)throw Error('Invalid model candidate '+id);if(r.apply)r.apply();st.k++;}
  if(guard>=80)throw Error('Static conversion loop');const steps=[];
@@ -8230,8 +8285,7 @@ const _cxFocusFromCtx=focusFromCtx;focusFromCtx=function(sk,ctx){const f=_cxFocu
 const _cxHasTrap=hasTrap;hasTrap=function(p,comp){if(CX_NEW_SKILLS.includes(p?.skill)&&comp&&comp!=='*'&&comp!=='why')return p.mainComp===comp;return _cxHasTrap(p,comp);};
 for(const sk of CX_NEW_SKILLS)STEP_COMPS[sk]=new Set(Object.keys(CX_GUIDES));
 NOT_YET_COVERED=curriculumCoverageNote();
-// Late registration also normalizes profiles loaded before this curriculum block.
-for(const name of Object.keys(DB.profiles))DB.profiles[name]=normalize(DB.profiles[name]);if(DB.current&&DB.profiles[DB.current])S=DB.profiles[DB.current];
+// Profiles load after all curriculum and lesson registration in the final bootstrap.
 
 const LP_LESSONS={...LP_U2,...LP_U3,...LP_CURRICULUM};
 const lpUnit=id=>+(String(id).match(/^U(\d+)L/)?.[1]||2);
@@ -8315,6 +8369,139 @@ const LP_CODE_NAMES={"decimal-place":"a decimal unit count needed attention","de
   ].join("\n"); document.head.appendChild(st); }catch(e){} })();
 
 if(document.head){const decStyle=document.createElement("style");decStyle.textContent='.lpdecchart{border:2px solid var(--ink);border-radius:8px;overflow:hidden;margin:10px 0}.lpdecrow{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr))}.lpdecrow>div{position:relative;min-width:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 4px;text-align:center}.lpdecpoint{position:absolute;right:-5px;top:50%;font-size:22px;background:white;z-index:1;line-height:1}.lpdecrow>div:last-child{border-right:0}.lpdechead{overflow-wrap:anywhere;background:#f0f3f7;font-size:13px;font-weight:700}.lpdecunits{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;margin-bottom:5px}.lpdecunit{display:block;border:1px solid #1b2a41;background:#e6eff7}.lpdecunit.whole{width:30px;height:30px;background-image:linear-gradient(#8ca3b5 1px,transparent 1px),linear-gradient(90deg,#8ca3b5 1px,transparent 1px);background-size:3px 3px}.lpdecunit.tenth{width:3px;height:30px;background-image:linear-gradient(#8ca3b5 1px,transparent 1px);background-size:3px 3px}.lpdecunit.hundredth{width:3px;height:3px}.lpdecunit.ten{width:30px;height:300px;background-color:#e6eff7;background-image:linear-gradient(#1b2a41 1px,transparent 1px),linear-gradient(#8ca3b5 1px,transparent 1px),linear-gradient(90deg,#8ca3b5 1px,transparent 1px);background-size:30px 30px,3px 3px,3px 3px}';document.head.appendChild(decStyle);}
+// Exact homework uses the checked lesson widgets, but owns its resume and history.
+// Nothing in this route raises a level, clears a weakness, or proves independent readiness.
+function parseFractionHomework(text){
+  const glyphs={'½':'1/2','⅓':'1/3','⅔':'2/3','¼':'1/4','¾':'3/4','⅕':'1/5','⅖':'2/5','⅗':'3/5','⅘':'4/5','⅙':'1/6','⅚':'5/6','⅛':'1/8','⅜':'3/8','⅝':'5/8','⅞':'7/8'};
+  let t=String(text||'').replace(/([0-9])([½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞])/g,'$1 $2').replace(/[½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]/g,c=>glyphs[c]);
+  t=normNum(t).replace(/⁄/g,'/').trim().toLowerCase().replace(/\s+/g,' ');
+  if(!/\d\s*\/\s*\d/.test(t)||!/[+−\-×x*÷]|\b(?:plus|minus|times|divided by)\b/.test(t))return null;
+  // Grouped expressions and A/B comparisons belong to the existing expression
+  // parser: their slash can mean division rather than a fraction operand.
+  if(/[()[\]]|\bvs\b|\b[ab]\s*:/.test(t))return null;
+  t=t.replace(/^(?:(?:#|question|problem)\s*\d{1,2}\s*[.):]?|\d{1,2}[.)])\s+/,'').replace(/^(?:what is|find|solve|evaluate)\s*:?[ ]*/,'').replace(/[?!.]+$/,'').trim();
+  const equals=t.indexOf('=');if(equals>=0)t=t.slice(0,equals).trim();
+  let method='algorithm',explicitMethod=false;
+  const suffix=t.match(/\s+(?:(?:using|use|with)\s+(?:the |an? )?)?(area model|number line|equivalent fractions?|algorithm)\s*$/);
+  if(suffix){method=suffix[1]==='area model'?'area':suffix[1]==='number line'?'line':'algorithm';explicitMethod=true;t=t.slice(0,suffix.index).trim();}
+  t=t.replace(/\bplus\b/g,'+').replace(/\bminus\b/g,'−').replace(/\btimes\b/g,'×').replace(/\bdivided by\b/g,'÷').replace(/[x*]/g,'×').replace(/-/g,'−');
+  const operand='(?:\\d+\\s+)?\\d+\\s*/\\s*\\d+|\\d+';
+  const match=t.match(new RegExp('^('+operand+')\\s*([+−×÷])\\s*('+operand+')$'));
+  if(!match)return {err:'Use one fraction operation, like 3/4 + 5/6 or 2 1/3 − 3/4. Use ÷ for division between fractions; / belongs inside a fraction.'};
+  const read=s=>{const f=parseFraction(s.replace(/\s*\/\s*/g,'/'));return f&&Number.isSafeInteger(f.w*f.d+f.n)&&f.d>0?{n:f.w*f.d+f.n,d:f.d}:null;};
+  const a=read(match[1]),b=read(match[3]),op=match[2];
+  const valid=f=>f&&Number.isSafeInteger(f.n)&&Number.isSafeInteger(f.d)&&f.d<=120&&f.n>=0&&f.n/f.d<=20;
+  if(!valid(a)||!valid(b))return {err:'Use nonnegative amounts up to 20, with positive whole-number denominators up to 120.'};
+  if(op==='−'&&a.n*b.d<b.n*a.d)return {err:'This fraction subtraction route needs the first amount to be at least the second.'};
+  if(['+','−'].includes(op)&&a.d*b.d/gcd(a.d,b.d)>120)return {err:'These denominators need a common denominator above 120. This checked route currently supports common denominators up to 120.'};
+  if(op==='×'&&(a.n===0||b.n===0))return {err:'This area-model multiplication route needs two positive amounts.'};
+  if(op==='×'&&[a,b].some(f=>f.d>12||f.n>24||f.n/f.d>6))return {err:'Fraction multiplication here supports amounts up to 6, numerators up to 24, and denominators up to 12.'};
+  if(op==='÷'&&!((a.d===1&&a.n>=1&&b.n===1&&b.d>=2)||(a.n===1&&a.d>=2&&b.d===1&&b.n>=1)))return {err:'For fraction division, this route supports a whole number ÷ a unit fraction, or a unit fraction ÷ a whole number, like 3 ÷ 1/4 or 1/4 ÷ 3.'};
+  return {fraction:true,a,b,op,method,explicitMethod,label:cxText(a)+' '+op+' '+cxText(b)};
+}
+function fractionHomeworkTask(task){
+  if(!task||typeof task!=='object'||Array.isArray(task))return null;
+  const operand=f=>f&&Number.isSafeInteger(f.n)&&Number.isSafeInteger(f.d)&&f.d>0?f.n+'/'+f.d:'?';
+  // Preserve unreduced original operands. Integers need their original d=1 in division.
+  const t=f=>f?.d===1?String(f.n):operand(f),r=parseFractionHomework(t(task.a)+' '+task.op+' '+t(task.b))||parseFractionHomework(operand(task.a)+' '+task.op+' '+operand(task.b));
+  if(!r?.fraction)return null;return {...r,method:['algorithm','area','line'].includes(task.method)?task.method:r.method};
+}
+function fractionHomeworkSpec(task){
+  if(task.op==='×')return cxFractionProduct({a:task.a,b:task.b,mode:'area'});
+  if(task.op==='÷')return cxFractionDivision({d:task.a.d===1?task.b.d:task.a.d,N:task.a.d===1?task.a.n:task.b.n,share:task.a.d!==1,mode:'model'});
+  return cxFractionCombine({...task,regroup:task.op==='−'&&task.a.n%task.a.d/task.a.d<task.b.n%task.b.d/task.b.d&&task.a.n>=task.a.d});
+}
+function fractionHomeworkStateValid(task,st){
+  if(['+','−'].includes(task.op)){
+    if(!['denominator','first','second','exchange','combine','jump','landing','final','done'].includes(st.stage))return false;
+    if(st.stage==='denominator')return st.D===null&&st.an===null&&st.bn===null;
+    const D=st.D;if(!Number.isInteger(D)||D<=0||D>120||D%task.a.d||D%task.b.d)return false;
+    if(st.stage==='first')return st.an===null&&st.bn===null;
+    if(st.an!==task.a.n*D/task.a.d)return false;
+    if(st.stage==='second')return st.bn===null;
+    if(st.bn!==task.b.n*D/task.b.d)return false;
+    if(task.method==='line'){
+      if(!Array.isArray(st.jumps)||st.jumps.length>160)return false;
+      let cur=task.a,remaining=task.b;
+      const valid=f=>f&&Number.isSafeInteger(f.n)&&Number.isSafeInteger(f.d)&&f.d>0&&f.n>=0&&f.n/f.d<=40;
+      for(const j of st.jumps){if(!j||![j.from,j.to,j.jump].every(valid)||j.jump.n<=0||!cxEq(j.from,cur)||j.jump.n*remaining.d>remaining.n*j.jump.d||D%j.jump.d)return false;cur=task.op==='+'?cxAdd(cur,j.jump):cxSub(cur,j.jump);remaining=cxSub(remaining,j.jump);if(!cxEq(j.to,cur))return false;}
+      if(!valid(st.cur)||!valid(st.remaining)||!cxEq(st.cur,cur)||!cxEq(st.remaining,remaining))return false;
+      if(st.stage==='landing'&&(!valid(st.pending)||st.pending.n<=0||st.pending.n*remaining.d>remaining.n*st.pending.d||D%st.pending.d))return false;
+    }
+    return true;
+  }
+  return Number.isInteger(st.k)&&st.k>=0&&st.k<=5;
+}
+function fractionHomeworkResumeNorm(r){
+  if(!r||r.v!==1||!fractionHomeworkTask(r.task)||!Number.isFinite(r.t)||Date.now()-r.t>30*864e5||!r.st||typeof r.st!=='object'||Array.isArray(r.st)||!Number.isInteger(r.st.k)||r.st.k<0||r.st.k>160)return null;
+  try{if(JSON.stringify(r).length>24000)return null;}catch(e){return null;}
+  if(!fractionHomeworkStateValid(r.task,r.st))return null;
+  return {...r,task:fractionHomeworkTask(r.task),st:{...r.st,stepEvents:lpTrimEvents(r.st.stepEvents)}};
+}
+function fractionHomeworkLogNorm(log){return (Array.isArray(log)?log:[]).filter(e=>e&&typeof e==='object'&&!Array.isArray(e)&&Number.isFinite(e.t)&&typeof e.q==='string').slice(-100).map(e=>({...e,q:e.q.slice(0,100),firstTry:0,hw:1,stepEvents:lpTrimEvents(e.stepEvents)}));}
+function fractionHomeworkResumeReady(){return !!fractionHomeworkResumeNorm(S?.homeworkResume);}
+function fractionHomeworkResume(){const r=fractionHomeworkResumeNorm(S?.homeworkResume);if(r)fractionHomeworkStart(r.task,r);}
+function fractionHomeworkStart(request,resume){
+  const task=fractionHomeworkTask(request);if(!task||!S)return;
+  if(cur&&phase==='q')leaveProblem();cur=null;mode='hw:fraction';
+  const sp=fractionHomeworkSpec(task),bp={name:'Fraction homework',lesson:0,skill:'fracaddsub',make:(load,phase,i=0)=>fractionHomeworkSpec(task.op==='×'?{...task,a:{n:i+2,d:5},b:{n:1,d:3}}:task.op==='÷'?{...task,a:{n:i+2,d:1},b:{n:1,d:5}}:{...task,a:{n:i+3,d:4},b:{n:1,d:6}})};bp.model=()=>bp.make(1,'model',0);
+  const it={phase:'guided',spec:sp,load:1};lp={id:'homework-fraction',homework:task,bp,items:[it,{phase:'summary'}],i:0,load:1,results:[],t0:Date.now()};
+  lpItemStart(it);
+  if(resume){it.st={...it.st,...resume.st,msg:'',msgKind:'',stepEvents:lpTrimEvents(resume.st.stepEvents)};it.step=sp.next(it.st);lpPrepareStep(it);it.recorded=!!resume.recorded;lp.results=Array.isArray(resume.results)?resume.results.slice(-2):[];}
+  lpRender();toProblemTop();
+}
+function fractionHomeworkSave(){const it=lp.items[lp.i];S.homeworkResume={v:1,task:lp.homework,st:it.st,recorded:!!it.recorded,results:lp.results,t:Date.now()};save();}
+function fractionHomeworkRecord(it,extra){
+  if(it.recorded)return null;it.recorded=true;const st=it.st||{};
+  const e={t:Date.now(),q:lp.homework.label,method:it.spec.methodName||it.spec.kind,ok:st.done?1:0,methodOk:st.done&&!st.skipped?1:0,helps:+st.helps||0,tries:+st.tries||0,firstTry:0,hw:1,phase:'homework',stepEvents:lpTrimEvents(st.stepEvents),walterHelp:(st.walterEvents||[]).slice(-60),...extra};
+  S.homeworkLog=fractionHomeworkLogNorm([...(S.homeworkLog||[]),e]);lp.results.push(e);fractionHomeworkSave();return e;
+}
+function fractionHomeworkSummaryHTML(){return `<div class="card lpcard"><h2 style="margin-top:0">Homework problem finished</h2><p>You worked through ${esc(lp.homework.label)} with ${esc(lp.items[0].spec.methodName||'checked fraction steps')}.</p>${walterNote('rest','You did the work. Take a break whenever you need.',true)}<p class="muted">This records homework practice. It does not change levels or count as independent lesson evidence.</p><div class="actions"><button class="btn primary" id="lphome">Home</button><button class="btn quiet" id="lpagain">Another problem from my page</button></div></div>`;}
+// UI derives a recommendation from existing plans and schedules, without writing evidence.
+function overviewMethodContext(sk,key){
+  const ctx=Object.fromEntries(String(key||'').split(',').filter(Boolean).map(kv=>kv.split('=')));
+  const names={numberline:'number line',chart:'place-value chart',algorithm:'standard algorithm',area:'area model',distributive:'distributive property',repeated:'repeated × 10',threefactor:'three factors'};
+  const words=s=>String(s).replace(/([a-z])([A-Z])/g,'$1 $2').replace(/[-_]/g,' ').toLowerCase();
+  const labelled={...ctx};if(labelled.variant)labelled.variant=names[labelled.variant]||words(labelled.variant);
+  const parts=[ctxLabel(sk,labelled)];if(ctx.kind)parts.push(words(ctx.kind));if(ctx.dir)parts.push(words(ctx.dir));if(ctx.lessonId&&LP_LESSONS[ctx.lessonId])parts.push(lpLessonLabel(ctx.lessonId));
+  return parts.filter(Boolean).join(' · ')||'See the full records for this task form';
+}
+function homeLessonCheck(){
+  const due=lpDue().map(id=>({id,focus:false,t:S.lessons[id].due}));
+  for(const [id,o] of Object.entries(S.teacherFocus||{}))if(o&&LP_LESSONS[id]&&o.due>0&&o.due<=Date.now())due.push({id,focus:true,t:o.due});
+  return due.sort((a,b)=>a.t-b.t)[0]||null;
+}
+function homePrimaryAction(){
+  const hr=fractionHomeworkResumeNorm(S?.homeworkResume),lr=lpResumeReady()?S.lessonResume:null;
+  if(hr&&(!lr||hr.t>=lr.t))return {kind:'homework',title:'Keep going',label:'Resume my homework',description:esc(hr.task.label)+'. Your checked work and draft are saved.'};
+  if(lr)return {kind:'lesson',title:'Keep going',label:lr.focus?"Resume teacher's focus":'Resume '+lpLessonLabel(lr.id),description:'Your checked steps and unfinished work are saved. Continue, ask Walter, or pause.'};
+  const due=homeLessonCheck();if(due)return {kind:'check',id:due.id,focus:due.focus,title:'Check back after a break',label:'Start today',description:'A short check-in with new numbers for '+esc(due.focus?"your teacher's focus":lpLessonLabel(due.id))+'. Try it yourself, or ask Walter.'};
+  const plan=buildTodayPlan();return {kind:'today',title:'Ready for today?',label:'Start today',description:plan[0]==='starter'?'A quick look, then three gentle place-value warm-ups. You can choose a different topic below.':`About ${todayCountWords(plan)} problems: ${[...new Set(plan.map(k=>k==='mix'&&(!classCalOn()||!S.classPin)?"math you've practiced":todayLabel(k)))].join(', ')}. You can stop at any time.${classCalOn()&&!S.classPin?" We’ll use math you have practiced here, or a foundation builder, until a grown-up sets the class lesson.":""}`};
+}
+function evidenceOverviewHTML(){
+  const summary=summarizeEvidence(S,Date.now(),classifyEntry),action=homePrimaryAction(),target=recoveryTarget(),due=[];
+  for(const [key,o] of Object.entries(S.checkins||{})){const sk=key.split('|')[0];if(o&&SKILLS[sk]&&taughtSk(sk,o.ctx)&&o.due>0)due.push({label:SKILLS[sk].name+' · ordinary practice',t:o.due});}
+  for(const [id,o] of Object.entries(S.lessons||{}))if(o&&LP_LESSONS[id]&&taughtSk(LP_LESSONS[id].skill,{lessonId:id})&&o.due>0)due.push({label:lpLessonLabel(id)+' · lesson method',t:o.due});
+  for(const [id,o] of Object.entries(S.teacherFocus||{}))if(o&&LP_LESSONS[id]&&o.due>0)due.push({label:lpLessonLabel(id)+" · teacher's focus",t:o.due});
+  due.sort((a,b)=>a.t-b.t);
+  const recommendation=action.kind!=='today'?action.label:target?'Practice '+SKILLS[target.sk].name:due.some(x=>x.t<=Date.now())?'Start today and take a due check-in':classCalOn()&&S.classPin?'Start today with the pinned class lesson':'Start today';
+  const reason=action.kind==='check'?'A scheduled lesson-method check is ready after a break.':action.kind!=='today'?'There is unfinished work to continue.':target?esc(target.why):due.some(x=>x.t<=Date.now())?'A scheduled check is ready after a break.':action.description;
+  const ordinary=summary.ordinary.slice(0,6),lessons=summary.lessons.slice(0,6);
+  return `<section class="card gu-overview" id="evidenceoverview"><h2 style="margin-top:0">What to practice next</h2><p><b>${esc(recommendation)}</b></p><p class="muted">${reason}</p><h3>Recent independent observations</h3><p class="muted">Last 7 days. Ordinary answers and checked lesson methods stay separate. The difficulty shown is the one practiced, not the next assigned difficulty.</p>
+  <div id="ordinaryoverview"><b>Ordinary practice</b>${ordinary.length?ordinary.map(g=>`<div class="gu-observation">${esc(SKILLS[g.sk]?.name||g.sk)} · ${g.level===null?'difficulty not recorded':'level '+g.level}: ${g.right} right / ${g.tried} independent attempts; ${g.distinct} distinct recorded problem${g.distinct===1?'':'s'}${g.context?`<br><span class="muted">${esc(overviewMethodContext(g.sk,g.context))}</span>`:''}.</div>`).join(''):'<p class="muted">No independent ordinary attempts recorded in this period.</p>'}</div>
+  <div id="lessonoverview" style="margin-top:12px"><b>Lesson methods</b>${lessons.length?lessons.map(g=>`<div class="gu-observation">${esc(lpLessonLabel(g.id))}${g.focus?" · teacher's focus":''} · ${g.load===null?'difficulty not recorded':'practice load '+g.load}: ${g.clean} clean checked / ${g.tried} attempts; ${g.distinct} distinct recorded problems${g.delayed?`; later checks ${g.delayedClean} clean / ${g.delayed}`:''}.</div>`).join(''):'<p class="muted">No independent lesson-method attempts recorded in this period.</p>'}</div>
+  <p class="muted">Supported completions, repeats, and homework are practice. These observations do not establish readiness for untried topics or independent paper mastery. Full records are below.</p>
+  <h3>Checks after a break</h3>${due.length?due.slice(0,5).map(x=>`<div class="gu-observation">${esc(x.label)}: ${x.t<=Date.now()?'ready now':'due '+esc(new Date(x.t).toLocaleDateString(undefined,{month:'short',day:'numeric'}))}.</div>`).join(''):'<p class="muted">No future checks are scheduled yet.</p>'}${due.length>5?`<p class="muted">${due.length-5} more scheduled checks in the detailed records.</p>`:''}
+  </section>`;
+}
+function fractionHomeworkReportHTML(){
+  const rows=fractionHomeworkLogNorm(S.homeworkLog),pending=fractionHomeworkResumeNorm(S.homeworkResume);
+  if(!rows.length&&!pending)return '';
+  return `<div class="card"><h2 style="margin-top:0">Exact fraction homework</h2><p class="muted">Homework stays separate from independent readiness and lesson difficulty. Help is counted when delivered; unfinished work keeps its draft.</p>${pending?`<p>Unfinished: ${esc(pending.task.label)} · ${+pending.st.helps||0} help deliveries · ${+pending.st.tries||0} calculation misses.</p>`:''}${rows.slice(-10).reverse().map(e=>`<div class="gu-observation">${esc(e.q)} · ${esc(e.method)} · ${e.ok?'finished':'unfinished'} · ${e.helps} help deliveries · ${e.tries} calculation misses.</div>`).join('')}</div>`;
+}
+// One bootstrap: late-added skills must exist before saved check-ins are normalized.
+load();
+try{ let changed=false; for(const p of Object.values(DB.profiles)) if(nsMigrateNotes(p)) changed=true; if(changed) save(); }catch(e){}
 home();
 
 </script>
