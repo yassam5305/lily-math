@@ -1670,7 +1670,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.50 · October 6, 2026";
+const BUILD="v9.51 · October 6, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -3765,7 +3765,7 @@ function normalize(p){ // fill in anything missing (older saves, imports)
   // history: keep only real entries (non-null objects with a finite numeric time); coerce the fields the report keys on
   const log=(Array.isArray(p.log)?p.log:[]).filter(e=>e&&typeof e==="object"&&!Array.isArray(e)&&Number.isFinite(e.t))
     .map(e=>{ const o={...e}; if("sk" in o) o.sk=String(o.sk); if("ok" in o) o.ok=o.ok?1:0; return o; });
-  const out={...b, ...p, homeworkWalter:(Array.isArray(p.homeworkWalter)?p.homeworkWalter:[]).filter(h=>h&&typeof h==='object'&&typeof h.delivery==='string'&&Number.isFinite(h.t)).slice(-200), levels:{...b.levels, ...(p.levels||{})}, hist:{...b.hist, ...(p.hist||{})}, today:{...b.today, ...(p.today||{})}, log};
+  const out={...b, ...p, practiceWalter:(Array.isArray(p.practiceWalter)?p.practiceWalter:[]).filter(h=>h&&typeof h==='object'&&typeof h.delivery==='string'&&Number.isFinite(h.t)).slice(-200), homeworkWalter:(Array.isArray(p.homeworkWalter)?p.homeworkWalter:[]).filter(h=>h&&typeof h==='object'&&typeof h.delivery==='string'&&Number.isFinite(h.t)).slice(-200), levels:{...b.levels, ...(p.levels||{})}, hist:{...b.hist, ...(p.hist||{})}, today:{...b.today, ...(p.today||{})}, log};
   for(const k of SKILL_ORDER){ out.levels[k]=Math.min(MAX_LEVEL, Math.max(1, +out.levels[k]||1)); if(!Array.isArray(out.hist[k])) out.hist[k]=[]; }
   for(const k of ["correct","attempted","best","run","guided","persist","shown","logTrimmed","supportedOk"]) out[k]=Math.max(0, +out[k]||0);
   out.scratch = ("scratch" in p) ? !!p.scratch : b.scratch;
@@ -4052,7 +4052,7 @@ const nudgeAvailable=()=>!!(cur && !cur.ws && !cur.onramp && cur.hints && cur.hi
 // "Show me one first": a completed example of a similar problem, before she tries hers. Looking is recorded as studied (help), never as independent.
 let exampleOpen=false, exStep=0, exAll=false, exSub={}; // v9.13: the example is revealed one step at a time (exStep = steps shown); exAll = every step at once; exSub[i] = that step's smaller steps open
 const onrampWaiting=()=>!!(cur && cur.onramp && !cur.onrampChoice && phase==="q"); // v9.13.1: while the on-ramp card waits for a choice, its buttons are the only help controls on screen
-const exampleBtn=()=> (cur.hw&&cur.fixed) || onrampWaiting() ? "" : `<button class="btn quiet" id="showexample" title="See a similar problem worked out, step by step, before you try this one">${exampleOpen?"Hide the example":cur.studied?"See the example again":"Show me one first"}</button>`;
+const exampleBtn=()=> (cur.hw&&cur.fixed) || onrampWaiting() ? "" : `<button class="btn quiet" id="showexample" title="See a similar problem worked out, step by step, before you try this one">${exampleOpen?"Hide the example":cur.exampleShown?"See the example again":"Show me one first"}</button>`;
 const walkthroughBtn=()=>cur&&cur.hw&&cur.fixed&&(cur.skill==="multiply"||cur.skill==="divide") ? `<button class="btn quiet" id="workthrough" title="Work through this exact problem, one small checked step at a time">Work through this problem</button>` : "";
 // v9.20 (review #4): once the first hint is on screen (the coach line, an opened nudge, "Help me start", or a Hint tap), a checked way in:
 // the same voluntary walkthrough as "Work through this problem" (beginWalkthrough), on this exact problem. Not on the multiplication
@@ -5415,7 +5415,7 @@ function wsSpec(p){
 // v9.16: ws.dir is the way the blue box walks after a digit: "l" (the algorithm's right-to-left order, the default) or "r" (she tapped a box
 // on the left of an empty row, so she is writing the number the way it reads). ws.edge means the blue box is resting: the box it is on is
 // done, and a digit does nothing until she taps a box. Auto-advance never lands on a filled box, so a double tap cannot overwrite a neighbor.
-function wsInit(){ if(ws) return; const sp=wsSpec(cur); const rowKeys=sp.two?["r0","r1","t"]:["t"]; ws={rows:{}, carries:{}, vals:{}, sel:`${rowKeys[0]}-0`, rowKeys, locked:{}, marks:null, edge:false, dir:"l", nudge:false}; if(wsSup()>=3 && sp.two){ ws.locked["r1-0"]=true; ws.vals["r1-0"]="0"; } wsSync(); }
+function wsInit(){ if(ws) return; const sp=wsSpec(cur); const rowKeys=sp.two?["r0","r1","t"]:["t"]; ws={rows:{}, carries:{}, vals:{}, sel:`${rowKeys[0]}-0`, rowKeys, locked:{}, marks:null, edge:false, dir:"l", nudge:false}; if(wsSup()>=3 && sp.two && !cur.adaptivePrepared){ ws.locked["r1-0"]=true; ws.vals["r1-0"]="0"; } wsSync(); }
 function wsSync(){ const sp=wsSpec(cur); for(const row of ws.rowKeys){ let high=-1; for(let p=sp.cols-1;p>=0;p--) if(ws.vals[`${row}-${p}`]!==undefined){ high=p; break; } ws.rows[row]=high<0?"":Array.from({length:high+1},(_,i)=>ws.vals[`${row}-${high-i}`]??" ").join(""); } if(S && S.pendingQ && !S.pendingQ.typed && Object.keys(ws.vals).some(k=>!ws.locked[k] && ws.vals[k]!=="")){ S.pendingQ.typed=true; S.pendingQ.at=Date.now(); save(); } }
 function wsRowLabel(k, sp){ return ({r0:"ones row (top partial product)",r1:"tens row",t:sp.two?"total (bottom row)":"answer"})[k]||"answer"; }
 function wsRowPrompt(k, sp){ if(k==="r1" && ws.locked["r1-0"]) return "The 0 is already written. Start in the tens box. After each digit, the blue box moves one place left."; return "Start in the ones box. After each digit, the blue box moves one place left."; }
@@ -5559,7 +5559,7 @@ function gradeWS(){
   if(swaps.length){ swaps.forEach(x=>{ cur.swapSeen[x.sig]=1; ws.flag[x.hi]=1; ws.flag[x.lo]=1; }); cur.swapCaught=(cur.swapCaught||0)+1; ws.nudge=false;
     const nm=k=>k==="t"?(sp.two?"bottom row":"answer"):k==="r0"?"top row":"tens row";
     const one=x=>`In the ${nm(x.key)}, the two digits on the left read ${x.a} ${x.b}. Did the ${x.kind==="column"?"last column add up to":"last step make"} ${x.b}${x.a}? A two-digit number goes in ones digit first: the ${x.a}, then the ${x.b} in the box to its left.`;
-    return {err:`${swaps.map(one).join(" ")} Tap a box to fix it. To keep it as it is, tap Check answer again.`, swap:true}; }
+    return {err:`${swaps.map(x=>cur.adaptivePrepared?`In the ${nm(x.key)}, check the order of your two leftmost digits against your last calculation. Read the place values before changing a box.`:one(x)).join(" ")} Tap a box to fix it. To keep it as it is, tap Check answer again.`, swap:true}; }
   { const rn=estReasonNote(rows.t); if(rn) return {err:rn, reason:true}; } // v9.19: an estimate was made and the total is far from it: sent back once, like the swap note, then graded as written
   const note=(k,comp)=>{ wrong.push(k); marks[k]="bad"; if(comp){ comps.push(comp); tally[comp]=tally[comp]||{ok:0,miss:0}; tally[comp].miss++; } };
   const digitOK=(k)=>{ const e=sp.exp[k]; const v=V[k]; if(e===undefined) return v===undefined||v===""||v==="0"; return v===e; };
@@ -5639,7 +5639,7 @@ function render(){
       const independent = okEntry ? !!okEntry.independent : (stage==="fresh" && hintIdx===0);
       let msg;
       if(independent) msg=pick(["Correct.","Yes.","Nailed it.","That's right."])/* v9.20: no "N in a row" streak counter on her screens */+(lastChange>0 && !cur.placement?`<span class="lvl">Level up! ${SKILLS[sk].name} is now level ${lvl}${lvl===MAX_LEVEL?", the top":""}.</span>`:"")+(cur.hw?`<small>Homework practice: the dots stay put; this counts on the grown-ups page.</small>`:"");
-      else if(stage==="fresh" && hintIdx===0 && cur.studied) msg=`Right.<small>${cur.walterHelp?.length?"You asked Walter for help":"You studied an example first"}, so this counts as help. ${cur.hw?"Homework does not change your levels.":"Level-ups and checking things off your practice list come from problems done without the example."}</small>`;
+      else if(stage==="fresh" && hintIdx===0 && cur.studied) msg=`Right.<small>${cur.walterHelp?.length?"You asked Walter for help":cur.helpTaps?"You asked for step help":"You studied an example first"}, so this counts as help. ${cur.hw?"Homework does not change your levels.":"Level-ups and checking things off your practice list come from problems done without the example."}</small>`;
       else if(stage==="fresh" && hintIdx===0 && cur.reasonCaught && !(okEntry && okEntry.supported)) msg=`Right.<small>You checked your answer against your estimate and fixed it. That is a great habit. This one counts as prompted, since the note pointed you back to it.</small>`; // v9.19: fixed after the "does that make sense?" note
       else if(stage==="fresh" && hintIdx===0 && cur.ws) msg=`Right.<small>The supports were on for this one, so it counts as a supported success: it fades the supports, and level-ups come once they are mostly off.</small>`;
       else if(stage==="fresh" && hintIdx===0 && cur.preMiss) msg=`Right answer.<small>The step you showed first was not right, so this one counts as worked with help. Level-ups come from problems where the step and the answer are both yours.</small>`;
@@ -5857,9 +5857,12 @@ function hwCheckedLedger(){
   return `<div class="chart" aria-label="Your checked division work"><b>${cur.meta.variant==='area'?'Your accepted bands':'Your accepted friendly parts'}</b>${s.bands.length?(cur.meta.variant==='area'?s.bands.map(b=>`<div class="lpband"><span class="lpnote">Height ${cur.meta.d}</span><div class="lprect">Area ${L(b.piece)}</div><span class="lpq">Width ${L(b.q)}</span></div>`).join('')+'<p class="muted">Bands shown without a scale.</p>':`<ul>${s.bands.map(b=>`<li>${cur.meta.d} × ${L(b.q)} = ${L(b.piece)}; ${L(b.piece)} ÷ ${cur.meta.d} = ${L(b.q)}</li>`).join('')}</ul>`):'<p>No chunk accepted yet.</p>'}<p>Amount left: ${L(s.remaining)}.</p></div>`;
 }
 function hwPrepare(p){
-  if(!p?.hw||mode!=='hw:check'||p.hwPrepared)return;p.hwPrepared=true;
+  if(!p||p.adaptivePrepared)return;p.adaptivePrepared=true;
+  p.hwPrepared=!!(p.hw&&mode==='hw:check');
   // Optional pre-cards and generated estimate choices can reveal solution-shaped parts.
-  p.pre=null;p.est=null;p.divMap=false;delete p.hintLog;delete p.hintUsed;
+  if(p.hwPrepared||p.skill==='divide')p.pre=null;
+  if(p.hwPrepared)p.est=null;p.divMap=false;delete p.hintLog;delete p.hintUsed;
+  if(p.pre)p.pre.note='Choose how to work out the first-step card. Use the original quantities and units, then test your result before entering it.';
   if(p.hintPlan)p.hintPlan=p.hintPlan.map(h=>({...h,hints:[
     'Choose how to work in this box. Use the original factors or your own product rows.',
     'Name the units in this column and explain how this row uses them.',
@@ -5867,10 +5870,10 @@ function hwPrepare(p){
     'Check the calculation a second way. Check the value of the carry and the digit together.',
     'Revise a calculation or place if your checks disagree. Enter the digit you found before moving to another box.'
   ]}));
-  if(p.skill==='divide')hwDivisionSteps(p);
+  if(p.skill==='divide'&&Number.isFinite(p.meta?.N)&&Number.isFinite(p.meta?.d))hwDivisionSteps(p);
   else {
     let steps=p.steps;
-    if(p.skill==='multiply'&&p.meta.variant==='algorithm')steps=steps.flatMap(s=>s.sub?[...s.sub.map(x=>({...x,row:s.row})),s]:[s]);
+    if(p.skill==='multiply'&&p.meta.variant==='algorithm')steps=steps.flatMap(s=>s.sub?[...s.sub.map(x=>({...x,row:s.row,place:x.place??s.place})),s]:[s]);
     // The estimate must be the learner's choice, not a fixed benchmark selected by the generator.
     steps=steps.filter(s=>s.check&&!(p.skill==='decmul'&&s.check.comp==='point'&&s.check.type==='input'));
     if(p.skill==='decdiv'&&p.meta.variant==='measuring'){
@@ -5881,6 +5884,8 @@ function hwPrepare(p){
     p.steps=steps.map(s=>{
       const out={...s,t:'Use the original problem and your checked work to answer this card.',after:'You checked this step. Keep your work for the next card.'};
       for(const k of ['sub','rescue','cues','more','vis','charts','chart','tAfter','divDone','divIndex','divLeft','guidedChoice'])delete out[k];
+      if(!p.hwPrepared&&s.visAfter)for(const k of ['vis','charts','chart'])if(s[k])out[k]=s[k];
+      if(p.skill==='twostep'||p.skill==='multiply')out.after=s.after;
       if(p.skill==='addsub'&&/What digit goes/i.test(plain(out.check.q)))out.t='Work in the named column. Use your own carries or exchanges; check their value before entering the digit.';
       return out;
     });
@@ -5895,43 +5900,43 @@ function hwStepHelp(){
   const depth=sc.helpDepth||0;
   cur.helpTaps=(cur.helpTaps||0)+1;cur.studied=true;sc.helped=true;
   if(missEntry){missEntry.helpTaps=cur.helpTaps;missEntry.studied=true;}
-  if(depth<g.length){sc.msg=`<b>Help ${depth+1} of ${g.length}: ${HW_HELP_STAGES[depth]}.</b> ${esc(g[depth])}`;sc.helpDepth=depth+1;}
-  else {exampleOpen=true;exStep=0;exAll=false;exSub={};sc.msg='You have the five help steps. You can keep testing your own work, take a break, or see how a different problem works below.';}
+  if(depth<g.length){hwRecordHelp(ctx,'walkthrough','procedure',depth);sc.msg=`<b>Help ${depth+1} of ${g.length}: ${HW_HELP_STAGES[depth]}.</b> ${esc(g[depth])}`;sc.helpDepth=depth+1;}
+  else {exampleOpen=true;cur.exampleShown=true;exStep=0;exAll=false;exSub={};sc.msg='You have the five help steps. You can keep testing your own work, take a break, or see how a different problem works below.';}
   save();render();
 }
 
 function hwWalterGuide(ctx){ return hwHelpLadder(ctx); }
-function hwWalterEligible(){ return !!(cur && cur.hw && mode==='hw:check' && (phase==='q'||(phase==='wt' && sc && sc.state==='open'))); }
+function hwWalterEligible(){ return !!(cur && !onrampWaiting() && (phase==='q'||(phase==='wt' && sc && sc.state==='open'))); }
 function hwWalterContext(){
   const c=phase==='wt'?cur.steps[stepIdx]?.check:cur.pre?.check;
   const key=phase==='wt'?`step:${stepIdx}:${plain(c?.q||'')}`:cur.ws&&ws?`box:${ws.sel}`:cur.pre?`pre:${cur.pre.comp}`:'problem';
-  const target=phase==='wt'?'This walkthrough step':cur.ws&&ws?`Selected ${String(ws.sel).startsWith('c')?'carry box':'box'}: ${WHOLE_PLACES[+(ws.sel||'t-0').split('-')[1]]||'place value'}`:cur.pre?'The first-step card':'This homework problem';
+  const target=phase==='wt'?'This walkthrough step':cur.ws&&ws?`Selected ${String(ws.sel).startsWith('c')?'carry box':'box'}: ${WHOLE_PLACES[+(ws.sel||'t-0').split('-')[1]]||'place value'}`:cur.pre?'The first-step card':'This problem';
   return {key,target,c,comp:typeof c?.comp==='string'?c.comp:phase==='q'&&cur.pre?cur.pre.comp:'',q:plain(c?.q||'')};
 }
-function hwWalterBaseGuide(ctx){
-  const sk=cur.skill,v=cur.meta?.variant;
-  if(phase==='q'&&cur.ws&&ws){ const row=String(ws.sel).split('-')[0];
+function hwWalterBaseGuide(ctx,p=cur,at=phase,workspace=ws){
+  const sk=p.skill,v=p.meta?.variant;
+  if(at==='q'&&p.ws&&workspace){ const row=String(workspace.sel).split('-')[0];
     if(row.startsWith('c'))return ['Use the carry from the column you just worked. Put full tens one place left.','A carry keeps the same value when it changes places; it is not another multiplication result.','Work out the previous column on scratch paper. Separate its full tens and leftover ones; put the full tens in this carry box.'];
-    if(row==='t'&&cur.meta.b>=10)return ['Add the partial-product digits in this column, including an incoming addition carry.','The two product rows account for different parts of the multiplier. Their values are added together.','Copy this column from both product rows onto scratch paper. Add them and any addition carry; place the leftover ones here and full tens left.'];
-    if(row==='r1'&&String(ws.sel).endsWith('-0'))return ['Check the place value of the multiplier digit for this row.','The second row multiplies by tens. Its products begin one place left of the first row.','Point to the tens digit in the multiplier. Begin its multiplication row in the tens place, keeping the empty ones place as a zero.'];
+    if(row==='t'&&p.meta.b>=10)return ['Add the partial-product digits in this column, including an incoming addition carry.','The two product rows account for different parts of the multiplier. Their values are added together.','Copy this column from both product rows onto scratch paper. Add them and any addition carry; place the leftover ones here and full tens left.'];
+    if(row==='r1'&&String(workspace.sel).endsWith('-0'))return ['Check the place value of the multiplier digit for this row.','The second row multiplies by tens. Its products begin one place left of the first row.','Point to the tens digit in the multiplier. Begin its multiplication row in the tens place, keeping the empty ones place as a zero.'];
     return ['Multiply the top digit for this column by this row’s multiplier digit; include any incoming carry.','Each product belongs to its place value. Full tens move left, and leftover ones stay in this column.','Copy the current digits to scratch paper. Multiply, add any incoming carry, and separate the total into full tens and leftover ones.'];
   }
   const comp=ctx.comp,q=ctx.q;
-  if(phase==='wt'&&sk==='addsub'&&/How many decimal digits/i.test(q))return ['Count the decimal places in each number before adding any zeros.','Trailing zeros keep a decimal’s value unchanged and let matching units line up.','Find the number with the most decimal places. Use that count for every row, filling shorter decimal parts with zeros.'];
-  if(phase==='wt'&&sk==='addsub'&&/What digit goes/i.test(q))return cur.meta.op==='+'?['Work only in the column named on the current card. Include any incoming carry.','Matching place-value units add together. A full group of ten becomes one unit to the left.','Copy the current column to scratch paper, add its digits and carry, and separate full tens from leftover ones before entering this digit.']:['Work only in the column named on the current card. Check whether the top has enough units to subtract.','An exchange supplies smaller units without changing the starting value; the neighboring place must change too.','Copy the current column to scratch paper. If needed, exchange from a place to the left, update both counts, then subtract in this column.'];
-  if(phase==='wt'&&comp==='unit')return ['Read the unit named on the current card before changing how the number is written.','A whole can be expressed in tenths or hundredths without changing its value. Both division amounts need matching units.','Draw a place-value chart on scratch paper. Exchange whole units into the unit requested, include the existing fractional units, and count the total in that unit.'];
-  if(phase==='wt'&&/sections.*area model/i.test(q))return ['Count the parts on each side of the rectangle.','Every part on one side meets every part on the other side, making a separate section.','Draw the partition lines on scratch paper. Count the rows and columns of sections, then work out how many sections there are.'];
-  if(phase==='wt'&&sk==='multiply'&&/second partial product/i.test(q))return ['Use the tens part of the multiplier for the second product row.','This row multiplies by tens, so its digits begin one place left of the ones row.','Multiply the top number by the tens digit on scratch paper. Use the digit’s tens value when placing that product in the row.'];
-  if(phase==='wt'&&sk==='multiply'&&comp==='rows')return ['Work on the product row or sections named by this card.','Each partial product uses one part of the multiplier and accounts for that part of the whole product.','Point to the multiplier part for this row. Multiply it by each matching part of the other factor, then add only the sections that belong to this row.'];
-  if(phase==='wt'&&(comp==='add-partials'||comp==='sections'||/Now you finish/i.test(q))){
+  if(at==='wt'&&sk==='addsub'&&/How many decimal digits/i.test(q))return ['Count the decimal places in each number before adding any zeros.','Trailing zeros keep a decimal’s value unchanged and let matching units line up.','Find the number with the most decimal places. Use that count for every row, filling shorter decimal parts with zeros.'];
+  if(at==='wt'&&sk==='addsub'&&/What digit goes/i.test(q))return p.meta.op==='+'?['Work only in the column named on the current card. Include any incoming carry.','Matching place-value units add together. A full group of ten becomes one unit to the left.','Copy the current column to scratch paper, add its digits and carry, and separate full tens from leftover ones before entering this digit.']:['Work only in the column named on the current card. Check whether the top has enough units to subtract.','An exchange supplies smaller units without changing the starting value; the neighboring place must change too.','Copy the current column to scratch paper. If needed, exchange from a place to the left, update both counts, then subtract in this column.'];
+  if(at==='wt'&&comp==='unit')return ['Read the unit named on the current card before changing how the number is written.','A whole can be expressed in tenths or hundredths without changing its value. Both division amounts need matching units.','Draw a place-value chart on scratch paper. Exchange whole units into the unit requested, include the existing fractional units, and count the total in that unit.'];
+  if(at==='wt'&&/sections.*area model/i.test(q))return ['Count the parts on each side of the rectangle.','Every part on one side meets every part on the other side, making a separate section.','Draw the partition lines on scratch paper. Count the rows and columns of sections, then work out how many sections there are.'];
+  if(at==='wt'&&sk==='multiply'&&/second partial product/i.test(q))return ['Use the tens part of the multiplier for the second product row.','This row multiplies by tens, so its digits begin one place left of the ones row.','Multiply the top number by the tens digit on scratch paper. Use the digit’s tens value when placing that product in the row.'];
+  if(at==='wt'&&sk==='multiply'&&comp==='rows')return ['Work on the product row or sections named by this card.','Each partial product uses one part of the multiplier and accounts for that part of the whole product.','Point to the multiplier part for this row. Multiply it by each matching part of the other factor, then add only the sections that belong to this row.'];
+  if(at==='wt'&&(comp==='add-partials'||comp==='sections'||/Now you finish/i.test(q))){
     if(sk==='divide')return ['Add the accepted partial quotients or band widths.','Widths count groups; products count amounts used. The quotient is the total group count.','Check that no amount remains. List every accepted group count on scratch paper, add them, and check by multiplying the total by the divisor.'];
     if(sk==='multiply'||sk==='decmul')return ['Add every completed partial product once.','The sections or rows represent different parts of the same multiplication. Their values combine to make the full product.','List the completed products with matching places lined up. Add them, handle any carry, and compare the result’s size with the original factors.'];
     if(sk==='addsub')return ['Read the value of the completed columns with the decimal point in place.','Each digit counts units of its column; the decimal point separates whole units from fractional units.','Check the column headings and exchanges. Write the digits in order, place the decimal point after the ones, and check the answer’s size.'];
   }
-  if(phase==='wt'&&sk==='multiply'&&comp==='fact')return ['Use a multiplication fact you know, then adjust by equal groups.','Adding another equal group increases the product by the size of that group.','Choose an easier nearby fact on scratch paper. Add or remove equal groups until you reach the multiplication on the card.'];
-  if(phase==='wt'&&comp==='regroup')return ['Separate the column total into full tens and leftover ones.','Full tens have the same value as units one place left. Leftover ones stay in the current place.','Work out the column total, including its carry. Mark the leftover ones in this column and move the full tens one place left.'];
-  if(phase==='wt'&&sk==='divide'&&/left|remain|subtract|take away/i.test(q))return ['Subtract the amount used by the current group or band from the previous amount left.','A band’s width counts groups; its product is the amount used. Only that product is subtracted.','On scratch paper, copy the previous amount left and the current product. Subtract, then compare your remainder with the divisor.'];
-  if(phase==='wt'&&sk==='divide'&&/×|times|product|groups of/i.test(q))return ['Multiply the candidate group count by the divisor before choosing it.','A group count tells how many equal groups; the product tells how much those groups use.','Work out each candidate product on scratch paper. Compare it with the amount left, and use a group count that fits. If the card asks for the biggest friendly count, compare all the fitting choices.'];
+  if(at==='wt'&&sk==='multiply'&&comp==='fact')return ['Use a multiplication fact you know, then adjust by equal groups.','Adding another equal group increases the product by the size of that group.','Choose an easier nearby fact on scratch paper. Add or remove equal groups until you reach the multiplication on the card.'];
+  if(at==='wt'&&comp==='regroup')return ['Separate the column total into full tens and leftover ones.','Full tens have the same value as units one place left. Leftover ones stay in the current place.','Work out the column total, including its carry. Mark the leftover ones in this column and move the full tens one place left.'];
+  if(at==='wt'&&sk==='divide'&&/left|remain|subtract|take away/i.test(q))return ['Subtract the amount used by the current group or band from the previous amount left.','A band’s width counts groups; its product is the amount used. Only that product is subtracted.','On scratch paper, copy the previous amount left and the current product. Subtract, then compare your remainder with the divisor.'];
+  if(at==='wt'&&sk==='divide'&&/×|times|product|groups of/i.test(q))return ['Multiply the candidate group count by the divisor before choosing it.','A group count tells how many equal groups; the product tells how much those groups use.','Work out each candidate product on scratch paper. Compare it with the amount left, and use a group count that fits. If the card asks for the biggest friendly count, compare all the fitting choices.'];
   const guides={
     standard:['Separate the whole-number words from the decimal words.','The decimal place named at the end tells what units the decimal digits count.','Write the whole-number groups first. Put the decimal point after the ones, then place the decimal digits in the named units.'],
     expanded:['Read the value of each digit in its own place.','Expanded form adds the place-value parts to make the original number.','Label the places on scratch paper. Write a separate value for each nonzero digit, then join those parts with addition.'],
@@ -5949,6 +5954,17 @@ function hwWalterBaseGuide(ctx){
     decdiv:v==='measuring'?['Count how many groups the size of the divisor fit into the dividend.','The quotient counts groups; it is different from the amount in each group.','Express both amounts in matching units. Count equal groups without changing their size, then check by multiplying the group count by the divisor.']:['Share each place-value amount equally among the groups.','If a place cannot be shared evenly, exchange its leftover units for smaller equal-value units.','Share the largest place first. Exchange any leftover units into the next place, continue sharing, and check that all groups together make the dividend.'],
     compare:['Compare matching places from the largest place down.','The first place with different digits decides the order; trailing decimal zeros do not change a value.','Line up the decimal points on scratch paper. Compare one matching column at a time, then choose the relation the question asks for.']
   };
+  guides.wholepv=guides.placevalue;guides.tenths=guides.placevalue;guides.factors=guides.primes;
+  guides.fractions=['Name the units in the fractions before choosing a calculation.','Equivalent fractions name the same amount with different-sized parts. Operations must keep the part sizes connected.','Use equal partitions or equivalent fractions on scratch paper. Work out the requested operation, then check with the original amounts.'];
+  guides.fracbasics=['Name the whole and the equal parts before working with the fraction.','The denominator describes the size of each equal part; the numerator counts those parts.','Draw equal partitions on scratch paper. Mark the amount requested and connect the drawing to your fraction.'];
+  guides.facts=['Choose a fact you know or an equal-groups drawing to work out this fact.','Multiplication combines equal groups. Division asks for a group size or group count that matches the same product.','Choose your own starting fact. Add or remove equal groups, or test a missing factor by multiplying it back.'];
+  if(sk==='facts'){
+    const plans={ten:['Use place value to count groups of ten.','A group of ten is one ten; changing the unit does not change its value.','Name the groups of ten, then write their value using matching places.'],double2:['Use an equal-groups drawing or a double.','Two equal groups can be combined by adding the same amount to itself.','Write the equal addends, work out the sum, and check against your drawing.'],half10:['Choose how to use a times-ten fact to find half as many groups.','Five groups are half of ten equal groups.','Calculate the times-ten fact yourself, find half its value, and check the group count.'],near10:['Choose a times-ten fact, then decide how many equal groups to remove.','Removing groups from ten groups keeps each group the same size.','Calculate your starting fact, subtract the value of the removed groups, and check the remaining group count.'],five:['Choose a times-five fact and identify the additional equal groups.','The starting groups and additional groups together must match the factor.','Calculate both parts yourself, combine them, and check every group is included once.'],double:['Choose a smaller fact you can double.','Doubling the number of equal groups doubles their total.','Work out the smaller fact, double its product, and check by counting groups.'],dd:['Choose how to build a double of a double.','Doubling twice makes four equal groups.','Calculate the first double, double it again, and compare with an equal-groups drawing.']};
+    if(plans[p.meta?.kind])guides.facts=plans[p.meta.kind];
+    if(p.meta?.op==='÷')guides.facts=['Choose an equal-sharing drawing or a multiplication fact with a missing factor.','Division and multiplication describe the same equal groups.','Test your proposed group size or count by multiplication. Check that all groups account for the original amount.'];
+  }
+
+  guides.twostep=['Identify what the story asks and choose which quantity you need first.','The first result becomes a quantity in the next operation. Its units must still match what the story describes.','Write your own first expression and calculate it. Label the result, then use it in the next expression and check against the story.'];
   if(sk==='words')return guides.standard;
   return guides[sk]||['Read exactly what this step asks you to find.','Keep the quantities and units connected to the operation on the card.','Copy the current question to scratch paper. Work out one part at a time, check the units, and enter your result yourself.'];
 }
@@ -5960,15 +5976,21 @@ function hwWalterQuestions(ctx){ const g=hwWalterGuide(ctx); return [
 function hwWalterHTML(){ if(!hwWalterEligible())return ''; const ctx=hwWalterContext();
   let st=cur.hwWalter;if(!st||st.context!==ctx.key)st=cur.hwWalter={context:ctx.key,open:false,choice:null};
   const qs=hwWalterQuestions(ctx),picked=st.choice&&qs.find(x=>x.id===st.choice.id),depth=picked?st.choice.depth:0;
-  return `<div class="lpwalter" id="hwwalter"><button type="button" class="btn quiet" id="hwask" aria-expanded="${!!st.open}" aria-controls="hwaskpanel">Ask Walter</button>${st.open?`<section id="hwaskpanel" aria-label="Ask Walter homework help"><p><b>${esc(ctx.target)}</b></p><p>What would help?</p><div class="actions">${qs.map(x=>`<button type="button" class="btn quiet small" data-hw-walter="${x.id}" aria-pressed="${picked?.id===x.id}">${esc(x.label)}</button>`).join('')}</div>${picked?`<div id="hwaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('work',picked.texts[depth],true)}</div><p class="muted">Help ${depth+1} of ${picked.texts.length}: ${HW_HELP_STAGES[depth]}.</p>${depth<picked.texts.length-1?`<button type="button" class="btn quiet small" id="hwaskmore">Next help step</button>`:'<p class="muted">Keep testing your work, or take a break. You can also choose a different example.</p>'}`:''}<button type="button" class="btn quiet small" id="hwaskreturn">Back to my work</button></section>`:''}</div>`;
+  return `<div class="lpwalter" id="hwwalter"><button type="button" class="btn quiet" id="hwask" aria-expanded="${!!st.open}" aria-controls="hwaskpanel">Ask Walter</button>${st.open?`<section id="hwaskpanel" aria-label="Ask Walter step help"><p><b>${esc(ctx.target)}</b></p><p>What would help?</p><div class="actions">${qs.map(x=>`<button type="button" class="btn quiet small" data-hw-walter="${x.id}" aria-pressed="${picked?.id===x.id}">${esc(x.label)}</button>`).join('')}</div>${picked?`<div id="hwaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('work',picked.texts[depth],true)}</div><p class="muted">Help ${depth+1} of ${picked.texts.length}: ${HW_HELP_STAGES[depth]}.</p>${depth<picked.texts.length-1?`<button type="button" class="btn quiet small" id="hwaskmore">Next help step</button>`:'<p class="muted">Keep testing your work, or take a break. You can also choose a different example.</p>'}`:''}<button type="button" class="btn quiet small" id="hwaskreturn">Back to my work</button></section>`:''}</div>`;
+}
+function hwRecordHelp(ctx,id,type,depth){
+  cur.walterHelp=cur.walterHelp||[];
+  if(!cur.walterHelp.some(e=>e.context===ctx.key&&e.id===id&&e.depth===depth)){
+    cur.walterSession=cur.walterSession||`${TAB_ID}:${Date.now()}:${Math.random()}`;
+    const event={delivery:`${cur.walterSession}:${cur.walterHelp.length}`,context:ctx.key,id,type:type,depth,phase,tries:phase==='wt'?sc.tries:0,t:Date.now(),sk:cur.skill};cur.walterHelp.push(event);
+    const store=cur.hw?'homeworkWalter':'practiceWalter';S[store]=Array.isArray(S[store])?S[store]:[];S[store].push({...event});S[store]=S[store].slice(-200);
+  }
+  if(missEntry)missEntry.walterHelp=cur.walterHelp.map(e=>({...e}));
+  if(S.pendingQ){S.pendingQ.studied=true;S.pendingQ.engaged=true;S.pendingQ.walterHelp=cur.walterHelp.map(e=>({...e}));}
 }
 function hwWalterDeliver(id,depth){ if(!hwWalterEligible())return;const ctx=hwWalterContext(),q=hwWalterQuestions(ctx).find(x=>x.id===id);if(!q)return;
   depth=Math.max(0,Math.min(q.texts.length-1,depth|0));const st=cur.hwWalter;cur.walterHelp=cur.walterHelp||[];
-  if(!cur.walterHelp.some(e=>e.context===ctx.key&&e.id===id&&e.depth===depth)){
-    cur.walterSession=cur.walterSession||`${TAB_ID}:${Date.now()}:${Math.random()}`;
-    const event={delivery:`${cur.walterSession}:${cur.walterHelp.length}`,context:ctx.key,id,type:q.type,depth,phase,tries:phase==='wt'?sc.tries:0,t:Date.now(),sk:cur.skill};cur.walterHelp.push(event);
-    S.homeworkWalter=Array.isArray(S.homeworkWalter)?S.homeworkWalter:[];S.homeworkWalter.push({...event});S.homeworkWalter=S.homeworkWalter.slice(-200);
-  }
+  hwRecordHelp(ctx,id,q.type,depth);
   st.open=true;st.choice={id,depth};cur.studied=true;if(phase==='wt')sc.helped=true;
   if(missEntry)missEntry.walterHelp=cur.walterHelp.map(e=>({...e}));
   if(S.pendingQ){ S.pendingQ.studied=true;S.pendingQ.engaged=true;S.pendingQ.walterHelp=cur.walterHelp.map(e=>({...e})); }
@@ -5982,7 +6004,9 @@ function hwWalterBind(){ const q=id=>app.querySelector('#'+id),keep=()=>{const a
   if(q('hwaskreturn'))q('hwaskreturn').onclick=()=>{keep();cur.hwWalter.open=false;render();focusFirst();};
 }
 function hwWalterReportHTML(){ const deliveries=Array.isArray(S.homeworkWalter)?S.homeworkWalter:[];
-  return deliveries.length?`<div class="card"><h2 style="margin-top:0">Homework: Ask Walter</h2><p>${deliveries.length} distinct help ${deliveries.length===1?'delivery':'deliveries'} in recent saved work (up to the latest 200). Opening the question menu is not counted as help. Replies are recorded by question, depth, and active step, including unfinished walkthroughs. Work with replies is practice with help; homework does not change levels.</p></div>`:''; }
+  const practice=Array.isArray(S.practiceWalter)?S.practiceWalter:[];
+  const report=practice.length?`<div class="card"><h2>Practice: Ask Walter and step help</h2><p>${practice.length} distinct help deliveries in recent saved work (up to the latest 200). Menu opening is not a help delivery. Work with delivered replies is supported practice and does not raise levels or clear an independent check.</p></div>`:"";
+  return report+(deliveries.length?`<div class="card"><h2 style="margin-top:0">Homework: Ask Walter</h2><p>${deliveries.length} distinct help ${deliveries.length===1?'delivery':'deliveries'} in recent saved work (up to the latest 200). Opening the question menu is not counted as help. Walter replies and walkthrough help are recorded by question, depth, and active step, including unfinished walkthroughs. Work with replies is practice with help; homework does not change levels.</p></div>`:''); }
 function hwWalterRefresh(){ const el=app.querySelector('#hwwalter');if(!el||!hwWalterEligible())return;
   if(cur.hwWalter?.context===hwWalterContext().key)return;el.outerHTML=hwWalterHTML();hwWalterBind();
 }
@@ -6058,7 +6082,7 @@ function bind(){
   if(q("next")) q("next").onclick=next;
   if(q("ortry")) q("ortry").onclick=()=>{ cur.onrampChoice="try"; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const f=app.querySelector("#ans:not([disabled])")||app.querySelector(".ws .cell.sel:not([disabled])")||app.querySelector("#opts .opt"); if(f) f.focus({preventScroll:true}); };
   if(q("orhelp")) q("orhelp").onclick=()=>{ cur.onrampChoice="help"; const inp=q("ans"); if(inp) lastAnswer=inp.value; if(cur.ws && ws && cur.hintPlan){ wsNextHint(); hintIdx=(cur.hintLog||[]).filter(h=>!h.done).length; } else cur.nudgeOpen=true; render(); }; /* her call; the attempt becomes "prompted" (a hint on the workspace) */
-  if(q("orshow")) q("orshow").onclick=()=>{ cur.onrampChoice="example"; exampleOpen=true; cur.studied=true; exStep=0; exAll=false; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const ex=app.querySelector("#example"); if(ex) ex.scrollIntoView({behavior:"smooth",block:"nearest"}); };
+  if(q("orshow")) q("orshow").onclick=()=>{ cur.onrampChoice="example"; exampleOpen=true; cur.studied=true; cur.exampleShown=true; exStep=0; exAll=false; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const ex=app.querySelector("#example"); if(ex) ex.scrollIntoView({behavior:"smooth",block:"nearest"}); };
   if(q("stretch")) q("stretch").onclick=()=>{ pendingStretch=cur.skill; next(); };
   if(q("nudge")) q("nudge").onclick=()=>{ cur.nudgeOpen=true; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); }; /* her call; the attempt becomes "prompted" */
   const toMine=()=>{ const f=app.querySelector("#cans:not([disabled])")||app.querySelector("#copts .opt:not([disabled])")||app.querySelector("#ans:not([disabled])")||app.querySelector(".ws .cell.sel:not([disabled])")||app.querySelector("#opts .opt")||app.querySelector("#check"); const pr=phase==="wt"?app.querySelector("#wt .step:last-child"):app.querySelector(".prompt"); if(pr && pr.scrollIntoView) pr.scrollIntoView({behavior:"smooth",block:"start"}); if(f) f.focus({preventScroll:true}); };
@@ -6067,7 +6091,7 @@ function bind(){
   app.querySelectorAll(".exsub").forEach(b=>b.onclick=()=>{ exSub[+b.dataset.i]=true; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); });
   if(q("exback")) q("exback").onclick=toMine;
   if(q("extry")) q("extry").onclick=()=>{ const inp=q("ans"); if(inp) lastAnswer=inp.value; exampleOpen=false; render(); toMine(); };
-  if(q("showexample")) q("showexample").onclick=()=>{ exampleOpen=!exampleOpen; if(exampleOpen){ cur.studied=true; exStep=0; exAll=false; exSub={}; } inlineErr=""; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const ex=app.querySelector("#example"); if(ex) ex.scrollIntoView({behavior:"smooth",block:"nearest"}); };
+  if(q("showexample")) q("showexample").onclick=()=>{ exampleOpen=!exampleOpen; if(exampleOpen){ cur.studied=true; cur.exampleShown=true; exStep=0; exAll=false; exSub={}; } inlineErr=""; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const ex=app.querySelector("#example"); if(ex) ex.scrollIntoView({behavior:"smooth",block:"nearest"}); };
   if(q("stopnow")) q("stopnow").onclick=()=>{ stopOfferedAt=sessionN; sessionDone=true; home(); };
   if(q("breaknow")) q("breaknow").onclick=()=>{ breakOfferedAt=sessionMissRun; sessionDone=true; save(); home(); };
   if(q("keepgoing")) q("keepgoing").onclick=()=>{ if(sessionMissRun>=2) breakOfferedAt=sessionMissRun; wtKeepGoing=true; render(); };
@@ -6209,7 +6233,7 @@ function submit(){
   // Fading supports (multiplication workspace): two clean successes in a row at this support level remove the next support; a fresh miss brings one back.
   if(cur.ws && stage==="fresh" && !cur.placement){ const sp=S.support, sw=S.supportWins;
     const qtext=plain(cur.prompt); S.supportRecent=Array.isArray(S.supportRecent)?S.supportRecent:[]; const distinct = !S.supportRecent.includes(qtext); // a problem seen in the last several is not new evidence for taking a tool away (alternating two memorized ones included)
-    if(ok && hintIdx===0 && distinct && !cur.reasonCaught){ S.supportRecent.push(qtext); /* v9.19: a total fixed after the "does that make sense?" note is not a clean success */ while(S.supportRecent.length>8) S.supportRecent.shift(); sw.multiply=(sw.multiply||0)+1;
+    if(ok && hintIdx===0 && !cur.studied && distinct && !cur.reasonCaught){ S.supportRecent.push(qtext); /* v9.19: a total fixed after the "does that make sense?" note is not a clean success */ while(S.supportRecent.length>8) S.supportRecent.shift(); sw.multiply=(sw.multiply||0)+1;
       // each tool comes off only after successes that exercised what it is for: the written-in 0 and labels need a two-row problem; the carry boxes need regrouping in a two-row problem
       const regroups = !!(cur.meta && cur.meta.regroup); const need = sp.multiply===1 ? regroups : true; // the coach line and labels fade on any two distinct clean successes; the carry boxes only after problems that actually regroup
       if(sw.multiply>=2 && sp.multiply>0 && need){ sp.multiply--; sw.multiply=0; lastPraise.push({big:true, t:`You have not needed ${SUPPORT_NAMES[sp.multiply+1]} lately, so next time it comes off. The page is getting closer to the real worksheet.`}); }
@@ -6240,11 +6264,11 @@ function submit(){
     if(wsGrade && wsGrade.comps && wsGrade.comps.includes("regroup") && ok){ noteComp(sk, "regroup", false, {lvl:cur.level, ctx:ctxOf(cur)}); lastPraise.push({t:`The product is right. One carry box needs a different number, so regrouping stays on your practice list.`}); }
   } else {
     S.run=0; if(cur.checkin && S.checkins){ delete S.checkins[cur.checkin]; entry.delayedMiss=1; } // a missed check-in: the weakness machinery takes over from here
-    const d=twoPoints ? {tag:"two-points", note:NOTES["two-points"]} : wsGrade ? {tag:COMP_TO_TAG[wsGrade.main]||wsGrade.main, note:NOTES[COMP_TO_TAG[wsGrade.main]]||""} : diag(raw); if(cur.hwPrepared)d.note=({alignment:'Check that matching units line up before you calculate.',regroup:'Check that each carry or exchange keeps the same value.', 'tens-zero':'Check the place value represented by the second product row.', 'missing-part':'Check that every accepted part contributes its group count to the total.',rows:'Check each partial product against the factor part it represents.'})[d.tag]||'Compare your written steps with the original operation and units. We can check the part that needs another look.';
+    const d=twoPoints ? {tag:"two-points", note:NOTES["two-points"]} : wsGrade ? {tag:COMP_TO_TAG[wsGrade.main]||wsGrade.main, note:NOTES[COMP_TO_TAG[wsGrade.main]]||""} : diag(raw); if(cur.adaptivePrepared)d.note=({alignment:'Check that matching units line up before you calculate.',regroup:'Check that each carry or exchange keeps the same value.', 'tens-zero':'Check the place value represented by the second product row.', 'first-part':'Your work found one part. There is one more step: check what the question asks you to find.', 'missing-part':'Check that every accepted part contributes its group count to the total.',rows:'Check each partial product against the factor part it represents.'})[d.tag]||'Compare your written steps with the original operation and units. We can check the part that needs another look.';
     cur.mistake=d; entry.tag=d.tag;
     // The miss opens (or re-opens) the components it points at: the workspace names them per cell; a single answer box is read from its mistake tag.
     for(const comp of (wsGrade && wsGrade.comps && wsGrade.comps.length) ? wsGrade.comps : compsOfMiss(sk, d.tag)) noteComp(sk, comp, false, {lvl:cur.placement?1:cur.level, ctx:clearableCtx(sk, comp, ctxOf(cur)), harder:!!cur.harder});
-    if(twoPoints && !cur.hwPrepared && !cur.twoPointsStep && cur.meta && cur.meta.x){ cur.twoPointsStep=true; const x=cur.meta.x, k=(x.d||"").length; const xx=padTo(x,Math.min(3,k+1));
+    if(twoPoints && !cur.adaptivePrepared && !cur.twoPointsStep && cur.meta && cur.meta.x){ cur.twoPointsStep=true; const x=cur.meta.x, k=(x.d||"").length; const xx=padTo(x,Math.min(3,k+1));
       cur.steps.unshift({t:`First, ${fmt(x)} and ${fmt(xx)} are the <b>same number</b>: a zero on the end of a decimal adds nothing. Compare them in the chart.`, charts:[x,xx], check:cm(`${fmt(xx)} is … ${fmt(x)}`, ["greater than","less than","equal to"], 2)}); }
     if(stage==="fresh") chain=1; else chain++;
     missEntry=pushLog(entry);
@@ -6257,7 +6281,7 @@ function submit(){
             if(st.row==="setup"){ stepRes[i]="skipped"; continue; }
             if(cur.meta.b<10){ if(st.place!==undefined && st.place<target.place){ stepRes[i]="skipped"; continue; } start=i; break; }
             if(st.row && rowOrder.indexOf(st.row)<rowOrder.indexOf(target.row)){ stepRes[i]="skipped"; continue; }
-            if(cur.hwPrepared&&st.row===target.row&&st.place!==undefined&&st.place<target.place){stepRes[i]="skipped";continue;}
+            if(cur.adaptivePrepared&&st.row===target.row&&st.place!==undefined&&st.place<target.place){stepRes[i]="skipped";continue;}
             if(st.row===target.row){ // open its column steps and skip the columns before the first wrong one
               if(Array.isArray(st.sub) && st.sub.length && !st.expanded){ st.expanded=true; if(st.tAfter) st.t=st.tAfter; cur.steps.splice(i,0,...st.sub.map(x=>({...x}))); expanded++; }
               let k=i; while(k<cur.steps.length && cur.steps[k]!==st && cur.steps[k].place!==undefined && cur.steps[k].place<target.place){ stepRes[k]="skipped"; k++; }
@@ -6388,7 +6412,7 @@ function factCue(aS, op, bS, ans, tries){
 }
 function cueFor(step, c, tries, yoursText){ return g1(cueForRaw(step, c, tries, yoursText)); }
 function cueForRaw(step, c, tries, yoursText){
-  if(cur?.hw&&mode==='hw:check')return hwHelpLadder(hwWalterContext())[Math.min(4,Math.max(0,tries-1))];
+  if(cur?.adaptivePrepared)return hwHelpLadder(hwWalterContext())[Math.min(4,Math.max(0,tries-1))];
   const own = Array.isArray(step.cues) ? step.cues[tries-1] : null; if(own) return own;
   const q=plain(c.q||""); const m=q.match(/^([\d.,]+)\s*([×+−÷])\s*([\d.,]+)\s*=\s*\?/); const fill=t=>{ if(!m) return t.replace(/\{[^}]+\}/g,"").replace(/\s+/g," ").trim(); const a=m[1], b=m[3], bn=parseAnswer(b); return t.replace(/\{a\}/g,a).replace(/\{b\}/g,b).replace(/\{op\}/g,m[2]).replace(/\{bm1\}/g,Number.isFinite(bn)?String(bn-1):"?").replace(/\{bp1\}/g,Number.isFinite(bn)?String(bn+1):"?"); };
   let comp=c.comp; if(typeof comp==="function") comp=null;
@@ -6451,7 +6475,7 @@ function checkStep(){
     wtSignals++; // v9.13: a wrong step entry is a struggle signal
     if(sc.tries>=3 && Array.isArray(st.rescue) && st.rescue.length && !st.rescueOpened){ expandRescue(st,"Let's work this out in smaller checked steps."); return; }
     const yoursText=c.type==="mc"?String((c.options||[])[sc.sel]):sc.val;
-    sc.msg=cur.hw&&mode==='hw:check'?`That check does not agree yet. ${esc(cueFor(st,c,Math.min(5,sc.tries),yoursText))}`:sc.tries<=2?`Not quite. ${cueFor(st,c,sc.tries,yoursText)}`:`That is still tricky. Try the calculation on scratch paper, or tap <b>See one like it</b> for a different worked example. You can take a break, too.`;
+    sc.msg=cur.adaptivePrepared?`That check does not agree yet. ${esc(cueFor(st,c,Math.min(5,sc.tries),yoursText))}`:sc.tries<=2?`Not quite. ${cueFor(st,c,sc.tries,yoursText)}`:`That is still tricky. Try the calculation on scratch paper, or tap <b>See one like it</b> for a different worked example. You can take a break, too.`;
     sc.val=""; sc.sel=-1; }
   finishStepCheck(c, stepIdx===cur.steps.length-1);
 }
@@ -6465,10 +6489,10 @@ function revealStepAnswer(st, c){ // the answer and its explanation together; th
 function homeworkNoReveal(){ return !!(cur && cur.hw); }
 function expandRescue(st,message){ st.rescueOpened=true; cur.steps.splice(stepIdx,0,...st.rescue.map(x=>({...x}))); expanded++; if(missEntry) missEntry.expanded=expanded;
   initStepCheck(); if(sc) sc.msg=message; save(); render(); const el=app.querySelectorAll("#wt .step"); if(el.length) el[el.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); }
-function stepHelpLabel(st, c){ if(cur?.hw&&mode==='hw:check')return (sc?.helpDepth||0)<5?((sc?.helpDepth||0)?'Next help step':'Help me'):'See one like it'; if(!sc) return "Help me"; if(Array.isArray(st.sub) && st.sub.length && !st.expanded) return "Help me"; if((sc.tries||0)>=2) return Array.isArray(st.rescue)&&st.rescue.length&&!st.rescueOpened?"Smaller steps":"See one like it"; return (sc.tries||0)===0 ? "Help me" : "Another clue"; }
+function stepHelpLabel(st, c){ if(cur?.adaptivePrepared)return (sc?.helpDepth||0)<5?((sc?.helpDepth||0)?'Next help step':'Help me'):'See one like it'; if(!sc) return "Help me"; if(Array.isArray(st.sub) && st.sub.length && !st.expanded) return "Help me"; if((sc.tries||0)>=2) return Array.isArray(st.rescue)&&st.rescue.length&&!st.rescueOpened?"Smaller steps":"See one like it"; return (sc.tries||0)===0 ? "Help me" : "Another clue"; }
 function stepHelp(){
   if(!sc || sc.state!=="open" || !(phase==="wt")) return;
-  if(cur.hw&&mode==='hw:check'){hwStepHelp();return;}
+  if(cur.adaptivePrepared){hwStepHelp();return;}
   const st=cur.steps[stepIdx], c=st.check, last=stepIdx===cur.steps.length-1;
   cur.helpTaps=(cur.helpTaps||0)+1; if(missEntry) missEntry.helpTaps=cur.helpTaps; wtSignals++;
   const inp=app.querySelector("#cans"); if(inp) sc.val=inp.value;
@@ -6480,7 +6504,7 @@ function stepHelp(){
   sc.tries=(sc.tries||0)+1; sc.helped=(sc.helped||0)+1;
   if(sc.tries>=3){
     if(Array.isArray(st.rescue) && st.rescue.length && !st.rescueOpened){ expandRescue(st,"Here are smaller steps. Work out each one, then return to this question."); return; }
-    if(!exampleOpen){ exampleOpen=true; cur.studied=true; exStep=0; exAll=false; exSub={}; }
+    if(!exampleOpen){ exampleOpen=true; cur.studied=true; cur.exampleShown=true; exStep=0; exAll=false; exSub={}; }
     sc.msg="This answer is still yours. See how a different problem works below, then try this step again."; save(); render(); const ex=app.querySelector("#example"); if(ex) ex.scrollIntoView({behavior:"smooth",block:"nearest"}); return; }
   sc.msg=`Here is a clue. ${cueFor(st,c,sc.tries,"")}`; save(); render();
   const cm=app.querySelector("#cmsg"); if(cm && cm.scrollIntoView) cm.scrollIntoView({behavior:"smooth",block:"nearest"});
@@ -7138,7 +7162,7 @@ function lpTrimEvents(events){ const out=Array.isArray(events)?events.slice(-LP_
   while(out.length&&encodeURIComponent(JSON.stringify(out)).replace(/%[A-F\d]{2}/g,"x").length>LP_EVENT_BYTES) out.shift(); return out; }
 function lpObserve(item,v,r){ if(item.phase==="model") return; const st=item.st, step=item.step, m=step.evidence||{};
   const values=(Array.isArray(v)?v:[v]).map(x=>x&&typeof x==="object"?JSON.stringify(x):String(x??""));
-  const ev={step:st.k,stepId:step.walter?.id||`${item.spec.kind}:${st.k}`,component:r.code==="regroup"?(m.row==="sum"?"addition-carry":"multiply-carry"):m.component||r.code||"checked-step",row:m.row||"",place:m.place||"",values,outcome:r.ok?"ok":r.fmt?"format":r.safe?"trial":"miss",code:r.code||"",field:Number.isInteger(r.badIndex)?r.badIndex:-1,
+  const ev={step:st.k,stepId:step.walter?.id||`${item.spec.kind}:${st.k}`,component:r.code==="regroup"?(m.row==="sum"?"addition-carry":"multiply-carry"):m.component||r.code||"checked-step",row:m.row||"",place:m.place||"",values,outcome:r.ok?(step.short==="Your trial count"?"trial":"ok"):r.fmt?"format":r.safe?"trial":"miss",code:r.code||"",field:Number.isInteger(r.badIndex)?r.badIndex:-1,
     support:st.answerPreviewed?"answer-confirmed":st.helps?"helped":["guided","repair"].includes(item.phase)?"guided":"checked",t:Date.now()};
   const all=[...(st.stepEvents||[]),ev]; st.stepEvents=lpTrimEvents(all); st.eventsTrimmed=(+st.eventsTrimmed||0)+all.length-st.stepEvents.length; }
 function lpEvidenceState(x){ return {sessions:Math.max(0,Math.floor(+x.sessions||0)),load:Math.max(1,Math.min(3,Math.round(+x.load||1))),due:Math.max(0,+x.due||0),last:Math.max(0,+x.last||0),checked:Math.max(0,+x.checked||0),checkClean:x.checkClean?1:0,
@@ -7176,11 +7200,11 @@ const lpShow=s=>String(s).replace(/\s*([+−×÷])\s*/g," $1 ").replace(/\(\s*/g
 // A spec: {title, prompt (HTML), init()->state, next(st)->step|null, visual(st,phase)->HTML, script:[values for the model], done(st)->HTML,
 // answer (final number, for the answer-only field), method (what "using the model" means, for the report)}.
 // A step: {id, prompt, short, input:{type, ...}, check(v, st)->{ok, msg, code, apply()}, help:[clues], why (model narration)}.
-function lpItemStart(item){ const sp=item.spec; item.st=Object.assign({k:0, helps:0, tries:0, codes:[], helpShown:[], stepEvents:[], eventsTrimmed:0, focusSupport:lp?.focusSupport||null, msg:"", msgKind:"", done:false, answerOnly:null, answerPreviewed:false, skipped:false, videoOpened:false, draft:null, badIndex:-1}, sp.init?sp.init():{}); item.step=sp.next(item.st); item.shown=0; }
+function lpItemStart(item){ const sp=item.spec; item.st=Object.assign({model:item.phase==="model", k:0, helps:0, tries:0, codes:[], helpShown:[], stepEvents:[], eventsTrimmed:0, focusSupport:lp?.focusSupport||null, msg:"", msgKind:"", done:false, answerOnly:null, answerPreviewed:false, skipped:false, videoOpened:false, draft:null, badIndex:-1}, sp.init?sp.init():{}); item.step=sp.next(item.st); lpPrepareStep(item); item.shown=0; }
 function lpApply(item, v){ const st=item.st, step=item.step; if(!step) return; const r=step.check(v, st)||{ok:false};
   lpObserve(item,v,r);
-  if(r.ok){ if(r.apply) r.apply(); st.k++; st.draft=null; st.badIndex=-1; st.walterOpen=false; st.walterChoice=null; st.msg=r.msg||""; st.msgKind="ok"; st.helpShown=[]; item.step=item.spec.next(st); if(!item.step){ st.done=true; } return true; }
-  if(item.phase!=="model" && !r.fmt){ if(r.safe){ if(r.code) st.codes.push(r.code); } else { st.tries++; if(r.code) st.codes.push(r.code); } } st.badIndex=Number.isInteger(r.badIndex)?r.badIndex:-1; st.msg=r.msg||"Not yet. Check that step and try again."; st.msgKind=r.safe?"":"no"; return false; }
+  if(r.ok){ if(r.apply) r.apply(); st.k++; st.draft=null; st.badIndex=-1; st.walterOpen=false; st.walterChoice=null; st.exampleNarr="";st.exampleNote=""; st.msg=r.msg||""; st.msgKind="ok"; st.helpShown=[]; item.step=item.spec.next(st); lpPrepareStep(item); if(!item.step){ st.done=true; } return true; }
+  if(item.phase!=="model" && !r.fmt){ if(r.safe){ if(r.code) st.codes.push(r.code); } else { st.tries++; if(r.code) st.codes.push(r.code); } } st.badIndex=Number.isInteger(r.badIndex)?r.badIndex:-1; st.msg=item.phase!=="model"&&!r.fmt ? `${st.badIndex>=0&&step.input?.labels?.[st.badIndex]?`Check ${lpPlain(step.input.labels[st.badIndex])}. `:""}${lpStrategyGuide(item)[2]}` : r.msg||"Not yet. Check that step and try again."; st.msgKind=r.safe?"":"no"; return false; }
 
 // ---- input widgets ----
 function lpInputHTML(step, st, locked){ const I=step.input||{type:"num"}, dis=locked?" disabled":"", draft=st.draft&&st.draft.k===st.k?st.draft.values:[];
@@ -7322,9 +7346,9 @@ function lpExplainHTML(){ const bp=lp.bp; return `<div class="card lpcard"><h2 s
   <p class="muted" style="font-size:14px">Say it out loud to a grown-up, or type it. A sentence start: <i>${esc(bp.explain[1])}</i></p>
   <label class="vh" for="lpexp">Your explanation</label><textarea id="lpexp" class="lpexp" maxlength="280" rows="3" placeholder="${esc(bp.explain[1])}"></textarea>
   <div class="inline-err" id="lpexpmsg" role="status" aria-live="polite"></div><div class="actions"><button class="btn primary" id="lpexpsave">Save what I typed</button><button class="btn quiet" id="lpexpsaid">I said it aloud</button><button class="btn quiet" id="lpexpskip">Skip</button></div></div>`; }
-// Ask Walter stage 1: authored relationships only; never reuse step.why or auto.
-function lpWalterEligible(it){ return !!(lp && lp.focus && lp.id==="U2L8" && it.spec?.kind==="algorithm" && it.step?.walter && !it.st.done && ["guided","independent","delayed"].includes(it.phase)); }
-function lpWalterQuestions(it){
+// Shared lesson tutoring: model narration stays explicit; pending help never reads why or auto.
+function lpWalterEligible(it){ return !!(it?.spec && it.step && !it.st.done && ["guided","repair","independent","delayed","mixed"].includes(it.phase)); }
+function lpWalterAlgorithmQuestions(it){
   const w=it.step.walter, last=w.last;
   const place={id:"place",label:"Which place am I working in?",type:"explanation",texts:["Look at the column named above the box. Keep each digit in its own place.","Each place to the left is worth ten times as much. Use the column labels to keep the places lined up.","Point to the current column, then the column immediately to its left. Compare what each place is worth."]};
   const carry={id:"carry",label:"What do I do with the carry?",type:"clue",texts:[last?"Include any carry from the previous column. This is the last column, so write the remaining digits together.":"Include any carry from the previous column. Separate the ones from the full tens.",last?"Work out this column's total, including its incoming carry. There is no further column to split it into.":"The ones stay in this column. Full tens belong one place to the left.",last?"Use scratch paper: calculate the column, include its incoming carry, then write the remaining digits.":"Use scratch paper to separate the total into full tens and leftover ones. Put each part in its place."]};
@@ -7334,22 +7358,59 @@ function lpWalterQuestions(it){
   if(it.st.focusSupport==="multiply-carry"&&w.role==="column"&&!last){ const model={id:"carry-model",label:"Show the places",type:"representation",texts:["Separate this column's total into full tens and leftover ones. Fill the places on your scratch paper.","Each full ten moves one place left. The leftover ones stay in the current column.","Work out the column total first. Use the empty places to sort full tens and leftover ones, then return to your entries."]}; return it.st.badIndex===1?[carry,model,start]:[model,start,carry]; }
   return it.st.badIndex===1 ? [carry,start,place] : [start,carry,place];
 }
+function lpStrategyGuide(it){
+  const st=it.st,kind=it.spec.kind,step=it.step;
+  if(kind==='areadiv'&&st.stage!=='w')return hwDivisionGuide(({q:'trial',p:'product',fit:'fit',sub:'subtract',sum:'total'})[st.stage]||'total');
+  const id=it.lid||lp?.id,sk=LP_LESSONS[id]?.skill||({compat:'divide',tree:'primes',order:'orderops',parens:'orderops',build:'expressions',story:'expressions',reverse:'expressions',areamul:'multiply',distmul:'multiply',rows:'multiply',algorithm:'multiply',contrast:'orderops',compare:'expressions'})[kind]||'addsub';
+  let g=hwWalterBaseGuide({comp:step.evidence?.component||'',q:lpPlain(step.prompt||'')},{skill:sk,meta:{variant:kind==='decimal-line'?'numberline':kind==='areamul'?'area':kind==='distmul'?'distributive':kind}},'wt',null);
+  if(kind==='compat'&&st.stage==='split')g=['Choose your own way to split the amount into parts the divisor divides evenly.','All parts must account for the original dividend; each part gets its own group count.','Test a part you choose by division or multiplication on scratch paper. Check that it fits what remains before entering it.'];
+  if(kind==='areadiv'&&st.stage==='w')g=['Decide which quantity describes the side of the band.','A width counts groups; the area counts the amount those groups use.','Label the side and inside of your band on scratch paper. Match each quantity to what it measures.'];
+  if(step.input?.type==='group')g=['Choose a group to test before moving any parentheses.','Parentheses make the selected group act as one quantity in the rest of the expression.','Calculate your selected group, then finish the remaining operations. Compare your result with the target and revise the grouping if needed.'];
+  if(step.input?.type==='tiles')g=['Choose which words name a group and which operation acts on that group.','An expression preserves the story\'s quantities and their order; its structure matters as well as its value.','Build your proposed expression. Read it back as words and check each quantity and operation against the original phrase.'];
+  return [g[0],g[1],g[2],'Test your proposed result with a reverse operation, another calculation, or a model that matches the original units. Explain whether the checks agree.','Find the first step where your checks disagree. Revise your calculation or representation and repeat the check before entering your result.'];
+}
+function lpWalterQuestions(it){
+  if(it.step.walter){return lpWalterAlgorithmQuestions(it).map(q=>({...q,texts:[...q.texts,'Check this column with another calculation. Does the written digit and any carry preserve the total value?','If the checks disagree, revise this column before moving on. Keep the work you have already checked.']}));}
+  const g=lpStrategyGuide(it);return [
+    {id:'start',label:'How do I start this step?',type:'clue',texts:g},
+    {id:'meaning',label:'Why does this method work?',type:'explanation',texts:[g[0],g[1],g[2],g[3],g[4]]},
+    {id:'check',label:'How can I test my plan?',type:'checking',texts:['Choose a check that matches the current step and its units.',g[1],g[2],g[3],g[4]]}
+  ];
+}
+function lpPrepareStep(it){
+  if(!lpWalterEligible(it))return;
+  it.step={...it.step,help:lpStrategyGuide(it)};
+}
+function lpDifferentExample(it){
+  const bp=LP_LESSONS[it.lid||lp.id];if(!bp)return;
+  let sp=bp.model();
+  const different=s=>lpFingerprint(s)!==lpFingerprint(it.spec)&&(s.answer===undefined||it.spec.answer===undefined||s.answer!==it.spec.answer);
+  for(let n=0;n<8&&!different(sp);n++)sp=bp.make(it.load||lp.load,'model',n%2);
+  if(!different(sp)){it.st.exampleNote='A different example is not available here. Keep testing your plan, or pause.';return;}
+  const demo={phase:'model',spec:sp};lpItemStart(demo);const lines=[];let n=0;
+  while(demo.step&&n<160){const step=demo.step,script=sp.script?.[n++],v=script==='@'||script===undefined?step.auto:script;
+    if(v===undefined){it.st.exampleNote='This example needs a learner choice. Keep testing your plan, or pause.';return;}
+    const yes=lpApply(demo,v);lines.push(`${step.prompt}<br><b>${yes?'Checked':'Trial'}:</b> ${esc(step.showVal?step.showVal(v):Array.isArray(v)?v.join(', '):typeof v==='object'?'prime':String(v))}${step.why&&yes?`<br>${step.why}`:''}`);
+  }
+  if(!demo.st.done)return;
+  it.st.exampleNarr=`<section class="lpclue" aria-label="Different worked example"><h3>Different worked example: ${esc(lpPlain(sp.title))}</h3><p>This is help. Keep your own problem and draft above.</p><ol>${lines.map(t=>`<li>${t}</li>`).join('')}</ol></section>`;
+}
 function lpCarryModelHTML(){ return `<div class="lp-carry-model" role="group" aria-label="Place-value support with empty places"><div><b>One place left</b><span>Full tens</span><span class="lp-empty-place" aria-label="Empty full-tens place">□</span></div><div><b>Current column</b><span>Leftover ones</span><span class="lp-empty-place" aria-label="Empty leftover-ones place">□</span></div></div>`; }
 function lpWalterHTML(it){ if(!lpWalterEligible(it)) return "";
   const st=it.st, selected=st.walterChoice?.step===st.k?st.walterChoice:null, qs=lpWalterQuestions(it), picked=selected&&qs.find(x=>x.id===selected.id);
-  const depth=picked?Math.min(2,selected.depth||0):0;
-  return `<div class="lpwalter"><button type="button" class="btn quiet" id="lpask" aria-expanded="${!!st.walterOpen}" aria-controls="lpaskpanel">Ask Walter</button>${st.walterOpen?`<section id="lpaskpanel" aria-label="Ask Walter help"><p><b>What would help with this step?</b></p><div class="actions">${qs.map(x=>`<button type="button" class="btn quiet small" data-walter-question="${x.id}" aria-pressed="${picked?.id===x.id}">${esc(x.label)}</button>`).join("")}</div>${picked?`<div id="lpaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote("work",picked.texts[depth],true)}${picked.id==="carry-model"?lpCarryModelHTML():""}</div>${depth<2?`<button type="button" class="btn quiet small" id="lpaskmore">${depth===0?"Explain the relationship":"Break it into actions"}</button>`:`<p class="muted">Try that on your work, or pause when you need a break.</p>`}<button type="button" class="btn quiet small" id="lpaskreturn">Back to my step</button>`:""}</section>`:""}</div>`;
+  const depth=picked?Math.min(picked.texts.length-1,selected.depth||0):0;
+  return `<div class="lpwalter"><button type="button" class="btn quiet" id="lpask" aria-expanded="${!!st.walterOpen}" aria-controls="lpaskpanel">Ask Walter</button>${st.walterOpen?`<section id="lpaskpanel" aria-label="Ask Walter help"><p><b>What would help with this step?</b></p><div class="actions">${qs.map(x=>`<button type="button" class="btn quiet small" data-walter-question="${x.id}" aria-pressed="${picked?.id===x.id}">${esc(x.label)}</button>`).join("")}</div>${picked?`<div id="lpaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote("work",picked.texts[depth],true)}${picked.id==="carry-model"?lpCarryModelHTML():""}</div><p class="muted">Help ${depth+1} of ${picked.texts.length}: ${HW_HELP_STAGES[depth]}.</p>${depth<picked.texts.length-1?`<button type="button" class="btn quiet small" id="lpaskmore">Next help step</button>`:`<p class="muted">Keep testing your plan, or pause.</p><button type="button" class="btn quiet small" id="lpother">See a different worked example</button>`}<button type="button" class="btn quiet small" id="lpaskreturn">Back to my step</button>`:""}</section>`:""}</div>`;
 }
 function lpWalterDeliver(it,id,depth){ if(!lpWalterEligible(it)) return;
   const st=it.st, q=lpWalterQuestions(it).find(x=>x.id===id); if(!q) return;
-  depth=Math.max(0,Math.min(2,depth|0)); st.walterEvents=Array.isArray(st.walterEvents)?st.walterEvents:[];
+  depth=Math.max(0,Math.min(q.texts.length-1,depth|0)); st.walterEvents=Array.isArray(st.walterEvents)?st.walterEvents:[];
   if(!st.walterEvents.some(e=>e.step===st.k && e.id===id && e.depth===depth)){
-    st.walterEvents.push({step:st.k,stepId:it.step.walter.id,id,type:q.type,depth,tries:+st.tries||0}); st.helps++;
-    if(it.phase==="delayed" && !st.walterProbe) st.walterProbe=st.tries?"miss-before-help":"help-before-miss";
+    st.walterEvents.push({step:st.k,stepId:it.step.walter?.id||`${it.spec.kind}:${st.k}:${st.stage||""}`,id,type:q.type,depth,tries:+st.tries||0}); st.helps++;
+    if(["delayed","mixed"].includes(it.phase) && !st.walterProbe) st.walterProbe=st.tries?"miss-before-help":"help-before-miss";
   }
   st.walterChoice={step:st.k,id,depth}; st.walterOpen=true;
 }
-function lpWorkHTML(it){ const sp=it.spec, st=it.st, ph=it.phase, model=ph==="model", own=ph==="independent"||ph==="delayed"||ph==="mixed";
+function lpWorkHTML(it){ lpPrepareStep(it); const sp=it.spec, st=it.st, ph=it.phase, model=ph==="model", own=ph==="independent"||ph==="delayed"||ph==="mixed";
   const step=it.step; const visual=sp.visual?sp.visual(st, ph):"";
   const intro = own&&(st.helps||st.walterProbe) ? `<p class="lpmodel-note"><b>Practice with help.</b> Try the step, then check back with another problem later.</p>` : own&&it.repeated ? `<p class="lpmodel-note"><b>Practice repeat.</b> These numbers have appeared before. Work through the steps again.</p>` : ph==="repair" ? `<p class="lpmodel-note"><b>Fix it.</b> ${esc(lpPlain(it.rspec?it.rspec.story:""))} Clues are there if you want one.</p>` : model ? `<p class="lpmodel-note"><b>Watch one.</b> Each step shows what to do and why. Think about what you would do before you tap.</p>` : own ? `<p class="lpmodel-note"><b>On your own.</b> The steps get checked, but the clues are off unless you ask.</p>` : `<p class="lpmodel-note"><b>Together.</b> Do each step; ask for a clue any time.</p>`;
   let work="";
@@ -7359,7 +7420,7 @@ function lpWorkHTML(it){ const sp=it.spec, st=it.st, ph=it.phase, model=ph==="mo
     const clues=(st.helpShown||[]).map(t=>`<div class="lpclue">${t}</div>`).join("");
     work=`<p class="lpstep">${prompt}</p>${lpInputHTML(step, st, false)}<div class="inline-err lpmsg${st.msgKind==="ok"?" ok":""}" id="lpmsg" role="status" aria-live="polite">${st.msg||""}</div>${clues}
       <div class="actions"><button class="btn primary" id="lpcheck">${step.input&&step.input.type==="button"?esc(step.input.label||"Next"):"Check"}</button>${!lpWalterEligible(it)&&(step.help||[]).length>(st.helpShown||[]).length?`<button class="btn quiet" id="lphelp">${own?"I need a clue":"Clue"}</button>`:""}${own&&sp.answer!==undefined&&st.answerOnly===null?`<button class="btn quiet small" id="lpknow">I know the answer</button>`:""}${own&&st.answerOnly===true?`<button class="btn quiet small" id="lpskip">Skip building it</button>`:""}</div>
-      ${lpWalterHTML(it)}${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
+      ${lpWalterHTML(it)}${st.exampleNarr||""}${st.exampleNote?`<p class="muted">${esc(st.exampleNote)}</p>`:""}${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
   const walterLesson=st.done && ph!=="model" && !st.skipped && (st.tries>0 || st.helps>0) ? walterNote("nice","You worked through the steps and finished this one.",true) : ph==="delayed" ? walterNote("checkin","Here are new numbers. Show what you remember.",true) : ph==="guided" || (st.helpShown||[]).length ? walterNote("work","Let's check one step at a time.",true) : "";
   return `<div class="card lpcard"><h2 style="margin-top:0" class="lptitle">${sp.title}</h2>${sp.prompt?`<p class="muted lpsub">${sp.prompt}</p>`:""}${intro}${walterLesson}<div class="lpboard" id="lpboard">${visual}</div><div id="lpwork" class="lpwork">${work}</div>${model||own?"":lpVideoHTML()}</div>`; }
 function lpRepairHTML(it){ const r=it.rspec, rp=it.rep;
@@ -7404,6 +7465,7 @@ function lpBind(it){ const q=s=>app.querySelector(s);
   const reply=()=>{ lpRender(); q("#lpaskreply")?.focus({preventScroll:true}); };
   app.querySelectorAll("[data-walter-question]").forEach(b=>b.onclick=()=>{ keepDraft(); const old=st.walterChoice; lpWalterDeliver(it,b.dataset.walterQuestion,old?.step===st.k&&old.id===b.dataset.walterQuestion?old.depth:0); reply(); });
   const more=q("#lpaskmore"); if(more) more.onclick=()=>{ keepDraft(); lpWalterDeliver(it,st.walterChoice.id,st.walterChoice.depth+1); reply(); };
+  const other=q("#lpother");if(other)other.onclick=()=>{keepDraft();lpDifferentExample(it);lpSaveResume();lpRender();};
   const ret=q("#lpaskreturn"); if(ret) ret.onclick=()=>{ keepDraft(); st.walterOpen=false; lpRender(); (q("#lpin")||q("[data-lpi]")||q(".lpopt")||q("#lpcheck"))?.focus({preventScroll:true}); };
   const go=()=>{ keepDraft(); const typedTile=I.type==="tiles"&&!!q("#lptype")?.value.trim(); const v=lpReadInput(step, st); const ok=lpApply(it, v); if(ok && I.type==="tiles") st.tiles=[]; if(ok) st.grp=[]; lpRender(); const f=(!ok&&st.badIndex>=0?q(`[data-lpi="${st.badIndex}"]`):null)||(!ok&&typedTile?q("#lptype"):null)||q("#lpin")||q("[data-lpi]")||q(".lpopt")||q(".lpchip")||q(".lptok")||q(".lptile")||q("#lpnext"); if(f) f.focus({preventScroll:true}); };
   q("#lpcheck").onclick=go; const pb=q("#lpprime"); if(pb) pb.onclick=()=>{ const ok=lpApply(it, {prime:true}); lpRender(); const f=q("[data-lpi]")||q("#lpnext")||q("#lpcheck"); if(f) f.focus({preventScroll:true}); };
@@ -7432,6 +7494,13 @@ function lpAreaDiv(o){ const d=o.d, N=o.N, Q=N/d, askWidth=!!o.askWidth, fewer=!
   const sp={kind:"areadiv", methodEvidence:askWidth?"area-width-vs-product":"area-bands-and-ledger", methodName:"area model", title:`${lpN(N)} ÷ ${d}`, prompt:o.prompt||`Build the area model: ${d} across the top, partial quotients down the right side, products inside, and subtract in the ledger.`, answer:Q, script:o.script||[],
     init:()=>({rem:N, bands:[], trials:[], stage:"q", pend:null, summed:false, askedW:{}}),
     next:st=>{ if(st.rem>0){
+        if(st.stage==="q"&&!st.model)return {prompt:`Choose a count of groups of ${d} to test against ${lpN(st.rem)}. We will check its product before using it.`,short:"Your trial count",input:{type:"num"},auto:Math.max(1,Math.floor(st.rem/d/2)),help:hwDivisionGuide('trial'),
+          check:v=>{const n=lpNum(v);if(!Number.isInteger(n)||n<=0||n>100000)return {ok:false,fmt:true,msg:"Choose a positive whole-number count up to 100,000."};return {ok:true,msg:"Trial recorded. Test its product next.",apply:()=>{st.pend=n;st.stage='p';}};}};
+        if(st.stage==="fit")return lpMcStep({prompt:`Your checked product is ${lpN(st.pendingProduct)}. ${lpN(st.rem)} is available. Does this trial fit?`,short:"Does your trial fit?",options:['Yes','No'],right:st.pendingProduct<=st.rem?0:1,help:hwDivisionGuide('fit'),apply:()=>{
+          if(st.pendingProduct>st.rem){st.trials.push({q:st.pend,p:st.pendingProduct});st.pend=null;st.pendingProduct=null;st.stage='q';}
+          else{st.pendingBand={q:st.pend,p:st.pendingProduct};if(!st.bands.length&&st.pend===Q&&lpPlaceParts(Q).length>=2)st.codes.push('one-band');st.stage=askWidth?'w':'sub';}
+        }});
+
         if(st.stage==="q") return {prompt:`How many groups of <b>${d}</b> fit in <b>${lpN(st.rem)}</b> without going over? That partial quotient goes on the right side of the next band.`, short:`Next partial quotient (right side). Left to divide: ${lpN(st.rem)}.`, input:{type:"num", ph:"partial quotient"},
           why:`The number on the right must be small enough that ${d} times it fits in what is left.`,
           help:(fewer?[`Estimate: about how many groups of ${d} fit in ${lpN(st.rem)}? Check that ${d} × your number is not more than ${lpN(st.rem)}.`]:[d<10?`Try a friendly number of groups: 10, 100, or 1,000 groups of ${d}. What is ${d} × 100? Does it fit in ${lpN(st.rem)}?`:`Try a friendly number: ${d} × 10 = ${lpN(d*10)} and ${d} × 100 = ${lpN(d*100)}. Which fits in ${lpN(st.rem)}? Then try more tens or hundreds.`, `Any number of groups that fits is fine. A bigger one means fewer bands. Check it: ${d} × your number must not be more than ${lpN(st.rem)}.`]),
@@ -7442,17 +7511,17 @@ function lpAreaDiv(o){ const d=o.d, N=o.N, Q=N/d, askWidth=!!o.askWidth, fewer=!
             return {ok:true, msg: whole ? `${lpN(n)} is the whole quotient in one band. It fits, but this lesson is about building it in parts, so this one counts as knowing the answer rather than using the model.` : `${lpN(n)} fits.`, apply:()=>{ st.pend=n; st.stage="p"; if(whole) st.codes.push("one-band"); }}; } };
         if(st.stage==="p") return lpNumStep({prompt:`Multiply: <b>${d} × ${lpN(st.pend)}</b>. The product goes inside the band.`, short:`${d} × ${lpN(st.pend)} = ?`, ans:d*st.pend, why:"Divisor on top × partial quotient on the right = the area of that band.",
           help:[`Think ${d} × ${String(st.pend).replace(/0+$/,"")||st.pend}, then put back the zeros.`], diag:n=>(n*10===d*st.pend||n===d*st.pend*10)?{code:"place", msg:`Check the zeros: ${d} × ${lpN(st.pend)} has ${String(st.pend).match(/0*$/)[0].length} zero${String(st.pend).match(/0*$/)[0].length===1?"":"s"} at the end of ${lpN(st.pend)} to carry along.`}:null,
-          apply:()=>{ st.bands.push({q:st.pend, p:d*st.pend}); st.stage=askWidth?"w":"sub"; }});
-        if(st.stage==="w"){ const b=st.bands[st.bands.length-1], sw=Math.random()<.5, opts=sw?[lpN(b.p), lpN(b.q)]:[lpN(b.q), lpN(b.p)]; return lpMcStep({prompt:`Which number goes on the <b>right side</b> of this band?`, short:"Which number goes on the right side?", options:opts, right:sw?1:0, why:"The right side shows the partial quotient (how many groups). The product sits inside.", diag:()=>({code:"product-as-quotient", msg:"The right side counts groups. The inside records the product. Compare what each number represents, then choose again."}), apply:()=>{ st.stage="sub"; }}); }
-        const b=st.bands[st.bands.length-1];
-        return lpNumStep({prompt:`Subtract in the ledger: <b>${lpN(st.rem)} − ${lpN(b.p)}</b>. What is still left to divide?`, short:`${lpN(st.rem)} − ${lpN(b.p)} = ?`, ans:st.rem-b.p, why:"The ledger keeps track of what still needs a band.", help:[`Line up the places and subtract ${lpN(b.p)} from ${lpN(st.rem)}.`], apply:()=>{ st.rem-=b.p; st.stage="q"; }}); }
+          apply:()=>{ if(st.model){st.bands.push({q:st.pend,p:d*st.pend});st.stage=askWidth?"w":"sub";}else{st.pendingProduct=d*st.pend;st.stage="fit";} }});
+        if(st.stage==="w"){ const b=st.pendingBand||st.bands[st.bands.length-1], sw=Math.random()<.5, opts=sw?[lpN(b.p), lpN(b.q)]:[lpN(b.q), lpN(b.p)]; return lpMcStep({prompt:`Which number goes on the <b>right side</b> of this band?`, short:"Which number goes on the right side?", options:opts, right:sw?1:0, why:"The right side shows the partial quotient (how many groups). The product sits inside.", diag:()=>({code:"product-as-quotient", msg:"The right side counts groups. The inside records the product. Compare what each number represents, then choose again."}), apply:()=>{ st.stage="sub"; }}); }
+        const b=st.pendingBand||st.bands[st.bands.length-1];
+        return lpNumStep({prompt:`Subtract in the ledger: <b>${lpN(st.rem)} − ${lpN(b.p)}</b>. What is still left to divide?`, short:`${lpN(st.rem)} − ${lpN(b.p)} = ?`, ans:st.rem-b.p, why:"The ledger keeps track of what still needs a band.", help:[`Line up the places and subtract ${lpN(b.p)} from ${lpN(st.rem)}.`], apply:()=>{if(st.pendingBand){st.bands.push(st.pendingBand);st.pendingBand=null;st.pendingProduct=null;st.pend=null;}st.rem-=b.p;st.stage="q";}}); }
       if(!st.summed) return lpNumStep({prompt:`Nothing is left to divide. Add the partial quotients on the right side: ${st.bands.map(b=>lpN(b.q)).join(" + ")}.`, short:"Add the partial quotients.", ans:Q, why:"The whole right side is the quotient.", help:["Add only the numbers on the right side, not the products inside."],
         diag:n=>{ for(const b of st.bands) if(n===Q-b.q+b.p) return {code:"product-as-quotient", msg:`One number in that sum is a product from inside the rectangle (${lpN(b.p)}). Add only the right-side numbers.`}; for(const b of st.bands) if(n===Q-b.q) return {code:"missing-band", msg:"Every band's partial quotient belongs in the sum. Check that none was left out."}; return null; }, apply:()=>{ st.summed=true; }});
       return null; },
     visual:(st)=>{ const rows=st.bands.map((b,i)=>`<div class="lpband"><span class="lpnote">${d} × ${lpN(b.q)}</span><div class="lprect">${lpN(b.p)}</div><span class="lpq">${lpN(b.q)}</span></div>`).join("");
-      const pend=st.stage==="p"&&st.pend?`<div class="lpband pend"><span class="lpnote">${d} × ${lpN(st.pend)}</span><div class="lprect">?</div><span class="lpq">${lpN(st.pend)}</span></div>`:"";
+      const pend=["p","fit","w","sub"].includes(st.stage)&&st.pend&&!st.model?`<div class="lpband pend"><span class="lpnote">${d} × ${lpN(st.pend)}</span><div class="lprect">${st.pendingProduct!==null&&st.pendingProduct!==undefined?lpN(st.pendingProduct):"?"}</div><span class="lpq">${lpN(st.pend)}</span></div>`:"";
       const left=st.rem>0&&st.stage==="q"?`<div class="lpband empty"><span class="lpnote"></span><div class="lprect">${lpN(st.rem)} left</div><span class="lpq">?</span></div>`:"";
-      let led=`<div class="lpled-n">${lpN(N)}</div>`, r=N; st.bands.forEach((b,i)=>{ const subDone=i<st.bands.length-1 || !(st.stage==="sub"||st.stage==="w"); led+=`<div class="lpled-m">− ${lpN(b.p)}</div>`; if(subDone){ r-=b.p; led+=`<div class="lpled-r">${lpN(r)}</div>`; } else led+=`<div class="lpled-r">?</div>`; });
+      let led=`<div class="lpled-n">${lpN(N)}</div>`, r=N; st.bands.forEach((b,i)=>{ const subDone=!st.model||i<st.bands.length-1 || !(st.stage==="sub"||st.stage==="w"); led+=`<div class="lpled-m">− ${lpN(b.p)}</div>`; if(subDone){ r-=b.p; led+=`<div class="lpled-r">${lpN(r)}</div>`; } else led+=`<div class="lpled-r">?</div>`; });
       const tr=st.trials.length?`<p class="muted lptrials">Tried: ${st.trials.map(t=>`<s>${d} × ${lpN(t.q)} = ${lpN(t.p)}</s>`).join("; ")} (too big, so not used)</p>`:"";
       const fin=st.rem>0&&st.stage==="q"&&st.bands.length?`<button type="button" class="btn quiet small" id="lpfinish">Add up the partial quotients</button>`:"";
       return `<div class="lpdiv" aria-label="Area model for ${lpN(N)} divided by ${d}"><div class="lpdiv-model"><div class="lpdiv-top"><span class="lpnote"></span><div class="lpdiv-d">${d}</div><span class="lpq lpqh">quotient</span></div>${rows}${pend}${left}</div><div class="lpledger" aria-label="Ledger">${led}</div></div>${tr}${st.summed?`<p class="lpsum">${st.bands.map(b=>lpN(b.q)).join(" + ")} = <b>${lpN(Q)}</b></p>`:""}${fin}`; },
@@ -7491,7 +7560,7 @@ function lpCompat(o){ const d=o.d, N=o.N, Q=N/d;
     done:st=>`${lpN(N)} ÷ ${d} = <b>${lpN(Q)}</b>, from ${st.parts.map(lpN).join(" + ")}. Check: ${d} × ${lpN(Q)} = ${lpN(N)}.`};
   // the free-choice part step needs its own check (any valid part), so wrap next()
   const base=sp.next; sp.next=st=>{ const s=base(st); if(s && st.stage==="split" && !st.combine){ s.check=v=>{ const n=lpNum(v); if(isNaN(n)||n<=0||n!==Math.floor(n)) return {ok:false, fmt:true, msg:"Type a whole number."};
-        if(n>st.left) return {ok:false, code:"too-big", msg:`Only ${lpN(st.left)} is left to split.`}; if(n%d!==0) return {ok:false, code:"not-compatible", msg:`${d} doesn't divide ${lpN(n)} evenly. Try a part like ${lpN(d*Math.max(1,Math.pow(10,Math.floor(Math.log10(Math.max(1,st.left/d))))))}.`};
+        if(n>st.left) return {ok:false, code:"too-big", msg:`Only ${lpN(st.left)} is left to split.`}; if(n%d!==0) return {ok:false, code:"not-compatible", msg:`${d} doesn't divide ${lpN(n)} evenly. Test your chosen part by multiplying a whole-number group count by the divisor. Revise the part if that check does not reproduce it.`};
         const whole=!st.parts.length && n===N && lpPlaceParts(Q).length>=2;
         return {ok:true, msg: whole ? `That is all of ${lpN(N)} as one part. It works, but this lesson is about splitting it into parts, so this one counts as knowing the answer rather than using the split.` : `${lpN(n)} works: ${lpN(n)} ÷ ${d} will be easy.`, apply:()=>{ st.parts.push(n); st.left-=n; if(st.left===0) st.stage="div"; if(whole) st.codes.push("one-band"); }}; }; } return s; };
   sp.oneShot=st=>st.parts.length===1 && lpPlaceParts(Q).length>=2; sp.route=st=>st.parts.slice();
@@ -7538,7 +7607,7 @@ function lpRows(o){ const a=o.a, b=o.b, ones=b%10, tens=b-ones, R1=a*ones, R2=a*
   const steps=[
     lpMcStep({prompt:`Before multiplying: about how big is the second row, <b>${lpN(a)} × ${lpN(tens)}</b>?`, short:`About how big is ${lpN(a)} × ${lpN(tens)}?`, options:opts, right:ordE.indexOf(1), why:`${lpN(a)} × ${lpN(tens)} is about ${lpN(est)}, so the second row should be about that size.`, diag:i=>({code:"row-size", msg: ordE[i]===0?`That would be ${lpN(a)} × ${tens/10}. The ${tens/10} in ${lpN(b)} means ${tens/10} tens.`:"Too big: round and multiply to check."}), help:[`Round ${lpN(a)}, then multiply by ${lpN(tens)}.`]}),
     lpNumStep({prompt:`First row: <b>${lpN(a)} × ${ones}</b>.`, short:`${lpN(a)} × ${ones}`, ans:R1, why:"The ones digit first.", help:[`Multiply ${lpN(a)} by ${ones}, one place at a time, regrouping as you go.`]}),
-    lpNumStep({prompt:`Second row: <b>${lpN(a)} × ${lpN(tens)}</b>. Start the row with a 0 in the ones place.`, short:`${lpN(a)} × ${lpN(tens)}`, ans:R2, why:`${lpN(a)} × ${lpN(tens)} = ${lpN(R2)}; the 0 holds the ones place because this row is tens.`, help:["The multiplier is tens. Work out the digit multiplication, then use its place value."],
+    lpNumStep({prompt:`Second row: <b>${lpN(a)} × ${lpN(tens)}</b>. Decide where a row for tens begins and keep its place value.`, short:`${lpN(a)} × ${lpN(tens)}`, ans:R2, why:`${lpN(a)} × ${lpN(tens)} = ${lpN(R2)}; the 0 holds the ones place because this row is tens.`, help:["The multiplier is tens. Work out the digit multiplication, then use its place value."],
       diag:n=>n===a*tens/10?{code:"tens-as-ones", msg:`That is ${lpN(a)} × ${tens/10}. The ${tens/10} means ${tens/10} tens, so the row is ten times as big.`}:null}),
     lpNumStep({prompt:`Add the rows: ${lpN(R1)} + ${lpN(R2)}.`, short:"Total", ans:T, why:`${lpN(a)} × ${lpN(b)} = ${lpN(T)}. Compare with the estimate.`})];
   return {kind:"rows", methodEvidence:"row-totals-and-size", methodName:"partial-product rows", title:`${lpN(a)} × ${lpN(b)}`, answer:T, script:o.script||[], init:()=>({}), next:st=>steps[st.k]||null,
