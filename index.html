@@ -1675,7 +1675,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.54 · October 7, 2026";
+const BUILD="v9.58 · October 7, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -4372,6 +4372,7 @@ function parseExprWords(str){
   try{ const tk=parseBack(e); if(!validTokens(tk)) return {err:`That reads as ${e}, and one of its steps does not come out a whole number, so the app cannot check it. Check the numbers, or type the expression itself.`}; return {expr:tokStr(tk), ops:(e.match(/[+−×÷]/g)||[]).length, sentence:s}; }catch(err){ return null; } }
 // "Check my homework": read a problem typed from the page. Returns {skill, focus, level, label} or {err}.
 function parseHomework(text, depth){
+  const story=parseWordHomework(text); if(story) return story;
   const fraction=parseFractionHomework(text); if(fraction) return fraction;
   let t=String(text||"").trim().toLowerCase().replace(/\s+/g," ").replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g,m=>"^"+[...m].map(ch=>"⁰¹²³⁴⁵⁶⁷⁸⁹".indexOf(ch)).join("")).replace(/=\s*[\d,.\s?_]*$/,"").trim(); // "= ?", "= ____", or an answer she already wrote after the equals sign are all dropped
   // v9.17: Unit 2 homework shapes typed as printed.
@@ -4446,7 +4447,6 @@ function parseHomework(text, depth){
   if(m){ const A=numOf(m[1]), B=numOf(m[2]); if(!A||!B) return {err:"I could not read those numbers."}; if(A.d||B.d){ if(A.d.length+B.d.length>3) return {err:"Decimal products up to thousandths, please (like 2.5 × 1.2)."}; const [X,Y]= B.d&&!A.d ? [B,A] : [A,B]; return {skill:"decmul", focus:{fixed:{a:{w:X.w,d:X.d}, b:{w:Y.w,d:Y.d}}}, level:Y.d?4:2, label:`${fmt(A)} × ${fmt(B)}`}; }
     let a=A.w, b=B.w; if(String(b).length>String(a).length) [a,b]=[b,a]; if(a<2||b<2) return {err:"Both factors should be 2 or more."};
     if(String(a).length>4) return {err:"Up to a 4-digit number times a 2-digit number, please."}; if(String(b).length>2) return {err:"The standard-algorithm walkthrough handles a 1- or 2-digit multiplier (two partial products)."};
-    if(b>=10 && b%10===0) return {err:`${a} × ${b}: a multiplier ending in 0 is a powers-of-ten pattern (${a} × ${b/10}, then × 10). Type ${a} × ${b/10} for the algorithm, or use "Multiply and divide by 10" for the pattern.`};
     const variant = method==="area" ? "area" : method==="distributive" ? "distributive" : "algorithm"; // the worksheet's method word decides the walkthrough: area model, distributive, or the standard algorithm
     return {skill:"multiply", focus:{fixed:{a,b},variant}, level:shapeLevel([String(a).length,String(b).length]), label:`${a.toLocaleString("en-US")} × ${b}${variant!=="algorithm"?` (${variant==="area"?"area model":"distributive"})`:""}`}; }
   // division: "3,660 ÷ 30", "1728 / 12"
@@ -4483,7 +4483,7 @@ function parseHomework(text, depth){
   if(!depth){ const found=t.match(/(?:\d[\d,]*(?:\.\d+)?|[(\[{])[\d\s,.+\-−×x*·÷\/()\[\]{}^]*\d[)\]}]?/g)||[]; const cands=found.map(x=>x.trim()).filter(x=>/[+\-−×x*·÷\/^]/.test(x));
     const rest=cands.length===1 ? t.replace(found.find(x=>x.trim()===cands[0]),"") : ""; // the words around the one problem must not change it: no other numbers, no operation words
     if(cands.length===1 && !/\d/.test(rest) && !/\b(?:half|twice|double|triple|more|less|fewer|from|to|sum|product|difference|quotient|then|plus|minus|times|divided|of|than|each|left|total|altogether)\b/.test(rest)){ const r=parseHomework(cands[0]+(method==="area"?" area model":method==="distributive"?" distributive":divMethod==="area"?" using an area model":""), 1); if(!r.err) return r; } }
-  return {err:"I did not recognize that. Type just the problem, like 16 × 24. Shapes the app knows: 148 × 19, 1,144 ÷ 11 or 40)8,760, 6,426 ÷ 9 area model, 3.45 + 2.7, 8 × 10^5 × 6, 4.5 × 1,000, 49 ÷ (34 − 27) × 9, (24 ÷ 4) × 2 vs 12, half of the sum of 17 and 9, six and four tenths, or round 2.98 to the nearest tenth."};
+  return {err:"I could not turn that wording into a checked problem yet. For a story problem, type the expression you wrote, like 3 × 12 − 2. Other supported entries include 16 × 24, 3.45 + 2.7, 3/4 + 5/6, and half of the sum of 17 and 9. Your entry is still here to edit."};
 }
 const hwMode=()=>HW_MODES[hwId(mode)]||null;
 const MUL_SHAPE_BY_LEVEL={1:"2-digit × 1-digit",2:"3-digit × 1-digit",3:"2-digit × 2-digit",4:"3-digit × 2-digit",5:"3-digit × 2-digit with larger numbers"};
@@ -5355,23 +5355,23 @@ function hwEntry(prefill, err){
     <div class="topbar"><button class="btn quiet" id="back">Home</button><div class="row"><span class="pill week">Homework</span></div></div>${warnHTML()}
     <div class="card">
       <h2 style="margin-top:0">Check a problem from the page</h2>
-      <p class="muted" style="margin:0 0 10px">Copy the expression, including fractions or mixed numbers, like <b>3/4 + 5/6</b> or <b>2 1/3 − 3/4</b>. You do the arithmetic; Walter can help with each step. Homework does not change levels.</p>
+      <p class="muted" style="margin:0 0 10px">Copy an expression, including fractions or mixed numbers, like <b>3/4 + 5/6</b> or <b>2 1/3 − 3/4</b>. Age stories with a known age, half that age, and years added or taken away, and the paper-company story about sheets, packages, and boxes, can also be typed in full. You write the expression and do the arithmetic; Walter can help with each step. Homework does not change levels.</p>
       <label class="vh" for="hwq">The problem</label>
       <input class="ans text" id="hwq" type="text" inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="like 3/4 + 5/6 or 148 × 19" value="${esc(prefill||"")}">
       <label class="hwmethod" for="hwfractionmethod">For fraction addition or subtraction, use <select id="hwfractionmethod"><option value="algorithm">Equivalent fractions</option><option value="area">Equal-part area model</option><option value="line">Number line</option></select></label>
       <div class="inline-err" id="hwerr" role="status" aria-live="polite">${esc(err||"")}</div>
       <div class="actions"><button class="btn primary" id="hwgo">Set it up</button></div>
-      <details class="lpwalter"><summary class="btn quiet">Ask Walter</summary>${walterNote('work','Copy the expression from your page, including decimal points and operation signs. If your teacher asks for an area model, add “area model” after it. For a story problem, type the expression you wrote. After setting it up, I can help with the method while you do the arithmetic.',true)}</details>
-      <details class="home-more"><summary>Examples and supported problems</summary><p class="muted" style="font-size:14px;margin:14px 0 0">Fractions: <b>3/4 + 5/6</b>, <b>2 1/3 − 3/4</b>, <b>2/3 × 3/5</b>, <b>3 ÷ 1/4</b>, and <b>1/4 ÷ 3</b>. Other shapes the app knows: <b>148 × 19</b> (standard algorithm), <b>3,660 ÷ 30</b> (place value strategy), <b>8 × 10^5 × 6</b> or <b>47 × 10^6</b> (powers of ten), <b>4.5 × 1,000</b> or <b>36.5 ÷ 10^2</b> (moving the decimal point), <b>round 2.98 to the nearest tenth</b>, <b>3.45 + 2.7</b> or <b>12.5 − 3.75</b> (adding and subtracting decimals), <b>3.4 × 6</b>, <b>2.5 × 1.2</b> or <b>4.8 ÷ 0.6</b> (multiplying and dividing decimals), <b>2 + 3 × 4</b> or <b>49 ÷ (34 − 27) × 9</b> (order of operations), <b>1,144 ÷ 11</b> or <b>40)8,760</b> (dividing; add <b>area model</b> for the area model), <b>(24 ÷ 4) × 2 vs 12</b> (less than, equal to, or greater than), <b>A: 8 + 4 B: (8 + 4) ÷ 2</b> (the relationship), <b>half of the sum of 17 and 9</b> (write the expression), <b>six hundred forty-seven and eight hundred ninety-two thousandths</b> (standard form). Use x or × for times, ÷ or / for divide, ^ for the exponent. Add <b>area model</b> after a multiplication or division to walk through it as an area model. For a story problem, type the expression you wrote, like <b>3 × 12 − 2</b>.</p></details>
+      <details class="lpwalter"><summary class="btn quiet">Ask Walter</summary>${walterNote('work','Copy the expression from your page, including decimal points and operation signs. If your teacher asks for an area model, add “area model” after it. For a supported age story, copy the full question. For another story shape, type the expression you wrote. After setting it up, I can help with the method while you do the arithmetic.',true)}</details>
+      <details class="home-more"><summary>Examples and supported problems</summary><p class="muted" style="font-size:14px;margin:14px 0 0">Fractions: <b>3/4 + 5/6</b>, <b>2 1/3 − 3/4</b>, <b>2/3 × 3/5</b>, <b>3 ÷ 1/4</b>, and <b>1/4 ÷ 3</b>. Other shapes the app knows: <b>148 × 19</b> (standard algorithm), <b>3,660 ÷ 30</b> (place value strategy), <b>8 × 10^5 × 6</b> or <b>47 × 10^6</b> (powers of ten), <b>4.5 × 1,000</b> or <b>36.5 ÷ 10^2</b> (moving the decimal point), <b>round 2.98 to the nearest tenth</b>, <b>3.45 + 2.7</b> or <b>12.5 − 3.75</b> (adding and subtracting decimals), <b>3.4 × 6</b>, <b>2.5 × 1.2</b> or <b>4.8 ÷ 0.6</b> (multiplying and dividing decimals), <b>2 + 3 × 4</b> or <b>49 ÷ (34 − 27) × 9</b> (order of operations), <b>1,144 ÷ 11</b> or <b>40)8,760</b> (dividing; add <b>area model</b> for the area model), <b>(24 ÷ 4) × 2 vs 12</b> (less than, equal to, or greater than), <b>A: 8 + 4 B: (8 + 4) ÷ 2</b> (the relationship), <b>half of the sum of 17 and 9</b> (write the expression), <b>six hundred forty-seven and eight hundred ninety-two thousandths</b> (standard form). Use x or × for times, ÷ or / for divide, ^ for the exponent. Add <b>area model</b> after a multiplication or division to walk through it as an area model. Age stories with a known age, half that age, and years added or taken away, and the paper-company story about sheets, packages, and boxes, can be typed in full. Other story shapes: type the expression you wrote, like <b>3 × 12 − 2</b>.</p></details>
     </div>`;
   const q=id=>app.querySelector("#"+id); const inp=q("hwq");
   q("back").onclick=home;
-  const go=()=>{ const r=parseHomework(inp.value); if(r.err){ q("hwerr").textContent=r.err; inp.focus(); return; } if(r.fraction){if(!r.explicitMethod)r.method=q("hwfractionmethod").value;fractionHomeworkStart(r);return;} pendingHW=r; next(); };
+  const go=()=>{ const r=parseHomework(inp.value); if(r.err){ q("hwerr").textContent=r.err; inp.focus(); return; } if(r.fraction||r.wordStory){if(r.fraction&&!r.explicitMethod)r.method=q("hwfractionmethod").value;fractionHomeworkStart(r);return;} pendingHW=r; next(); };
   q("hwgo").onclick=go; inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); go(); } });
   inp.focus({preventScroll:true});
 }
 function next(){ // a fresh problem: new help chain
-  if(mode==='hw:check'&&pendingHW?.fraction){const task=pendingHW;pendingHW=null;fractionHomeworkStart(task);return;}
+  if(mode==='hw:check'&&(pendingHW?.fraction||pendingHW?.wordStory)){const task=pendingHW;pendingHW=null;fractionHomeworkStart(task);return;}
   if(mode==='hw:check'&&pendingHW?.err){const message=pendingHW.err;pendingHW=null;hwEntry();document.getElementById('hwerr').textContent=message;return;}
   if(pendingStretch && SKILLS[pendingStretch] && mode!=="hw:check" && !hwMode()){ const sk0=pendingStretch; pendingStretch=null; const trial=SKILLS[sk0].gen(3); // v9.13: the old level-3 quick check, now her choice and only after a warm-up success
     if(trial && trial.skill===sk0){ stage="fresh"; chain=0; cur=trial; cur.placement=true; cur.stretch=true; if(!cur.pre){ const rc=REP_COMP[`${cur.skill}:${cur.meta&&cur.meta.variant}`]; if(rc) attachPre(cur, rc); }
@@ -5687,7 +5687,8 @@ function render(){
     if(phase==="ok"){
       const independent = okEntry ? !!okEntry.independent : (stage==="fresh" && hintIdx===0);
       let msg;
-      if(independent) msg=pick(["Correct.","Yes.","Nailed it.","That's right."])/* v9.20: no "N in a row" streak counter on her screens */+(lastChange>0 && !cur.placement?`<span class="lvl">Level up! ${SKILLS[sk].name} is now level ${lvl}${lvl===MAX_LEVEL?", the top":""}.</span>`:"")+(cur.hw?`<small>Homework practice: the dots stay put; this counts on the grown-ups page.</small>`:"");
+      if(cur.hw) msg=`Right.<small>${cur.walterHelp?.length?"You asked Walter for help, then finished this problem. ":cur.studied?"You studied an example, then finished this problem. ":hintIdx>0?"You used a hint, then finished this problem. ":""}Homework practice does not change levels, remove tools, or count as independent lesson evidence.</small>`;
+      else if(independent) msg=pick(["Correct.","Yes.","Nailed it.","That's right."])/* v9.20: no "N in a row" streak counter on her screens */+(lastChange>0 && !cur.placement?`<span class="lvl">Level up! ${SKILLS[sk].name} is now level ${lvl}${lvl===MAX_LEVEL?", the top":""}.</span>`:"")+(cur.hw?`<small>Homework practice: the dots stay put; this counts on the grown-ups page.</small>`:"");
       else if(stage==="fresh" && hintIdx===0 && cur.studied) msg=`Right.<small>${cur.walterHelp?.length?"You asked Walter for help":cur.helpTaps?"You asked for step help":"You studied an example first"}, so this counts as help. ${cur.hw?"Homework does not change your levels.":"Level-ups and checking things off your practice list come from problems done without the example."}</small>`;
       else if(stage==="fresh" && hintIdx===0 && cur.reasonCaught && !(okEntry && okEntry.supported)) msg=`Right.<small>You checked your answer against your estimate and fixed it. That is a great habit. This one counts as prompted, since the note pointed you back to it.</small>`; // v9.19: fixed after the "does that make sense?" note
       else if(stage==="fresh" && hintIdx===0 && cur.ws) msg=`Right.<small>The supports were on for this one, so it counts as a supported success: it fades the supports, and level-ups come once they are mostly off.</small>`;
@@ -6283,7 +6284,7 @@ function submit(){
   else if(cur.placement){ if(ok && independent){ S.levels[sk]=3; S.hist[sk]=[1]; lastChange=+2; S.coach=S.coach||{}; S.coach[sk]=0; if(cur.ws){ S.support.multiply=0; S.supportWins.multiply=0; } lastPraise.push({big:true, t:`You already have ${SKILLS[sk].name.toLowerCase()}. Starting you at level 3${cur.ws?", on the bare page, since that is how you just did it":""}.`}); } else if(!ok){ lastPraise.push({t:`No problem: that bigger one was a stretch. It is not scored, and your level stays where it is. Let's look at it together.`}); } entry.placement=1; }
   else if(cur.onramp){ entry.warmup=1; if(!ok){ entry.placement=1; lastPraise.push({t:`No problem: that was a warm-up. It is not scored. Let's walk through it together.`}); } } // v9.13: a missed warm-up is recorded, walked through, never scored
   // Fading supports (multiplication workspace): two clean successes in a row at this support level remove the next support; a fresh miss brings one back.
-  if(cur.ws && stage==="fresh" && !cur.placement){ const sp=S.support, sw=S.supportWins;
+  if(cur.ws && stage==="fresh" && !cur.placement && !cur.hw){ const sp=S.support, sw=S.supportWins;
     const qtext=plain(cur.prompt); S.supportRecent=Array.isArray(S.supportRecent)?S.supportRecent:[]; const distinct = !S.supportRecent.includes(qtext); // a problem seen in the last several is not new evidence for taking a tool away (alternating two memorized ones included)
     if(ok && hintIdx===0 && !cur.studied && distinct && !cur.reasonCaught){ S.supportRecent.push(qtext); /* v9.19: a total fixed after the "does that make sense?" note is not a clean success */ while(S.supportRecent.length>8) S.supportRecent.shift(); sw.multiply=(sw.multiply||0)+1;
       // each tool comes off only after successes that exercised what it is for: the written-in 0 and labels need a two-row problem; the carry boxes need regrouping in a two-row problem
@@ -6312,8 +6313,8 @@ function submit(){
         else if(tr==="stage2") lastPraise.push({big:true, t:`${ucfirst(nm)} held up after a few days off. One more review in about a week.`});
         else if(tr==="recovered") lastPraise.push({big:true, t:`${ucfirst(nm)}: recovered. It stayed solid across review, so it is off the list.`}); }
       if(!lastPraise.length && before.length===0 && hintIdx===0 && prevNeededHelp(sk)) lastPraise.push({t:`No hints, no walkthrough this time. That one was all yours.`}); }
-    if(supported && ok) lastPraise.push({t:`Right, with the supports on. Keep it up and they start coming off.`});
-    if(wsGrade && wsGrade.comps && wsGrade.comps.includes("regroup") && ok){ noteComp(sk, "regroup", false, {lvl:cur.level, ctx:ctxOf(cur)}); lastPraise.push({t:`The product is right. One carry box needs a different number, so regrouping stays on your practice list.`}); }
+    if(supported && ok && !cur.hw) lastPraise.push({t:`Right, with the supports on. Keep it up and they start coming off.`});
+    if(wsGrade && wsGrade.comps && wsGrade.comps.includes("regroup") && ok && !cur.hw){ noteComp(sk, "regroup", false, {lvl:cur.level, ctx:ctxOf(cur)}); lastPraise.push({t:`The product is right. One carry box needs a different number, so regrouping stays on your practice list.`}); }
   } else {
     S.run=0; if(cur.checkin && S.checkins){ delete S.checkins[cur.checkin]; entry.delayedMiss=1; } // a missed check-in: the weakness machinery takes over from here
     const d=twoPoints ? {tag:"two-points", note:NOTES["two-points"]} : wsGrade ? {tag:COMP_TO_TAG[wsGrade.main]||wsGrade.main, note:NOTES[COMP_TO_TAG[wsGrade.main]]||""} : diag(raw); if(cur.adaptivePrepared)d.note=({alignment:'Check that matching units line up before you calculate.',regroup:'Check that each carry or exchange keeps the same value.', 'tens-zero':'Check the place value represented by the second product row.', 'first-part':'Your work found one part. There is one more step: check what the question asks you to find.', 'missing-part':'Check that every accepted part contributes its group count to the total.',rows:'Check each partial product against the factor part it represents.'})[d.tag]||'Compare your written steps with the original operation and units. We can check the part that needs another look.';
@@ -7224,8 +7225,9 @@ function lpObserve(item,v,r){ if(item.phase==="model") return; const st=item.st,
   const ev={step:st.k,stepId:step.walter?.id||`${item.spec.kind}:${st.k}`,component:r.code==="regroup"?(m.row==="sum"?"addition-carry":"multiply-carry"):m.component||r.code||"checked-step",row:m.row||"",place:m.place||"",values,outcome:r.ok?(step.short==="Your trial count"?"trial":"ok"):r.fmt?"format":r.safe?"trial":"miss",code:r.code||"",field:Number.isInteger(r.badIndex)?r.badIndex:-1,
     support:st.answerPreviewed?"answer-confirmed":st.helps?"helped":["guided","repair"].includes(item.phase)?"guided":"checked",t:Date.now()};
   const all=[...(st.stepEvents||[]),ev]; st.stepEvents=lpTrimEvents(all); st.eventsTrimmed=(+st.eventsTrimmed||0)+all.length-st.stepEvents.length; }
+function lpMethodChecks(x){const out={};if(!x||typeof x!=='object'||Array.isArray(x))return out;for(const [key,v] of Object.entries(x).slice(0,8)){if(!/^[a-z-]{1,80}$/.test(key)||!v||typeof v!=='object')continue;out[key]={last:Math.max(0,+v.last||0),due:Math.max(0,+v.due||0),checked:Math.max(0,+v.checked||0),checkedLoad:Math.max(0,Math.min(3,+v.checkedLoad||0)),checkClean:v.checkClean?1:0,retentionStage:Math.max(0,Math.min(2,+v.retentionStage||0))};}return out;}
 function lpEvidenceState(x){ return {sessions:Math.max(0,Math.floor(+x.sessions||0)),load:Math.max(1,Math.min(3,Math.round(+x.load||1))),due:Math.max(0,+x.due||0),last:Math.max(0,+x.last||0),checked:Math.max(0,+x.checked||0),checkClean:x.checkClean?1:0,
-    checkedLoad:Math.max(0,Math.min(3,+x.checkedLoad||0)),retentionStage:Math.max(0,Math.min(2,+x.retentionStage||0)),adjustment:["raised","smaller-practice","held"].includes(x.adjustment)?x.adjustment:"held"}; }
+    checkedLoad:Math.max(0,Math.min(3,+x.checkedLoad||0)),retentionStage:Math.max(0,Math.min(2,+x.retentionStage||0)),adjustment:["raised","smaller-practice","held"].includes(x.adjustment)?x.adjustment:"held",methodChecks:lpMethodChecks(x.methodChecks)}; }
 function lpFreshSpec(bp,load,phase,i,used){ let sp, fingerprint; for(let n=0;n<160;n++){ const previous=new Set(lpUsed); sp=bp.make(load,phase,i); fingerprint=lpFingerprint(sp); if(!used.has(fingerprint)) break; lpUsed=previous; }
   const repeated=used.has(fingerprint); used.add(fingerprint); return {phase,spec:sp,load,fingerprint,repeated}; }
 function lpRecurringSupport(id,focus){ const rows=(S.lessonLog||[]).filter(e=>e.id===id&&!!e.teacherFocus===!!focus&&e.t>=Date.now()-30*864e5&&["guided","independent","delayed"].includes(e.phase)).slice(-8);
@@ -7336,18 +7338,19 @@ function lpSeeded(seed, work){ const old=Math.random; let state=seed>>>0; Math.r
 function lpSaveResume(){ if(!S||!lp||lp.items[lp.i].phase==="summary") return; if(lp.homework){fractionHomeworkSave();return;} const it=lp.items[lp.i], st=it.st||null;
   S.lessonResume={v:lp.generationVersion||1,blocked:lp.blocked||[],mixedChoices:lp.mixedChoices||[],focusSupport:lp.focusSupport||null,id:lp.id,delayed:lp.delayed,focus:!!lp.focus,seed:lp.seed,load:lp.load,i:lp.i,phase:it.phase,lid:it.lid||null,t:Date.now(),
     st,rep:it.rep||null,recorded:!!it.recorded,results:lp.results}; save(); }
-function lpResumeReady(){ const r=S&&S.lessonResume; return !!(r&&[1,2].includes(r.v)&&LP_LESSONS[r.id]&&Number.isInteger(r.i)&&r.i>=0&&r.i<9&&Number.isInteger(r.seed)&&Number.isInteger(r.load)&&r.load>=1&&r.load<=3&&Number.isFinite(+r.t)&&Date.now()-r.t<30*864e5); }
+function lpResumeReady(){ const r=S&&S.lessonResume; return !!(r&&[1,2,3].includes(r.v)&&LP_LESSONS[r.id]&&Number.isInteger(r.i)&&r.i>=0&&r.i<9&&Number.isInteger(r.seed)&&Number.isInteger(r.load)&&r.load>=1&&r.load<=3&&Number.isFinite(+r.t)&&Date.now()-r.t<30*864e5); }
 function lpResume(){ if(!lpResumeReady()) return; const id=S.lessonResume.id, delayed=!!S.lessonResume.delayed, focus=!!S.lessonResume.focus; try{ lpStart(id,delayed,S.lessonResume,focus); }catch(e){ delete S.lessonResume; lp=null; save(); lpStart(id,delayed,null,focus); } }
 function lpStart(id, delayed, resume, focus){ focus=!!(focus || (resume&&resume.focus)); const bp=focus?teacherFocusBlueprint(id):lpBlueprint(id); if(!bp || !S) return; lpSanitize(); if(typeof home==="function" && cur && phase==="q") leaveProblem(); cur=null; mode="lesson:"+id;
-  const load=resume?resume.load:(focus?teacherFocusState(id).load:lpLoadFor(id)), seed=resume?resume.seed:Math.floor(Math.random()*4294967296), items=[], generationVersion=resume?(resume.v===2?2:1):2;
+  const load=resume?resume.load:(focus?teacherFocusState(id).load:lpLoadFor(id)), seed=resume?resume.seed:Math.floor(Math.random()*4294967296), items=[], generationVersion=resume?([2,3].includes(resume.v)?resume.v:1):3;
   const blocked=generationVersion===1?[]:resume?(Array.isArray(resume.blocked)?resume.blocked.filter(x=>typeof x==="string").slice(-80):[]):(S.lessonLog||[]).slice(-80).map(lpRecordFingerprint).filter(Boolean);
   const used=new Set(blocked), focusSupport=resume?resume.focusSupport||null:lpRecurringSupport(id,focus); lpUsed=new Set();
-  const mixedChoices=generationVersion===2&&resume? (Array.isArray(resume.mixedChoices)?resume.mixedChoices.filter(x=>x&&LP_LESSONS[x.id]&&x.id!==id&&Number.isInteger(x.load)&&x.load>=1&&x.load<=3):[]) : focus?[]:lpReached().filter(x=>x!==id&&(S.lessons||{})[x]&&+S.lessons[x].sessions>0).map(x=>({id:x,load:lpLoadFor(x)}));
-  const make=(blue,L,ph,i)=>generationVersion===1?{phase:ph,spec:blue.make(L,ph,i),load:L}:lpFreshSpec(blue,L,ph,i,used);
+  const mixedChoices=generationVersion>=2&&resume? (Array.isArray(resume.mixedChoices)?resume.mixedChoices.filter(x=>x&&LP_LESSONS[x.id]&&x.id!==id&&Number.isInteger(x.load)&&x.load>=1&&x.load<=3):[]) : focus?[]:lpReached().filter(x=>x!==id&&(S.lessons||{})[x]&&+S.lessons[x].sessions>0).map(x=>({id:x,load:lpLoadFor(x)}));
+  const versioned=blue=>generationVersion<3&&blue.legacyMake?{...blue,make:blue.legacyMake,model:blue.legacyModel,repair:blue.legacyRepair}:blue;
+  const make=(original,L,ph,i)=>{const blue=versioned(original);return generationVersion===1?{phase:ph,spec:blue.make(L,ph,i),load:L}:lpFreshSpec(blue,L,ph,i,used);};
   lpSeeded(seed,()=>{ if(delayed){ items.push(make(bp,load,"delayed",0));
       if(mixedChoices.length){ const o=lpPick(mixedChoices); items.push({...make(LP_LESSONS[o.id],o.load,"mixed",1),lid:o.id}); } }
-    else { items.push({phase:"intro"}); const model=bp.model(); used.add(lpFingerprint(model)); items.push({phase:"model",spec:model}); items.push(make(bp,load,"guided",0)); items.push(make(bp,load,"guided",1));
-      items.push({phase:"explain"}); const repair=bp.repair(load); used.add(lpFingerprint(repair.fix)); items.push({phase:"repair",rspec:repair}); items.push(make(bp,load,"independent",0)); items.push(make(bp,load,"independent",1)); } });
+    else { items.push({phase:"intro"}); const model=versioned(bp).model(); used.add(lpFingerprint(model)); items.push({phase:"model",spec:model}); items.push(make(bp,load,"guided",0)); items.push(make(bp,load,"guided",1));
+      items.push({phase:"explain"}); const repair=versioned(bp).repair(load); used.add(lpFingerprint(repair.fix)); items.push({phase:"repair",rspec:repair}); items.push(make(bp,load,"independent",0)); items.push(make(bp,load,"independent",1)); } });
   items.push({phase:"summary"}); lp={id,bp,items,i:0,delayed:!!delayed,focus,seed,load,generationVersion,blocked,mixedChoices,focusSupport,t0:Date.now(),results:[]};
   if(resume){ const it=items[resume.i]; if(!it||it.phase!==resume.phase||it.lid!==(resume.lid||undefined)){ delete S.lessonResume; lp=null; lpStart(id,delayed,null,focus); return; }
     lp.i=resume.i; lp.results=Array.isArray(resume.results)?resume.results:[]; if(it.phase==="repair"){ it.spec=it.rspec.fix; it.rep=resume.rep&&typeof resume.rep==="object"?resume.rep:{stage:"spot",picked:-1,tries:0}; }
@@ -7380,6 +7383,17 @@ function lpFinish(){ if(lp.homework){delete S.homeworkResume;save();return;} con
       if(recent.length===2&&recent.every(e=>e.tries>=3&&!e.repeated&&lpRecordFingerprint(e))&&lpRecordFingerprint(recent[0])!==lpRecordFingerprint(recent[1])){ o.load--; o.adjustment="smaller-practice"; } }
     if(lp.delayed){ const sameLoad=o.checkedLoad===lp.load; o.checked=Date.now(); o.checkedLoad=lp.load; o.checkClean=clean?1:0; o.retentionStage=clean?Math.min(2,(sameLoad?+o.retentionStage||0:0)+1):0; o.due=Date.now()+(clean?(o.retentionStage===1?7:14):3)*864e5; }
     else { o.retentionStage=0; o.due=Date.now()+LP_DELAY_MS; } }
+  if(lp.bp.strategyChoices&&own.length){
+    const now=Date.now(),methods=o.methodChecks=lpMethodChecks(o.methodChecks);
+    for(const key of new Set(own.filter(e=>e.methodEvidence&&e.methodEvidence!=='strategy-not-selected').map(e=>e.methodEvidence))){
+      const rows=own.filter(e=>e.methodEvidence===key),clean=rows.every(e=>e.firstTry&&e.methodOk&&!e.repeated),m=methods[key]||{checkedLoad:0,retentionStage:0};m.last=now;
+      if(lp.delayed){const same=m.checkedLoad===lp.load;m.checked=now;m.checkedLoad=lp.load;m.checkClean=clean?1:0;m.retentionStage=clean?Math.min(2,(same?m.retentionStage:0)+1):0;m.due=now+(clean?(m.retentionStage===1?7:14):3)*864e5;}
+      else {m.retentionStage=0;m.due=now+LP_DELAY_MS;}
+      methods[key]=m;
+    }
+    const due=Object.values(methods).map(m=>m.due).filter(d=>d>0);if(due.length)o.due=Math.min(...due);
+    if(lp.delayed&&own[0]?.methodEvidence&&methods[own[0].methodEvidence])o.retentionStage=methods[own[0].methodEvidence].retentionStage;
+  }
   delete S.lessonResume; save(); }
 
 // ---- rendering ----
@@ -7418,7 +7432,7 @@ function lpWalterAlgorithmQuestions(it){
   return it.st.badIndex===1 ? [carry,start,place] : [start,carry,place];
 }
 function lpStrategyGuide(it){
-  const st=it.st,kind=it.spec.kind,step=it.step;
+  const st=it.st,kind=it.step.strategyKind||it.spec.kind,step=it.step;
   if(step.curriculumGuide)return step.curriculumGuide.slice();
   if(kind==='areadiv'&&st.stage!=='w')return hwDivisionGuide(({q:'trial',p:'product',fit:'fit',sub:'subtract',sum:'total'})[st.stage]||'total');
   const id=it.lid||lp?.id,sk=LP_LESSONS[id]?.skill||({compat:'divide',tree:'primes',order:'orderops',parens:'orderops',build:'expressions',story:'expressions',reverse:'expressions',areamul:'multiply',distmul:'multiply',rows:'multiply',algorithm:'multiply',contrast:'orderops',compare:'expressions'})[kind]||'addsub';
@@ -7443,7 +7457,7 @@ function lpPrepareStep(it){
 }
 function lpDifferentExample(it){
   const bp=lp.homework?lp.bp:LP_LESSONS[it.lid||lp.id];if(!bp)return;
-  let sp=bp.model();
+  let sp=bp.modelByStrategy&&it.st.strategyIndex!==undefined?bp.modelByStrategy(it.st.strategyIndex):bp.model();
   const different=s=>lpFingerprint(s)!==lpFingerprint(it.spec)&&(s.answer===undefined||it.spec.answer===undefined||s.answer!==it.spec.answer);
   for(let n=0;n<8&&!different(sp);n++)sp=bp.make(it.load||lp.load,'model',n%2);
   if(!different(sp)){it.st.exampleNote='A different example is not available here. Keep testing your plan, or pause.';return;}
@@ -7938,7 +7952,24 @@ const LP_U2={
     model:()=>{ const s=lpAreaDiv({d:21, N:4536}); s.script=[200,"@","@",20,10,"@","@",6,"@","@","@"]; return s; },
     make:(load)=>{ let d; do{ d=lpRnd(21,89); }while(d%10===0); const q=lpRnd(21, Math.min(load<=1?150:450, Math.floor(9999/d))); return lpAreaDiv({d, N:d*q, fewerClues:true}); }, repair:()=>LP_REPAIR[14]()}
 };
-// Unit 3: original interactive tasks informed by the visually reviewed SWUN strategy videos.
+// Shared per-problem strategy choice. Original operands stay fixed; accepted work is owned by the selected method.
+// The outer session owns drafts/help/evidence; the nested method state owns arithmetic and representations.
+function lpStrategyChoice({kind,choices,preferred=0}){
+ const methods=choices.map(c=>c.make()),base=methods[preferred],sp={kind,title:base.title,problemKey:base.problemKey||base.title,prompt:'Choose a strategy for these numbers, then check your work one step at a time.',answer:base.answer,audit:base.audit,script:[],methodName:'chosen strategy',methodEvidence:'strategy-not-selected',
+  init:()=>({stage:'strategy',strategyIndex:null,methodState:null}),
+  next:st=>{
+   if(st.strategyIndex===null){const names=choices.map((c,i)=>{const due=lp?.delayed&&S.lessons?.[lp.id]?.methodChecks?.[methods[i].methodEvidence||methods[i].kind]?.due;return c.name+(due&&due<=Date.now()?' (check-in due)':'');});return {...lpMcStep({prompt:'Which strategy would you like to use?',options:names,right:i=>Number.isInteger(i)&&i>=0&&i<choices.length,apply:i=>{st.strategyIndex=i;st.methodState=methods[i].init();}}),auto:preferred,evidence:{component:'strategy-choice'},curriculumGuide:['Choose a representation you can use to explain the original operation.','Different valid strategies keep the same original quantities and operation.','Think through how you would start each method, then choose one to work through.','Compare the units and relationships each method would show. Explain your choice.','Revise your plan before checking your choice. The calculations remain yours.']};}
+   if(!Number.isInteger(st.strategyIndex)||!methods[st.strategyIndex]||!st.methodState||typeof st.methodState!=='object')throw Error('Invalid saved strategy');
+   const method=methods[st.strategyIndex],inner=st.methodState;inner.k=st.k-1;inner.model=st.model;st.stage=inner.stage||'work';
+   sp.methodName=method.methodName||choices[st.strategyIndex].name;sp.methodEvidence=method.methodEvidence||method.kind;sp.audit=method.audit||base.audit;
+   const step=method.next(inner);st.stage=inner.stage||'work';return step?{...step,strategyKind:method.kind}:null;
+  },visual:st=>st.strategyIndex===null?'':methods[st.strategyIndex].visual?.(st.methodState)||'',
+  done:st=>methods[st.strategyIndex].done(st.methodState),oneShot:st=>!!methods[st.strategyIndex]?.oneShot?.(st.methodState),route:st=>choices[st.strategyIndex]?.key};
+ return sp;
+}
+// Unit 3: original tasks informed by reviewed SWUN videos and photographed homework.
+// Intro goals below quote photographed directions; definitions and step coaching are authored.
+// Photo/page provenance and limits: SWUN-HOMEWORK-LANGUAGE-REVIEW.md.
 // All arithmetic/state uses integer hundredths; block sizes illustrate unit relationships.
 const lpDecInput=v=>String(v??'').trim().replace(/^(-?)\./,(_,sign)=>sign+'0.');
 const lpDecRead=v=>lpNum(lpDecInput(v));
@@ -7965,20 +7996,20 @@ function lpDecimalChart(o){ const A=o.A,B=o.B,add=o.op==='+', R=add?A+B:A-B, aa=
     title:`${lpDecText(A)} ${o.op} ${lpDecText(B)}`,prompt:o.story||'Build the places, exchange equal values when needed, and read the result.',answer:R/100,script:[],
     init:()=>({A,B,R,op:o.op,stage:'build',rows:[],counts:null,mat:[0,0,0,0],j:3,exchanges:[],final:false}),
     next:st=>{
-      if(st.stage==='build'){ const r=st.rows.length, values=r===0?aa:bb, n=r===0?A:B;
-        return lpDecFields(`Build ${lpDecText(n)}. How many units belong in each place?`,LP_DEC_PLACES.slice(1),values.slice(1),()=>{st.rows.push(values.slice());if(!add||st.rows.length===2){st.counts=aa.slice();st.stage=add?'combine':'work';}},'decimal-build'); }
-      if(st.stage==='combine') return lpDecFields('Combine the matching places. Count the units before exchanging.',LP_DEC_PLACES.slice(1),aa.slice(1).map((v,i)=>v+bb[i+1]),()=>{st.counts=aa.map((v,i)=>v+bb[i]);st.stage='work';},'decimal-combine');
+      if(st.stage==='build'){ const r=st.rows.length, values=r===0?aa:bb, n=r===0?A:B,first=A>=1000||B>=1000?0:1;
+        return lpDecFields(`Build ${lpDecText(n)}. How many units belong in each place?`,LP_DEC_PLACES.slice(first),values.slice(first),()=>{st.rows.push(values.slice());if(!add||st.rows.length===2){st.counts=aa.slice();st.stage=add?'combine':'work';}},'decimal-build'); }
+      if(st.stage==='combine'){const first=A>=1000||B>=1000?0:1;return lpDecFields('Combine the matching places. Count the units before regrouping (exchanging equal values).',LP_DEC_PLACES.slice(first),aa.slice(first).map((v,i)=>v+bb[i+first]),()=>{st.counts=aa.map((v,i)=>v+bb[i]);st.stage='work';},'decimal-combine');}
       if(st.stage==='work'){
         if(st.j===0&&st.counts[0]===0&&bb[0]===0)st.j=-1;
         if(st.j<0){st.stage='final';return lpDecNumStep({prompt:'Read the decimal value of your completed chart.',ans:R/100,apply:()=>{st.final=true;st.stage='done';}});}
         const j=st.j,c=st.counts;
         if(add){ const needs=c[j]>=10&&j>0;
-          if(st.decision!==j) return lpMcStep({prompt:`Look at the ${LP_DEC_PLACES[j]}. Exchange a group of ten, or keep these units?`,options:['Exchange ten for one in the place to the left','Keep these units'],right:needs?0:1,apply:()=>{st.decision=j;if(!needs)st.j--;},no:'Ten small units can be exchanged for one unit in the next place.',help:['Count the units in this place. Is there a full group of ten?']});
-          if(needs) return lpDecFields(`Exchange in the ${LP_DEC_PLACES[j]}. Enter the counts after the exchange.`,[LP_DEC_PLACES[j-1],LP_DEC_PLACES[j]],[c[j-1]+Math.floor(c[j]/10),c[j]%10],()=>{const g=Math.floor(c[j]/10);c[j-1]+=g;c[j]%=10;st.exchanges.push(`${g*10} ${LP_DEC_PLACES[j]} → ${g} ${LP_DEC_PLACES[j-1]}; same value.`);st.j--;},'decimal-exchange');
+          if(st.decision!==j) return lpMcStep({prompt:`Look at the ${LP_DEC_PLACES[j]}. Regroup (exchange) a group of ten, or keep these units?`,options:['Regroup: exchange ten for one in the place to the left','Keep these units'],right:needs?0:1,apply:()=>{st.decision=j;if(!needs)st.j--;},no:'Ten small units can be exchanged for one unit in the next place.',help:['Count the units in this place. Is there a full group of ten?']});
+          if(needs) return lpDecFields(`Regroup (exchange) in the ${LP_DEC_PLACES[j]}. Enter the counts after the exchange.`,[LP_DEC_PLACES[j-1],LP_DEC_PLACES[j]],[c[j-1]+Math.floor(c[j]/10),c[j]%10],()=>{const g=Math.floor(c[j]/10);c[j-1]+=g;c[j]%=10;st.exchanges.push(`${g*10} ${LP_DEC_PLACES[j]} → ${g} ${LP_DEC_PLACES[j-1]}; same value.`);st.j--;},'decimal-exchange');
         }else{
           if(c[j]<bb[j]){let donor=j-1;while(donor>=0&&c[donor]===0)donor--;const target=donor+1;
             if(donor<0) throw Error('Decimal subtraction underflow');
-            return lpDecFields(`There are not enough ${LP_DEC_PLACES[j]} to remove ${bb[j]}. Exchange one ${lpDecSingular(donor)} for ten ${LP_DEC_PLACES[target]}. Enter the new counts.`,[LP_DEC_PLACES[donor],LP_DEC_PLACES[target]],[c[donor]-1,c[target]+10],()=>{c[donor]--;c[target]+=10;st.exchanges.push(`1 ${lpDecSingular(donor)} → 10 ${LP_DEC_PLACES[target]}; same value.`);},'decimal-exchange'); }
+            return lpDecFields(`There are not enough ${LP_DEC_PLACES[j]} to remove ${bb[j]}. Regroup: exchange one ${lpDecSingular(donor)} for ten ${LP_DEC_PLACES[target]}. Enter the new counts.`,[LP_DEC_PLACES[donor],LP_DEC_PLACES[target]],[c[donor]-1,c[target]+10],()=>{c[donor]--;c[target]+=10;st.exchanges.push(`1 ${lpDecSingular(donor)} → 10 ${LP_DEC_PLACES[target]}; same value.`);},'decimal-exchange'); }
           const step=lpDecNumStep({prompt:`Remove ${bb[j]} ${LP_DEC_PLACES[j]}. How many ${LP_DEC_PLACES[j]} remain?`,ans:c[j]-bb[j],apply:()=>{c[j]-=bb[j];st.mat[j]+=bb[j];st.j--;},help:['Take away only units in the named place.','If a place gave one unit to its right, use its changed count.'],no:'Use the current count in this place, then take away the named units.'});step.evidence={component:'decimal-remove',place:LP_DEC_PLACES[j]};return step;
         }
       }
@@ -7989,8 +8020,8 @@ function lpDecimalLine(o){ const add=o.op==='+',A=o.A,B=o.B,R=add?A+B:A-B;
   return {kind:'decimal-line',methodName:'number-line jumps',methodEvidence:'decimal-jumps-and-landings',title:`${lpDecText(A)} ${o.op} ${lpDecText(B)}`,prompt:o.story||'Choose jumps and check each landing. Small jumps or large jumps can work.',answer:R/100,script:[],oneShot:st=>st.jumps.length<2,
     init:()=>({stage:'start',start:null,cur:null,remaining:null,pending:null,jumps:[],lands:[],final:false}),
     next:st=>{
-      if(st.stage==='start'){ const opts=add&&A%100? [`Start at ${lpDecText(A%100)}; add both whole parts later`,`Start at the full first addend, ${lpDecText(A)}`]:[`Start at ${lpDecText(A)}`];
-        return lpMcStep({prompt:add?'Choose a start. The fractional start lets you combine fractional parts first.':'Start at the minuend: the amount you have.',options:opts,right:()=>true,apply:i=>{st.start=st.cur=add&&A%100&&i===0?A%100:A;st.remaining=add?A+B-st.start:B;st.stage='jump';},help:['For addition, starting with the fractional part means the whole part still has to be added.']}); }
+      if(st.stage==='start'){ const opts=add&&A%100? [`Start at ${lpDecText(A%100)}; add both whole parts later`,`Start at the full first number, ${lpDecText(A)}`]:[`Start at ${lpDecText(A)}`];
+        return lpMcStep({prompt:add?'Choose a start. The fractional start lets you combine fractional parts first.':'Start at the first number: the amount you have before subtracting.',options:opts,right:()=>true,apply:i=>{st.start=st.cur=add&&A%100&&i===0?A%100:A;st.remaining=add?A+B-st.start:B;st.stage='jump';},help:[add?'For addition, starting with the fractional part means the whole part still has to be added.':'Start at the first number. Use backward jumps to take away the second number.']}); }
       if(st.stage==='jump'){
         if(st.remaining===0) return lpDecNumStep({prompt:'All the required jumps are used. What is the final landing point?',ans:st.cur/100,apply:()=>{st.final=true;st.stage='done';},help:['Read the last landing point you found.']});
         const left=st.remaining; let auto;
@@ -7998,11 +8029,11 @@ function lpDecimalLine(o){ const add=o.op==='+',A=o.A,B=o.B,R=add?A+B:A-B;
         else if(add&&st.start===A%100&&st.jumps.length===1&&A>=100) auto=A-A%100;
         else if(add&&st.start===A%100&&st.jumps.length===2&&B>=100) auto=B-B%100;
         else if(!add&&st.jumps.length===0&&B%100) auto=B%100;
-        else auto=left>=100?100:left>=10?10:left;
+        else auto=left>=1000?1000:left>=100?100:left>=10?10:left;
         auto=Math.min(auto,left);
         return {prompt:`${lpDecText(left)} still needs to be ${add?'added':'taken away'}. Choose the size of your next ${add?'forward':'backward'} jump.`,short:`Amount still to ${add?'add':'subtract'}: ${lpDecText(left)}. Next jump size?`,input:{type:'num'},auto:auto/100,evidence:{component:'decimal-jump'},help:['A jump can be a whole, a tenth, a hundredth, or several of them.','Use a positive jump no larger than the amount still to use.'],check:v=>{const n=lpDecRead(v),c=Math.round(n*100); if(!Number.isFinite(n)||Math.abs(n*100-c)>1e-7)return {ok:false,fmt:true,msg:'Use a number with at most two decimal places.'};if(c<=0||c>left)return {ok:false,safe:true,code:'decimal-jump-size',msg:'Try a positive jump that fits the amount still to use.'};return {ok:true,apply:()=>{st.pending=c;st.stage='land';}};}};
       }
-      if(st.stage==='land')return lpDecNumStep({prompt:`From ${lpDecText(st.cur)}, jump ${add?'forward':'back'} ${lpDecText(st.pending)}. Where do you land?`,ans:(st.cur+(add?1:-1)*st.pending)/100,apply:()=>{st.cur+=(add?1:-1)*st.pending;st.remaining-=st.pending;st.jumps.push({dv:(add?1:-1)*st.pending*10,label:`${o.op}${lpDecText(st.pending)}`});st.lands.push(st.cur);st.pending=null;st.stage='jump';},no:'Check the jump direction and size from the current point.',help:['Keep the direction: addition moves forward, subtraction moves back.','Use the place value of your chosen jump; regroup if you cross a whole.']});
+      if(st.stage==='land')return lpDecNumStep({prompt:`From ${lpDecText(st.cur)}, jump ${add?'forward':'back'} ${lpDecText(st.pending)}. Where do you land?`,ans:(st.cur+(add?1:-1)*st.pending)/100,apply:()=>{st.cur+=(add?1:-1)*st.pending;st.remaining-=st.pending;st.jumps.push({dv:(add?1:-1)*st.pending*10,label:`${o.op}${lpDecText(st.pending)}`});st.lands.push(st.cur);st.pending=null;st.stage='jump';},no:'Check the jump direction and size from the current point.',help:['For this strategy, move forward to add or backward to take away.','Use the place value of your chosen jump; regroup if you cross a whole.']});
       return null;
     },visual:st=>st.start===null?'':nlSVG(st.start*10,st.jumps),done:()=>`${lpDecText(A)} ${o.op} ${lpDecText(B)} = <b>${lpDecText(R)}</b>${o.unit?' '+esc(o.unit):''}. Your jumps account for the whole amount.`}; }
 function lpDecimalGen(load,op,line){ let A,B;
@@ -8012,7 +8043,7 @@ function lpDecimalGen(load,op,line){ let A,B;
   return {A,B,op}; }
 function lpDecimalRepair(op,line){ const add=op==='+',A=add?245:430,B=add?175:185;
   const fix=line?lpDecimalLine({A,B,op}):lpDecimalChart({A,B,op,blocks:true});
-  return {story:`Here is someone's work for <b>${lpDecText(A)} ${op} ${lpDecText(B)}</b>.`,steps:line?[`Start at ${lpDecText(A)}`,`Jump ${add?'back':'forward'} by ${lpDecText(B)}`]:['Build matching places',add?'Keep 20 hundredths as the digit 20 in the hundredths place':'Take 5 hundredths from 0 without an exchange'],wrongAt:1,whyWrong:line?'The direction should match the operation.':add?'A full group of ten is exchanged for one unit to the left.':'Exchange equal values before taking away units you do not yet have.',clue:line?'Addition moves forward; subtraction moves back.':'Read the count in each place and consider an exchange.',fix}; }
+  return {story:`Here is someone's work for <b>${lpDecText(A)} ${op} ${lpDecText(B)}</b>.`,steps:line?[`Start at ${lpDecText(A)}`,`Jump ${add?'back':'forward'} by ${lpDecText(B)}`]:['Build matching places',add?'Keep 20 hundredths as the digit 20 in the hundredths place':'Take 5 hundredths from 0 without an exchange'],wrongAt:1,whyWrong:line?'The direction should match the operation.':add?'A full group of ten is exchanged for one unit to the left.':'Exchange equal values before taking away units you do not yet have.',clue:line?'For this strategy, move forward to add or backward to take away.':'Read the count in each place and consider an exchange.',fix}; }
 // Original repair example inspired by the full Lesson 1 common-error segment.
 function lpDecimalL1Repair(){ return {
   story:"A learner adds two prices: <b>$4.23 + $0.68</b>. Find the first slip.",
@@ -8020,15 +8051,29 @@ function lpDecimalL1Repair(){ return {
   wrongAt:2, whyWrong:"Eleven hundredths are one tenth and one hundredth. Exchange a group of ten before writing the total; do not join the counts into a longer decimal.",
   clue:"The combined counts are right. Check how the hundredths count becomes decimal digits.",
   fix:lpDecimalChart({A:423,B:68,op:'+',blocks:true,unit:'dollars'})}; }
+// Exact directions from pages 72, 74, 75, 78, 80, and 81, respectively.
+const LP_U3_DIRECTIONS=[null,'Add decimals using the place value strategy.','Add decimals using the number line strategy.','Find the sum.','Find the difference using the place value strategy.','Find the difference using the number line.','Find the difference.'];
 const LP_U3={};
 for(let n=1;n<=6;n++){ const id=`U3L${n}`,op=n<=3?'+':'−',line=n===2||n===5,blocks=n===1||n===4, l=lessonById(id);
   const create=(o,ph)=>line?lpDecimalLine(o):lpDecimalChart({...o,blocks:blocks||ph==='model'});
-  LP_U3[id]={unit:3,lesson:n,name:l.name,skill:'addsub',goal:line?`Choose ${op==='+'?'forward':'backward'} jumps, account for the entire amount, and check each landing.`:`Build and ${op==='+'?'combine':'remove'} matching place-value units. Exchange equal values and read the decimal result.`,
-    vocab:line?[[op==='+'?'addends':'minuend and subtrahend',op==='+'?'the numbers being added':'the starting amount and the amount taken away'],['number line','a line that shows number positions and jumps'],['benchmark','a familiar value such as 0.25, 0.5, 0.75, or 1']]:[['whole, tenth, hundredth','1, 0.1, and 0.01'],['exchange','ten units in one place have the same value as one unit to the left'],[op==='+'?'sum':'difference',op==='+'?'the result of adding':'the result of subtracting']],
+  LP_U3[id]={unit:3,lesson:n,name:l.name,skill:'addsub',goal:LP_U3_DIRECTIONS[n],
+    vocab:line?[[op==='+'?'sum':'difference',op==='+'?'the result of adding':'the result of subtracting'],['number line','a line that shows numbers in order'],['ones, tenths, hundredths','1, 0.1, and 0.01']]:[['ones, tenths, hundredths','1, 0.1, and 0.01'],[op==='+'?'regroup (bundle)':'regroup',op==='+'?'put ten units together to make one unit in the next place':'exchange equal values, such as one whole for ten tenths'],[op==='+'?'sum':'difference',op==='+'?'the result of adding':'the result of subtracting']],
     explain:line?['How do you know your jumps used the whole amount?','My jumps account for…']:['Why does an exchange leave the value unchanged?','Ten… have the same value as one…'],
     talk:line?'Ask the learner to show another valid set of jumps with new numbers.':'Ask the learner to draw an exchange with new numbers on paper.',
     model:()=>create(line?{A:op==='+'?150:350,B:op==='+'?250:175,op}:{A:op==='+'?268:450,B:op==='+'?157:218,op},'model'),
     make:(load,ph,i)=>{const o=lpDecimalGen(load,op,line);if(i===1){o.story=op==='+'?`Two lengths of ribbon measure ${lpDecText(o.A)} meters and ${lpDecText(o.B)} meters. Find their combined length.`:`A ribbon measures ${lpDecText(o.A)} meters. ${lpDecText(o.B)} meters are used. Find the length left.`;o.unit='meters';}return create(o,ph);},repair:()=>n===1?lpDecimalL1Repair():lpDecimalRepair(op,line)};
+}
+
+// Pages 75/81 leave strategy selection open; preserve the prior route for older saved sessions.
+for(const n of [3,6]){const bp=LP_U3[`U3L${n}`],op=n===3?'+':'−';
+ bp.strategyChoices=true;bp.legacyMake=bp.make;bp.legacyModel=bp.model;bp.legacyRepair=bp.repair;
+ const choice=(o,preferred=0)=>lpStrategyChoice({kind:'decimal-addsub-choice',preferred,choices:[{key:'chart',name:'Place value chart',make:()=>lpDecimalChart({...o,blocks:true})},{key:'line',name:'Number line',make:()=>lpDecimalLine(o)}]});
+ bp.model=()=>choice({A:n===3?268:350,B:n===3?157:175,op},n===6?1:0);
+ bp.modelByStrategy=i=>choice({A:n===3?268:350,B:n===3?157:175,op},i);
+ bp.make=(load,ph,i)=>{const max=load<=1?5:load===2?15:op==='+'?45:99;let A=lpRnd(100,max*100+99),B=lpRnd(1,max*100+99);if(op==='−'&&A<B)[A,B]=[B,A];const o={A,B,op};if(i===1){o.story=op==='+'?`Two lengths measure ${lpDecText(A)} meters and ${lpDecText(B)} meters. Find their combined length.`:`A length is ${lpDecText(A)} meters. ${lpDecText(B)} meters are used. Find the length left.`;o.unit='meters';}return choice(o);};
+ bp.vocab=[[op==='+'?'sum':'difference',op==='+'?'the result of adding':'the result of subtracting'],['place value chart','a chart organizing ones, tenths, hundredths, and larger places'],['number line','a line that shows numbers in order']];
+ bp.explain=['Why did you choose your strategy? How did you check the result?','I chose… because… I checked it by…'];
+ bp.repair=()=>({...lpDecimalRepair(op,n===6),fix:choice({A:op==='+'?245:430,B:op==='+'?175:185,op},n===6?1:0)});
 }
 // v9.52: original curriculum tasks. Source observation and authored task design are separate.
 // Exact rational arithmetic and integer decimal units; pending help never consumes solutions.
@@ -8071,14 +8116,55 @@ function cxFields(prompt,labels,answers,component,apply){return cxStep({prompt,i
 function cxSeq(o){const sp=lpSeq(o);sp.kind=o.kind;sp.problemKey=o.problemKey||o.title;sp.methodEvidence=o.methodEvidence||o.kind;sp.methodName=o.methodName||o.kind.replace(/-/g,' ');sp.audit=o.audit;sp.answerCheck=o.answerCheck;return sp;}
 function cxFractionBars(f,label,D){const count=Math.ceil(f.n/f.d),den=D||f.d;if(count>6||den>60)return `<p>${esc(label)}: ${cxText(f)}. Draw equal wholes on scratch paper.</p>`;let svg='';for(let w=0;w<count;w++)for(let i=0;i<den;i++)svg+=`<rect x="${20+i*360/den}" y="${25+w*30}" width="${360/den}" height="24" fill="${w*den+i<f.n*den/f.d?'#7fb5d5':'white'}" stroke="#1b2a41" stroke-width="0.8"/>`;return `<svg viewBox="0 0 400 ${30+count*30}" role="img" aria-label="${esc(label)}: ${esc(cxText(f))}; equal wholes"><text x="20" y="17" font-size="13">${esc(label)}: ${cxText(f)}</text>${svg}</svg>`;}
 function cxArea(a,b,labels,checked){return `<table class="cxgrid"><caption>Every row meets every column. ${esc(labels||'')}</caption><thead><tr><th>×</th>${b.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${a.map((x,i)=>`<tr><th>${x}</th>${b.map((y,j)=>`<td>${checked?.[i*b.length+j]??`${x} × ${y}`}</td>`).join('')}</tr>`).join('')}</tbody></table>`;}
-function cxDecimalMul(o){const {a,b,method}=o,A=Math.floor(a),B=Math.floor(b),pa=[A,+(a-A).toFixed(2)].filter(x=>x>0),pb=[B,+(b-B).toFixed(2)].filter(x=>x>0),products=pa.flatMap(x=>pb.map(y=>+(x*y).toFixed(4))),value=+(a*b).toFixed(4);const steps=[];
+function cxDecimalMulLegacy(o){const {a,b,method}=o,A=Math.floor(a),B=Math.floor(b),pa=[A,+(a-A).toFixed(2)].filter(x=>x>0),pb=[B,+(b-B).toFixed(2)].filter(x=>x>0),products=pa.flatMap(x=>pb.map(y=>+(x*y).toFixed(4))),value=+(a*b).toFixed(4);const steps=[];
  if(method==='algorithm'){const da=String(a).split('.')[1]?.length||0,db=String(b).split('.')[1]?.length||0,ia=Math.round(a*10**da),ib=Math.round(b*10**db);
   steps.push(cxFields('Rename each factor as a whole-number count of its smallest units.',['First factor count','Second factor count'],[ia,ib],'decimal-unit'));
   steps.push(cxNum(`Multiply the digit counts: ${ia} × ${ib}.`,ia*ib,'decimal-product'));
   steps.push(cxChoice('Which units does the product count?', ['ones','tenths','hundredths','thousandths','ten-thousandths'],da+db,'decimal-unit'));
- }else{steps.push(cxFields(`Split ${a} into whole and fractional parts.`,['Wholes','Fractional value'],[A,+(a-A).toFixed(2)],'decimal-parts'));steps.push(cxFields(`Split ${b} into whole and fractional parts.`,['Wholes','Fractional value'],[B,+(b-B).toFixed(2)],'decimal-parts'));for(let i=0;i<pa.length;i++)for(let j=0;j<pb.length;j++)steps.push(cxNum(`Partial product: ${pa[i]} × ${pb[j]}.`,products[i*pb.length+j],'decimal-product'));}
+ }else{steps.push(cxFields(`Decompose ${a} into whole and fractional parts.`,['Wholes','Fractional value'],[A,+(a-A).toFixed(2)],'decimal-parts'));steps.push(cxFields(`Decompose ${b} into whole and fractional parts.`,['Wholes','Fractional value'],[B,+(b-B).toFixed(2)],'decimal-parts'));for(let i=0;i<pa.length;i++)for(let j=0;j<pb.length;j++)steps.push(cxNum(`Partial product: ${pa[i]} × ${pb[j]}.`,products[i*pb.length+j],'decimal-product'));}
  steps.push(cxNum(method==='algorithm'?'Write the product with its units as a decimal.':'Add all checked partial products.',value,'decimal-product'));
  return cxSeq({kind:'decimal-'+method,title:`${a} × ${b}`,answer:value,steps,audit:{family:'decmul',a,b,result:value,method},init:()=>({}),visual:st=>method==='area'&&st.k>=2?cxArea(pa,pb,'Place-value parts',products.map((p,i)=>st.k>i+2?p:null)):method==='distributive'&&st.k>=2?`<p>${pa.join(' + ')} multiplied by ${pb.join(' + ')}. Account for every pair.</p>`:'',done:()=>`${a} × ${b} = <b>${value}</b>. The product units match both factors.`});}
+// Decimal area/distributive methods use learner-authored parts, exact hundredth counts,
+// and accepted products only. A pending cell never displays its computed product.
+function cxDecimalGrid(a,b,st){
+ const scale=Math.min(360/a,260/b),W=a*scale,H=b*scale,X=v=>40+v*scale,Y=v=>35+v*scale;
+ let lines='',fills='',labels='';
+ for(let i=1;i<Math.ceil(a*10);i++){const v=i/10;if(v>=a)break;lines+=`<path d="M${X(v)} 35 V${35+H}" stroke="#617284" stroke-width="${i%10===0?1.4:.45}"/>`;}
+ for(let i=1;i<Math.ceil(b*10);i++){const v=i/10;if(v>=b)break;lines+=`<path d="M40 ${Y(v)} H${40+W}" stroke="#617284" stroke-width="${i%10===0?1.4:.45}"/>`;}
+ if(st.partsA&&st.partsB){let x=0;for(let i=0;i<st.partsA.length;i++){let y=0;const av=st.partsA[i]/100;for(let j=0;j<st.partsB.length;j++){const bv=st.partsB[j]/100,k=i*st.partsB.length+j;
+  if(k<st.products.length)fills+=`<rect x="${X(x)}" y="${Y(y)}" width="${av/a*W}" height="${bv/b*H}" fill="#7fb5d5" opacity=".6"/>`;
+  else if(k===st.products.length&&st.shaded)fills+=`<rect x="${X(x)}" y="${Y(y)}" width="${av/a*W}" height="${bv/b*H}" fill="#ecd998" opacity=".6"/>`;
+  labels+=`<rect x="${X(x)}" y="${Y(y)}" width="${av/a*W}" height="${bv/b*H}" fill="none" stroke="#1b2a41" stroke-width="1.2"/>`;y+=bv;
+ }x+=av;}}
+ return `<figure style="margin:0"><svg style="display:block;width:100%;height:340px;max-width:100%" viewBox="0 0 ${W+80} ${H+70}" role="img" aria-label="Decimal area grid with factor lengths ${a} and ${b}; blue parts have checked products; gold is the selected part"><text x="${40+W/2}" y="22" text-anchor="middle" font-size="16">${a}</text><text x="22" y="${35+H/2}" text-anchor="middle" font-size="16" transform="rotate(-90 22 ${35+H/2})">${b}</text><rect x="40" y="35" width="${W}" height="${H}" fill="white" stroke="#1b2a41"/>${fills}${lines}${labels}</svg><figcaption class="muted">Heavy grid lines: ones. Small grid steps: tenths. One tenth × one tenth makes one hundredth. Work out each shaded part; then add the products.</figcaption></figure>`;
+}
+function cxDecimalMul(o){
+ if(o.method==='algorithm')return cxDecimalMulLegacy(o);
+ const {a,b,method}=o,A=Math.round(a*100),B=Math.round(b*100),value=A*B/10000;
+ const canonical=c=>[Math.floor(c/100),Math.floor(c%100/10)/10,(c%10)/100];
+ const partsStep=(st,first)=>cxStep({prompt:`Decompose ${first?a:b} into up to three parts. Enter each part's value; use zero for an unused part.`,input:{type:'nums',labels:['First part value','Second part value','Third part value']},auto:canonical(first?A:B),check:v=>{
+  const nums=Array.isArray(v)?v.map(lpDecRead):[],cs=nums.map(n=>Math.round(n*100));
+  if(nums.length!==3||nums.some((n,i)=>!Number.isFinite(n)||n<0||Math.abs(n*100-cs[i])>1e-7))return {ok:false,fmt:true,msg:'Use nonnegative values with at most two decimal places in all three boxes.'};
+  if(cs.reduce((s,x)=>s+x,0)!==(first?A:B))return {ok:false,code:'decimal-parts',msg:'Your parts need to add to the original factor. Keep the parts that fit your plan and revise the others.'};
+  return {ok:true,apply:()=>{st[first?'partsA':'partsB']=cs.filter(x=>x>0);st.stage=first?'partsB':method==='area'?'shade':'product';}};
+ }},'decimal-parts');
+ return {kind:'decimal-'+method,methodName:method==='area'?'decimal area grid':'distributive property',methodEvidence:'decimal-'+method,title:`${a} × ${b}`,problemKey:`${a} × ${b}`,answer:value,audit:{family:'decmul',a,b,result:value,method},script:[],
+  init:()=>({stage:'partsA',partsA:null,partsB:null,products:[],shaded:false}),
+  next:st=>{
+   if(st.stage==='partsA'||st.stage==='partsB')return partsStep(st,st.stage==='partsA');
+   const k=st.products.length, count=st.partsA.length*st.partsB.length;
+   if(k===count&&st.stage!=='done')return cxNum('Add your checked partial products. Write the product as a decimal.',value,'decimal-product',()=>{st.stage='done';});
+   if(st.stage==='done')return null;
+   const x=st.partsA[Math.floor(k/st.partsB.length)],y=st.partsB[k%st.partsB.length];
+   if(st.stage==='shade')return cxStep({prompt:`Shade the rectangle for ${lpDecText(x)} × ${lpDecText(y)}. Then calculate its value.`,input:{type:'button',label:'Shade this part'},showVal:()=> 'Shaded',auto:true,check:()=>({ok:true,apply:()=>{st.shaded=true;st.stage='product';}})},'decimal-parts');
+   return cxNum(`Partial product: ${lpDecText(x)} × ${lpDecText(y)}.`,x*y/10000,'decimal-product',()=>{st.products.push(x*y/10000);st.shaded=false;st.stage=method==='area'?'shade':'product';});
+  },visual:st=>{
+   const ledger=st.products.length?`<p>Checked partial products: ${st.products.map(cxDecimal).join(' + ')}</p>`:'';
+   if(method==='area')return cxDecimalGrid(a,b,st)+ledger;
+   return (st.partsA&&st.partsB?`<p>(${st.partsA.map(lpDecText).join(' + ')}) × (${st.partsB.map(lpDecText).join(' + ')})</p><p>Multiply every part of the first factor by every part of the second.</p>`:'')+ledger;
+  },done:()=>`${a} × ${b} = <b>${value}</b>. Every pair of factor parts is included.`};
+}
+
 function cxDecimalDivide(o){const {N,d,method}=o,q=+(N/d).toFixed(4),places=Math.max((String(N).split('.')[1]||'').length,(String(d).split('.')[1]||'').length),scale=10**places,units=['ones','tenths','hundredths'][places],Nc=Math.round(N*scale),dc=Math.round(d*scale),steps=[];
  if(method==='dealing'){const hundredCount=Math.round(N*100),ones=Math.floor(hundredCount/100),tenths=Math.floor(hundredCount%100/10),hundredths=hundredCount%10,wholeEach=Math.floor(ones/d),leftWhole=ones%d,totalTenths=leftWhole*10+tenths,tenthsEach=Math.floor(totalTenths/d),leftTenths=totalTenths%d,totalHundredths=leftTenths*10+hundredths;
   steps.push(cxNum(`Share ${ones} whole units among ${d} groups. Whole units in each group?`,wholeEach,'decimal-share'));
@@ -8220,6 +8306,22 @@ for(let n=1;n<=11;n++){
   if(mul){const a=(lpRnd(1,load<=1?4:8)*100+lpRnd(1,9)*(load>=2?1:10))/100,b=n<=4?lpRnd(2,8):(lpRnd(1,5)*10+lpRnd(1,9))/10;return cxDecimalMul({a,b,method});}
   const d=chosenMethod==='dealing'?lpRnd(2,8):lpPick(load<=1?[.2,.4,.5]:[.12,.15,.25,.3,.6]),q=chosenMethod==='dealing'?(load===1?lpRnd(2,15)/10:lpRnd(5,load===2?250:1250)/100):lpRnd(2,12),N=+(d*q).toFixed(2);return cxDecimalDivide({N,d,method:chosenMethod});
  });
+ // Multiplication words are grounded in the Unit 4 homework samples; these definitions are authored.
+ // Division keeps its own vocabulary. A quotient is not introduced on multiplication lessons.
+ const bp=LP_CURRICULUM[`U4L${n}`];
+ bp.vocab=mul?[['factors','the numbers being multiplied'],['product','the result of multiplying'],[method==='area'?'area model':'distributive property',method==='area'?'a rectangle model showing the parts being multiplied':'multiply each part, then add the products']]:[['dividend','the amount being divided'],['divisor','the number you divide by'],['quotient','the result of dividing']];
+ if(n===1||n===2)bp.goal='Evaluate using an area model.'; // Exact direction: homework pages 88–89.
+ else if(n===4||n===8)bp.goal='Find the product using the distributive property.'; // Authored goal; the photographed directions allow either area or distributive.
+}
+// Preserve prior generated problems/steps on v1/v2 resumes; new tasks follow photographed methods.
+for(let n=1;n<=8;n++){const bp=LP_CURRICULUM[`U4L${n}`],method=n<=2||n===5||n===6?'area':'distributive';
+ bp.legacyMake=load=>{const a=(lpRnd(1,load<=1?4:8)*100+lpRnd(1,9)*(load>=2?1:10))/100,b=n<=4?lpRnd(2,8):(lpRnd(1,5)*10+lpRnd(1,9))/10;return cxDecimalMulLegacy({a,b,method});};
+ bp.legacyModel=()=>lpSeeded(52000+400+n,()=>bp.legacyMake(1));bp.legacyRepair=load=>cxRepair({...bp,make:bp.legacyMake},'decimal-parts',load);
+ const create=(o,preferred=0)=>n===4||n===8?lpStrategyChoice({kind:'decimal-multiply-choice',preferred,choices:[{key:'area',name:'Area model',make:()=>cxDecimalMul({...o,method:'area'})},{key:'distributive',name:'Distributive property',make:()=>cxDecimalMul({...o,method:'distributive'})}]}):cxDecimalMul({...o,method});
+ bp.make=load=>{const a=lpRnd(1,(load<=1?4:8)*100+99)/100,b=n<=4?lpRnd(2,load<=1?4:load===2?13:20):lpRnd(1,(load<=1?3:5)*100+99)/100;return create({a,b});};
+ bp.model=()=>create(n<=4?{a:1.36,b:3}:{a:2.4,b:1.02},n===4||n===8?1:0);
+ bp.modelByStrategy=i=>create(n<=4?{a:1.36,b:3}:{a:2.4,b:1.02},i);
+ if(n===4||n===8){bp.strategyChoices=true;bp.goal=n===4?'Evaluate using an area model or the distributive property.':'Use either an area model or the distributive property to solve.';bp.vocab=[['factors','the numbers being multiplied'],['product','the result of multiplying'],['decompose','write a number as parts that add to the same value']];bp.explain=['Why did you choose your strategy? How do your parts account for both factors?','I chose… My parts…'];}
 }
 for(let n=1;n<=10;n++){
  const mode=n<=2?'simplify':n===3?'estimate':n===4?'mixed':n<=6?'area':n<=8?'line':'algorithm';
@@ -8339,7 +8441,7 @@ function teacherFocusGrownupsHTML(){ const log=Array.isArray(S.lessonLog)?S.less
   const aw=log.filter(e=>e.teacherFocus&&e.walterHelp?.length), probes=aw.filter(e=>e.probeStatus==="help-before-miss").length;
   const awReport=aw.length?`<p class="muted" style="font-size:13px">Ask Walter: ${aw.length} problem${aw.length===1?"":"s"} with help; ${aw.reduce((n,e)=>n+e.walterHelp.length,0)} distinct help deliveries. ${probes} delayed probe${probes===1?"":"s"} changed to supported practice before an independent miss. Vocabulary, explanation, and clue use are saved separately. These completions are not clean checks.</p>`:"";
   return rows?`<div class="card"><h2 style="margin-top:0">Teacher's focus practice</h2>${awReport}<p class="muted" style="font-size:13px">This route has its own difficulty and check-in schedule. “Clean” means a new problem's checked method steps were finished without clues, do-overs, or a confirmed answer shown first. Repeated problems are practice, not new evidence. A correct final answer alone is not counted as clean method work. A later check-in checks the difficulty practiced; it keeps a future review on the calendar.</p><div style="overflow-x:auto"><table class="report"><tr><th>Focus</th><th>Sessions</th><th>On their own</th><th>Later check-in</th><th>What was checked</th></tr>${rows}</table></div></div>`:""; }
-const LP_EVIDENCE_NAMES={"decimal-build-exchange":"decimal unit counts, exchanges, and removals","decimal-chart-exchange":"decimal chart counts and equal-value exchanges","decimal-jumps-and-landings":"learner-chosen decimal jumps and checked landings","area-cells-to-rows":"area cells to row totals","row-totals-and-size":"row totals and size","distributive-cells-to-rows":"four products to rows","expansion-to-column-bridge":"expansion to a written column","column-digits-regroup-and-sum":"algorithm digits, carries, and column sums","expanded-recombination":"expanded-form recombination","compatible-parts":"compatible parts and partial quotients","area-width-vs-product":"band widths versus products","area-bands-and-ledger":"area bands and subtraction ledger"};
+const LP_EVIDENCE_NAMES={"decimal-area":"decimal grid with checked decompositions and partial products","decimal-distributive":"chosen decimal parts and every checked partial product","decimal-build-exchange":"decimal unit counts, exchanges, and removals","decimal-chart-exchange":"decimal chart counts and equal-value exchanges","decimal-jumps-and-landings":"learner-chosen decimal jumps and checked landings","area-cells-to-rows":"area cells to row totals","row-totals-and-size":"row totals and size","distributive-cells-to-rows":"four products to rows","expansion-to-column-bridge":"expansion to a written column","column-digits-regroup-and-sum":"algorithm digits, carries, and column sums","expanded-recombination":"expanded-form recombination","compatible-parts":"compatible parts and partial quotients","area-width-vs-product":"band widths versus products","area-bands-and-ledger":"area bands and subtraction ledger"};
 const LP_CODE_NAMES={"decimal-place":"a decimal unit count needed attention","decimal-jump-size":"tested a jump outside the amount still to use",trial:"tested a band that was too big, then chose a smaller one (a normal step)", "one-band":"wrote the whole answer as one band or part (counted as the answer, not the method)", structure:"an expression with the right value that didn't match the words", overshoot:"a band too big for what was left (then fixed)", "area-as-quotient":"used the amount left as a partial quotient", "product-as-quotient":"mixed up a product and a partial quotient", leftover:"tried to finish with something left",
   "missing-band":"left a partial quotient out of the sum", unprocessed:"left a part out of the sum", place:"a place-value slip (zeros)", "not-compatible":"chose a part the divisor doesn't divide evenly", "tens-row-zero":"tens row missing its 0",
   "tens-as-ones":"treated the tens digit as ones", "row-match":"matched products to the wrong row", "not-place":"split a number but not by place value", "copied-sign":"copied a sign incorrectly when rewriting", straddle:"mixed numbers from two groups",
@@ -8400,6 +8502,7 @@ function parseFractionHomework(text){
   return {fraction:true,a,b,op,method,explicitMethod,label:cxText(a)+' '+op+' '+cxText(b)};
 }
 function fractionHomeworkTask(task){
+  if(task?.wordStory)return wordHomeworkTask(task);
   if(!task||typeof task!=='object'||Array.isArray(task))return null;
   const operand=f=>f&&Number.isSafeInteger(f.n)&&Number.isSafeInteger(f.d)&&f.d>0?f.n+'/'+f.d:'?';
   // Preserve unreduced original operands. Integers need their original d=1 in division.
@@ -8407,11 +8510,13 @@ function fractionHomeworkTask(task){
   if(!r?.fraction)return null;return {...r,method:['algorithm','area','line'].includes(task.method)?task.method:r.method};
 }
 function fractionHomeworkSpec(task){
+  if(task.wordStory)return wordHomeworkSpec(task);
   if(task.op==='×')return cxFractionProduct({a:task.a,b:task.b,mode:'area'});
   if(task.op==='÷')return cxFractionDivision({d:task.a.d===1?task.b.d:task.a.d,N:task.a.d===1?task.a.n:task.b.n,share:task.a.d!==1,mode:'model'});
   return cxFractionCombine({...task,regroup:task.op==='−'&&task.a.n%task.a.d/task.a.d<task.b.n%task.b.d/task.b.d&&task.a.n>=task.a.d});
 }
 function fractionHomeworkStateValid(task,st){
+  if(task.wordStory)return wordHomeworkStateValid(task,st);
   if(['+','−'].includes(task.op)){
     if(!['denominator','first','second','exchange','combine','jump','landing','final','done'].includes(st.stage))return false;
     if(st.stage==='denominator')return st.D===null&&st.an===null&&st.bn===null;
@@ -8433,19 +8538,20 @@ function fractionHomeworkStateValid(task,st){
   return Number.isInteger(st.k)&&st.k>=0&&st.k<=5;
 }
 function fractionHomeworkResumeNorm(r){
-  if(!r||r.v!==1||!fractionHomeworkTask(r.task)||!Number.isFinite(r.t)||Date.now()-r.t>30*864e5||!r.st||typeof r.st!=='object'||Array.isArray(r.st)||!Number.isInteger(r.st.k)||r.st.k<0||r.st.k>160)return null;
+  const task=fractionHomeworkTask(r?.task);
+  if(!r||r.v!==1||!task||!Number.isFinite(r.t)||Date.now()-r.t>30*864e5||!r.st||typeof r.st!=='object'||Array.isArray(r.st)||!Number.isInteger(r.st.k)||r.st.k<0||r.st.k>160)return null;
   try{if(JSON.stringify(r).length>24000)return null;}catch(e){return null;}
-  if(!fractionHomeworkStateValid(r.task,r.st))return null;
-  return {...r,task:fractionHomeworkTask(r.task),st:{...r.st,stepEvents:lpTrimEvents(r.st.stepEvents)}};
+  if(!fractionHomeworkStateValid(task,r.st))return null;
+  return {...r,task,st:{...r.st,stepEvents:lpTrimEvents(r.st.stepEvents)}};
 }
 function fractionHomeworkLogNorm(log){return (Array.isArray(log)?log:[]).filter(e=>e&&typeof e==='object'&&!Array.isArray(e)&&Number.isFinite(e.t)&&typeof e.q==='string').slice(-100).map(e=>({...e,q:e.q.slice(0,100),firstTry:0,hw:1,stepEvents:lpTrimEvents(e.stepEvents)}));}
 function fractionHomeworkResumeReady(){return !!fractionHomeworkResumeNorm(S?.homeworkResume);}
 function fractionHomeworkResume(){const r=fractionHomeworkResumeNorm(S?.homeworkResume);if(r)fractionHomeworkStart(r.task,r);}
 function fractionHomeworkStart(request,resume){
   const task=fractionHomeworkTask(request);if(!task||!S)return;
-  if(cur&&phase==='q')leaveProblem();cur=null;mode='hw:fraction';
-  const sp=fractionHomeworkSpec(task),bp={name:'Fraction homework',lesson:0,skill:'fracaddsub',make:(load,phase,i=0)=>fractionHomeworkSpec(task.op==='×'?{...task,a:{n:i+2,d:5},b:{n:1,d:3}}:task.op==='÷'?{...task,a:{n:i+2,d:1},b:{n:1,d:5}}:{...task,a:{n:i+3,d:4},b:{n:1,d:6}})};bp.model=()=>bp.make(1,'model',0);
-  const it={phase:'guided',spec:sp,load:1};lp={id:'homework-fraction',homework:task,bp,items:[it,{phase:'summary'}],i:0,load:1,results:[],t0:Date.now()};
+  if(cur&&phase==='q')leaveProblem();cur=null;mode=task.wordStory?'hw:word':'hw:fraction';
+  const sp=fractionHomeworkSpec(task),bp={name:task.wordStory?'Word problem homework':'Fraction homework',lesson:0,skill:task.wordStory?'expressions':'fracaddsub',make:(load,phase,i=0)=>fractionHomeworkSpec(task.wordStory?wordHomeworkExample(task,i):task.op==='×'?{...task,a:{n:i+2,d:5},b:{n:1,d:3}}:task.op==='÷'?{...task,a:{n:i+2,d:1},b:{n:1,d:5}}:{...task,a:{n:i+3,d:4},b:{n:1,d:6}})};bp.model=()=>bp.make(1,'model',0);
+  const it={phase:'guided',spec:sp,load:1};lp={id:task.wordStory?'homework-word':'homework-fraction',homework:task,bp,items:[it,{phase:'summary'}],i:0,load:1,results:[],t0:Date.now()};
   lpItemStart(it);
   if(resume){it.st={...it.st,...resume.st,msg:'',msgKind:'',stepEvents:lpTrimEvents(resume.st.stepEvents)};it.step=sp.next(it.st);lpPrepareStep(it);it.recorded=!!resume.recorded;lp.results=Array.isArray(resume.results)?resume.results.slice(-2):[];}
   lpRender();toProblemTop();
@@ -8457,6 +8563,119 @@ function fractionHomeworkRecord(it,extra){
   S.homeworkLog=fractionHomeworkLogNorm([...(S.homeworkLog||[]),e]);lp.results.push(e);fractionHomeworkSave();return e;
 }
 function fractionHomeworkSummaryHTML(){return `<div class="card lpcard"><h2 style="margin-top:0">Homework problem finished</h2><p>You worked through ${esc(lp.homework.label)} with ${esc(lp.items[0].spec.methodName||'checked fraction steps')}.</p>${walterNote('rest','You did the work. Take a break whenever you need.',true)}<p class="muted">This records homework practice. It does not change levels or count as independent lesson evidence.</p><div class="actions"><button class="btn primary" id="lphome">Home</button><button class="btn quiet" id="lpagain">Another problem from my page</button></div></div>`;}
+// Bounded, local story recognition. Match the whole story and its references;
+// never infer an operation just from numbers or unrelated surrounding words.
+function parseWordHomework(text){
+ const production=parsePaperHomework(text);if(production)return production;
+ const story=String(text||'').replace(/\s+/g,' ').trim();if(story.length>1400)return null;
+ const s=story.replace(/[’‘]/g,"'").replace(/^(?:(?:#|question|problem)\s*\d{1,2}\s*[.):]?|\d{1,2}[.)])\s+/i,'');
+ const name="([a-z][a-z'-]{0,29})",count="([a-z0-9 -]{1,48})";
+ const first=s.match(new RegExp('^'+name+' is '+count+' years? old[.!]?\\s+','i'));if(!first)return null;
+ const rest=s.slice(first[0].length),relation=rest.match(new RegExp('^'+name+"'s (?:little |younger |older )?(?:brother|sister|sibling)(?:,\\s*|\\s+)"+name+"(?:,\\s*|\\s+)is half (?:of )?"+name+"'s age (minus|plus) "+count+' years?[.!]?\\s+How old is '+name+"[?!.]{0,2}(?:\\s+Write and solve an expression to find "+name+"'s age[.!]?)?$",'i'));
+ if(!relation)return null;
+ const same=(a,b)=>a.toLowerCase()===b.toLowerCase();
+ if(!same(first[1],relation[1])||!same(first[1],relation[3])||!same(relation[2],relation[6])||(relation[7]&&!same(relation[2],relation[7]))||same(first[1],relation[2]))return null;
+ const read=x=>/^\d+$/.test(x.trim())?Number(x):(()=>{const n=parseNumberWords(x.trim().toLowerCase());return n&&!n.d?n.w:NaN;})();
+ const age=read(first[2]),change=read(relation[5]),op=relation[4].toLowerCase()==='minus'?'−':'+';
+ if(!Number.isSafeInteger(age)||age<2||age>120||age%2||!Number.isSafeInteger(change)||change<0||change>99||(op==='−'&&change>age/2))return {err:'This age-story route checks whole-year ages: an even starting age from 2 to 120, with a nonnegative year adjustment. For another story shape, type the expression you wrote.'};
+ const role=rest.match(/'s (younger|older) (?:brother|sister|sibling)(?:,|\s)/i)?.[1]?.toLowerCase(),result=age/2+(op==='+'?change:-change);
+ if((role==='younger'&&result>=age)||(role==='older'&&result<=age))return {err:'The age relationship conflicts with the younger or older description. Check the wording, or type the expression you wrote.'};
+ return {wordStory:true,story,source:first[1],person:relation[2],age,change,op,label:'Age story: '+relation[2]};
+}
+function wordHomeworkTask(task){const r=task?.wordStory&&typeof task.story==='string'?parseWordHomework(task.story):null;return r?.wordStory?r:null;}
+function wordHomeworkExpressionCheck(task,value){
+ const s=String(value||'').trim();if(s.length>512)return {ok:false,fmt:true,msg:'Keep the expression to the operations in this story.'};
+ const e=lpEval(s),tree=lpAst(s);if(!e.ok||!Number.isFinite(e.val)||!tree)return {ok:false,fmt:true,msg:'Write a complete expression with operation signs and matching parentheses.'};
+ const forms=op=>[...['÷ 2','× 0.5','× (1 ÷ 2)'].map(half=>`(${task.age} ${half}) ${op} ${task.change}`),`(${task.age} ${op} ${task.change} × 2) ÷ 2`,`(${task.age} ${op} ${task.change*2}) ÷ 2`,...(task.change===0?[`${task.age} ÷ 2`,`${task.age} × 0.5`,`${task.age} × (1 ÷ 2)`]:[])].map(form=>lpCanon(lpAst(form)));
+ const key=lpCanon(tree);if(forms(task.op).includes(key))return {ok:true};
+ if(forms(task.op==='−'?'+':'−').includes(key))return {ok:false,code:'story-expression',msg:'Check whether the story adds or takes away years.'};
+ return {ok:false,fmt:true,msg:'I cannot verify that expression against the story yet. Show the known age being halved and the year adjustment in your expression. Your work is still here to edit.'};
+}
+function wordHomeworkSpec(task){
+ if(task.storyType==='production')return paperHomeworkSpec(task);
+ const value=task.age/2+(task.op==='+'?task.change:-task.change),expr=`${task.age} ÷ 2 ${task.op} ${task.change}`;
+ const expressionGuide=['Find the known age and the words describing the other person\'s age.','An expression must preserve the halving relationship and the year adjustment, in the order the story gives.','Write your proposed expression on scratch paper. Read each operation back as words and match it to the story.','Explain what each quantity and operation means. Check who the question asks about.','Revise any part that changes the relationship or its order. Keep the expression as your own work.'];
+ const ageGuide=['Use the expression you already checked to plan the calculation.','Follow its grouping and operation order, then apply the year adjustment.','Test the halving calculation with a reverse operation on scratch paper. Then check the adjustment.','Compare your calculation with the original age relationship. The final quantity is an age in years.','Find the first calculation that does not fit your check. Revise it and check again.'];
+ return {kind:'build',methodName:'story expression and age',methodEvidence:'homework-age-story',title:esc(task.label),problemKey:task.story,answer:value,script:[],init:()=>({expression:null}),
+  next:st=>st.k===0?{prompt:'Write an expression for the story. Use the known age and both parts of the relationship.',short:'Your expression',input:{type:'text',ph:'Type your expression'},auto:expr,curriculumGuide:expressionGuide,check:v=>{const r=wordHomeworkExpressionCheck(task,v);return r.ok?{ok:true,apply:()=>{st.expression=String(v).trim();}}:r;}}:st.k===1?{...lpNumStep({prompt:`Evaluate your checked expression. How old is ${esc(task.person)}, in years?`,short:'Age in years',ans:value,no:'Keep your checked expression. Recheck the halving calculation and the year adjustment.'}),curriculumGuide:ageGuide}:null,
+  visual:st=>`<p class="lpstory">${esc(task.story)}</p>${st.expression?`<p class="lpeq">Your checked expression: ${esc(st.expression)}</p>`:''}`,
+  done:()=>`${esc(task.person)} is <b>${value}</b> years old. You checked the expression and its value.`};
+}
+function wordHomeworkStateValid(task,st){if(task.storyType==='production')return paperHomeworkStateValid(task,st);return Number.isInteger(st.k)&&st.k>=0&&st.k<=2&&(st.k===0?st.expression===null:wordHomeworkExpressionCheck(task,st.expression).ok)&&(st.k===2?st.done===true:!st.done);}
+function wordHomeworkExample(task,i=0){
+ if(task.storyType==='production')return parsePaperHomework(`A paper company produces ${40+i*20} sheets of specialty paper each day. How many sheets are produced in 12 days? Twenty sheets placed in each package. How many packages of specialty paper are produced in 12 days? Four packages are bundled in a box for shipping. Would 100 boxes be enough to ship all the packages? Explain.`);
+ const answer=task.age/2+(task.op==='+'?task.change:-task.change);let age=16+i*2;if(age/2-2===answer)age+=4;
+ return parseWordHomework(`Maya is ${age} years old. Maya's younger sibling, Leo, is half of Maya's age minus two years. How old is Leo?`);
+}
+// The printed paper-company family: daily sheets -> packages -> shipping capacity.
+// Match every question, including the repeated number of days. Do not discard
+// extra facts or interpret handwriting as an instruction or a given.
+function parsePaperHomework(text){
+ const story=String(text||'').replace(/\s+/g,' ').trim();if(story.length>1800)return null;
+ const s=story.replace(/^(?:(?:#|question|problem)\s*\d{1,2}\s*[.):]?|\d{1,2}[.)])\s+/i,'');
+ const count='([a-z0-9, -]{1,48})';
+ const stem=new RegExp('^A paper company produces '+count+' sheets of specialty paper each day[.!]?\\s+How many sheets are produced in '+count+' days[?!.]{0,2}', 'i');
+ const first=s.match(stem);if(!first)return null;
+ const tail=s.slice(first[0].length).trim(),follow=tail?tail.match(new RegExp('^'+count+' sheets (?:are )?placed in each package[.!]?\\s+How many packages of specialty paper are produced in '+count+' days[?!.]{0,2}\\s+'+count+' packages are bundled in a box for shipping[.!]?\\s+Would '+count+' boxes be enough to ship all the packages[?!.]{0,2}(?:\\s+Explain[.!]?)?$', 'i')):null;
+ if(tail&&!follow)return null;
+ const read=x=>{x=x.trim();if(/^\d+$/.test(x)||/^\d{1,3}(,\d{3})+$/.test(x))return Number(x.replace(/,/g,''));const n=parseNumberWords(x.toLowerCase());return n&&!n.d?n.w:NaN;};
+ const perDay=read(first[1]),days=read(first[2]),perPackage=follow?read(follow[1]):null,repeatDays=follow?read(follow[2]):null,packagesPerBox=follow?read(follow[3]):null,boxes=follow?read(follow[4]):null;
+ const whole=(v,min,max)=>Number.isSafeInteger(v)&&v>=min&&v<=max;
+ if(!whole(perDay,2,9999)||!whole(days,2,99)||(follow&&(!whole(perPackage,2,99)||!whole(packagesPerBox,1,99)||!whole(boxes,1,999))))return {err:'This paper-story route checks positive whole-number quantities: daily sheets up to 9,999, days and package sizes up to 99, and boxes up to 999. For another shape, type the expression you wrote.'};
+ if(follow&&repeatDays!==days)return {err:'The sheet and package questions use different numbers of days. Check the wording, or type the expressions you wrote separately.'};
+ if(follow&&perDay*days%perPackage)return {err:'This paper-story route currently checks an exact number of full packages. For leftover sheets, type the expression you wrote and handle the remaining sheets on paper.'};
+ return {wordStory:true,storyType:'production',story,perDay,days,perPackage,packagesPerBox,boxes,parts:follow?3:1,label:'Paper company: sheets'+(follow?', packages, and boxes':'')};
+}
+function paperHomeworkExpected(task){return [task.perDay*task.days,task.perDay*task.days/task.perPackage,task.packagesPerBox*task.boxes];}
+function paperHomeworkExpressionCheck(task,index,value){
+ const s=String(value||'').trim(),tree=s.length<=512?lpAst(s):null,result=s.length<=512?lpEval(s):{ok:false};
+ if(!tree||!result.ok||!Number.isFinite(result.val))return {ok:false,fmt:true,msg:'Write a complete expression with operation signs and matching parentheses.'};
+ const total=task.perDay*task.days,forms=index===0?[`${task.perDay} × ${task.days}`]:index===1?[`${total} ÷ ${task.perPackage}`,`(${task.perDay} × ${task.days}) ÷ ${task.perPackage}`,`${task.perDay} × (${task.days} ÷ ${task.perPackage})`,`(${task.perDay} ÷ ${task.perPackage}) × ${task.days}`]:[`${task.packagesPerBox} × ${task.boxes}`];
+ if(forms.some(form=>lpCanon(lpAst(form))===lpCanon(tree)))return {ok:true};
+ return {ok:false,fmt:true,msg:'I cannot verify that expression against this question yet. Show the quantities and relationship for this part of the story. Your work is still here to edit.'};
+}
+function paperHomeworkGuide(index,expression){
+ const relation=index===0?'the daily sheet count and the number of days':index===1?'the checked sheet total and the sheets in each package':'the number of boxes and the packages each box holds';
+ return expression?[
+  `Identify ${relation}.`,
+  'Plan an operation that connects those quantities to the unit the question asks for.',
+  'Write your proposed expression on scratch paper. Read each operation as words.',
+  'Explain what each quantity counts and match it to this part of the story.',
+  'Revise any operation that changes that relationship. Keep the expression as your own work.'
+ ]:[
+  'Use the expression you checked to plan the calculation.',
+  'Follow its grouping and operation order. Keep the units beside the quantities.',
+  'Test the calculation using a reverse operation or a different representation on scratch paper.',
+  'Compare the result with the quantities and units in this question.',
+  'Find the first calculation that does not fit your check. Revise it and check again.'
+ ];
+}
+function paperHomeworkSpec(task){
+ const expected=paperHomeworkExpected(task),end=task.parts===3?7:2,units=['sheets','packages','packages'],names=['Sheets produced','Packages produced','Box capacity'];
+ return {kind:'build',methodName:'story expressions, quantities, and capacity',methodEvidence:'homework-production-story',title:esc(task.label),problemKey:task.story,answer:expected[0],script:[],init:()=>({expressions:[],values:[],enough:null}),
+  next:st=>{
+   if(st.k>=end)return null;
+   if(st.k===6){const options=['Yes, the boxes can hold all the packages.','No, the boxes cannot hold all the packages.'];return {prompt:'Compare your checked package count with your checked box capacity. Would the boxes be enough? Explain your comparison on paper.',short:'Enough boxes?',input:{type:'mc',options},auto:expected[2]>=expected[1]?0:1,curriculumGuide:['Identify the two quantities you checked: packages to ship and package spaces in the boxes.','Plan a comparison between the required amount and the available capacity.','Write the comparison on scratch paper and use the same unit on both sides.','Explain how that comparison supports your yes or no decision.','Recheck any quantity or comparison that does not fit your explanation.'],check:v=>v===-1?{ok:false,fmt:true,msg:'Choose whether the boxes are enough after comparing your checked quantities.'}:String(v)===String(expected[2]>=expected[1]?0:1)?{ok:true,apply:()=>{st.enough=Number(v)===0;}}:{ok:false,msg:'Compare the checked number of packages to ship with the checked number the boxes can hold.'}};}
+   const index=Math.floor(st.k/2),expression=st.k%2===0;
+   if(expression){const prompt=index===0?'Write an expression for the total sheets produced. Use the daily sheet count and the number of days.':index===1?'Write an expression for the number of packages. Use your checked sheet total and the sheets in each package.':'Write an expression for how many packages the given boxes can hold. Use the number of boxes and the packages in each box.';
+    return {prompt,short:names[index]+' expression',input:{type:'text',ph:'Type your expression'},auto:index===0?`${task.perDay} × ${task.days}`:index===1?`${expected[0]} ÷ ${task.perPackage}`:`${task.boxes} × ${task.packagesPerBox}`,curriculumGuide:paperHomeworkGuide(index,true),check:v=>{const r=paperHomeworkExpressionCheck(task,index,v);return r.ok?{ok:true,apply:()=>{st.expressions[index]=String(v).trim();}}:r;}};
+   }
+   const step=lpNumStep({prompt:`Evaluate your checked expression. ${names[index]}: how many ${units[index]}?`,short:names[index]+' in '+units[index],ans:expected[index],no:'Keep your checked expression. Recheck the calculation and its unit.'}),check=step.check;
+   return {...step,curriculumGuide:paperHomeworkGuide(index,false),check:v=>{const r=check(v);return r.ok?{...r,apply:()=>{if(r.apply)r.apply();st.values[index]=expected[index];}}:r;}};
+  },
+  visual:st=>`<p class="lpstory">${esc(task.story)}</p>${st.expressions.map((x,i)=>`<p class="lpeq">${names[i]}: ${esc(x)}${st.values[i]!==undefined?` = ${st.values[i].toLocaleString('en-US')} ${units[i]}`:''}</p>`).join('')}`,
+  done:()=>task.parts===3?'You checked the sheets, the packages, and the box capacity. You used their comparison to decide whether the boxes are enough.':'You checked your expression and the number of sheets produced.'};
+}
+function paperHomeworkStateValid(task,st){
+ const end=task.parts===3?7:2;if(!Number.isInteger(st.k)||st.k<0||st.k>end||!Array.isArray(st.expressions)||!Array.isArray(st.values)||st.expressions.length>3||st.values.length>3||(st.k===end?st.done!==true:!!st.done))return false;
+ const expected=paperHomeworkExpected(task),count=task.parts===3?3:1;
+ if(st.k===7?st.enough!==(expected[2]>=expected[1]):st.enough!==null)return false;
+ for(let i=0;i<count;i++){
+  if(st.k>i*2){if(!paperHomeworkExpressionCheck(task,i,st.expressions[i]).ok)return false;}else if(st.expressions[i]!==undefined)return false;
+  if(st.k>i*2+1){if(st.values[i]!==expected[i])return false;}else if(st.values[i]!==undefined)return false;
+ }
+ return st.expressions.length<=Math.ceil(Math.min(st.k,count*2)/2)&&st.values.length<=Math.floor(Math.min(st.k,count*2)/2);
+}
 // UI derives a recommendation from existing plans and schedules, without writing evidence.
 function overviewMethodContext(sk,key){
   const ctx=Object.fromEntries(String(key||'').split(',').filter(Boolean).map(kv=>kv.split('=')));
