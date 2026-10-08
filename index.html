@@ -169,9 +169,13 @@ input.ans:disabled{background:#F0F3F7;color:var(--graphite);border-color:var(--l
 .chart-label{font-size:12px;color:var(--graphite);text-align:center;margin-top:6px;font-weight:600}
 pre.stack{font-family:Menlo,Consolas,"Courier New",monospace;font-size:22px;font-weight:700;line-height:1.35;margin:10px auto 4px;display:table;text-align:right;background:#F7F9FC;border:2px solid var(--line);border-radius:10px;padding:10px 18px;font-variant-numeric:tabular-nums}
 pre.stack .rule{display:block;border-top:3px solid var(--ink);margin-top:2px;padding-top:2px}
-pre.stack .pad{color:#9AA5B3}
+pre.stack .decimal-pad{color:#9AA5B3}
+input[type="file"]{max-width:100%}
 pre.stack .carry{font-size:.6em;color:var(--hi-ink);vertical-align:top}
 pre.stack .cr{color:#B45309;font-weight:600}
+#gupage{flex-wrap:wrap}
+#gupage h1{flex:1 1 160px;min-width:0;overflow-wrap:anywhere}
+#gupage .build{white-space:normal}
 .build{font-size:12px;margin-left:auto;align-self:center;white-space:nowrap}
 .substep.why{border-style:solid;border-color:var(--ink);background:#fff}
 .substep .res.after{margin-top:6px;font-weight:400;color:var(--ink);opacity:.9}
@@ -997,7 +1001,7 @@ function stackHTML(nums, ops, k, result){
   const width=Math.max(...parts.map(p=>p.real.length+p.pad.length), rs.length);
   const esc=s=>s.replace(/</g,"&lt;");
   let html="";
-  parts.forEach((p,i)=>{ const len=p.real.length+p.pad.length; html+=(i?ops[i]:" ")+" "+" ".repeat(width-len)+esc(p.real)+(p.pad?`<span class="pad">${p.pad}</span>`:"")+"\n"; });
+  parts.forEach((p,i)=>{ const len=p.real.length+p.pad.length; html+=(i?ops[i]:" ")+" "+" ".repeat(width-len)+esc(p.real)+(p.pad?`<span class="decimal-pad">${p.pad}</span>`:"")+"\n"; });
   if(result) html+=`<span class="rule">  ${" ".repeat(width-rs.length)}${rs}</span>`;
   return `<pre class="stack">${html}</pre>`;
 }
@@ -1675,7 +1679,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.58 · October 7, 2026";
+const BUILD="v9.59 · October 8, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -3961,8 +3965,45 @@ function genForTarget(t){
   p.notEligible=true; return p;
 }
 function weakSummary(){ const W=S.weak; const out={weak:[],review:[],ok:[]}; for(const k in W){ const e=W[k]; const {sk,comp,ctx}=parseWeakKey(k); if(!SKILLS[sk]) continue; out[e.state].push({key:k, sk, comp, ctx, name:weakLabel(k), ...e}); } return out; }
+// Pure size/shape policy. Limits are app safeguards, not promises about browser quota.
+const BACKUP_LIMITS=Object.freeze({bytes:12*1024*1024,encoded:16*1024*1024+4,players:32,depth:48,nodes:500000,array:10000,keys:4096,string:65536});
+const SAVE_CHAR_BUDGET=2*1024*1024;
+function backupShapeError(root){
+  const todo=[[root,0]];let nodes=0;
+  while(todo.length){const [v,d]=todo.pop();if(++nodes>BACKUP_LIMITS.nodes)return "The backup has too many entries.";
+    if(d>BACKUP_LIMITS.depth)return "The backup is nested too deeply.";
+    if(typeof v==="string"&&v.length>BACKUP_LIMITS.string)return "A backup text field is too long.";
+    if(v&&typeof v==="object"){
+      if(Array.isArray(v)&&v.length>BACKUP_LIMITS.array)return "A backup list is too long.";
+      const keys=Object.keys(v);if(keys.length>BACKUP_LIMITS.keys)return "A backup record has too many fields.";
+      for(const k of keys){if(k.length>256)return "A backup field name is too long.";todo.push([v[k],d+1]);}
+    }
+  }return "";
+}
+function prepareStoredDatabase(db,now){
+  let raw=JSON.stringify(db);if(raw.length<=SAVE_CHAR_BUDGET)return {ok:true,db,raw,trimmed:0};
+  // Preserve every aggregate, fingerprint, due check, and draft. Only archive old
+  // per-step details outside both the recent 80 and the recurring-support window.
+  const profiles=profileMap(db.profiles),candidate={...db,profiles},eligible=[];
+  for(const [name,p] of Object.entries(profiles)){
+    const rows=Array.isArray(p.lessonLog)?p.lessonLog:[];
+    rows.slice(0,Math.max(0,rows.length-80)).forEach((r,i)=>{if(r&&Number.isFinite(+r.t)&&+r.t<now-30*864e5&&Array.isArray(r.stepEvents)&&r.stepEvents.length)eligible.push({name,i,t:+r.t});});
+  }
+  eligible.sort((a,b)=>a.t-b.t);let estimate=raw.length,trimmed=0;const cloned=new Set();
+  for(const x of eligible){
+    if(estimate<=SAVE_CHAR_BUDGET)break;
+    if(!cloned.has(x.name)){profiles[x.name]={...profiles[x.name],lessonLog:profiles[x.name].lessonLog.slice()};cloned.add(x.name);}
+    const p=profiles[x.name],r=p.lessonLog[x.i];
+    p.lessonLog[x.i]={...r,stepEvents:[],eventsTrimmed:(+r.eventsTrimmed||0)+r.stepEvents.length};
+    p.storageDetailsTrimmed=(+p.storageDetailsTrimmed||0)+r.stepEvents.length;
+    trimmed+=r.stepEvents.length;estimate-=Math.max(0,JSON.stringify(r.stepEvents).length-192);
+  }
+  raw=JSON.stringify(candidate);
+  return raw.length<=SAVE_CHAR_BUDGET?{ok:true,db:candidate,raw,trimmed}:{ok:false,err:"The saved work is too large for this app's storage budget. Ask a grown-up to download a backup before closing this tab."};
+}
 let loadProblem=""; // v9.12: shown once if the save could not be read
 let otherTab=false; // v9.12: another tab saved progress while this one was open
+let saveFailureReason="";
 let saveFailed=false; // set when localStorage refuses to write (quota, private mode)
 let storedSnapshot=null, saveConflict=false;
 function load(){
@@ -3983,13 +4024,20 @@ function load(){
   if(DB.current && !DB.profiles[DB.current]) DB.current=null;
   S = DB.current ? DB.profiles[DB.current] : null;
 }
-function save(){
-  try{ if(S) DB.profiles[S.name]=S;
-    // Guard against stale tabs even when their storage event has not arrived yet.
-    if(saveConflict||localStorage.getItem(KEY)!==storedSnapshot){ saveConflict=true; otherTab=true; showSaveConflict(); return false; }
-    const raw=JSON.stringify(DB); localStorage.setItem(KEY,raw); storedSnapshot=raw; saveFailed=false; return true; }
-  catch(e){ saveFailed=true; return false; }
+function writeDatabase(candidate){
+  try{
+    if(saveConflict||localStorage.getItem(KEY)!==storedSnapshot){saveConflict=true;otherTab=true;showSaveConflict();return false;}
+    const prepared=prepareStoredDatabase(candidate,Date.now());
+    if(!prepared.ok){saveFailureReason=prepared.err;saveFailed=true;showSaveFailure();return false;}
+    // setItem is atomic for this key: commit live players only after it succeeds.
+    localStorage.setItem(KEY,prepared.raw);storedSnapshot=prepared.raw;
+    DB=prepared.db;S=DB.current?DB.profiles[DB.current]||null:null;
+    saveFailed=false;saveFailureReason="";document.getElementById("savefailure")?.remove();
+    if(typeof requestStorageProtection==="function")requestStorageProtection();
+    return true;
+  }catch(e){saveFailed=true;saveFailureReason="Progress could not be saved on this device. Ask a grown-up to download a backup before closing this tab.";showSaveFailure();return false;}
 }
+function save(){if(S)DB.profiles[S.name]=S;return writeDatabase(DB);}
 // Do not replace the profile underneath live lesson/practice state or promise a merge.
 try{ window.addEventListener("storage", ev=>{ if(ev.key!==KEY&&ev.key!==null) return; try{ if(localStorage.getItem(KEY)!==storedSnapshot){ saveConflict=true; otherTab=true; showSaveConflict(); } }catch(e){ saveFailed=true; } }); }catch(e){}
 
@@ -4001,7 +4049,9 @@ const cap=s=>s.replace(/(^|\s)\S/g,c=>c.toUpperCase());
 const ucfirst=s=>String(s).charAt(0).toUpperCase()+String(s).slice(1);
 function saveConflictHTML(){ return `<div id="saveconflict" class="warn" role="status">Another tab changed the saved progress. New work in this tab has not been saved. Ask a grown-up to back up this tab on the grown-ups page before reloading, and use one tab at a time.</div>`; }
 function showSaveConflict(){ const root=document.getElementById("app"); if(root&&!root.querySelector("#saveconflict")) root.insertAdjacentHTML("afterbegin",saveConflictHTML()); }
-const warnHTML=()=>(saveConflict?saveConflictHTML():saveFailed?`<div class="warn" role="status">Progress could not be saved on this device. Use the backup on the grown-ups page.</div>`:"")+(loadProblem?(()=>{ const m=loadProblem; setTimeout(()=>{ loadProblem=""; },0); return `<div class="warn" role="status">${esc(m)}</div>`; })():"");
+function saveFailureHTML(){return `<div id="savefailure" class="warn" role="status">${esc(saveFailureReason||"Progress could not be saved on this device. Ask a grown-up to download a backup before closing this tab.")}</div>`;}
+function showSaveFailure(){const root=document.getElementById("app");if(root&&!root.querySelector("#savefailure"))root.insertAdjacentHTML("afterbegin",saveFailureHTML());}
+const warnHTML=()=>(saveConflict?saveConflictHTML():saveFailed?saveFailureHTML():"")+(loadProblem?(()=>{ const m=loadProblem; setTimeout(()=>{ loadProblem=""; },0); return `<div class="warn" role="status">${esc(m)}</div>`; })():"");
 
 function chartHTML(num, hl, minCols, compact){
   if(num==="blank"||!num) return `<div class="chart"><table>${chartHeader(3)}<tr>${"<td></td>".repeat(3)}<td class="point">•</td>${"<td></td>".repeat(3)}</tr></table></div>`;
@@ -4154,13 +4204,15 @@ function restoreScreen(){ // first-launch restore: paste the transfer code from 
     <h1>Bring progress over</h1>${warnHTML()}
     <p class="muted" style="margin:0 0 14px">On the old iPad, open the app, tap <b>For grown-ups</b>, then <b>Copy transfer code</b>. Paste it here. (Same iCloud account: copy there, paste here; the clipboard carries over on its own.)</p>
     <div class="card" style="margin-top:0">
+      <label for="restorefile">Choose a backup file</label><input type="file" id="restorefile" accept=".json,.txt">
       <label class="vh" for="rcode">Transfer code or backup text</label>
       <textarea class="io" id="rcode" placeholder="Paste the transfer code (starts with LM1.) or backup text"></textarea>
       <div class="inline-err" id="rerr" role="status" aria-live="polite"></div>
       <div class="actions"><button class="btn primary" id="rgo">Restore</button><button class="btn quiet" id="rcancel">Back</button></div>
     </div>`;
   const q=id=>app.querySelector("#"+id); q("rcode").focus();
-  q("rgo").onclick=async()=>{ q("rerr").textContent="Checking…"; const r=await importBackupText(q("rcode").value); if(!r.ok){ q("rerr").textContent=r.err; return; } if(r.err){ q("rerr").textContent=r.err; return; } home(); };
+  q("rgo").onclick=async()=>{ q("rerr").textContent="Checking…"; const r=await importBackupText(q("rcode").value); if(!r.ok){ q("rerr").textContent=r.err;showUnappliedRestoreDownload(q("rerr")); return; } if(r.err){ q("rerr").textContent=r.err;showUnappliedRestoreDownload(q("rerr")); return; } home(); };
+  bindBackupFile(q("restorefile"),q("rerr"),home);
   q("rcancel").onclick=()=>{ if(Object.keys(DB.profiles).length) players(); else askName(); };
 }
 function players(){
@@ -6957,33 +7009,79 @@ async function makeTransferCode(db, withHistory){
   if(typeof CompressionStream==="function"){ try{ const stream=new Blob([bytes]).stream().pipeThrough(new CompressionStream("deflate")); const buf=new Uint8Array(await new Response(stream).arrayBuffer()); return "LM1."+B64U.enc(buf); }catch(e){} }
   return "LM0."+B64U.enc(bytes);
 }
-async function readTransferCode(text){ // → backup JSON text, or null if it is not a code
-  const t=String(text||"").trim(); const m=t.match(/^LM([01])\.([A-Za-z0-9_-]+)$/); if(!m) return null;
-  const bytes=B64U.dec(m[2]); if(m[1]==="0") return new TextDecoder().decode(bytes);
-  if(typeof DecompressionStream!=="function") throw new Error("This browser cannot open a compressed transfer code. Paste the plain backup text instead.");
-  const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate")); return await new Response(stream).text();
+async function readBoundedBackupStream(stream){
+  const reader=stream.getReader(),decoder=new TextDecoder("utf-8",{fatal:true});let size=0,text="";
+  try{for(;;){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;
+    if(size>BACKUP_LIMITS.bytes){await reader.cancel();throw new Error("The expanded backup is too large (maximum 12 MiB).");}
+    text+=decoder.decode(value,{stream:true});}return text+decoder.decode();
+  }finally{reader.releaseLock();}
 }
-// Restore from a transfer code or backup text: validates, confirms, replaces same-named players. Returns {ok, err}.
+async function readTransferCode(text){
+  const input=String(text||"");if(input.length>BACKUP_LIMITS.encoded)throw new Error("The transfer code is too large.");
+  const t=input.trim(),m=t.match(/^LM([01])\.([A-Za-z0-9_-]+)$/);if(!m)return null;
+  const bytes=B64U.dec(m[2]);if(bytes.byteLength>BACKUP_LIMITS.bytes)throw new Error("The transfer code is too large.");
+  if(m[1]==="0")return new TextDecoder("utf-8",{fatal:true}).decode(bytes);
+  if(typeof DecompressionStream!=="function")throw new Error("This browser cannot open a compressed transfer code. Use a plain backup file or text instead.");
+  return readBoundedBackupStream(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate")));
+}
+let pendingRestoreRecovery=null;
 async function importBackupText(text){
-  let json=text; try{ const j=await readTransferCode(text); if(j!==null) json=j; }catch(e){ return {ok:false, err:e.message||"That transfer code could not be opened."}; }
-  const r=validateBackup(json); if(!r.ok) return r;
-  let restored; try{ restored=profileMap(Object.fromEntries(r.names.map(n=>[n,normalize({...r.db.profiles[n],name:n})]))); }catch(e){ return {ok:false,err:"A player record could not be restored. The players on this device were kept."}; }
-  if(!confirm(`Restore ${r.names.length} player${r.names.length>1?"s":""}?\n\n${r.summary.join("\n")}\n\nPlayers with the same name on this device will be replaced.`)) return {ok:false, err:""};
-  for(const n of r.names){ DB.profiles[n]=restored[n]; }
-  DB.current = r.db.current && DB.profiles[r.db.current] ? r.db.current : (r.names[0]||DB.current); S=DB.profiles[DB.current]||S;
-  if(!save()) return {ok:true, err:saveConflict?"Restored in this tab only. Another tab changed the saved progress. Back up this tab before reloading.":"Restored in memory, but this device refused to save it. Progress will be lost when the page closes."};
-  return {ok:true, err:""};
+  let json=text;try{const j=await readTransferCode(text);if(j!==null)json=j;}catch(e){return {ok:false,err:e.message||"That transfer code could not be opened."};}
+  const r=validateBackup(json);if(!r.ok)return r;
+  let restored;try{restored=profileMap(Object.fromEntries(r.names.map(n=>[n,normalize({...r.db.profiles[n],name:n})])));}catch(e){return {ok:false,err:"A player record could not be restored. The players on this device were kept."};}
+  if(!confirm(`Restore ${r.names.length} player${r.names.length>1?"s":""}?\n\n${r.summary.join("\n")}\n\nPlayers with the same name on this device will be replaced.`))return {ok:false,err:""};
+  const profiles=profileMap(DB.profiles);for(const n of r.names)profiles[n]=restored[n];
+  const current=typeof r.db.current==="string"&&profiles[r.db.current]?r.db.current:r.names[0];
+  const candidate={...DB,profiles,current};
+  if(!writeDatabase(candidate)){
+    pendingRestoreRecovery=candidate;
+    return {ok:false,err:"Restore was not saved or applied. The current players were kept. The unapplied restore is available to download below. "+(saveConflict?"Another tab changed the saved progress. Use one tab at a time.":"This device could not store the restore.")};
+  }
+  pendingRestoreRecovery=null;return {ok:true,err:""};
+}
+async function importBackupFile(file){
+  if(!file)return {ok:false,err:"Choose a backup file."};
+  if(!Number.isFinite(file.size)||file.size>BACKUP_LIMITS.encoded)return {ok:false,err:"The backup file is too large (maximum 16 MiB for a transfer code, 12 MiB for plain text)."};
+  try{return await importBackupText(await file.text());}catch(e){return {ok:false,err:"The backup file could not be read. The current players were kept."};}
+}
+// Device metadata is local and never part of a transferred learner profile.
+const DEVICE_BACKUP_KEY=KEY+".device";
+function backupDeviceMeta(){try{const o=JSON.parse(localStorage.getItem(DEVICE_BACKUP_KEY)||"{}");return o&&typeof o==="object"&&!Array.isArray(o)?o:{};}catch(e){return {};}}
+function noteBackupCreated(kind){const o=backupDeviceMeta();o[kind]=Date.now();try{localStorage.setItem(DEVICE_BACKUP_KEY,JSON.stringify(o));}catch(e){}refreshBackupStatus();}
+let storageProtectionAttempted=false,storageProtectionStatus="Not checked in this browser.";
+async function requestStorageProtection(manual=false){
+  if(storageProtectionAttempted&&!manual)return;storageProtectionAttempted=true;
+  if(!navigator.storage||typeof navigator.storage.persist!=="function"){storageProtectionStatus="Persistent storage is unavailable here. Keep a separate backup.";refreshBackupStatus();return;}
+  try{const already=typeof navigator.storage.persisted==="function"&&await navigator.storage.persisted();
+    const granted=already||await navigator.storage.persist();storageProtectionStatus=granted?"The browser granted persistent storage. Keep a separate backup for deletion or device loss.":"The browser did not grant persistent storage. Keep a separate backup.";
+  }catch(e){storageProtectionStatus="Storage protection could not be checked. Keep a separate backup.";}
+  refreshBackupStatus();
+}
+function backupStatusText(){const m=backupDeviceMeta(),last=Math.max(+m.exportCreatedAt||0,+m.copiedAt||0);
+  return `Last file export created: ${m.exportCreatedAt?fmtDate(m.exportCreatedAt):"none recorded"}. Last successful copy: ${m.copiedAt?fmtDate(m.copiedAt):"none recorded"}. ${!last||Date.now()-last>10*864e5?"A separate backup is recommended.":"An export or copy does not verify that the backup was stored safely."} ${storageProtectionStatus}`;
+}
+function refreshBackupStatus(){const el=document.getElementById("backupstatus");if(el)el.textContent=backupStatusText();}
+function downloadBackup(db=DB,unapplied=false){
+  const text=JSON.stringify(db),url=URL.createObjectURL(new Blob([text],{type:"application/json"}));
+  const a=document.createElement("a");a.href=url;a.download=`math-practice-${unapplied?"unapplied-restore":"backup"}-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);try{a.click();if(!unapplied)noteBackupCreated("exportCreatedAt");}finally{a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+}
+function bindBackupFile(input,status,onSuccess){input.onchange=async()=>{status.textContent="Checking…";const r=await importBackupFile(input.files&&input.files[0]);input.value="";if(r.ok)onSuccess();else{status.textContent=r.err;showUnappliedRestoreDownload(status);}};}
+function showUnappliedRestoreDownload(status){document.getElementById("downloadunapplied")?.remove();if(!pendingRestoreRecovery)return;
+  const b=document.createElement("button");b.id="downloadunapplied";b.className="btn";b.textContent="Download unapplied restore";b.onclick=()=>{try{downloadBackup(pendingRestoreRecovery,true);}catch(e){status.textContent="Download could not start. Keep the original backup file or text.";}};status.after(b);
 }
 function validateBackup(text){ // returns {ok:true, db, summary} or {ok:false, err}
+  if(typeof text!=="string"||text.length>BACKUP_LIMITS.bytes||new Blob([text]).size>BACKUP_LIMITS.bytes)return {ok:false,err:"The plain backup is too large (maximum 12 MiB)."};
   let o; try{ o=JSON.parse(text); }catch(e){ return {ok:false, err:"That is not valid backup text (it did not parse as JSON). Make sure you copied all of it."}; }
   if(!o||typeof o!=="object"||Array.isArray(o)) return {ok:false, err:"The backup should be a single block of text starting with { and ending with }."};
   if(!o.profiles||typeof o.profiles!=="object"||Array.isArray(o.profiles)) return {ok:false, err:"The backup has no 'profiles' section, so it is not from this app."};
-  const names=Object.keys(o.profiles); if(!names.length) return {ok:false, err:"The backup has no players in it."};
+  const shapeError=backupShapeError(o);if(shapeError)return {ok:false,err:shapeError};
+  const names=Object.keys(o.profiles);if(names.length>BACKUP_LIMITS.players)return {ok:false,err:"The backup has too many players (maximum 32)."}; if(!names.length) return {ok:false, err:"The backup has no players in it."};
   const summary=[];
   for(const n of names){ const p=o.profiles[n];
-    if(!n.trim()||!p||typeof p!=="object"||Array.isArray(p)) return {ok:false, err:`Player "${n}" is not a valid record.`};
+    if(n.length>256||!n.trim()||!p||typeof p!=="object"||Array.isArray(p)) return {ok:false, err:`Player "${n}" is not a valid record.`};
     if(!p.levels||typeof p.levels!=="object"||Array.isArray(p.levels)) return {ok:false, err:`Player "${n}" has no levels.`};
-    for(const k of SKILL_ORDER){ if(k in p.levels){ const v=p.levels[k]; if(typeof v!=="number"||!Number.isInteger(v)||v<1||v>MAX_LEVEL) return {ok:false, err:`Player "${n}" has an impossible level for ${SKILLS[k].name} (${String(v)}). Levels are whole numbers from 1 to ${MAX_LEVEL}.`}; } }
+    for(const k of SKILL_ORDER){ if(k in p.levels){ const v=p.levels[k]; if(typeof v!=="number"||!Number.isInteger(v)||v<1||v>MAX_LEVEL) return {ok:false, err:`Player "${n}" has an impossible level for ${SKILLS[k].name} (${String(v).slice(0,80)}). Levels are whole numbers from 1 to ${MAX_LEVEL}.`}; } }
     if(p.log!==undefined && !Array.isArray(p.log)) return {ok:false, err:`Player "${n}" has a history that is not a list.`};
     if(Array.isArray(p.log)){ const bad=p.log.findIndex(e=>!e||typeof e!=="object"||Array.isArray(e)); if(bad>=0) return {ok:false, err:`Player "${n}" has a broken history entry at position ${bad}.`}; }
     const att = Array.isArray(p.log) ? p.log.length : (+p.attempted||0);
@@ -7142,13 +7240,19 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
       <label class="row" style="font-size:14px;gap:8px;margin:0 0 8px"><input type="checkbox" id="tchist" checked> Include the attempt history (longer code; the grown-ups page on the new iPad keeps every miss)</label>
       <div class="actions" style="margin-top:0"><button class="btn primary" id="tcopy">Copy transfer code</button>${typeof navigator!=="undefined"&&navigator.share?`<button class="btn" id="tshare">Share…</button>`:""}<button class="btn quiet" id="tshow">Show the code</button><span class="muted" id="tmsg" style="font-size:13px" role="status" aria-live="polite"></span></div>
       <textarea class="io" id="tcode" readonly hidden aria-label="Transfer code"></textarea>
+      <h2>Keep a backup file</h2>
+      <p class="muted" id="backupstatus" role="status">${esc(backupStatusText())}</p>
+      <div class="actions"><button class="btn" id="downloadbackup">Download backup file</button><button class="btn quiet" id="protectstorage">Check storage protection</button></div>
+      <p class="muted">A browser can still refuse a save. Keep the backup in Files or another safe place. A file export being created does not confirm the file was saved.</p>
+      ${Object.values(DB.profiles).some(p=>p.storageDetailsTrimmed)?`<p class="muted">Older lesson step details were trimmed to fit the storage budget. Attempt summaries, support counts, saved work, and due checks were retained.</p>`:""}
       <h2>Plain backup text</h2>
       <p class="muted" style="font-size:14px;margin:0 0 8px">The same progress as readable text, for keeping a copy in Notes or email. Either form pastes into Restore.</p>
       <label class="vh" for="export">Backup text</label>
       <textarea class="io" id="export" readonly>${esc(exportText)}</textarea>
-      <div class="muted" style="font-size:13px;margin-top:4px">${fmtBytes(new Blob([exportText]).size)} · ${nPlayers} player${nPlayers===1?"":"s"}</div>
+      <div class="muted" style="font-size:13px;margin-top:4px">${fmtBytes(new Blob([exportText]).size)} · ${Math.round(exportText.length/SAVE_CHAR_BUDGET*100)}% of the app storage budget (the browser can refuse saves sooner) · ${nPlayers} player${nPlayers===1?"":"s"}</div>
       <div class="actions" style="margin-top:8px"><button class="btn" id="copy">Copy backup</button><span class="muted" id="copied" style="font-size:13px" role="status" aria-live="polite"></span></div>
       <h2>Restore</h2>
+      <label for="backupfile">Choose a backup file</label><input type="file" id="backupfile" accept=".json,.txt">
       <label class="vh" for="import">Paste a transfer code or backup here</label>
       <textarea class="io" id="import" placeholder="Paste a transfer code (starts with LM1.) or backup text here"></textarea>
       <div class="inline-err" id="imperr" role="status" aria-live="polite"></div>
@@ -7184,11 +7288,14 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
     S.classPin=l.id; S.classPinAt=Date.now(); S.classPinApprox=0; const okSave=save(); q("classsaved").textContent=okSave?`Pinned: ${lessonShort(l)}. It stays there until you change it.`:"Pinned for now, but this device refused to save it."; setClassMode(); };
   if(q("followcal")) q("followcal").onclick=()=>{ S.classPin=null; delete S.classPinAt; delete S.classPinApprox; const okSave=save(); const id=calendarClassAt(); q("classat").value="";
     q("classsaved").textContent=okSave?`Following the calendar: ${id?lessonShortById(id):"—"} today.`:"Following the calendar for now, but this device refused to save it."; setClassMode(); };
-  q("copy").onclick=async()=>{ const ta=q("export"); ta.select(); let done=false; try{ await navigator.clipboard.writeText(ta.value); done=true; }catch(e){ try{ done=document.execCommand("copy"); }catch(e2){} } q("copied").textContent=done?"Copied.":"Select the text and copy it by hand."; };
-  q("doimport").onclick=async()=>{ q("imperr").textContent="Checking…"; const r=await importBackupText(q("import").value); if(!r.ok){ q("imperr").textContent=r.err; return; } if(r.err){ q("imperr").textContent=r.err; return; } home(); };
+  q("copy").onclick=async()=>{ const ta=q("export"); ta.value=JSON.stringify(DB);ta.select(); let done=false; try{ await navigator.clipboard.writeText(ta.value); done=true; }catch(e){ try{ done=document.execCommand("copy"); }catch(e2){} } if(done)noteBackupCreated("copiedAt");q("copied").textContent=done?"Copied.":"Select the text and copy it by hand."; };
+  q("doimport").onclick=async()=>{ q("imperr").textContent="Checking…"; const r=await importBackupText(q("import").value); if(!r.ok){ q("imperr").textContent=r.err;showUnappliedRestoreDownload(q("imperr")); return; } if(r.err){ q("imperr").textContent=r.err; return; } home(); };
+  q("downloadbackup").onclick=()=>{try{downloadBackup();q("copied").textContent="File export created. Check that it is saved in Files.";}catch(e){q("copied").textContent="Download could not start. Use Copy backup instead.";}};
+  q("protectstorage").onclick=()=>requestStorageProtection(true);
+  bindBackupFile(q("backupfile"),q("imperr"),home);
   const codeFor=async()=>makeTransferCode(DB, q("tchist").checked);
   const copyText=async(text)=>{ let done=false; try{ await navigator.clipboard.writeText(text); done=true; }catch(e){ const ta=q("tcode"); ta.hidden=false; ta.value=text; ta.select(); try{ done=document.execCommand("copy"); }catch(e2){} } return done; };
-  q("tcopy").onclick=async()=>{ q("tmsg").textContent="Building…"; try{ const code=await codeFor(); const ok=await copyText(code); q("tmsg").textContent= ok ? `Copied (${fmtBytes(code.length)}). Now paste it into Restore on the new iPad.` : "Could not copy automatically; the code is shown below, select it and copy by hand."; if(!ok){ q("tcode").hidden=false; q("tcode").value=code; } }catch(e){ q("tmsg").textContent="Could not build the code: "+(e.message||e); } };
+  q("tcopy").onclick=async()=>{ q("tmsg").textContent="Building…"; try{ const code=await codeFor(); const ok=await copyText(code);if(ok)noteBackupCreated("copiedAt"); q("tmsg").textContent= ok ? `Copied (${fmtBytes(code.length)}). Now paste it into Restore on the new iPad.` : "Could not copy automatically; the code is shown below, select it and copy by hand."; if(!ok){ q("tcode").hidden=false; q("tcode").value=code; } }catch(e){ q("tmsg").textContent="Could not build the code: "+(e.message||e); } };
   if(q("tshare")) q("tshare").onclick=async()=>{ try{ const code=await codeFor(); await navigator.share({title:"Math Practice transfer code", text:code}); q("tmsg").textContent="Shared. On the new iPad, copy the code from where it landed and paste it into Restore."; }catch(e){ if(e && e.name!=="AbortError") q("tmsg").textContent="Sharing did not work here; use Copy instead."; } };
   q("tshow").onclick=async()=>{ const ta=q("tcode"); if(!ta.hidden){ ta.hidden=true; q("tshow").textContent="Show the code"; return; } ta.value="Building…"; ta.hidden=false; ta.value=await codeFor(); q("tshow").textContent="Hide the code"; };
   q("reset").onclick=()=>{ if(confirm(`Erase ${S.name}'s levels and history and start from level 1?`)){ const n=S.name, cal=S.classCal===true; S=normalize({...blankProfile(n), classCal:cal}); DB.profiles[n]=S; save(); home(); } }; // v9.24: the class pacing calendar choice is a setting, not progress, so it survives
