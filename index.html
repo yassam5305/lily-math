@@ -554,6 +554,7 @@ function genWords(level, focus){
   else { w=ri(100,9999); d=pick([nonZeroDigits(ri(1,3)), digitsWithLeadingZeros(3,1), digitsWithLeadingZeros(3,2)]); }
   if(f==="leading-zero") d=digitsWithLeadingZeros(3, ri(1,2));
   if(f==="place-name" && d.length<2) d=nonZeroDigits(ri(2,3));
+  if(focus?.fixed?.num){ w=+focus.fixed.num.w; d=String(focus.fixed.num.d); }
   const num={w,d}; const correct=toWordForm(num);
   const k=d.length, di=parseInt(d,10);
   const D=[];
@@ -590,7 +591,7 @@ function expandedFor(num){
   const m=chartModel(num); const terms=[];
   m.whole.forEach(c=>{ if(c.digit && c.digit!=="0") terms.push(termFor(c.digit,c.key)); });
   m.dec.forEach(c=>{ if(c.digit && c.digit!=="0") terms.push(termFor(c.digit,c.key)); });
-  return terms.join(" + ");
+  return terms.join(" + ") || "0";
 }
 function genExpanded(level, focus){
   const f=focus&&focus.tag;
@@ -601,6 +602,7 @@ function genExpanded(level, focus){
   else if(level===4){ w=pick([ri(100,999), 100*ri(1,9)+ri(1,9), 100*ri(1,9)+10*ri(1,9)]); d=digitsWithLeadingZeros(3, ri(1,2)); }
   else { w=pick([ri(1000,9999), 1000*ri(1,9)+ri(1,9), 1000*ri(1,9)+10*ri(1,9), 1000*ri(1,9)+100*ri(1,9)]); d=pick([nonZeroDigits(3), digitsWithLeadingZeros(3,1), digitsWithLeadingZeros(3,2)]); }
   if(f==="skip-zero") d=digitsWithLeadingZeros(3, ri(1,2));
+  if(focus?.fixed?.num){ w=+focus.fixed.num.w; d=String(focus.fixed.num.d); }
   const num={w,d}; const correct=expandedFor(num);
   const m=chartModel(num);
   const all=[...m.whole,...m.dec].filter(c=>c.digit!=="");
@@ -624,15 +626,15 @@ function genExpanded(level, focus){
     const idx=allVals.indexOf(val); const cand=[val]; for(let dlt=1; cand.length<4 && dlt<7; dlt++){ if(allVals[idx-dlt]) cand.push(allVals[idx-dlt]); if(cand.length<4 && allVals[idx+dlt]) cand.push(allVals[idx+dlt]); }
     const opts=shuffle(cand); const ask=(i===0 || c.key[0]==="d"); // v9.18: the first digit and every decimal digit are asked (the "shift" trap lives in the last decimal digit); she reads the place herself
     steps.push({t: ask ? `Look at the underlined <b>${c.digit}</b>. Read the place name above it.` : `The <b>${c.digit}</b> is in the <b>${c.place}</b> place.`, chart:num, hl:{[c.key]:"ul"}, cues:[`Which place is the ${c.digit} in? Its value is the digit times that place.`, `Read the chart heading above the ${c.digit}: that place's value is the number to multiply by.`], check: ask ? cm(`The value of the ${c.digit} is ${c.digit} × …?`, opts, opts.indexOf(val)) : undefined, after: ask ? `The ${c.digit} is in the ${c.place} place: ${c.digit} × ${val}.` : undefined}); });
-  if(z) steps.push({t:`There is a <b>0</b> in the ${z.place} place.`, cues:[`What is 0 times any number?`, `One addend would be worth exactly 0. Adding 0 changes nothing.`], after:`0 × ${valOf(z)} = 0, so expanded form leaves it out. The zero still <b>holds its place</b>: the next digit does not move over.`, check:cm(`Which addend can be left out without changing the value?`, shuffle([`0 × ${valOf(z)}, because it equals 0`, `${nz[0].digit} × ${valOf(nz[0])}`, `the ${nz[nz.length-1].place} addend, because it is last`]), null)});
-  if(z){ const st=steps[steps.length-1]; st.check.answer=st.check.options.findIndex(o=>o.startsWith("0 ×")); st.check.display=st.check.options[st.check.answer]; }
+  if(z && nz.length) steps.push({t:`There is a <b>0</b> in the ${z.place} place.`, cues:[`What is 0 times any number?`, `One addend would be worth exactly 0. Adding 0 changes nothing.`], after:`0 × ${valOf(z)} = 0, so expanded form leaves it out. The zero still <b>holds its place</b>: the next digit does not move over.`, check:cm(`Which addend can be left out without changing the value?`, shuffle([`0 × ${valOf(z)}, because it equals 0`, `${nz[0].digit} × ${valOf(nz[0])}`, `the ${nz[nz.length-1].place} addend, because it is last`]), null)});
+  if(z && nz.length){ const st=steps[steps.length-1]; st.check.answer=st.check.options.findIndex(o=>o.startsWith("0 ×")); st.check.display=st.check.options[st.check.answer]; }
   steps.push({t:`Join the addends with plus signs. Count them: there should be ${nz.length}.`, cues:[`Each nonzero digit's value, joined with +.`, `${nz.length} addends, biggest place first, with + between them.`], check:finalCheck(p)});
   p.steps=steps;
   const fc=nz[0];
   p.hints=[
     {t:`Write the value of every digit that is not zero, joined with plus signs.`},
     {t:`Count the digits that are not zero: there are <b>${nz.length}</b>. So the expanded form has exactly ${plural(nz.length,"addend")}.`},
-    {t:`The place gives the value. The <b>${fc.digit}</b> is in the <b>${fc.place}</b> place, so its value is <b>${fc.digit} × ${valOf(fc)}</b>. Do the same for each digit.`, chart:num, hl:{[fc.key]:"ul"}}
+    fc ? {t:`The place gives the value. The <b>${fc.digit}</b> is in the <b>${fc.place}</b> place, so its value is <b>${fc.digit} × ${valOf(fc)}</b>. Do the same for each digit.`, chart:num, hl:{[fc.key]:"ul"}} : {t:'Every digit is zero. Check the value of a zero in each place.', chart:num}
   ];
   return p;
 }
@@ -1275,7 +1277,6 @@ function focusFor(prob, tag){
   if(prob.skill==="compare"){ f.order = !!(m.nums); f.open = !!m.open; }
   return f;
 }
-
 // ===== Progression =====
 // hist: last few INDEPENDENT results for a skill (1 = right, 0 = wrong). Returns +1 (level up), -1 (level down), or 0.
 // v9.12: a right multiple-choice pick is worth 0.75, a typed answer 1. Moving up needs 3 points in the last four, so four right picks in a row
@@ -1679,7 +1680,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v9.59 · October 8, 2026";
+const BUILD="v9.60.1 · October 8, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -2208,7 +2209,6 @@ diagnose=function(prob, yours){
 };
 const _focusFor2=focusFor;
 focusFor=function(prob, tag){ const f=_focusFor2(prob, tag); const m=prob.meta||{}; if(prob.skill==="divide"){ f.variant=m.variant; f.d=m.d; } if(prob.skill==="placevalue"){ f.variant=m.variant; } return f; };
-
 // ---- Swun Math Grade 5 pacing, 2026–27 (one class pacing calendar). Unit dates come from that calendar; lesson position within a unit is estimated by school day.
 // v9.24: following it is a per-learner grown-up choice (S.classCal, see classCalOn); new learners start with it off.
 const UNITS=[{"unit": 1, "name": "Place Value System", "start": "2026-08-13", "end": "2026-09-02", "days": 15, "assess": "September 3 & 4"}, {"unit": 2, "name": "Multiplication and Division of Whole Numbers", "start": "2026-09-08", "end": "2026-09-28", "days": 15, "assess": "September 29 & 30"}, {"unit": 3, "name": "Add and Subtract Decimals", "start": "2026-10-01", "end": "2026-10-09", "days": 7, "assess": "October 12 & 13"}, {"unit": 4, "name": "Multiply and Divide Decimals", "start": "2026-10-14", "end": "2026-10-28", "days": 11, "assess": "October 29 & 30"}, {"unit": 5, "name": "Add Fractions", "start": "2026-11-10", "end": "2026-11-30", "days": 12, "assess": "December 1 & 2"}, {"unit": 6, "name": "Subtract Fractions", "start": "2026-12-03", "end": "2027-01-13", "days": 15, "assess": "January 14 & 15"}, {"unit": 7, "name": "Multiply Fractions", "start": "2027-01-19", "end": "2027-02-03", "days": 12, "assess": "February 4 & 5"}, {"unit": 8, "name": "Divide Fractions", "start": "2027-02-09", "end": "2027-02-19", "days": 8, "assess": "February 22 & 23"}, {"unit": 9, "name": "Polygons and Volume", "start": "2027-03-04", "end": "2027-03-17", "days": 10, "assess": "March 18 & 19"}, {"unit": 10, "name": "Graphing", "start": "2027-03-30", "end": "2027-04-21", "days": 17, "assess": "April 22 & 23"}, {"unit": 11, "name": "Measurement and Data", "start": "2027-04-26", "end": "2027-05-12", "days": 13, "assess": "May 13 & 14"}];
@@ -4423,7 +4423,28 @@ function parseExprWords(str){
   const e=rd(s,0); if(!e){ return ambiguous ? {err:ambiguous} : null; } if(!/[+−×÷]/.test(e)) return null;
   try{ const tk=parseBack(e); if(!validTokens(tk)) return {err:`That reads as ${e}, and one of its steps does not come out a whole number, so the app cannot check it. Check the numbers, or type the expression itself.`}; return {expr:tokStr(tk), ops:(e.match(/[+−×÷]/g)||[]).length, sentence:s}; }catch(err){ return null; } }
 // "Check my homework": read a problem typed from the page. Returns {skill, focus, level, label} or {err}.
+// Decimal-form directions are a task, not disposable decoration. Match the
+// complete instruction before the arithmetic parser removes method words.
+function parseDecimalFormHomework(text){
+  const s=String(text||'').toLowerCase().replace(/\s+/g,' ').trim()
+    .replace(/^(?:(?:#|q|question|number|problem)\s*\d{1,2}\s*[.):]?|\(\s*(?:\d{1,2}|[a-h])\s*\)|(?:\d{1,2}|[a-h])\s*[.):])\s+(?=\S)/,'')
+    .replace(/[.!?]+$/,'').trim();
+  const word='(?:number name(?: \\(word form\\))?|word form(?: \\(number name\\))?|words)',expanded='expanded (?:form|notation)',standard='(?:base[ -]ten numerals?(?: \\(standard form\\))?|standard form)';
+  for(const [skill,form] of [['words',word],['expanded',expanded],['standard',standard]]){
+    const patterns=[new RegExp('^(?:write|express|rewrite|convert)(?: the)? '+form+' (?:of|for)(?: the number)?\\s*:?\\s*(.+)$'),new RegExp('^(?:write|express|rewrite|convert) (?:the number )?(.+?) (?:in|into|to)(?: its)? '+form+'$'),new RegExp('^'+form+' (?:of|for)(?: the number)?\\s*:?\\s*(.+)$'),new RegExp('^(.+?) (?:in|to) '+form+'$')];
+    const m=patterns.map(p=>s.match(p)).find(Boolean);if(!m)continue;
+    const value=m[1].trim();let num;
+    if(skill==='standard')num=parseNumberWords(value);
+    else if(/^(?:\d+|\d{1,3}(?:,\d{3})+)\.\d+$/.test(value)||/^\.\d+$/.test(value)){
+      const [w,d]=value.replace(/,/g,'').split('.');num={w:Number(w||'0'),d};
+    }
+    if(!num||!Number.isSafeInteger(num.w)||num.w<0||num.w>999999||!num.d||num.d.length>3)return {err:'For decimal forms, use one decimal through thousandths, with a whole part up to 999,999. Keep the form direction and only its number or number words; extra facts and answers need a separate entry. Your entry is still here to edit.'};
+    return {skill,focus:{fixed:{num}},level:3,label:skill==='standard'?`Standard form of ${toWordForm(num)}`:`${skill==='words'?'Word':'Expanded'} form of ${fmt(num)}`};
+  }
+  return null;
+}
 function parseHomework(text, depth){
+  const decimalForm=parseDecimalFormHomework(text); if(decimalForm) return decimalForm;
   const story=parseWordHomework(text); if(story) return story;
   const fraction=parseFractionHomework(text); if(fraction) return fraction;
   let t=String(text||"").trim().toLowerCase().replace(/\s+/g," ").replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g,m=>"^"+[...m].map(ch=>"⁰¹²³⁴⁵⁶⁷⁸⁹".indexOf(ch)).join("")).replace(/=\s*[\d,.\s?_]*$/,"").trim(); // "= ?", "= ____", or an answer she already wrote after the equals sign are all dropped
@@ -5407,9 +5428,11 @@ function hwEntry(prefill, err){
     <div class="topbar"><button class="btn quiet" id="back">Home</button><div class="row"><span class="pill week">Homework</span></div></div>${warnHTML()}
     <div class="card">
       <h2 style="margin-top:0">Check a problem from the page</h2>
-      <p class="muted" style="margin:0 0 10px">Copy an expression, including fractions or mixed numbers, like <b>3/4 + 5/6</b> or <b>2 1/3 − 3/4</b>. Age stories with a known age, half that age, and years added or taken away, and the paper-company story about sheets, packages, and boxes, can also be typed in full. You write the expression and do the arithmetic; Walter can help with each step. Homework does not change levels.</p>
+      <p class="muted" style="margin:0 0 10px">Copy an expression, including fractions or mixed numbers, like <b>3/4 + 5/6</b> or <b>2 1/3 − 3/4</b>. Decimal word-form, standard-form, and expanded-form questions can be typed as printed. Supported age and paper-company stories can also be typed in full. Walter can help with each step. Homework does not change levels.</p>
       <label class="vh" for="hwq">The problem</label>
       <input class="ans text" id="hwq" type="text" inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="like 3/4 + 5/6 or 148 × 19" value="${esc(prefill||"")}">
+      <label class="hwmethod" for="hwform">Problem type <select id="hwform"><option value="auto">Read the full question</option><option value="words">Decimal → word form</option><option value="standard">Number words → standard form</option><option value="expanded">Decimal → expanded form</option></select></label>
+      <p class="muted" style="font-size:14px">If a form question uses different wording, choose its type above and enter just its number or number words.</p>
       <label class="hwmethod" for="hwfractionmethod">For fraction addition or subtraction, use <select id="hwfractionmethod"><option value="algorithm">Equivalent fractions</option><option value="area">Equal-part area model</option><option value="line">Number line</option></select></label>
       <div class="inline-err" id="hwerr" role="status" aria-live="polite">${esc(err||"")}</div>
       <div class="actions"><button class="btn primary" id="hwgo">Set it up</button></div>
@@ -5418,7 +5441,10 @@ function hwEntry(prefill, err){
     </div>`;
   const q=id=>app.querySelector("#"+id); const inp=q("hwq");
   q("back").onclick=home;
-  const go=()=>{ const r=parseHomework(inp.value); if(r.err){ q("hwerr").textContent=r.err; inp.focus(); return; } if(r.fraction||r.wordStory){if(r.fraction&&!r.explicitMethod)r.method=q("hwfractionmethod").value;fractionHomeworkStart(r);return;} pendingHW=r; next(); };
+  const go=()=>{ const form=q('hwform').value,prefix={words:'Word form of ',standard:'Standard form of ',expanded:'Expanded form of '};let r;
+    if(form==='auto')r=parseHomework(inp.value);
+    else {r=parseDecimalFormHomework(inp.value)||parseDecimalFormHomework(prefix[form]+inp.value)||{err:'Enter the decimal number or number words for the selected form first.'};if(r?.skill&&r.skill!==form)r={err:'The selected problem type and the question ask for different forms. Change the type or edit the entry; your work is still here.'};}
+    if(r.err){ q("hwerr").textContent=r.err; inp.focus(); return; } if(r.fraction||r.wordStory){if(r.fraction&&!r.explicitMethod)r.method=q("hwfractionmethod").value;fractionHomeworkStart(r);return;} pendingHW=r; next(); };
   q("hwgo").onclick=go; inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); go(); } });
   inp.focus({preventScroll:true});
 }
@@ -5883,6 +5909,13 @@ function hwHelpLadder(ctx){
   const st=phase==='wt'?cur.steps[stepIdx]:null;
   if(st?.hwGuide)return st.hwGuide;
   const g=hwWalterBaseGuide(ctx);
+  if(cur.skill==='expanded'){
+    const q=ctx.q||'';
+    if(phase==='wt'&&/How many addends/i.test(q))return [...g,'Compare your tally with the nonzero digits you marked. Each marked digit should be counted once, and zero places should add no part.','If your tally and marked digits disagree, recount the marked places. Keep your proposed count available to revise.'];
+    if(phase==='wt'&&/value of.*×/i.test(q))return [...g,'Compare your proposed multiplier with the named digit’s position in the original number. It should describe that place’s unit, not the digit itself.','If the unit does not match the digit’s column, revise the multiplier. Check the same digit and place again before moving on.'];
+    if(phase==='wt'&&/left out/i.test(q))return [...g,'Check whether removing your proposed addend changes the value of the sum. Keep every part that contributes value.','Revise your choice if omitting it changes the value. Use the original digit and its place to explain the choice.'];
+    return [...g,'Recombine the place-value parts on scratch paper. Compare their total with the original number and check that every nonzero digit contributes exactly once.','If the totals disagree, find the first missing part or mismatched place value. Revise that part, then recombine and check again.'];
+  }
   // A place-value rule is useful; telling a pending zero is not.
   if(phase==='q'&&cur.ws&&ws&&ws.sel==='r1-0')return [
     'Read the place value of the multiplier digit for this row. Choose where its product should begin.',
@@ -6027,6 +6060,11 @@ function hwWalterBaseGuide(ctx,p=cur,at=phase,workspace=ws){
     return ['Multiply the top digit for this column by this row’s multiplier digit; include any incoming carry.','Each product belongs to its place value. Full tens move left, and leftover ones stay in this column.','Copy the current digits to scratch paper. Multiply, add any incoming carry, and separate the total into full tens and leftover ones.'];
   }
   const comp=ctx.comp,q=ctx.q;
+  if(at==='wt'&&sk==='words'&&/How many digits/i.test(q))return ['Look only at the digits to the right of the decimal point.','Every written decimal digit occupies a place, including a zero.','Mark each decimal digit on scratch paper and count the marked places without skipping zeros.'];
+  if(at==='wt'&&sk==='words'&&/last digit.*which place/i.test(q))return ['Use the decimal-place count you already checked.','Read place names outward from the decimal point, stopping at the last written digit.','Label the decimal columns on scratch paper and match the final column to its place name.'];
+  if(at==='wt'&&sk==='expanded'&&/How many addends/i.test(q))return ['Find the nonzero digits in the original number.','Each nonzero digit contributes a place-value part; a zero contributes no value.','Mark the nonzero digits on scratch paper and count the parts you marked.'];
+  if(at==='wt'&&sk==='expanded'&&/value of.*×/i.test(q))return ['Locate the digit named on this card in the original number.','The digit multiplies the value of its own place.','Label that digit’s column on scratch paper, then match the column to its place value.'];
+  if(at==='wt'&&sk==='expanded'&&/left out/i.test(q))return ['Compare the proposed addends by the value each contributes.','An addend can be omitted without changing the sum only when it contributes no value.','Check each proposed part on scratch paper and explain which one leaves the sum unchanged.'];
   if(at==='wt'&&sk==='addsub'&&/How many decimal digits/i.test(q))return ['Count the decimal places in each number before adding any zeros.','Trailing zeros keep a decimal’s value unchanged and let matching units line up.','Find the number with the most decimal places. Use that count for every row, filling shorter decimal parts with zeros.'];
   if(at==='wt'&&sk==='addsub'&&/What digit goes/i.test(q))return p.meta.op==='+'?['Work only in the column named on the current card. Include any incoming carry.','Matching place-value units add together. A full group of ten becomes one unit to the left.','Copy the current column to scratch paper, add its digits and carry, and separate full tens from leftover ones before entering this digit.']:['Work only in the column named on the current card. Check whether the top has enough units to subtract.','An exchange supplies smaller units without changing the starting value; the neighboring place must change too.','Copy the current column to scratch paper. If needed, exchange from a place to the left, update both counts, then subtract in this column.'];
   if(at==='wt'&&comp==='unit')return ['Read the unit named on the current card before changing how the number is written.','A whole can be expressed in tenths or hundredths without changing its value. Both division amounts need matching units.','Draw a place-value chart on scratch paper. Exchange whole units into the unit requested, include the existing fractional units, and count the total in that unit.'];
@@ -6044,6 +6082,7 @@ function hwWalterBaseGuide(ctx,p=cur,at=phase,workspace=ws){
   if(at==='wt'&&sk==='divide'&&/×|times|product|groups of/i.test(q))return ['Multiply the candidate group count by the divisor before choosing it.','A group count tells how many equal groups; the product tells how much those groups use.','Work out each candidate product on scratch paper. Compare it with the amount left, and use a group count that fits. If the card asks for the biggest friendly count, compare all the fitting choices.'];
   const guides={
     standard:['Separate the whole-number words from the decimal words.','The decimal place named at the end tells what units the decimal digits count.','Write the whole-number groups first. Put the decimal point after the ones, then place the decimal digits in the named units.'],
+    words:['Separate the whole-number digits from the decimal digits.','Read the decimal digits as a number of fractional units. The last written decimal place names those units.','Write the whole part in words, use “and” for the decimal point when there is a whole part, then name the decimal amount and its units. Include zero places when finding the unit name.'],
     expanded:['Read the value of each digit in its own place.','Expanded form adds the place-value parts to make the original number.','Label the places on scratch paper. Write a separate value for each nonzero digit, then join those parts with addition.'],
     placevalue:['Locate the digit and read its column heading.','Each step left makes a place worth ten times as much; each step right makes it a tenth as much.','Mark the starting and ending places. Count the moves and use the direction to describe how the value changes.'],
     rounding:['Find the rounding place, then look at the digit immediately to its right.','That neighboring digit tells whether to keep the rounding digit or increase it. Digits farther right are not kept.','Underline the rounding place and circle its right-hand neighbor. Decide whether to round up, then rewrite the result in the requested place.'],
@@ -6070,7 +6109,6 @@ function hwWalterBaseGuide(ctx,p=cur,at=phase,workspace=ws){
   }
 
   guides.twostep=['Identify what the story asks and choose which quantity you need first.','The first result becomes a quantity in the next operation. Its units must still match what the story describes.','Write your own first expression and calculate it. Label the result, then use it in the next expression and check against the story.'];
-  if(sk==='words')return guides.standard;
   return guides[sk]||['Read exactly what this step asks you to find.','Keep the quantities and units connected to the operation on the card.','Copy the current question to scratch paper. Work out one part at a time, check the units, and enter your result yourself.'];
 }
 function hwWalterQuestions(ctx){ const g=hwWalterGuide(ctx); return [
@@ -6581,7 +6619,7 @@ function checkStep(){
     if(sc.tries>=3 && Array.isArray(st.rescue) && st.rescue.length && !st.rescueOpened){ expandRescue(st,"Let's work this out in smaller checked steps."); return; }
     const yoursText=c.type==="mc"?String((c.options||[])[sc.sel]):sc.val;
     sc.msg=cur.adaptivePrepared?`That check does not agree yet. ${esc(cueFor(st,c,Math.min(5,sc.tries),yoursText))}`:sc.tries<=2?`Not quite. ${cueFor(st,c,sc.tries,yoursText)}`:`That is still tricky. Try the calculation on scratch paper, or tap <b>See one like it</b> for a different worked example. You can take a break, too.`;
-    sc.val=""; sc.sel=-1; }
+    if(!cur.adaptivePrepared){sc.val=""; sc.sel=-1;} }
   finishStepCheck(c, stepIdx===cur.steps.length-1);
 }
 function revealStepAnswer(st, c){ // the answer and its explanation together; the reason question follows as an invitation (v9.13: it can be skipped)
