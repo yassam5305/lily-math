@@ -1683,7 +1683,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.2 · October 14, 2026";
+const BUILD="v10.3 · October 14, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -4689,7 +4689,7 @@ let pendingHW=null; // the parsed problem waiting to be served by next() in "hw:
 function decimalStoryParse(text){
  const story=String(text||'').replace(/\s+/g,' ').trim();if(story.length>1400)return null;
  const s=story.replace(/[’‘]/g,"'").replace(/^(?:(?:#|question|problem)\s*\d{1,2}\s*[.):]?|\d{1,2}[.)])\s+/i,'');
- const name="[a-z][a-z'-]{0,29}",num='(?:0|[1-9]\\d{0,3})(?:\\.\\d{1,3})?',unit='(?:liters?|milliliters?|meters?|centimeters?|kilometers?|kilograms?|grams?|miles?|pounds?|cups?|dollars?)(?: of (?:milk|water|juice|ribbon|flour|rice|paint|rope|sugar))?';
+ const name="[a-z][a-z'-]{0,29}",num='(?:0|[1-9]\\d{0,3})(?:\\.\\d{1,3})?',unit='(?:liters?|milliliters?|meters?|centimeters?|kilometers?|kilograms?|grams?|miles?|pounds?|cups?|dollars?|inch(?:es)?|feet|foot)(?: of (?:milk|water|juice|ribbon|flour|rice|paint|rope|sugar))?';
  const person='(?<person>'+name+')',a='(?<a>'+num+') (?<ua>'+unit+')',b='(?<b>'+num+') (?<ub>'+unit+')',question='How many (?<uq>'+unit+') does \\k<person> have';
  const rows=[
   ['combine','result','+',`${person} has ${a} and ${b}[.!] ${question} in all[?!.]{0,2}`],
@@ -4708,14 +4708,26 @@ function decimalStoryParse(text){
   ['compare','smaller','−',`${person} has ${a}[.!] (?<other>${name}) has ${b} fewer than \\k<person>[.!] How many (?<uq>${unit}) does \\k<other> have[?!.]{0,2}`]
   ,['compare','smaller','−',`${person} has ${a}[.!] (?<other>${name}) has (?<b>${num}) fewer (?<ub>${unit}) than \\k<person>[.!] How many (?<uq>${unit}) does \\k<other> have[?!.]{0,2}`]
  ];
- const normalize=u=>u.toLowerCase().replace(/^([a-z]+)s\b/,'$1');
- for(const [relation,unknown,op,pattern]of rows){
+ // The supplied printed pages mix computations with these complete story
+ // shapes. Noun phrases are bounded; a changed question or extra fact is not
+ // discarded. These recognizers do not infer relationships from keywords.
+ const item="(?:a|an|the) [a-z][a-z'-]{0,24}(?: [a-z][a-z'-]{0,24}){0,3}";
+ rows.push(
+  ['combine','result','+',`${person} bought ${item} for \\$(?<a>${num}) and ${item} for \\$(?<b>${num})[.!] How much money did (?:he|she|\\k<person>) spend[?!.]{0,2}`,'dollars'],
+  ['combine','result','+',`${person} spent \\$(?<a>${num}) for ${item} and \\$(?<b>${num}) for ${item}[.!] How much did (?:he|she|\\k<person>) spend in all[?!.]{0,2}`,'dollars'],
+  ['change','part','−',`${person} had \\$(?<a>${num}) when (?<ref>he|she) arrived at the fair[.!] \\k<ref> had \\$(?<b>${num}) when \\k<ref> left[.!] How much money did \\k<ref> spend at the fair[?!.]{0,2}`,'dollars'],
+  ['change','result','−',`A piece of paper is ${a} wide[.!] ${person} cut off a strip that was ${b} wide[.!] What is the width of the remaining piece of paper[?!.]{0,2}`],
+  ['change','result','−',`${person} has a paper chain that is ${a} long[.!] If (?:he|she|\\k<person>) takes off ${b} of the paper chain, how long is the paper chain that remains[?!.]{0,2}`]
+ );
+ const normalize=u=>u.toLowerCase().replace(/^inches\b/,'inch').replace(/^feet\b/,'foot').replace(/^([a-z]+)s\b/,'$1');
+ for(const [relation,unknown,op,pattern,knownUnit]of rows){
   const m=s.match(new RegExp('^'+pattern+'$','i'));if(!m)continue;const g=m.groups;
-  if(normalize(g.ua)!==normalize(g.ub)||normalize(g.ua)!==normalize(g.uq)||(g.other&&g.person.toLowerCase()===g.other.toLowerCase()))return null;
+  const ua=g.ua||knownUnit,ub=g.ub||knownUnit,uq=g.uq||ua;
+  if(normalize(ua)!==normalize(ub)||normalize(ua)!==normalize(uq)||(g.other&&g.person.toLowerCase()===g.other.toLowerCase()))return null;
   if(!g.a.includes('.')&&!g.b.includes('.'))return null;
   const scale=Math.max((g.a.split('.')[1]||'').length,(g.b.split('.')[1]||'').length),factor=10**scale,A=Math.round(Number(g.a)*factor),B=Math.round(Number(g.b)*factor),result=op==='+'?A+B:A-B;
   if(result<0||result>10000*factor)return {err:'This decimal story route checks nonnegative amounts up to 10,000, with up to three decimal places. Check the wording, or type the expression you wrote.'};
-  return {wordStory:true,storyType:'decimal',story,relation,unknown,given:[g.a,g.b],unit:g.uq,person:g.person,label:'Decimal story: '+g.person,op,scale,answer:result/factor};
+  return {wordStory:true,storyType:'decimal',story,relation,unknown,given:[g.a,g.b],unit:uq,person:g.person,label:'Decimal story: '+g.person,op,scale,answer:result/factor};
  }
  return null;
 }
@@ -4732,9 +4744,9 @@ function decimalStoryTeaching(ctx,move){
  if(!checkedRoute&&ctx?.family!=='decimal-story')return null;
  // Existing authored decimal methods check calculations, not a child's spoken
  // explanation of the story. Keep that distinction explicit on those routes.
- if(!checkedRoute&&move==='calculation')return {text:'Keep your story plan beside the calculation. Check one decimal place at a time. Your story explanation has not been checked here.',resource:'decimal-story:calculation-unverified-plan',concept:'decimal calculation',move};
+ if(!checkedRoute&&move==='calculation')return ctx.storyPlanChecked===true?{text:'Keep your checked story expression. Check one decimal place at a time, and track any equal-value exchanges.',resource:'decimal-story:calculation-checked-plan',concept:'decimal calculation',move}:{text:'Keep your story plan beside the calculation. Check one decimal place at a time. Your story explanation has not been checked here.',resource:'decimal-story:calculation-unverified-plan',concept:'decimal calculation',move};
  if(!checkedRoute&&!['words','meaning','plan','orient','units','rephrase'].includes(move))return null;
- const meaning=!checkedRoute||ctx.component==='decimal-story-meaning',relation=ctx.relationship||ctx.relation||'';
+ const meaning=checkedRoute?ctx.component==='decimal-story-meaning':ctx.storyPlanChecked!==true,relation=ctx.relationship||ctx.relation||'';
  const map=meaning?{
   orient:'Tell the story in your own words. What amount is missing?',words:'Say what happened without choosing an operation yet. Point to what the question asks.',
   meaning:'Label what each amount means. Which amount is known, and which amount must you find?',units:'Put the unit beside each amount. Do the amounts describe the same kind of thing?',
@@ -4799,8 +4811,8 @@ function decimalStoryPracticeTask(index){
 }
 // A parent-selected help preference, not a diagnosis or a teacher observation.
 function decimalStorySupportEnabled(player=S){return typeof player?.decimalStorySupport==='boolean'?player.decimalStorySupport:false;}
-function decimalStoryPrimary(context,normal){return decimalStorySupportEnabled()&&(context?.family==='decimal-story'||String(context?.component||'').startsWith('decimal-story-'))?[['words','Understand the story'],['calculation','Check my calculation'],['start','Help me plan'],['smaller','Show a smaller piece']]:normal;}
-function decimalStorySupportSettingsHTML(){return `<section class="card"><h3>Decimal stories: words and calculation</h3><label class="row"><input type="checkbox" id="decimalstorysupport" ${decimalStorySupportEnabled()?'checked':''}> Offer separate story and calculation help for ${esc(S.name)}</label><p class="muted">A help preference, not evidence of a difficulty. Walter can help explain the situation and check arithmetic separately. It changes no score, difficulty, or class calendar.</p><p id="decimalstorysettingmsg" role="status"></p></section>`;}
+function decimalStoryPrimary(context,normal){return (decimalStorySupportEnabled()||context?.storyCheckedRoute===true)&&(['decimal-story','lesson-story'].includes(context?.family)||String(context?.component||'').startsWith('decimal-story-'))?[['words','Understand the story'],['calculation','Check my calculation'],['start','Help me plan'],['smaller','Show a smaller piece']]:normal;}
+function decimalStorySupportSettingsHTML(){return `<section class="card"><h3>Decimal stories: words and calculation</h3><label class="row"><input type="checkbox" id="decimalstorysupport" ${decimalStorySupportEnabled()?'checked':''}> Offer extra decimal story practice on Home for ${esc(S.name)}</label><p class="muted">A help preference, not evidence of a difficulty. Regular lesson stories already separate the situation from calculation. This adds another practice choice on Home. It changes no score, difficulty, or class calendar.</p><p id="decimalstorysettingmsg" role="status"></p></section>`;}
 function bindDecimalStorySupport(panel){const box=panel.querySelector('#decimalstorysupport');if(box)box.onchange=()=>{const old=S.decimalStorySupport;S.decimalStorySupport=box.checked;if(!save()){S.decimalStorySupport=old;box.checked=decimalStorySupportEnabled();panel.querySelector('#decimalstorysettingmsg').textContent='Could not save. The previous preference remains.';}else panel.querySelector('#decimalstorysettingmsg').textContent='Help preference saved for this player.';};}
 function decimalStoryHomeHTML(){return decimalStorySupportEnabled()?`<section class="card" id="decimalstoryhome"><h2>Decimal story practice</h2><p>Work out what the story means, then check your calculation. You can ask about either part whenever you need.</p><button class="btn quiet" id="decimalstorypractice">Try a decimal story</button><p class="muted">Practice with support. Come back to a fresh problem to check what you can do on your own.</p></section>`:'';}
 function bindDecimalStoryHome(){const button=app.querySelector('#decimalstorypractice');if(button)button.onclick=()=>fractionHomeworkStart(decimalStoryPracticeTask());}
@@ -6094,13 +6106,13 @@ function walterNextReply({guide,intent='start',move,lastMove,repeats=0,observati
   const content={orient:get('orient',0,'Name what you need to find.'),meaning:get('meaning',1,'Label what each amount means.'),plan:get('plan',2,'Draw your next step before calculating.'),test:get('test',3,'Use a different method to check your step.'),smaller:walterPlainHelp(Array.isArray(profile)?profile[0]:guide?.smaller),compare:walterPlainHelp(Array.isArray(profile)?profile[1]:guide?.compare)};
   let chosen=WALTER_MOVES.includes(move)?move:move==='continue'?'stuck':intent==='meaning'?'meaning':intent==='check'?'test':'orient';
   const status=typeof observation.status==='string'?observation.status:typeof observation.observation==='string'?observation.observation:typeof context.status==='string'?context.status:'';
-  const safe={family:context.family||observation.kind||'',kind:context.kind||observation.kind||'',component:context.component||observation.component||'',stage:context.stage||observation.stage||'',role:context.role||observation.role||'',last:context.last===true||observation.last===true,relationship:context.relationship||'',unknown:context.unknown||'',storyStage:context.storyStage||'',question:walterRenderedText(context.question||''),visibleText:walterRenderedText(context.visibleText||''),acceptedText:walterRenderedText(context.acceptedText||''),label:walterPlainHelp(context.label||observation.label||''),code:context.code||observation.code||'',tag:context.tag||'',status};
+  const safe={family:context.family||observation.kind||'',kind:context.kind||observation.kind||'',component:context.component||observation.component||'',stage:context.stage||observation.stage||'',role:context.role||observation.role||'',last:context.last===true||observation.last===true,relationship:context.relationship||'',unknown:context.unknown||'',storyStage:context.storyStage||'',storyPlanChecked:context.storyPlanChecked===true,question:walterRenderedText(context.question||''),visibleText:walterRenderedText(context.visibleText||''),acceptedText:walterRenderedText(context.acceptedText||''),label:walterPlainHelp(context.label||observation.label||''),code:context.code||observation.code||'',tag:context.tag||'',status};
   safe.visibleNumbers=typeof walterVisibleNumbers==='function'?walterVisibleNumbers({text:safe.visibleText,acceptedText:safe.acceptedText}):[];
   if(repeats>0&&lastMove===chosen&&['orient','meaning','plan','test','smaller','rephrase'].includes(chosen))chosen='stuck';
   let choices=[],resource='',concept='',text='';
   if(chosen==='stuck'){text='Which part is getting in your way? Choose the words, the amounts, a plan, the calculation, or checking.';choices=['words','units','plan','calculation','test'];}
   else{
-    const authored=(typeof decimalStoryTeaching==='function'?decimalStoryTeaching(safe,chosen):null)||(typeof walterTeachingReply==='function'?walterTeachingReply(safe,chosen):null);
+    const authored=(typeof lessonStoryTeaching==='function'?lessonStoryTeaching(safe,chosen):null)||(typeof decimalStoryTeaching==='function'?decimalStoryTeaching(safe,chosen):null)||(typeof walterTeachingReply==='function'?walterTeachingReply(safe,chosen):null);
     if(authored){text=authored.text;resource=authored.resource;concept=authored.concept;}
 
     else text=({meaning:content.meaning,units:content.meaning,plan:content.plan,test:content.compare||content.test,connection:content.compare||content.test,smaller:content.smaller||content.plan,rephrase:content.smaller||content.plan,calculation:content.smaller||content.plan,words:content.orient})[chosen]||content.orient;
@@ -8357,6 +8369,7 @@ const lpShow=s=>String(s).replace(/\s*([+−×÷])\s*/g," $1 ").replace(/\(\s*/g
 // A step: {id, prompt, short, input:{type, ...}, check(v, st)->{ok, msg, code, apply()}, help:[clues], why (model narration)}.
 function lpItemStart(item){ const sp=item.spec; item.st=Object.assign({model:item.phase==="model", k:0, helps:0, tries:0, codes:[], helpShown:[], stepEvents:[], eventsTrimmed:0, focusSupport:lp?.focusSupport||null, msg:"", msgKind:"", done:false, answerOnly:null, answerPreviewed:false, skipped:false, videoOpened:false, draft:null, badIndex:-1}, sp.init?sp.init():{}); item.step=sp.next(item.st); lpPrepareStep(item); item.shown=0; }
 function lpApply(item, v){ const st=item.st, step=item.step; if(!step) return; const r=step.check(v, st)||{ok:false};
+  if(item.spec.walterStory?.checkedRoute&&!r.ok&&!r.fmt&&!r.safe&&!['decimal-story-meaning','word-story-meaning','strategy-choice'].includes(step.evidence?.component))st.storyArithmeticMisses=(Math.max(0,+st.storyArithmeticMisses||0))+1;
   const helpContext=typeof lpWalterContextKey==='function'?lpWalterContextKey(item):'';
   lpObserve(item,v,r);
   if(item.phase!=='model'&&typeof walterLinkNextCheck==='function')walterLinkNextCheck(st.walterEvents||[],helpContext,{status:r.fmt?'format':r.safe||r.ok&&step.short==='Your trial count'?'trial':r.ok?'ok':'miss',code:r.code||''});
@@ -8437,15 +8450,15 @@ function lpLoadFor(id){ const o=lpState(id); return Math.max(1, Math.min(3, Math
 function lpSeeded(seed, work){ const old=Math.random; let state=seed>>>0; Math.random=()=>{ state=(Math.imul(1664525,state)+1013904223)>>>0; return state/4294967296; }; try{ return work(); } finally { Math.random=old; } }
 function lpSaveResume(){ if(!S||!lp||lp.items[lp.i].phase==="summary") return; if(lp.homework){fractionHomeworkSave();return;} const it=lp.items[lp.i], st=it.st||null;
   S.lessonResume={v:lp.generationVersion||1,blocked:lp.blocked||[],mixedChoices:lp.mixedChoices||[],focusSupport:lp.focusSupport||null,id:lp.id,delayed:lp.delayed,focus:!!lp.focus,seed:lp.seed,load:lp.load,i:lp.i,phase:it.phase,lid:it.lid||null,t:Date.now(),
-    st,rep:it.rep||null,recorded:!!it.recorded,results:lp.results}; save(); }
-function lpResumeReady(){ const r=S&&S.lessonResume; return !!(r&&[1,2,3].includes(r.v)&&LP_LESSONS[r.id]&&Number.isInteger(r.i)&&r.i>=0&&r.i<9&&Number.isInteger(r.seed)&&Number.isInteger(r.load)&&r.load>=1&&r.load<=3&&Number.isFinite(+r.t)&&Date.now()-r.t<30*864e5); }
+    st,...(it.spec?.recordQuestion?{question:it.spec.recordQuestion}:{}),rep:it.rep||null,recorded:!!it.recorded,results:lp.results}; save(); }
+function lpResumeReady(){ const r=S&&S.lessonResume; return !!(r&&[1,2,3,4].includes(r.v)&&LP_LESSONS[r.id]&&Number.isInteger(r.i)&&r.i>=0&&r.i<9&&Number.isInteger(r.seed)&&Number.isInteger(r.load)&&r.load>=1&&r.load<=3&&Number.isFinite(+r.t)&&Date.now()-r.t<30*864e5); }
 function lpResume(){ if(!lpResumeReady()) return; const id=S.lessonResume.id, delayed=!!S.lessonResume.delayed, focus=!!S.lessonResume.focus; try{ lpStart(id,delayed,S.lessonResume,focus); }catch(e){ delete S.lessonResume; lp=null; save(); lpStart(id,delayed,null,focus); } }
 function lpStart(id, delayed, resume, focus){ focus=!!(focus || (resume&&resume.focus)); const bp=focus?teacherFocusBlueprint(id):lpBlueprint(id); if(!bp || !S) return; lpSanitize(); if(typeof home==="function" && cur && phase==="q") leaveProblem(); cur=null; mode="lesson:"+id;
-  const load=resume?resume.load:(focus?teacherFocusState(id).load:lpLoadFor(id)), seed=resume?resume.seed:Math.floor(Math.random()*4294967296), items=[], generationVersion=resume?([2,3].includes(resume.v)?resume.v:1):3;
+  const load=resume?resume.load:(focus?teacherFocusState(id).load:lpLoadFor(id)), seed=resume?resume.seed:Math.floor(Math.random()*4294967296), items=[], generationVersion=resume?([2,3,4].includes(resume.v)?resume.v:1):4;
   const blocked=generationVersion===1?[]:resume?(Array.isArray(resume.blocked)?resume.blocked.filter(x=>typeof x==="string").slice(-80):[]):(S.lessonLog||[]).slice(-80).map(lpRecordFingerprint).filter(Boolean);
   const used=new Set(blocked), focusSupport=resume?resume.focusSupport||null:lpRecurringSupport(id,focus); lpUsed=new Set();
   const mixedChoices=generationVersion>=2&&resume? (Array.isArray(resume.mixedChoices)?resume.mixedChoices.filter(x=>x&&LP_LESSONS[x.id]&&x.id!==id&&Number.isInteger(x.load)&&x.load>=1&&x.load<=3):[]) : focus?[]:lpReached().filter(x=>x!==id&&(S.lessons||{})[x]&&+S.lessons[x].sessions>0).map(x=>({id:x,load:lpLoadFor(x)}));
-  const versioned=blue=>generationVersion<3&&blue.legacyMake?{...blue,make:blue.legacyMake,model:blue.legacyModel,repair:blue.legacyRepair}:blue;
+  const versioned=blue=>generationVersion>=4&&blue.storyMake?{...blue,make:blue.storyMake}:generationVersion<3&&blue.legacyMake?{...blue,make:blue.legacyMake,model:blue.legacyModel,repair:blue.legacyRepair}:blue;
   const make=(original,L,ph,i)=>{const blue=versioned(original);return generationVersion===1?{phase:ph,spec:blue.make(L,ph,i),load:L}:lpFreshSpec(blue,L,ph,i,used);};
   lpSeeded(seed,()=>{ if(delayed){ items.push(make(bp,load,"delayed",0));
       if(mixedChoices.length){ const o=lpPick(mixedChoices); items.push({...make(LP_LESSONS[o.id],o.load,"mixed",1),lid:o.id}); } }
@@ -8455,7 +8468,7 @@ function lpStart(id, delayed, resume, focus){ focus=!!(focus || (resume&&resume.
   if(resume){ const it=items[resume.i]; if(!it||it.phase!==resume.phase||it.lid!==(resume.lid||undefined)){ delete S.lessonResume; lp=null; lpStart(id,delayed,null,focus); return; }
     lp.i=resume.i; lp.results=Array.isArray(resume.results)?resume.results:[]; if(it.phase==="repair"){ it.spec=it.rspec.fix; it.rep=resume.rep&&typeof resume.rep==="object"?resume.rep:{stage:"spot",picked:-1,tries:0}; }
     if(it.spec){ if(it.phase==="model"){ lpItemStart(it); } else if(resume.st&&typeof resume.st==="object"&&!Array.isArray(resume.st)&&Number.isInteger(resume.st.k)&&resume.st.k>=0){
-        it.st=resume.st; const shown=Array.isArray(it.st.helpShown)?it.st.helpShown.length:0; it.st.msg=""; it.st.msgKind=""; it.st.codes=Array.isArray(it.st.codes)?it.st.codes.filter(x=>typeof x==="string"):[]; it.st.stepEvents=lpTrimEvents(it.st.stepEvents); it.step=it.spec.next(it.st); it.st.helpShown=(it.step&&it.step.help||[]).slice(0,shown); it.recorded=!!resume.recorded;
+        it.st=resume.st;if(it.spec.storyStateValid&&!it.spec.storyStateValid(it.st)){lpItemStart(it);lpRender();return;} const shown=Array.isArray(it.st.helpShown)?it.st.helpShown.length:0; it.st.msg=""; it.st.msgKind=""; it.st.codes=Array.isArray(it.st.codes)?it.st.codes.filter(x=>typeof x==="string"):[]; it.st.stepEvents=lpTrimEvents(it.st.stepEvents); it.step=it.spec.next(it.st); it.st.helpShown=(it.step&&it.step.help||[]).slice(0,shown); it.recorded=!!resume.recorded;
       } else lpItemStart(it); }
     lpRender(); return; }
   lpEnter(); }
@@ -8465,7 +8478,8 @@ const LP_PHASE_NAME={intro:"The goal", model:"Watch one", guided:"Try it togethe
 function lpRecord(it, extra){ if(lp.homework)return fractionHomeworkRecord(it,extra); if(it.recorded) return null; it.recorded=true; const st=it.st||{}, sp=it.spec||{}, lid=it.lid||lp.id, oneShot=!!(st.done && sp.oneShot && sp.oneShot(st)), model=it.phase==="model";
   const method=st.done&&!st.skipped&&!oneShot&&!model?1:0;
   const fingerprint=lpFingerprint(sp), repeated=!!it.repeated||!!(fingerprint&&!model&&(S.lessonLog||[]).slice(-80).some(e=>lpRecordFingerprint(e)===fingerprint));
-  const e=Object.assign({t:Date.now(), id:lid, lesson:(LP_LESSONS[lid]||lp.bp).lesson, phase:it.phase, kind:sp.kind||it.phase, q:it.spec?lpPlain(sp.title||""):"",
+  const e=Object.assign({t:Date.now(), id:lid, lesson:(LP_LESSONS[lid]||lp.bp).lesson, phase:it.phase, kind:sp.kind||it.phase, q:it.spec?lpPlain(sp.recordQuestion||sp.title||""):"",
+    ...(sp.walterStory?.checkedRoute?{problemForm:"word-problem",storyArithmeticMisses:Math.max(0,+st.storyArithmeticMisses||0)}:{}),
     evidenceVersion:2,load:+it.load||+lp.load||1,fingerprint,repeated:repeated?1:0,features:sp.features||null,stepEvents:lpTrimEvents(st.stepEvents),eventsTrimmed:+st.eventsTrimmed||0,
     ok:st.done?1:0, methodOk:method, methodEvidence:sp.methodEvidence||sp.kind||it.phase, teacherFocus:!!lp.focus, answerOnly:oneShot?1:(st.answerOnly===null||st.answerOnly===undefined?null:(st.answerOnly?1:0)), answerPreviewed:st.answerPreviewed?1:0,
     helps:+st.helps||0, tries:+st.tries||0, firstTry:method&&!st.tries&&!st.helps&&!st.answerPreviewed&&!repeated?1:0,
@@ -8480,7 +8494,7 @@ function lpFinish(){ if(lp.homework){delete S.homeworkResume;save();return;} con
     o.adjustment="held";
     if(!lp.delayed&&own.length>=2&&clean&&o.load<3){ o.load=(+o.load||1)+1; o.adjustment="raised"; }
     else if(!clean&&o.load>1){ const recent=(S.lessonLog||[]).filter(e=>e.id===lp.id&&!!e.teacherFocus===!!lp.focus&&e.load===lp.load&&["independent","delayed"].includes(e.phase)&&e.t>=Date.now()-14*864e5).slice(-2);
-      if(recent.length===2&&recent.every(e=>e.tries>=3&&!e.repeated&&lpRecordFingerprint(e))&&lpRecordFingerprint(recent[0])!==lpRecordFingerprint(recent[1])){ o.load--; o.adjustment="smaller-practice"; } }
+      if(recent.length===2&&recent.every(e=>(Number.isInteger(e.storyArithmeticMisses)?e.storyArithmeticMisses:e.tries)>=3&&!e.repeated&&lpRecordFingerprint(e))&&lpRecordFingerprint(recent[0])!==lpRecordFingerprint(recent[1])){ o.load--; o.adjustment="smaller-practice"; } }
     if(lp.delayed){ const sameLoad=o.checkedLoad===lp.load; o.checked=Date.now(); o.checkedLoad=lp.load; o.checkClean=clean?1:0; o.retentionStage=clean?Math.min(2,(sameLoad?+o.retentionStage||0:0)+1):0; o.due=Date.now()+(clean?(o.retentionStage===1?7:14):3)*864e5; }
     else { o.retentionStage=0; o.due=Date.now()+LP_DELAY_MS; } }
   if(lp.bp.strategyChoices&&own.length){
@@ -8560,7 +8574,7 @@ function lpWalterContextKey(it){return `${it.lid||lp?.id||'homework'}:${it.phase
 function lpWalterSemanticContext(it){const c=lpHelpContext(it),question=walterRenderedText((['independent','delayed','mixed'].includes(it.phase)&&it.step.short)||it.step.prompt||'');
   // Titles and active prompt are rendered givens. Do not use sp.prompt (collapsed context),
   // future script entries, hidden checker values, or unchecked drafts as number provenance.
-  return {contextKey:lpWalterContextKey(it),mistakeNotes:S?.walterMistakeNotes!==false,family:(it.spec.walterStory&&decimalStorySupportEnabled())||it.step.evidence?.component?.startsWith('decimal-story-')?'decimal-story':LP_LESSONS[it.lid||lp?.id]?.skill||(lp?.homework?.fraction?'fracaddsub':lp?.homework?.wordStory?'expressions':''),kind:c.kind,component:c.component,stage:c.stage,role:c.role,last:c.last,relationship:it.step.walter?.relationship||it.spec.walterStory?.relationship||'',unknown:it.step.walter?.unknown||it.spec.walterStory?.unknown||'',storyStage:it.step.walter?.stage||'',question,visibleText:[walterRenderedText(it.spec.title||''),it.spec.walterStory&&decimalStorySupportEnabled()?walterRenderedText(it.spec.walterStory.story):'',question].join(' '),acceptedText:'',status:c.status,label:c.label,code:c.code||'',tag:c.status==='miss'?c.code||'':''};}
+  return {contextKey:lpWalterContextKey(it),mistakeNotes:S?.walterMistakeNotes!==false,storyCheckedRoute:it.spec.walterStory?.checkedRoute===true,storyPlanChecked:it.spec.walterStory?.checkedRoute===true&&it.st.storyPlanChecked===true,family:it.spec.walterStory?.checkedRoute===true&&it.spec.storyTask?.storyType==='lesson-story'?'lesson-story':(it.spec.walterStory&&(it.spec.walterStory.checkedRoute===true||decimalStorySupportEnabled()))||it.step.evidence?.component?.startsWith('decimal-story-')?'decimal-story':LP_LESSONS[it.lid||lp?.id]?.skill||(lp?.homework?.fraction?'fracaddsub':lp?.homework?.wordStory?'expressions':''),kind:c.kind,component:c.component,stage:c.stage,role:c.role,last:c.last,relationship:it.step.walter?.relationship||it.spec.walterStory?.relationship||'',unknown:it.step.walter?.unknown||it.spec.walterStory?.unknown||'',storyStage:it.step.walter?.stage||'',question,visibleText:[walterRenderedText(it.spec.title||''),it.spec.walterStory&&(it.spec.walterStory.checkedRoute===true||decimalStorySupportEnabled())?walterRenderedText(it.spec.walterStory.story):'',question].join(' '),acceptedText:'',status:c.status,label:c.label,code:c.code||'',tag:c.status==='miss'?c.code||'':''};}
 // Explicit fictional models use separate values. Answer admission runs only after
 // the learner requests a modeled example, never while choosing pending help.
 function walterModelValue(value){if(typeof value==='number')return value;if(value&&typeof value==='object'&&Number.isFinite(value.n)&&Number.isFinite(value.d))return value.n/value.d;const f=typeof value==='string'?parseFraction(value):null;return f?f.w+f.n/f.d:NaN;}
@@ -8577,9 +8591,9 @@ function lpPrepareStep(it){
 }
 function lpDifferentExample(it){
   const bp=lp.homework?lp.bp:LP_LESSONS[it.lid||lp.id];if(!bp)return;
-  let sp=bp.modelByStrategy&&Number.isInteger(it.st.strategyIndex)?bp.modelByStrategy(it.st.strategyIndex):bp.model();
+  const storyExample=it.spec.walterStory?.checkedRoute===true&&typeof bp.storyMake==='function';let sp=storyExample?bp.storyMake(it.load||lp.load,'model',1,it.st.baseState?.strategyIndex):bp.modelByStrategy&&Number.isInteger(it.st.strategyIndex)?bp.modelByStrategy(it.st.strategyIndex):bp.model();
   const different=s=>lpFingerprint(s)!==lpFingerprint(it.spec)&&(s.answer===undefined||it.spec.answer===undefined||s.answer!==it.spec.answer)&&!(s.audit?.family==='polygon'&&it.spec.audit?.family==='polygon'&&s.audit.name===it.spec.audit.name);
-  for(let n=0;n<8&&!different(sp);n++)sp=bp.make(it.load||lp.load,'model',n%2);
+  for(let n=0;n<8&&!different(sp);n++)sp=storyExample?bp.storyMake(it.load||lp.load,'model',1,it.st.baseState?.strategyIndex):bp.make(it.load||lp.load,'model',n%2);
   if(!different(sp)){it.st.exampleNote='A different example is not available here. Keep testing your plan, or pause.';return;}
   const demo={phase:'model',spec:sp};lpItemStart(demo);const lines=[];let n=0;
   while(demo.step&&n<160){const step=demo.step,script=sp.script?.[n++],v=script==='@'||script===undefined?step.auto:script;
@@ -8594,7 +8608,7 @@ function lpDifferentExample(it){
   }
   lpWalterTrimEvents(st);
   st.exampleNote='';
-  it.st.exampleNarr=`<section class="lpclue" aria-label="Different worked example"><h3>Different worked example: ${esc(lpPlain(sp.title))}</h3><p>This is help. Keep your own problem and draft above.</p><ol>${lines.map(t=>`<li>${t}</li>`).join('')}</ol></section>`;
+  it.st.exampleNarr=`<section class="lpclue" aria-label="Different worked example"><h3>Different worked example: ${esc(lpPlain(sp.title))}</h3><p>This is help. Keep your own problem and draft above.</p>${sp.recordQuestion?`<p>${esc(sp.recordQuestion)}</p>`:''}<ol>${lines.map(t=>`<li>${t}</li>`).join('')}</ol></section>`;
 }
 function lpCarryModelHTML(){ return `<div class="lp-carry-model" role="group" aria-label="Place-value support with empty places"><div><b>One place left</b><span>Full tens</span><span class="lp-empty-place" aria-label="Empty full-tens place">□</span></div><div><b>Current column</b><span>Leftover ones</span><span class="lp-empty-place" aria-label="Empty leftover-ones place">□</span></div></div>`; }
 // Keep the help total when older delivery detail is compacted. Current-step detail
@@ -9613,6 +9627,138 @@ for(const id of Object.keys(LP_LESSONS)){ const l=typeof lessonById==="function"
 // ---- Home, picker, grown-ups report ----
 // Home (inside "This week in class", calendar on): the lesson route for the current Unit 2 lesson, a picker for any Unit 2 lesson the class has
 // reached, and any lesson check-ins that are due. "Practice this week" keeps its job as mixed review and says so.
+// Original practice stories parallel to reviewed Unit 3 homework formats.
+// Story relationships are checked before the existing class calculation method.
+// Arithmetic ranges and method choices come from the original lesson generators.
+function lpHomeworkDecimalStory(o,index){
+ const a=(o.A/100).toFixed(2),b=(o.B/100).toFixed(2),add=o.op==='+';
+ const rows=add?[
+  ['combine','result','meters',`Maya has ${a} meters of ribbon and ${b} meters of ribbon. How many meters of ribbon does Maya have in all?`],
+  ['compare','larger','feet',`Maya has ${a} feet of ribbon. Noah has ${b} more feet of ribbon than Maya. How many feet of ribbon does Noah have?`],
+  ['change','start','liters',`Maya used ${b} liters of water. Maya now has ${a} liters of water. How many liters of water did Maya have at first?`],
+  ['combine','result','inches',`One paper strip is ${a} inches long, and another is ${b} inches long. They are placed end to end with no overlap. How long are the strips together?`],
+  ['change','result','liters',`Maya had ${a} liters of water. Maya received ${b} more liters of water. How many liters of water does Maya have now?`],
+  ['combine','result','dollars',`Maya bought a notebook for $${a} and a folder for $${b}. How much money did she spend?`]
+ ]:[
+  ['change','result','inches',`A piece of paper is ${a} inches wide. Maya cut off a strip that was ${b} inches wide. What is the width of the remaining piece of paper?`],
+  ['combine','part','meters',`Two pieces of ribbon measure ${a} meters in all. One piece measures ${b} meters. How many meters long is the other piece?`],
+  ['compare','difference','feet',`Maya's paper chain is ${a} feet long. Noah's paper chain is ${b} feet long. How many feet longer is Maya's chain than Noah's?`],
+  ['change','start','liters',`Maya received ${b} more liters of water. Maya now has ${a} liters of water. How many liters of water did Maya have at first?`],
+  ['change','part','liters',`Maya had ${a} liters of water. Maya now has ${b} liters of water. How many liters of water did Maya use?`],
+  ['compare','smaller','meters',`Maya has ${a} meters of ribbon. Noah has ${b} fewer meters of ribbon than Maya. How many meters of ribbon does Noah have?`],
+  ['change','result','feet',`Maya has a paper chain that is ${a} feet long. If she takes off ${b} feet of the paper chain, how long is the paper chain that remains?`],
+  ['change','part','dollars',`Maya had $${a} when she arrived at the fair. She had $${b} when she left. How much money did she spend at the fair?`]
+ ];
+ const i=Number.isInteger(index)?((index%rows.length)+rows.length)%rows.length:lpRnd(0,rows.length-1),[relation,unknown,unit,story]=rows[i];
+ return {wordStory:true,storyType:'decimal',story,relation,unknown,unit,person:'Maya',label:'Decimal word problem',given:[a,b],op:o.op,scale:2,answer:(add?o.A+o.B:o.A-o.B)/100};
+}
+function lpHomeworkStoryMethod(base,task,preferred=0){
+ const decimal=task.storyType==='decimal',meaning=decimal?'decimal-story-meaning':'word-story-meaning',calculation=decimal?'decimal-story-calculation':'word-story-calculation';
+ const checkExpression=decimal?decimalStoryExpressionCheck:lessonStoryExpressionCheck,teaching=decimal?decimalStoryTeaching:lessonStoryTeaching;
+ const guide=['orient','meaning','plan','test','smaller'].map(move=>teaching({component:meaning,relationship:task.relation,unknown:task.unknown},move).text);
+ const sp={kind:base.kind,title:decimal?'Decimal word problem':task.label||'Word problem',problemKey:base.problemKey||base.title,recordQuestion:task.story,prompt:task.story,answer:base.answer,answerCheck:base.answerCheck,audit:base.audit,script:[],
+  storyTask:task,walterStory:{story:task.story,relationship:task.relation,unknown:task.unknown,storyType:task.storyType,checkedRoute:true},methodName:base.methodName,methodEvidence:base.methodEvidence,
+  init:()=>({storyExpression:null,storyPlanChecked:false,baseState:null,stage:'story-meaning'}),
+  storyStateValid:st=>!!st&&Number.isInteger(st.k)&&st.k>=0&&(st.k===0?st.storyExpression===null&&st.storyPlanChecked===false&&st.baseState===null:st.storyPlanChecked===true&&typeof st.storyExpression==='string'&&checkExpression(task,st.storyExpression).ok&&!!st.baseState&&typeof st.baseState==='object'&&!Array.isArray(st.baseState)),
+  next:st=>{
+   if(!sp.storyStateValid(st))throw Error('Invalid saved decimal story plan');
+   if(st.k===0)return {prompt:'Write an expression for the amount this story asks you to find. Show how the two given amounts relate.'+(task.fractions?' For a mixed number, type (whole + fraction).':''),short:'Write the story relationship.'+(task.fractions?' Use (whole + fraction) for a mixed number.':''),input:{type:'text',ph:'Type your expression'},auto:task.expression||`${task.given[0]} ${task.op} ${task.given[1]}`,evidence:{component:meaning},walter:{id:meaning,relationship:task.relation,unknown:task.unknown,stage:'meaning'},curriculumGuide:guide,
+    check:v=>{const r=checkExpression(task,v);return r.ok?{ok:true,apply:()=>{st.storyExpression=String(v).trim();st.storyPlanChecked=true;st.baseState=base.init?base.init():{};st.stage=st.baseState.stage||'calculation';}}:r;}};
+   const inner=st.baseState;inner.k=st.k-1;inner.model=st.model;inner.focusSupport=st.focusSupport||null;
+   const step=base.next(inner);sp.methodName=base.methodName;sp.methodEvidence=base.methodEvidence;sp.audit=base.audit;st.stage=inner.methodState?.stage||inner.stage||'calculation';
+   if(!step)return null;
+   const component=step.evidence?.component||(base.kind==='decimal-line'&&inner.stage==='land'?'decimal-landing':calculation);
+   return {...step,...(component==='strategy-choice'?{auto:preferred===1?1:0}:{}),evidence:{...step.evidence,component},walter:{...step.walter,relationship:task.relation,unknown:task.unknown,stage:'calculation'}};
+  },
+  visual:st=>`<p class="lpstory">${esc(task.story)}</p>${st.storyPlanChecked&&sp.storyStateValid(st)?`<p class="lpeq">Your checked expression: ${esc(st.storyExpression)}</p>${base.visual?base.visual(st.baseState):''}`:''}`,
+  done:st=>!st.storyPlanChecked||!st.baseState?'Your final answer was checked. The story relationship and class method were not completed.':`You checked the story relationship and your calculation. ${base.done?base.done(st.baseState):''}`,
+  oneShot:st=>!st?.storyPlanChecked||!st?.baseState||!!base.oneShot?.(st.baseState),route:st=>st?.baseState?base.route?.(st.baseState):undefined};
+ return sp;
+}
+function installUnit3StorySets(){
+ for(let n=1;n<=6;n++){
+  const bp=LP_U3[`U3L${n}`],op=n<=3?'+':'−',line=n===2||n===5,blocks=n===1||n===4;
+  bp.storyMake=(load,phase,index,preferred=0)=>{
+   const story=index===1||phase==='delayed'||phase==='mixed';
+   if(!story)return bp.make(load,phase,index);
+   let o;
+   if(n===3||n===6){const max=load<=1?5:load===2?15:op==='+'?45:99;let A=lpRnd(100,max*100+99),B=lpRnd(1,max*100+99);if(op==='−'&&A<B)[A,B]=[B,A];o={A,B,op};}
+   else o=lpDecimalGen(load,op,line);
+   const task=lpHomeworkDecimalStory(o);o.unit=task.unit;let base;
+   if(n===3||n===6)base=lpStrategyChoice({kind:'decimal-addsub-choice',preferred:preferred===1?1:0,choices:[{key:'chart',name:'Place value chart',make:()=>lpDecimalChart({...o,blocks:true})},{key:'line',name:'Number line',make:()=>lpDecimalLine(o)}]});
+   else base=line?lpDecimalLine(o):lpDecimalChart({...o,blocks:blocks||phase==='model'});
+   return lpHomeworkStoryMethod(base,task,preferred);
+  };
+ }
+}
+installUnit3StorySets();
+
+// These applications are authored curriculum practice, not reproduced homework.
+const lessonStoryFractionExpression=f=>f.d===1?String(f.n):f.n>f.d?`(${Math.floor(f.n/f.d)} + ${f.n%f.d}/${f.d})`:`${f.n}/${f.d}`;
+function lessonStoryExpressionCheck(task,value){
+ const s=String(value||'').trim(),tree=s.length<=512?lpAst(s):null,r=s.length<=512?lpEval(s):{ok:false};
+ if(!tree||!r.ok||!Number.isFinite(r.val))return {ok:false,fmt:true,msg:'Write a complete expression. For a mixed number, use (whole + fraction), with matching parentheses.'};
+ const expected=lpAst(task.expression);
+ if(lpCanon(tree)===lpCanon(expected))return {ok:true};
+ if(lpSameNums(r.nums,lpEval(task.expression).nums))return {ok:false,code:'word-story-meaning',msg:'Read the relationship in your expression back as a story. Does it describe the amounts and what the question asks you to find?'};
+ return {ok:false,fmt:true,msg:'I cannot verify that form against this story yet. Use the two given amounts and show their relationship. A final number alone does not show that relationship.'};
+}
+function lessonStoryTeaching(ctx,move){
+ const meaning=ctx?.component==='word-story-meaning',checked=ctx?.storyPlanChecked===true;
+ if(!meaning&&ctx?.family!=='lesson-story')return null;
+ if(!meaning&&!['words','meaning','plan','orient','units','rephrase','calculation'].includes(move))return null;
+ if(!meaning&&!checked)return null;
+ const text=meaning?{
+  orient:'Tell the story in your own words. What amount do you need to find?',words:'Say what happened before choosing an operation. Name what each amount means.',
+  meaning:'Label the known amounts and the unknown amount. Which relationship connects them?',plan:'Draw the relationship. Label the given amounts and leave the requested amount blank.',
+  test:'Read your expression as words. Does each amount and operation still match the story?',smaller:'Focus on what the question asks. Where would that unknown amount belong in your drawing?',
+  rephrase:'Explain what you know and what you need to find without calculating yet.',units:'Name the unit for every amount. What unit will the requested amount use?',
+  calculation:'First check the relationship in your expression. The calculation comes after that plan.',connection:'Match each given amount to your drawing and expression. Keep its meaning the same.'
+ }:{
+  orient:'Your expression matched the story. Keep that plan and check the calculation with your class method.',words:'Your story setup is checked. Explain the units in the current calculation step.',
+  meaning:'A checked story plan can still have an arithmetic slip. Inspect the current calculation step separately.',plan:'Keep your checked expression. Use your class representation to organize the next calculation step.',
+  rephrase:'Your story plan is still here. Explain the current calculation in your own words.',units:'Keep the units attached to the amounts while checking your class calculation method.',
+  calculation:'Keep the story expression you checked. Recheck the current calculation step without changing what the amounts mean.'
+ };
+ if(meaning&&['meaning','plan'].includes(move)){
+  if(ctx.relationship==='product')text[move]='Draw the equal groups or rectangle described by the story. Label what is given and leave the requested amount blank.';
+  if(ctx.relationship==='share')text[move]='Draw the total and the equal shares. Label what is known and leave the size of a share blank.';
+  if(ctx.relationship==='groups')text[move]='Draw the total and the size of a group. Leave the number of groups blank until you choose your expression.';
+  if(ctx.relationship==='combine')text[move]='Draw the parts and the whole. Label what is known and leave the requested amount blank.';
+  if(ctx.relationship==='change')text[move]='Draw the starting amount, the change, and the ending amount. Leave the requested amount blank.';
+ }
+ return {text:text[move]||text.orient,resource:'lesson-story:'+(meaning?'meaning':'calculation'),concept:meaning?'word problem relationship':'class calculation',move};
+}
+function lessonStoryTask(base,index){
+ const a=base.audit;if(!a)return null;let rows,expression,unit,relation,unknown='result',fractions=false;
+ if(a.family==='decmul'){
+  expression=`${a.a} × ${a.b}`;relation='product';unit=Number.isInteger(a.b)?'dollars':'square meters';
+  rows=Number.isInteger(a.b)?[
+   `Each notebook costs $${a.a.toFixed(2)}. Maya buys ${a.b} notebooks at that price. How much do the notebooks cost together?`,
+   `Maya buys ${a.b} folders. Each folder costs $${a.a.toFixed(2)}. What is the total cost of the folders?`
+  ]:[`A rectangular piece of fabric measures ${a.a} meters by ${a.b} meters. What is its area in square meters?`,`A rectangular garden is ${a.a} meters long and ${a.b} meters wide. What is its area in square meters?`];
+ }else if(a.family==='decdiv'){
+  expression=`${a.N} ÷ ${a.d}`;
+  if(a.method==='dealing'){relation='share';unknown='share-size';unit='liters';rows=[`${a.N} liters of juice are shared equally among ${a.d} people. How many liters does each person receive?`,`${a.N} liters of water are poured equally into ${a.d} containers. How many liters go in each container?`];}
+  else{relation='groups';unknown='group-count';unit='bottles';rows=[`Maya has ${a.N} liters of juice. Each bottle holds ${a.d} liters. How many bottles can she fill completely?`,`Maya has ${a.N} meters of ribbon. Each piece must be ${a.d} meters long. How many complete pieces can she cut?`];}
+ }else if(a.family==='fraccombine'||a.family==='estimate'){
+  fractions=true;expression=`${lessonStoryFractionExpression(a.a)} ${a.op} ${lessonStoryFractionExpression(a.b)}`;unit='cups';const x=cxText(a.a),y=cxText(a.b),about=a.family==='estimate'?'About how many':'How many';relation=a.op==='+'?'combine':'change';
+  rows=a.op==='+'?[`Maya puts ${x} cups of flour in a bowl, then adds another ${y} cups of flour. ${about} cups of flour are in the bowl now?`,`One recipe uses ${x} cups of flour. Another recipe uses ${y} cups of flour. ${about} cups of flour are needed for both recipes together?`]:[`Maya has ${x} cups of flour. She uses ${y} cups of flour. ${about} cups of flour remain?`,`A container holds ${x} cups of water. Maya pours out ${y} cups of water. ${about} cups of water remain in the container?`];
+ }else return null;
+ const choice=Number.isInteger(index)?((index%rows.length)+rows.length)%rows.length:lpRnd(0,rows.length-1),story=rows[choice];
+ const given=a.family==='decmul'?[String(a.a),String(a.b)]:a.family==='decdiv'?[String(a.N),String(a.d)]:[cxText(a.a),cxText(a.b)];
+ return {wordStory:true,storyType:'lesson-story',story,relation,unknown,unit:relation==='groups'&&choice===1?'pieces':unit,label:'Word problem',expression,fractions,given,op:a.family==='decmul'?'×':a.family==='decdiv'?'÷':a.op};
+}
+function installApplicationStorySets(){
+ for(const [id,bp]of Object.entries(LP_LESSONS)){
+  if(!(id.startsWith('U4L')||id.startsWith('U6L')||/^U5L(?:[5-9]|10)$/.test(id)))continue;
+  bp.storyMake=(load,phase,index,preferred=0)=>{
+   const base=bp.make(load,phase,index);if(!(index===1||phase==='delayed'||phase==='mixed'))return base;
+   const task=lessonStoryTask(base);return task?lpHomeworkStoryMethod(base,task,preferred):base;
+  };
+ }
+}
+installApplicationStorySets();
 // Parent-selected focus catalog. A pacing entry alone never creates a route.
 const FOCUS_FEATURED={U2L8:{key:'multiply',name:'Three-digit multiplication',symbol:'×',detail:'Use the standard algorithm, including columns, carries, and row addition.'},U2L11:{key:'divide',name:'Division with an area model',symbol:'÷',detail:'Build bands and check partial quotients, products, and subtraction.'},U3L3:{key:'decimal-add',name:'Add decimals',symbol:'+',detail:'Combine matching places. Choose a chart or number line.'},U3L6:{key:'decimal-sub',name:'Subtract decimals',symbol:'−',detail:'Exchange equal values when needed. Choose a chart or number line.'}};
 const FOCUS_LESSONS=Object.freeze(Object.entries(LP_LESSONS).filter(([id,b])=>lessonById(id)&&SKILLS[b.skill]&&['model','make','repair'].every(k=>typeof b[k]==='function')&&Array.isArray(b.vocab)&&Array.isArray(b.explain)).map(([id,b])=>Object.freeze({id,kind:'lesson',skill:b.skill,key:FOCUS_FEATURED[id]?.key||'lesson:'+id,unit:lpUnit(id),name:FOCUS_FEATURED[id]?.name||b.name,symbol:FOCUS_FEATURED[id]?.symbol||'→',detail:FOCUS_FEATURED[id]?.detail||lpPlain(b.goal),featured:!!FOCUS_FEATURED[id]})));
@@ -9704,6 +9850,8 @@ const TEACHER_REPORT_STEPS=Object.freeze({
   'decimal-landing':'Landing after a decimal jump','decimal-place':'Counting decimal units',
   'decimal-combine':'Combining decimal units','decimal-exchange':'Exchanging equal decimal units',
   'decimal-parts':'Choosing decimal parts','decimal-unit':'Renaming decimal units','decimal-product':'Decimal product units','decimal-share':'Sharing decimal units',
+  'word-story-meaning':'Understanding the word problem relationship',
+  'word-story-calculation':'Calculating from the checked story setup',
   'decimal-story-meaning':'Understanding the decimal story relationship',
   'decimal-story-calculation':'Calculating from the decimal story setup',
   'common-unit':'Choosing common fractional units',
@@ -9722,8 +9870,8 @@ const TEACHER_REPORT_STEPS=Object.freeze({
 });
 function teacherReportQuestion(component,family=''){
   const text=(component+' '+family).toLowerCase();
-  if(component==='decimal-story-meaning')return 'Can the student explain what each amount means, what is unknown, and how the quantities relate before choosing an operation? Which class drawing or language would help?';
-  if(component==='decimal-story-calculation')return 'Could you confirm the story setup separately, then watch which calculation step needs another look? A fresh problem can help locate the place-value, exchange, or arithmetic step.';
+  if(['decimal-story-meaning','word-story-meaning'].includes(component))return 'Can the student explain what each amount means, what is unknown, and how the quantities relate before choosing an operation? Which class drawing or language would help?';
+  if(['decimal-story-calculation','word-story-calculation'].includes(component))return 'Could you confirm the story setup separately, then watch which calculation step needs another look? A fresh problem can help locate the place-value, exchange, or arithmetic step.';
   if(/carry|column|tens-place/.test(component.toLowerCase()))return 'Which class method should we use to explain the carry or value in this column?';
   if(/fraction|frac/.test(text))return 'Which class model would help explain the whole and equal-sized parts at this step?';
   if(/express|operation|group|parenth|twostep|story|word problem/.test(text))return 'What should the student explain about each quantity and operation before calculating?';
@@ -9758,7 +9906,7 @@ function teacherReportDraft(player=S,options={}){
     if(r.recorded||!r.st||typeof r.st!=='object'||['model','explain','intro','summary'].includes(r.phase))return;
     const st=r.st,id=source==='lesson'?(r.lid||r.id):undefined;
     add({t:r.t,id,sk:source==='homework'?(r.task?.wordStory?'expressions':'fracaddsub'):undefined,
-      q:source==='homework'?r.task?.label:'',phase:r.phase||(source==='homework'?'homework':''),load:r.load,
+      q:source==='homework'?(r.task?.story||r.task?.label):r.question||'',phase:r.phase||(source==='homework'?'homework':''),load:r.load,
       helps:st.helps,tries:st.tries,stepEvents:st.stepEvents,walterHelp:st.walterEvents,
       teacherFocus:!!r.focus,answerPreviewed:!!st.answerPreviewed,steps:st.k,ok:0,methodOk:0},source,true);
   };
