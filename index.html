@@ -1683,7 +1683,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.1 · October 14, 2026";
+const BUILD="v10.2 · October 14, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -3796,7 +3796,7 @@ const blankProfile=name=>({name, levels:Object.fromEntries(SKILL_ORDER.map(s=>[s
   correct:0, attempted:0, best:0, run:0, guided:0, persist:0, shown:0, logTrimmed:0, scratch:(typeof window!=="undefined" && window.innerWidth>=700), today:{d:todayStr(), c:0, a:0}, log:[], created:Date.now(), classPin:null, classCal:false,
   coach:{},                        // per-skill coaching level 0–2 (2 = coach line + example offered; 1 = coach line; 0 = none). New skills start at 2; two clean successes fade one level; a fresh miss brings one back.
   weak:{},                         // weakness profile, keyed "skill:component" → {state:"weak"|"review"|"ok", wins, misses, lvl, last, due, stage, recovered}
-  schema:10, walterMistakeNotes:true, readAloudEnabled:true, saveTeacherNotes:false, teacherFeedbackNotes:{}, focusRecent:[],
+  schema:10, decimalStorySupport:false, walterMistakeNotes:true, readAloudEnabled:true, saveTeacherNotes:false, teacherFeedbackNotes:{}, focusRecent:[],
   support:{multiply:3}, supportWins:{multiply:0}}); // workspace supports (3 = all of them, 0 = bare page) and clean wins toward fading the next one
 function normalize(p){ // fill in anything missing (older saves, imports)
   const b=blankProfile(p.name||"Player");
@@ -3842,7 +3842,7 @@ function normalize(p){ // fill in anything missing (older saves, imports)
   out.foundations=foundNorm(p.foundations); if(typeof out.foundLast!=="string") delete out.foundLast; out.foundNudgeAt=Math.max(0,+out.foundNudgeAt||0); // v9.21 (Agent M): the grown-ups' foundation choices (all off by default), the last one served, the last nudge served
   // Teacher notes are parent opt-in per player, local and included in backups only while enabled. No personal note is embedded in the app.
   out.schema=Math.max(10,Number.isInteger(p.schema)&&p.schema>0?p.schema:10);
-  out.walterMistakeNotes=p.walterMistakeNotes!==false;out.readAloudEnabled=p.readAloudEnabled!==false;
+  out.decimalStorySupport=typeof p.decimalStorySupport==='boolean'?p.decimalStorySupport:false;out.walterMistakeNotes=p.walterMistakeNotes!==false;out.readAloudEnabled=p.readAloudEnabled!==false;
   out.saveTeacherNotes=p.saveTeacherNotes===true;out.teacherFeedbackNotes=teacherNoteNormalize(p.teacherFeedbackNotes,out.saveTeacherNotes);
   out.teacherFeedback=teacherFeedbackNormalize(p.teacherFeedback);out.focusRecent=teacherFeedbackNormalize(p.focusRecent).slice(0,4);
   out.homeworkLog=fractionHomeworkLogNorm(p.homeworkLog);
@@ -4378,7 +4378,7 @@ function home(){
   const homeworkPaused=fractionHomeworkResumeReady();
   const primary=homePrimaryAction();
   const todayHTML=`<div class="card home-today home-lead" id="dailycard" style="margin-top:0"><h2 style="margin-top:0">${primary.title}</h2><p class="muted home-desc">${primary.description}</p>${stale?`<p class="muted week-guess" id="stalepin">A grown-up set the class lesson ${esc(pinDayText())}. If your homework shows a newer lesson, ask a grown-up to update it.</p>`:""}<button class="btn primary mix" id="${primary.kind==='lesson'?'lpresume':'dailygo'}" data-dailygo ${primary.kind==='today'?'data-skill="today"':''}>${primary.label}</button></div>`;
-  const feedbackHTML=teacherFeedbackHomeHTML();
+  const feedbackHTML=teacherFeedbackHomeHTML()+decimalStoryHomeHTML();
   const practiceCards=todayHTML;
   app.innerHTML=`
     <div class="topbar home-bar"><div class="walter-heading"><img class="walter-home" src="${WALTER_ART.work}" alt="" width="112" height="112"><h1 style="margin:0" tabindex="-1">Hi, ${esc(S.name)}.</h1></div><button class="btn quiet small" id="switch">Not ${esc(S.name)}?</button></div>${warnHTML()}
@@ -4418,7 +4418,7 @@ function home(){
   if(primary.kind==='homework') app.querySelector('#dailygo').onclick=fractionHomeworkResume;
   if(primary.kind==='check') app.querySelector('#dailygo').onclick=()=>lpStart(primary.id,true,null,primary.focus);
   const secondaryResume=app.querySelector('#lpsecondaryresume');if(secondaryResume)secondaryResume.onclick=lpResume;
-  bindFolds(); armWalterMotion();
+  bindDecimalStoryHome(); bindFolds(); armWalterMotion();
   app.querySelector(".topbar h1").focus({preventScroll:true});
   try{window.scrollTo(0,0);}catch(e){}
 }
@@ -4684,6 +4684,138 @@ function resetProblemState(){ // everything that must not leak from one problem 
   sc=null; stepRes=[]; revealed=0; passed=0; expanded=0; wtSignals=0; missEntry=null; whyState=null; okEntry=null; scratchStrokes=[]; ws=null; lastPraise=[]; exampleOpen=false; exStep=0; exAll=false; exSub={}; preVal=""; preSel=-1;
 }
 let pendingHW=null; // the parsed problem waiting to be served by next() in "hw:check" mode
+// Local, bounded decimal stories. Whole-story matches establish the references;
+// individual words such as "more" never choose an operation on their own.
+function decimalStoryParse(text){
+ const story=String(text||'').replace(/\s+/g,' ').trim();if(story.length>1400)return null;
+ const s=story.replace(/[’‘]/g,"'").replace(/^(?:(?:#|question|problem)\s*\d{1,2}\s*[.):]?|\d{1,2}[.)])\s+/i,'');
+ const name="[a-z][a-z'-]{0,29}",num='(?:0|[1-9]\\d{0,3})(?:\\.\\d{1,3})?',unit='(?:liters?|milliliters?|meters?|centimeters?|kilometers?|kilograms?|grams?|miles?|pounds?|cups?|dollars?)(?: of (?:milk|water|juice|ribbon|flour|rice|paint|rope|sugar))?';
+ const person='(?<person>'+name+')',a='(?<a>'+num+') (?<ua>'+unit+')',b='(?<b>'+num+') (?<ub>'+unit+')',question='How many (?<uq>'+unit+') does \\k<person> have';
+ const rows=[
+  ['combine','result','+',`${person} has ${a} and ${b}[.!] ${question} in all[?!.]{0,2}`],
+  ['combine','part','−',`${person} has ${a} in all[.!] ${b} are in one container[.!] How many (?<uq>${unit}) are in the other container[?!.]{0,2}`],
+  ['change','result','+',`${person} had ${a}[.!] \\k<person> got ${b} more[.!] ${question} now[?!.]{0,2}`],
+  ['change','result','+',`${person} had ${a}[.!] \\k<person> got (?<b>${num}) more (?<ub>${unit})[.!] ${question} now[?!.]{0,2}`],
+  ['change','result','−',`${person} had ${a}[.!] \\k<person> used ${b}[.!] ${question} left[?!.]{0,2}`],
+  ['change','part','−',`${person} had ${b}[.!] \\k<person> now has ${a}[.!] How many more (?<uq>${unit}) did \\k<person> get[?!.]{0,2}`],
+  ['change','part','−',`${person} had ${a}[.!] \\k<person> now has ${b}[.!] How many (?<uq>${unit}) did \\k<person> use[?!.]{0,2}`],
+  ['change','start','−',`${person} got ${b} more[.!] \\k<person> now has ${a}[.!] ${question} at first[?!.]{0,2}`],
+  ['change','start','−',`${person} got (?<b>${num}) more (?<ub>${unit})[.!] \\k<person> now has ${a}[.!] ${question} at first[?!.]{0,2}`],
+  ['change','start','+',`${person} used ${b}[.!] \\k<person> now has ${a}[.!] ${question} at first[?!.]{0,2}`],
+  ['compare','difference','−',`${person} has ${a}[.!] (?<other>${name}) has ${b}[.!] How many more (?<uq>${unit}) does \\k<person> have than \\k<other>[?!.]{0,2}`],
+  ['compare','larger','+',`${person} has ${a}[.!] (?<other>${name}) has ${b} more than \\k<person>[.!] How many (?<uq>${unit}) does \\k<other> have[?!.]{0,2}`],
+  ['compare','larger','+',`${person} has ${a}[.!] (?<other>${name}) has (?<b>${num}) more (?<ub>${unit}) than \\k<person>[.!] How many (?<uq>${unit}) does \\k<other> have[?!.]{0,2}`],
+  ['compare','smaller','−',`${person} has ${a}[.!] (?<other>${name}) has ${b} fewer than \\k<person>[.!] How many (?<uq>${unit}) does \\k<other> have[?!.]{0,2}`]
+  ,['compare','smaller','−',`${person} has ${a}[.!] (?<other>${name}) has (?<b>${num}) fewer (?<ub>${unit}) than \\k<person>[.!] How many (?<uq>${unit}) does \\k<other> have[?!.]{0,2}`]
+ ];
+ const normalize=u=>u.toLowerCase().replace(/^([a-z]+)s\b/,'$1');
+ for(const [relation,unknown,op,pattern]of rows){
+  const m=s.match(new RegExp('^'+pattern+'$','i'));if(!m)continue;const g=m.groups;
+  if(normalize(g.ua)!==normalize(g.ub)||normalize(g.ua)!==normalize(g.uq)||(g.other&&g.person.toLowerCase()===g.other.toLowerCase()))return null;
+  if(!g.a.includes('.')&&!g.b.includes('.'))return null;
+  const scale=Math.max((g.a.split('.')[1]||'').length,(g.b.split('.')[1]||'').length),factor=10**scale,A=Math.round(Number(g.a)*factor),B=Math.round(Number(g.b)*factor),result=op==='+'?A+B:A-B;
+  if(result<0||result>10000*factor)return {err:'This decimal story route checks nonnegative amounts up to 10,000, with up to three decimal places. Check the wording, or type the expression you wrote.'};
+  return {wordStory:true,storyType:'decimal',story,relation,unknown,given:[g.a,g.b],unit:g.uq,person:g.person,label:'Decimal story: '+g.person,op,scale,answer:result/factor};
+ }
+ return null;
+}
+function decimalStoryExpressionCheck(task,value){
+ const s=String(value||'').trim(),tree=s.length<=512?lpAst(s):null,result=s.length<=512?lpEval(s):{ok:false};
+ if(!tree||!result.ok||!Number.isFinite(result.val))return {ok:false,fmt:true,msg:'Write a complete expression with operation signs and matching parentheses.'};
+ const [a,b]=task.given.map(Number),expected=lpCanon(lpAst(`${a} ${task.op} ${b}`));
+ if(lpCanon(tree)===expected)return {ok:true};
+ if(tree&&typeof tree==='object'&&['+','−'].includes(tree.o)&&typeof tree.l==='number'&&typeof tree.r==='number'&&lpSameNums([tree.l,tree.r],[a,b]))return {ok:false,code:'decimal-story-meaning',msg:'Read your expression back as a story. Does it connect the known amounts to the amount the question asks for?'};
+ return {ok:false,fmt:true,msg:'I cannot verify that form against this story yet. Use the two given amounts and show their relationship. A final number alone does not show that relationship.'};
+}
+function decimalStoryTeaching(ctx,move){
+ const checkedRoute=['decimal-story-meaning','decimal-story-calculation'].includes(ctx?.component);
+ if(!checkedRoute&&ctx?.family!=='decimal-story')return null;
+ // Existing authored decimal methods check calculations, not a child's spoken
+ // explanation of the story. Keep that distinction explicit on those routes.
+ if(!checkedRoute&&move==='calculation')return {text:'Keep your story plan beside the calculation. Check one decimal place at a time. Your story explanation has not been checked here.',resource:'decimal-story:calculation-unverified-plan',concept:'decimal calculation',move};
+ if(!checkedRoute&&!['words','meaning','plan','orient','units','rephrase'].includes(move))return null;
+ const meaning=!checkedRoute||ctx.component==='decimal-story-meaning',relation=ctx.relationship||ctx.relation||'';
+ const map=meaning?{
+  orient:'Tell the story in your own words. What amount is missing?',words:'Say what happened without choosing an operation yet. Point to what the question asks.',
+  meaning:'Label what each amount means. Which amount is known, and which amount must you find?',units:'Put the unit beside each amount. Do the amounts describe the same kind of thing?',
+  plan:'Draw the relationship and label the known amounts. Leave the unknown amount blank before writing your expression.',
+  smaller:'Focus only on what the question asks. Is that amount given, or does your drawing still have a blank?',
+  calculation:'First check that your expression matches the story. Then calculate it without changing what the amounts mean.',
+  test:'Read each operation in your expression as words. Does your version still describe the given story?',
+  connection:'Match each given amount to your drawing and expression. Does each amount keep the same meaning?',
+  rephrase:'Tell someone what you know and what you need to find. Keep the amounts out of the explanation until the relationship is clear.'
+ }:{
+  orient:'Your expression matched the story. Keep that plan and check the calculation separately.',
+  words:'The story setup is checked. Explain what each place in your calculation counts.',
+  meaning:'A correct story plan can still have an arithmetic slip. Check the place values while keeping your expression.',
+  units:'Line up matching places and keep the decimal point with its unit. Check that the units stay consistent.',
+  plan:'Choose a calculation method for your checked expression. Write each amount with its place names.',
+  smaller:'Check one place at a time. If you exchange between places, track the amount before and after.',
+  calculation:'Use your checked expression. Recheck the digit calculation and any exchanges between decimal places.',
+  test:'Check your arithmetic with a reverse operation or another representation. Does it agree with your checked expression?',
+  connection:'Keep the story relationship you checked. Locate the first calculation step that disagrees with your own check.',
+  rephrase:'Your story plan is still here. Look at the calculation separately and explain what changed in each place.'
+ };
+ if(meaning&&['meaning','plan'].includes(move)){
+  if(relation==='compare')map[move]='Draw bars for the compared amounts. Label what is known and leave the amount the question asks for blank.';
+  else if(relation==='combine')map[move]='Draw the parts and the whole. Label the known amounts and leave the amount the question asks for blank.';
+  else if(relation==='change')map[move]='Draw the starting amount, the change, and the ending amount. Label what is known and leave the requested amount blank.';
+ }
+ return {text:map[move]||map.orient,resource:'decimal-story:'+ (meaning?'meaning':'calculation'),concept:meaning?'decimal story interpretation':'decimal calculation',move};
+}
+function decimalStorySpec(task){
+ const expression=`${task.given[0]} ${task.op} ${task.given[1]}`,guide=component=>['orient','meaning','plan','test','smaller'].map(move=>decimalStoryTeaching({component,relationship:task.relation,unknown:task.unknown},move).text);
+ return {kind:'build',methodName:'decimal story meaning and calculation',methodEvidence:'homework-decimal-story',title:esc(task.label),problemKey:task.story,answer:task.answer,script:[],init:()=>({expression:null}),
+  next:st=>st.k===0?{prompt:'Write an expression for the amount this story asks you to find. Show the relationship between the two given amounts.',short:'Story relationship',input:{type:'text',ph:'Type your expression'},auto:expression,evidence:{component:'decimal-story-meaning'},walter:{id:'decimal-story:meaning',relationship:task.relation,unknown:task.unknown},curriculumGuide:guide('decimal-story-meaning'),check:v=>{const r=decimalStoryExpressionCheck(task,v);return r.ok?{ok:true,apply:()=>{st.expression=String(v).trim();}}:r;}}:st.k===1?{...lpNumStep({prompt:`Your expression matched the story. Calculate the requested amount, in ${esc(task.unit)}.`,short:'Decimal calculation',ans:task.answer,no:'Keep your checked expression. Recheck the decimal calculation separately from the story setup.'}),evidence:{component:'decimal-story-calculation'},walter:{id:'decimal-story:calculation',relationship:task.relation,unknown:task.unknown},curriculumGuide:guide('decimal-story-calculation')}:null,
+  visual:st=>`<p class="lpstory">${esc(task.story)}</p>${st.expression?`<p class="lpeq">Your checked expression: ${esc(st.expression)}</p>`:''}`,
+  done:()=>`You checked the story relationship and then the decimal calculation. The requested amount is <b>${task.answer}</b> ${esc(task.unit)}.`};
+}
+function decimalStoryStateValid(task,st){return Number.isInteger(st.k)&&st.k>=0&&st.k<=2&&(st.k===0?st.expression===null:decimalStoryExpressionCheck(task,st.expression).ok)&&(st.k===2?st.done===true:!st.done);}
+function decimalStoryExample(task,i=0){
+ // Different named people and givens; never calculate an example from a hidden
+ // answer. Admission below rejects a coinciding final answer for this model only.
+ for(let n=0;n<12;n++){const a=(2.35+(i+n)*0.41).toFixed(2),b=(1.20+(i+n)*0.07).toFixed(2),p='Maya',q='Leo';
+  const story=task.relation==='combine'&&task.unknown==='part'?`${p} has ${a} liters of water in all. ${b} liters of water are in one container. How many liters of water are in the other container?`:task.relation==='compare'&&task.unknown==='larger'?`${p} has ${a} meters of ribbon. ${q} has ${b} meters of ribbon more than ${p}. How many meters of ribbon does ${q} have?`:task.relation==='compare'&&task.unknown==='smaller'?`${p} has ${a} meters of ribbon. ${q} has ${b} meters of ribbon fewer than ${p}. How many meters of ribbon does ${q} have?`:task.relation==='compare'?`${p} has ${a} liters of water. ${q} has ${b} liters of water. How many more liters of water does ${p} have than ${q}?`:task.relation==='change'&&task.unknown==='start'?(task.op==='+'?`${p} used ${b} liters of water. ${p} now has ${a} liters of water. How many liters of water does ${p} have at first?`:`${p} got ${b} liters of water more. ${p} now has ${a} liters of water. How many liters of water does ${p} have at first?`):task.relation==='change'&&task.unknown==='part'?`${p} had ${b} liters of water. ${p} now has ${a} liters of water. How many more liters of water did ${p} get?`:task.relation==='change'?(task.op==='+'?`${p} had ${a} liters of water. ${p} got ${b} liters of water more. How many liters of water does ${p} have now?`:`${p} had ${a} liters of water. ${p} used ${b} liters of water. How many liters of water does ${p} have left?`):`${p} has ${a} liters of water and ${b} liters of water. How many liters of water does ${p} have in all?`;
+  const out=decimalStoryParse(story);if(out?.wordStory&&out.answer!==task.answer&&out.given.every(x=>!task.given.includes(x)))return out;
+ }return null;
+}
+function decimalStoryPracticeTask(index){
+ const a=(2+Math.floor(Math.random()*780)/100).toFixed(2),b=(0.10+Math.floor(Math.random()*80)/100).toFixed(2),p='Maya',q='Noah',u='liters of water';
+ const stories=[
+  `${p} has ${a} ${u} and ${b} ${u}. How many ${u} does ${p} have in all?`,
+  `${p} has ${a} ${u} in all. ${b} ${u} are in one container. How many ${u} are in the other container?`,
+  `${p} had ${a} ${u}. ${p} got ${b} more ${u}. How many ${u} does ${p} have now?`,
+  `${p} had ${a} ${u}. ${p} used ${b} ${u}. How many ${u} does ${p} have left?`,
+  `${p} had ${b} ${u}. ${p} now has ${a} ${u}. How many more ${u} did ${p} get?`,
+  `${p} had ${a} ${u}. ${p} now has ${b} ${u}. How many ${u} did ${p} use?`,
+  `${p} got ${b} more ${u}. ${p} now has ${a} ${u}. How many ${u} does ${p} have at first?`,
+  `${p} used ${b} ${u}. ${p} now has ${a} ${u}. How many ${u} does ${p} have at first?`,
+  `${p} has ${a} ${u}. ${q} has ${b} ${u}. How many more ${u} does ${p} have than ${q}?`,
+  `${p} has ${a} ${u}. ${q} has ${b} more ${u} than ${p}. How many ${u} does ${q} have?`,
+  `${p} has ${a} ${u}. ${q} has ${b} fewer ${u} than ${p}. How many ${u} does ${q} have?`
+ ];
+ const choice=Number.isInteger(index)?((index%stories.length)+stories.length)%stories.length:Math.floor(Math.random()*stories.length);
+ return decimalStoryParse(stories[choice]);
+}
+// A parent-selected help preference, not a diagnosis or a teacher observation.
+function decimalStorySupportEnabled(player=S){return typeof player?.decimalStorySupport==='boolean'?player.decimalStorySupport:false;}
+function decimalStoryPrimary(context,normal){return decimalStorySupportEnabled()&&(context?.family==='decimal-story'||String(context?.component||'').startsWith('decimal-story-'))?[['words','Understand the story'],['calculation','Check my calculation'],['start','Help me plan'],['smaller','Show a smaller piece']]:normal;}
+function decimalStorySupportSettingsHTML(){return `<section class="card"><h3>Decimal stories: words and calculation</h3><label class="row"><input type="checkbox" id="decimalstorysupport" ${decimalStorySupportEnabled()?'checked':''}> Offer separate story and calculation help for ${esc(S.name)}</label><p class="muted">A help preference, not evidence of a difficulty. Walter can help explain the situation and check arithmetic separately. It changes no score, difficulty, or class calendar.</p><p id="decimalstorysettingmsg" role="status"></p></section>`;}
+function bindDecimalStorySupport(panel){const box=panel.querySelector('#decimalstorysupport');if(box)box.onchange=()=>{const old=S.decimalStorySupport;S.decimalStorySupport=box.checked;if(!save()){S.decimalStorySupport=old;box.checked=decimalStorySupportEnabled();panel.querySelector('#decimalstorysettingmsg').textContent='Could not save. The previous preference remains.';}else panel.querySelector('#decimalstorysettingmsg').textContent='Help preference saved for this player.';};}
+function decimalStoryHomeHTML(){return decimalStorySupportEnabled()?`<section class="card" id="decimalstoryhome"><h2>Decimal story practice</h2><p>Work out what the story means, then check your calculation. You can ask about either part whenever you need.</p><button class="btn quiet" id="decimalstorypractice">Try a decimal story</button><p class="muted">Practice with support. Come back to a fresh problem to check what you can do on your own.</p></section>`:'';}
+function bindDecimalStoryHome(){const button=app.querySelector('#decimalstorypractice');if(button)button.onclick=()=>fractionHomeworkStart(decimalStoryPracticeTask());}
+function teacherContextFileNormalize(data,player=S){
+ if(!data||data.format!=='MathTeacherContext'||data.version!==1||typeof data.player!=='string'||data.player.trim().toLowerCase()!==String(player.name||'').trim().toLowerCase())throw Error('This feedback file belongs to a different player. Select that player first.');
+ if(!Array.isArray(data.notes)||!data.notes.length||data.notes.length>8)throw Error('This file does not contain a supported feedback list.');
+ const raw={};for(const entry of data.notes){if(!entry||typeof entry.key!=='string'||!FOCUS_CATALOG.some(g=>g.key===entry.key)||!['teacher','parent'].includes(entry.source)||typeof entry.note!=='string'||!entry.note.trim())throw Error('Check the feedback topics and source labels in this file.');raw[entry.key]={note:entry.note,from:entry.from,date:entry.date,source:entry.source};}
+ const notes=teacherNoteNormalize(raw,true);if(Object.keys(notes).length!==data.notes.length)throw Error('The file contains repeated or unsupported topics.');return {notes,decimalStorySupport:data.decimalStorySupport===true};
+}
+function teacherContextImportHTML(){return `<details class="card" id="teachercontextimport"><summary>Import a local teacher-feedback file</summary><p>This saves feedback only for the active player after you review it. It does not upload the file. Saving turns on local feedback notes; backups you choose to make can include them.</p><label>Feedback file<input type="file" id="teachercontextfile" accept=".json,application/json"></label><div id="teachercontextpreview" hidden></div><p id="teachercontextmsg" role="status" aria-live="polite"></p></details>`;}
+function bindTeacherContextImport(panel){const input=panel.querySelector('#teachercontextfile');if(!input)return;const preview=panel.querySelector('#teachercontextpreview'),msg=panel.querySelector('#teachercontextmsg'),owner=S.name;let ready=null,revision=0;input.clearTeacherContext=()=>{revision++;ready=null;preview.hidden=true;preview.innerHTML='';input.value='';msg.textContent='';};
+ input.onchange=async()=>{const token=++revision;ready=null;preview.hidden=true;preview.innerHTML='';const file=input.files?.[0];if(!file)return;try{if(file.size>12000)throw Error('Use a feedback file under 12 KB.');const parsed=JSON.parse(await file.text());if(token!==revision)return;if(S.name!==owner||!input.isConnected)throw Error('The active player changed. Select the file again for that player.');ready=teacherContextFileNormalize(parsed);preview.innerHTML=`<h4>Review feedback for ${esc(S.name)}</h4>${Object.entries(ready.notes).map(([key,n])=>`<p><b>${esc(FOCUS_CATALOG.find(g=>g.key===key).name)}</b><br>${n.source==='teacher'?'Teacher feedback (reported)':'Parent observation'}${n.from?' · '+esc(n.from):''}${n.date?' · '+esc(n.date):''}<br>${esc(n.note)}</p>`).join('')}<p>These statements remain separate from app-detected mistakes. Existing notes for these topics will be replaced.</p><button type="button" class="btn primary" id="teachercontextsave">Save feedback for ${esc(S.name)}</button>`;preview.hidden=false;msg.textContent='Review the source and wording before saving.';
+ panel.querySelector('#teachercontextsave').onclick=()=>{if(!ready)return;if(S.name!==owner||!input.isConnected){input.clearTeacherContext();return;}const old={notes:S.teacherFeedbackNotes,save:S.saveTeacherNotes,support:S.decimalStorySupport,feedback:S.teacherFeedback};S.saveTeacherNotes=true;S.teacherFeedbackNotes={...teacherNoteNormalize(S.teacherFeedbackNotes,true),...ready.notes};S.decimalStorySupport=ready.decimalStorySupport;S.teacherFeedback=teacherFeedbackNormalize([...(S.teacherFeedback||[]),...Object.keys(ready.notes)]);if(!save()){S.teacherFeedbackNotes=old.notes;S.saveTeacherNotes=old.save;S.decimalStorySupport=old.support;S.teacherFeedback=old.feedback;msg.textContent='Could not save. Previous notes and preferences are kept.';return;}ready=null;preview.hidden=true;preview.innerHTML='';input.value='';grownups();const note=app.querySelector('#teachercontextmsg');if(note)note.textContent='Feedback saved locally for this player. Include saved feedback when preparing the teacher PDF.';};
+ }catch(e){if(token!==revision)return;ready=null;msg.textContent=e.message||'Could not read this local feedback file.';}};
+}
 // ===== v9.19 hooks: the "show what you know" check-up (number sense profile) and the start-of-sitting quick look =====
 // Stubs; the real versions are defined in the v9.19 blocks below and replace these.
 // ===== v9.19 habits (NS-SPEC Part 3): the start-of-sitting quick look, estimate first / check after, and number line pictures =====
@@ -5962,13 +6094,13 @@ function walterNextReply({guide,intent='start',move,lastMove,repeats=0,observati
   const content={orient:get('orient',0,'Name what you need to find.'),meaning:get('meaning',1,'Label what each amount means.'),plan:get('plan',2,'Draw your next step before calculating.'),test:get('test',3,'Use a different method to check your step.'),smaller:walterPlainHelp(Array.isArray(profile)?profile[0]:guide?.smaller),compare:walterPlainHelp(Array.isArray(profile)?profile[1]:guide?.compare)};
   let chosen=WALTER_MOVES.includes(move)?move:move==='continue'?'stuck':intent==='meaning'?'meaning':intent==='check'?'test':'orient';
   const status=typeof observation.status==='string'?observation.status:typeof observation.observation==='string'?observation.observation:typeof context.status==='string'?context.status:'';
-  const safe={family:context.family||observation.kind||'',kind:context.kind||observation.kind||'',component:context.component||observation.component||'',stage:context.stage||observation.stage||'',role:context.role||observation.role||'',last:context.last===true||observation.last===true,question:walterRenderedText(context.question||''),visibleText:walterRenderedText(context.visibleText||''),acceptedText:walterRenderedText(context.acceptedText||''),label:walterPlainHelp(context.label||observation.label||''),code:context.code||observation.code||'',tag:context.tag||'',status};
+  const safe={family:context.family||observation.kind||'',kind:context.kind||observation.kind||'',component:context.component||observation.component||'',stage:context.stage||observation.stage||'',role:context.role||observation.role||'',last:context.last===true||observation.last===true,relationship:context.relationship||'',unknown:context.unknown||'',storyStage:context.storyStage||'',question:walterRenderedText(context.question||''),visibleText:walterRenderedText(context.visibleText||''),acceptedText:walterRenderedText(context.acceptedText||''),label:walterPlainHelp(context.label||observation.label||''),code:context.code||observation.code||'',tag:context.tag||'',status};
   safe.visibleNumbers=typeof walterVisibleNumbers==='function'?walterVisibleNumbers({text:safe.visibleText,acceptedText:safe.acceptedText}):[];
   if(repeats>0&&lastMove===chosen&&['orient','meaning','plan','test','smaller','rephrase'].includes(chosen))chosen='stuck';
   let choices=[],resource='',concept='',text='';
   if(chosen==='stuck'){text='Which part is getting in your way? Choose the words, the amounts, a plan, the calculation, or checking.';choices=['words','units','plan','calculation','test'];}
   else{
-    const authored=typeof walterTeachingReply==='function'?walterTeachingReply(safe,chosen):null;
+    const authored=(typeof decimalStoryTeaching==='function'?decimalStoryTeaching(safe,chosen):null)||(typeof walterTeachingReply==='function'?walterTeachingReply(safe,chosen):null);
     if(authored){text=authored.text;resource=authored.resource;concept=authored.concept;}
 
     else text=({meaning:content.meaning,units:content.meaning,plan:content.plan,test:content.compare||content.test,connection:content.compare||content.test,smaller:content.smaller||content.plan,rephrase:content.smaller||content.plan,calculation:content.smaller||content.plan,words:content.orient})[chosen]||content.orient;
@@ -8423,19 +8555,19 @@ function lpWalterLegacyQuestions(it){
 // Four different needs stay visible; older question IDs remain callable for restored saves.
 const LP_WALTER_PRIMARY=[['words',"I don't get the words"],['start',"I don't know how to start"],['check',"I think I'm wrong"],['smaller','Show me a smaller piece']];
 function lpWalterQuestions(it){const qs=lpWalterLegacyQuestions(it),g=qs[0]?.texts||lpStrategyGuide(it);
-  for(const [id,label]of [...LP_WALTER_PRIMARY,['meaning','Why does this work?']]){const existing=qs.find(q=>q.id===id);if(existing)existing.label=label;else qs.push({id,label,type:id==='check'?'checking':id==='words'||id==='meaning'?'explanation':id==='smaller'?'representation':'clue',texts:g});}return qs;}
+  for(const [id,label]of [...decimalStoryPrimary(lpWalterSemanticContext(it),LP_WALTER_PRIMARY),['meaning','Why does this work?']]){const existing=qs.find(q=>q.id===id);if(existing)existing.label=label;else qs.push({id,label,type:id==='check'||id==='calculation'?'checking':id==='words'||id==='meaning'?'explanation':id==='smaller'?'representation':'clue',texts:g});}return qs;}
 function lpWalterContextKey(it){return `${it.lid||lp?.id||'homework'}:${it.phase}:${it.rep?.stage==='spot'?'repair-spot':it.step?.walter?.id||`${it.spec?.kind}:${it.st.k}:${it.st.stage||''}`}`;}
 function lpWalterSemanticContext(it){const c=lpHelpContext(it),question=walterRenderedText((['independent','delayed','mixed'].includes(it.phase)&&it.step.short)||it.step.prompt||'');
   // Titles and active prompt are rendered givens. Do not use sp.prompt (collapsed context),
   // future script entries, hidden checker values, or unchecked drafts as number provenance.
-  return {contextKey:lpWalterContextKey(it),mistakeNotes:S?.walterMistakeNotes!==false,family:LP_LESSONS[it.lid||lp?.id]?.skill||(lp?.homework?.fraction?'fracaddsub':lp?.homework?.wordStory?'expressions':''),kind:c.kind,component:c.component,stage:c.stage,role:c.role,last:c.last,question,visibleText:[walterRenderedText(it.spec.title||''),question].join(' '),acceptedText:'',status:c.status,label:c.label,code:c.code||'',tag:c.status==='miss'?c.code||'':''};}
+  return {contextKey:lpWalterContextKey(it),mistakeNotes:S?.walterMistakeNotes!==false,family:(it.spec.walterStory&&decimalStorySupportEnabled())||it.step.evidence?.component?.startsWith('decimal-story-')?'decimal-story':LP_LESSONS[it.lid||lp?.id]?.skill||(lp?.homework?.fraction?'fracaddsub':lp?.homework?.wordStory?'expressions':''),kind:c.kind,component:c.component,stage:c.stage,role:c.role,last:c.last,relationship:it.step.walter?.relationship||it.spec.walterStory?.relationship||'',unknown:it.step.walter?.unknown||it.spec.walterStory?.unknown||'',storyStage:it.step.walter?.stage||'',question,visibleText:[walterRenderedText(it.spec.title||''),it.spec.walterStory&&decimalStorySupportEnabled()?walterRenderedText(it.spec.walterStory.story):'',question].join(' '),acceptedText:'',status:c.status,label:c.label,code:c.code||'',tag:c.status==='miss'?c.code||'':''};}
 // Explicit fictional models use separate values. Answer admission runs only after
 // the learner requests a modeled example, never while choosing pending help.
 function walterModelValue(value){if(typeof value==='number')return value;if(value&&typeof value==='object'&&Number.isFinite(value.n)&&Number.isFinite(value.d))return value.n/value.d;const f=typeof value==='string'?parseFraction(value):null;return f?f.w+f.n/f.d:NaN;}
 function lpOpenFictionalExample(it){const ctx=lpWalterSemanticContext(it),model=walterFictionalExample(ctx);const blocked=[it.spec.answer,it.step.auto].map(walterModelValue).filter(Number.isFinite);if(!model||blocked.some(n=>Math.abs(n-model.finalValue)<1e-9)){it.st.fictionalNote='A separate mistake example is unavailable here. Keep your work and choose another kind of help.';return false;}it.st.fictional={...model,picked:-1};it.st.walterEvents=it.st.walterEvents||[];if(!it.st.walterEvents.some(e=>e.id==='fictional-example'&&e.text===model.text)){it.st.walterEvents.push({step:it.st.k,stepId:'fictional-example',id:'fictional-example',type:'modeled',context:lpWalterContextKey(it),text:model.text,t:Date.now(),tries:+it.st.tries||0});it.st.helps=(+it.st.helps||0)+1;}lpWalterTrimEvents(it.st);lpSaveResume();return true;}
 function walterFictionalHTML(model,note,prefix){const valid=model&&typeof model.text==='string'&&Array.isArray(model.options)&&model.options.length>=2&&model.options.length<=3&&model.options.every(x=>typeof x==='string')&&Number.isInteger(model.answer)&&model.answer>=0&&model.answer<model.options.length;return valid?`<section class="lpclue" aria-label="Separate fictional mistake example"><p><b>Different fictional example · modeled help</b></p><p>${esc(model.text)}</p><div class="actions">${model.options.map((text,i)=>`<button type="button" class="btn quiet small" data-${prefix}-fictional="${i}">${esc(text)}</button>`).join('')}</div>${model.picked>=0?`<p role="status">${model.picked===model.answer?esc(model.explanation):'That idea does not explain the slip. Check what the places or piece sizes mean.'}</p>`:''}<p class="muted">Your problem and work stay where you left them.</p></section>`:note?`<p class="muted">${esc(note)}</p>`:'';}
 function walterFictionalEligible(ctx){return /frac|decimal/.test(ctx.family+' '+ctx.kind)||['standard','words','expanded','compare','addsub','decmul','decdiv'].includes(ctx.family);}
-function lpWalterPrimaryButtons(picked){return `<div class="actions" aria-label="Choose what you need">${LP_WALTER_PRIMARY.map(([id,label])=>`<button type="button" class="btn quiet small" data-walter-question="${id}" aria-pressed="${picked===id}">${esc(label)}</button>`).join('')}</div>`;}
+function lpWalterPrimaryButtons(picked,it){return `<div class="actions" aria-label="Choose what you need">${decimalStoryPrimary(it?lpWalterSemanticContext(it):null,LP_WALTER_PRIMARY).map(([id,label])=>`<button type="button" class="btn quiet small" data-walter-question="${id}" aria-pressed="${picked===id}">${esc(label)}</button>`).join('')}</div>`;}
 function lpWalterRatingButtons(signature){return `<div class="actions" aria-label="Optional reply feedback"><button type="button" class="btn quiet small" data-walter-rating="helped" data-signature="${esc(signature||'')}">That helped</button><button type="button" class="btn quiet small" id="lpaskmore" data-walter-rating="stuck" data-signature="${esc(signature||'')}">Still stuck</button><button type="button" class="btn quiet small" data-walter-question="meaning">Why does this work?</button></div>`;}
 function lpWalterRate(it,rating,signature,repair=false){const events=it.st.walterEvents||[];if(typeof walterRecordRating==='function')walterRecordRating(events,signature,rating);if(rating==='stuck'){const selected=repair?it.rep.walterChoice:it.st.walterChoice;(repair?lpRepairWalterRespond:lpWalterRespond)(it,selected.id,'stuck');}lpSaveResume();}
 function lpPrepareStep(it){
@@ -8474,7 +8606,7 @@ function lpWalterTrimEvents(st){const events=st.walterEvents||[];if(events.lengt
 // The text arrays above are an authored content library, never a learner-facing ladder.
 function lpWalterChoiceButtons(choices){const labels={words:'The words',units:'The amounts',plan:'A plan',calculation:'The calculation',test:'Checking'};return Array.isArray(choices)&&choices.length?`<details><summary>Choose another part</summary><div class="actions">${choices.filter(x=>labels[x]).map(move=>`<button type="button" class="btn quiet small" data-walter-move="${move}">${labels[move]}</button>`).join('')}</div></details>`:'';}
 function lpWalterMoveButtons(){return '';}
-function lpWalterInitialMove(q){return q.id==='words'?'words':q.type==='checking'?'test':['explanation','vocabulary'].includes(q.type)?'meaning':q.type==='representation'?'smaller':'orient';}
+function lpWalterInitialMove(q){return q.id==='calculation'?'calculation':q.id==='words'?'words':q.type==='checking'?'test':['explanation','vocabulary'].includes(q.type)?'meaning':q.type==='representation'?'smaller':'orient';}
 function lpWalterRespond(it,id,move){if(!lpWalterEligible(it))return;
   const st=it.st,q=lpWalterQuestions(it).find(x=>x.id===id);if(!q)return;
   const c=lpHelpContext(it),old=st.walterChoice?.step===st.k&&st.walterChoice.id===id?st.walterChoice:null;
@@ -8493,7 +8625,7 @@ function lpWalterHTML(it){if(!lpWalterEligible(it))return '';
   const st=it.st,selected=st.walterChoice?.step===st.k?st.walterChoice:null,qs=lpWalterQuestions(it),picked=selected&&qs.find(x=>x.id===selected.id);
   // Older saved replies retain their authored text, without restoring the old sequence.
   const text=picked?(selected.text||picked.texts[Math.max(0,Math.min(picked.texts.length-1,selected.depth||0))]):'';
-  return `<div class="lpwalter"><button type="button" class="btn quiet" id="lpask" aria-expanded="${!!st.walterOpen}" aria-controls="lpaskpanel">Ask Walter</button>${st.walterOpen?`<section id="lpaskpanel" aria-label="Ask Walter help"><p><b>What would help with this step?</b></p><div class="actions">${LP_WALTER_PRIMARY.map(([id,label])=>`<button type="button" class="btn quiet small" data-walter-question="${id}" aria-pressed="${picked?.id===id}">${esc(label)}</button>`).join('')}</div>${picked?`<div id="lpaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('work',esc(text),true)}${typeof readAloudButton==='function'?readAloudButton(text,'lp-reply'):''}${picked.id==='carry-model'||selected.move==='smaller'&&it.step.walter?.role==='column'&&!it.step.walter.last?lpCarryModelHTML():''}</div>${lpWalterChoiceButtons(selected.choices)}${lpWalterRatingButtons(selected.signature)}${selected.move==='test'&&walterFictionalEligible(lpWalterSemanticContext(it))?`<button type="button" class="btn quiet small" id="lperror">Check a fictional mistake</button>`:''}<button type="button" class="btn quiet small" id="lpaskreturn">Back to my step</button>`:''}<button type="button" class="btn quiet small" id="lpother">See a different worked example</button></section>`:''}</div>`;
+  return `<div class="lpwalter"><button type="button" class="btn quiet" id="lpask" aria-expanded="${!!st.walterOpen}" aria-controls="lpaskpanel">Ask Walter</button>${st.walterOpen?`<section id="lpaskpanel" aria-label="Ask Walter help"><p><b>What would help with this step?</b></p><div class="actions">${decimalStoryPrimary(lpWalterSemanticContext(it),LP_WALTER_PRIMARY).map(([id,label])=>`<button type="button" class="btn quiet small" data-walter-question="${id}" aria-pressed="${picked?.id===id}">${esc(label)}</button>`).join('')}</div>${picked?`<div id="lpaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('work',esc(text),true)}${typeof readAloudButton==='function'?readAloudButton(text,'lp-reply'):''}${picked.id==='carry-model'||selected.move==='smaller'&&it.step.walter?.role==='column'&&!it.step.walter.last?lpCarryModelHTML():''}</div>${lpWalterChoiceButtons(selected.choices)}${lpWalterRatingButtons(selected.signature)}${selected.move==='test'&&walterFictionalEligible(lpWalterSemanticContext(it))?`<button type="button" class="btn quiet small" id="lperror">Check a fictional mistake</button>`:''}<button type="button" class="btn quiet small" id="lpaskreturn">Back to my step</button>`:''}<button type="button" class="btn quiet small" id="lpother">See a different worked example</button></section>`:''}</div>`;
 }
 function lpWalterDeliver(it,id,depth){ if(!lpWalterEligible(it)) return;
   const st=it.st, q=lpWalterQuestions(it).find(x=>x.id===id); if(!q) return;
@@ -8527,7 +8659,7 @@ function lpRepairWalterQuestions(it){
   const texts=['Read the original question, then check the proposed lines in order.',g[1],g[2],
     'Explain what changed from one line to the next. Does each change preserve the quantities, operation, and units?',
     'Recheck the line you selected on scratch paper. Choose the first change you cannot justify; keep the earlier work.'];
-  return [...LP_WALTER_PRIMARY.map(([id,label])=>({id,label,type:id==='check'?'checking':id==='words'?'explanation':id==='smaller'?'representation':'clue',texts})),{id:'meaning',label:'Why does this work?',type:'explanation',texts},{id:'spot-start',label:'How do I find a slip?',type:'clue',texts},
+  return [...decimalStoryPrimary(lpWalterSemanticContext(it),LP_WALTER_PRIMARY).map(([id,label])=>({id,label,type:id==='check'||id==='calculation'?'checking':id==='words'?'explanation':id==='smaller'?'representation':'clue',texts})),{id:'meaning',label:'Why does this work?',type:'explanation',texts},{id:'spot-start',label:'How do I find a slip?',type:'clue',texts},
     {id:'spot-check',label:'How can I check a line?',type:'checking',texts:['Choose a line and test what it claims, using the original quantities.',texts[1],texts[2],texts[3],texts[4]]}];
 }
 function lpRepairWalterRespond(it,id,move){const q=lpRepairWalterQuestions(it).find(x=>x.id===id);if(!q)return;
@@ -8543,7 +8675,7 @@ function lpRepairWalterRespond(it,id,move){const q=lpRepairWalterQuestions(it).f
 }
 function lpRepairWalterHTML(it){const rp=it.rep,qs=lpRepairWalterQuestions(it),picked=qs.find(x=>x.id===rp.walterChoice?.id),selected=rp.walterChoice;
   const text=picked?(selected.text||picked.texts[Math.max(0,Math.min(picked.texts.length-1,selected.depth||0))]):'';
-  return `<div class="lpwalter"><button type="button" class="btn quiet" id="lpask" aria-expanded="${!!rp.walterOpen}" aria-controls="lpaskpanel">Ask Walter</button>${rp.walterOpen?`<section id="lpaskpanel" aria-label="Ask Walter help"><p><b>What would help with these lines?</b></p><div class="actions">${LP_WALTER_PRIMARY.map(([id,label])=>`<button type="button" class="btn quiet small" data-walter-question="${id}" aria-pressed="${picked?.id===id}">${esc(label)}</button>`).join('')}</div>${picked?`<div id="lpaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('work',esc(text),true)}${typeof readAloudButton==='function'?readAloudButton(text,'lp-reply'):''}</div>${lpWalterChoiceButtons(selected.choices)}${lpWalterRatingButtons(selected.signature)}`:''}<button type="button" class="btn quiet small" id="lpaskreturn">Back to the lines</button></section>`:''}</div>`;
+  return `<div class="lpwalter"><button type="button" class="btn quiet" id="lpask" aria-expanded="${!!rp.walterOpen}" aria-controls="lpaskpanel">Ask Walter</button>${rp.walterOpen?`<section id="lpaskpanel" aria-label="Ask Walter help"><p><b>What would help with these lines?</b></p><div class="actions">${decimalStoryPrimary(lpWalterSemanticContext(it),LP_WALTER_PRIMARY).map(([id,label])=>`<button type="button" class="btn quiet small" data-walter-question="${id}" aria-pressed="${picked?.id===id}">${esc(label)}</button>`).join('')}</div>${picked?`<div id="lpaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('work',esc(text),true)}${typeof readAloudButton==='function'?readAloudButton(text,'lp-reply'):''}</div>${lpWalterChoiceButtons(selected.choices)}${lpWalterRatingButtons(selected.signature)}`:''}<button type="button" class="btn quiet small" id="lpaskreturn">Back to the lines</button></section>`:''}</div>`;
 }
 function lpRepairWalterDeliver(it,id,depth){const q=lpRepairWalterQuestions(it).find(x=>x.id===id);if(!q)return;const st=it.st,rp=it.rep;depth=Math.max(0,Math.min(4,depth|0));st.walterEvents=Array.isArray(st.walterEvents)?st.walterEvents:[];
   if(!st.walterEvents.some(e=>e.id===id&&e.depth===depth&&e.stepId==='repair-spot')){st.walterEvents.push({step:st.k,stepId:'repair-spot',id,type:q.type,depth,tries:rp.tries||0});st.helps=(+st.helps||0)+1;}
@@ -9129,6 +9261,11 @@ function lpDecimalL1Repair(){ return {
   wrongAt:2, whyWrong:"Eleven hundredths are one tenth and one hundredth. Exchange a group of ten before writing the total; do not join the counts into a longer decimal.",
   clue:"The combined counts are right. Check how the hundredths count becomes decimal digits.",
   fix:lpDecimalChart({A:423,B:68,op:'+',blocks:true,unit:'dollars'})}; }
+// Authored Unit 3 methods check arithmetic, not the child's story explanation.
+function decimalStoryLessonContext(spec,o){
+ if(!o.story)return spec;spec.walterStory={story:o.story,relationship:o.op==='+'?'combine':'change',unknown:'result'};
+ const visual=spec.visual;spec.visual=st=>(decimalStorySupportEnabled()?`<p class="lpstory">${esc(o.story)}</p>`:'')+visual(st);return spec;
+}
 // Exact directions from pages 72, 74, 75, 78, 80, and 81, respectively.
 const LP_U3_DIRECTIONS=[null,'Add decimals using the place value strategy.','Add decimals using the number line strategy.','Find the sum.','Find the difference using the place value strategy.','Find the difference using the number line.','Find the difference.'];
 const LP_U3={};
@@ -9139,7 +9276,7 @@ for(let n=1;n<=6;n++){ const id=`U3L${n}`,op=n<=3?'+':'−',line=n===2||n===5,bl
     explain:line?['How do you know your jumps used the whole amount?','My jumps account for…']:['Why does an exchange leave the value unchanged?','Ten… have the same value as one…'],
     talk:line?'Ask the learner to show another valid set of jumps with new numbers.':'Ask the learner to draw an exchange with new numbers on paper.',
     model:()=>create(line?{A:op==='+'?150:350,B:op==='+'?250:175,op}:{A:op==='+'?268:450,B:op==='+'?157:218,op},'model'),
-    make:(load,ph,i)=>{const o=lpDecimalGen(load,op,line);if(i===1){o.story=op==='+'?`Two lengths of ribbon measure ${lpDecText(o.A)} meters and ${lpDecText(o.B)} meters. Find their combined length.`:`A ribbon measures ${lpDecText(o.A)} meters. ${lpDecText(o.B)} meters are used. Find the length left.`;o.unit='meters';}return create(o,ph);},repair:()=>n===1?lpDecimalL1Repair():lpDecimalRepair(op,line)};
+    make:(load,ph,i)=>{const o=lpDecimalGen(load,op,line);if(i===1){o.story=op==='+'?`Two lengths of ribbon measure ${lpDecText(o.A)} meters and ${lpDecText(o.B)} meters. Find their combined length.`:`A ribbon measures ${lpDecText(o.A)} meters. ${lpDecText(o.B)} meters are used. Find the length left.`;o.unit='meters';}return decimalStoryLessonContext(create(o,ph),o);},repair:()=>n===1?lpDecimalL1Repair():lpDecimalRepair(op,line)};
 }
 
 // Pages 75/81 leave strategy selection open; preserve the prior route for older saved sessions.
@@ -9148,7 +9285,7 @@ for(const n of [3,6]){const bp=LP_U3[`U3L${n}`],op=n===3?'+':'−';
  const choice=(o,preferred=0)=>lpStrategyChoice({kind:'decimal-addsub-choice',preferred,choices:[{key:'chart',name:'Place value chart',make:()=>lpDecimalChart({...o,blocks:true})},{key:'line',name:'Number line',make:()=>lpDecimalLine(o)}]});
  bp.model=()=>choice({A:n===3?268:350,B:n===3?157:175,op},n===6?1:0);
  bp.modelByStrategy=i=>choice({A:n===3?268:350,B:n===3?157:175,op},i);
- bp.make=(load,ph,i)=>{const max=load<=1?5:load===2?15:op==='+'?45:99;let A=lpRnd(100,max*100+99),B=lpRnd(1,max*100+99);if(op==='−'&&A<B)[A,B]=[B,A];const o={A,B,op};if(i===1){o.story=op==='+'?`Two lengths measure ${lpDecText(A)} meters and ${lpDecText(B)} meters. Find their combined length.`:`A length is ${lpDecText(A)} meters. ${lpDecText(B)} meters are used. Find the length left.`;o.unit='meters';}return choice(o);};
+ bp.make=(load,ph,i)=>{const max=load<=1?5:load===2?15:op==='+'?45:99;let A=lpRnd(100,max*100+99),B=lpRnd(1,max*100+99);if(op==='−'&&A<B)[A,B]=[B,A];const o={A,B,op};if(i===1){o.story=op==='+'?`Two lengths measure ${lpDecText(A)} meters and ${lpDecText(B)} meters. Find their combined length.`:`A length is ${lpDecText(A)} meters. ${lpDecText(B)} meters are used. Find the length left.`;o.unit='meters';}return decimalStoryLessonContext(choice(o),o);};
  bp.vocab=[[op==='+'?'sum':'difference',op==='+'?'the result of adding':'the result of subtracting'],['place value chart','a chart organizing ones, tenths, hundredths, and larger places'],['number line','a line that shows numbers in order']];
  bp.explain=['Why did you choose your strategy? How did you check the result?','I chose… because… I checked it by…'];
  bp.repair=()=>({...lpDecimalRepair(op,n===6),fix:choice({A:op==='+'?245:430,B:op==='+'?175:185,op},n===6?1:0)});
@@ -9567,6 +9704,8 @@ const TEACHER_REPORT_STEPS=Object.freeze({
   'decimal-landing':'Landing after a decimal jump','decimal-place':'Counting decimal units',
   'decimal-combine':'Combining decimal units','decimal-exchange':'Exchanging equal decimal units',
   'decimal-parts':'Choosing decimal parts','decimal-unit':'Renaming decimal units','decimal-product':'Decimal product units','decimal-share':'Sharing decimal units',
+  'decimal-story-meaning':'Understanding the decimal story relationship',
+  'decimal-story-calculation':'Calculating from the decimal story setup',
   'common-unit':'Choosing common fractional units',
   'division-product':'Checking a division band product','division-subtract':'Subtracting a division band',
   'division-count':'Choosing a partial quotient','division-sum':'Adding partial quotients',
@@ -9583,11 +9722,13 @@ const TEACHER_REPORT_STEPS=Object.freeze({
 });
 function teacherReportQuestion(component,family=''){
   const text=(component+' '+family).toLowerCase();
+  if(component==='decimal-story-meaning')return 'Can the student explain what each amount means, what is unknown, and how the quantities relate before choosing an operation? Which class drawing or language would help?';
+  if(component==='decimal-story-calculation')return 'Could you confirm the story setup separately, then watch which calculation step needs another look? A fresh problem can help locate the place-value, exchange, or arithmetic step.';
   if(/carry|column|tens-place/.test(component.toLowerCase()))return 'Which class method should we use to explain the carry or value in this column?';
   if(/fraction|frac/.test(text))return 'Which class model would help explain the whole and equal-sized parts at this step?';
-  if(/decimal|round|place|shift|powers|expanded|standard|words/.test(text))return 'Which place-value model or language should we use at this step?';
+  if(/express|operation|group|parenth|twostep|story|word problem/.test(text))return 'What should the student explain about each quantity and operation before calculating?';
+  if(/decimal|round|place|shift|powers|expanded|standard|number words|numbers in words/.test(text))return 'Which place-value model or language should we use at this step?';
   if(/divis|divide|band|quotient/.test(text))return 'How should the student explain group count, group size, and the amount remaining here?';
-  if(/express|operation|group|parenth|twostep|story/.test(text))return 'What should the student explain about each operation before calculating?';
   if(/graph|coordinate|pattern/.test(text))return 'How do you connect the rule, table, and ordered pair in class?';
   if(/volume|geometry|measure|convert/.test(text))return 'Which unit or model would clarify this measurement step?';
   if(/multiply|multiplication/.test(text))return 'How does the class multiplication model connect each factor to the product?';
@@ -9672,11 +9813,36 @@ function teacherReportDraft(player=S,options={}){
       clean.set(k,(clean.get(k)||0)+1);reported(e);}
   }
   const selected=[...areas.values()].sort((a,b)=>b.misses-a.misses||b.last-a.last),shown=selected.slice(0,5);
+  // Inclusion is explicit. Teacher statements and parent notes remain reported
+  // context; they never create checked misses or readiness evidence above.
+  const includedNotes=[];
+  if(options.includeNote===true&&p.saveTeacherNotes===true&&typeof teacherNoteNormalize==='function'){
+    const notes=teacherNoteNormalize(p.teacherFeedbackNotes,true);
+    if(requested)reportedNoteKeys.add(requested.key);
+    if(!options.goalKey)for(const key of Array.isArray(p.teacherFeedback)?p.teacherFeedback:[])if(catalog.some(g=>g.key===key))reportedNoteKeys.add(key);
+    const dedupe=new Map();
+    for(const key of reportedNoteKeys){const goal=catalog.find(g=>g.key===key),note=notes[key];if(!goal||!note)continue;
+      const provenance=['teacher','parent'].includes(note.source)?note.source:'unrecorded';
+      const identity=JSON.stringify([provenance,note.from||'',note.date||'',note.note]);
+      if(!dedupe.has(identity)){const item={...note,source:provenance,topics:[]};dedupe.set(identity,item);includedNotes.push(item);}
+      const label=teacherReportPlain(goal.name,120);if(!dedupe.get(identity).topics.includes(label))dedupe.get(identity).topics.push(label);
+    }
+  }
   const lines=[`${name}: home practice note for the teacher`,`Recorded window: ${date(since)} to ${date(now)} (${days} days).`,
     ...(requested?[`Selected topic: ${teacherReportPlain(requested.name,120)}.`]:[]),
+    '', 'Teacher feedback (reported)'];
+  const teacherNotes=includedNotes.filter(n=>n.source==='teacher');
+  if(!teacherNotes.length)lines.push(options.includeNote===true?'No teacher feedback is included for the reported or selected topics. The app does not infer the teacher\'s assessment.':'Saved notes are excluded by default. The parent can explicitly include relevant notes after reviewing this draft.');
+  const noteLine=n=>`Topics: ${n.topics.join('; ')}${n.from?' · from '+teacherReportPlain(n.from,60):''}${n.date?' · '+n.date:''}: ${teacherReportPlain(n.note,280)}`;
+  for(const n of teacherNotes)lines.push(noteLine(n));
+  for(const [source,heading]of [['parent','Parent observations'],['unrecorded','Notes with source not recorded']]){
+    const notes=includedNotes.filter(n=>n.source===source);if(notes.length)lines.push('',heading,...notes.map(noteLine));
+  }
+  if(includedNotes.length)lines.push('These notes were explicitly included by the parent for observed or selected topics. They are reported context, separate from the app checks below.');
+  lines.push('', 'App observations from saved checks',
     `Source: this player's saved home-practice checks. These observations are not a test score, diagnosis, or measure of mastery.`,
     '',`Where a check needed another look`,
-    `${math} mathematical miss${math===1?'':'es'} recorded; ${format} input-format check${format===1?'':'s'} and ${trials} exploratory trial${trials===1?'':'s'} are separate.`];
+    `${math} mathematical miss${math===1?'':'es'} recorded; ${format} input-format check${format===1?'':'s'} and ${trials} exploratory trial${trials===1?'':'s'} are separate.`);
   if(!shown.length)lines.push('No specific mathematical miss is established in this window. Asking Walter for help alone does not establish a difficulty.');
   for(let i=0;i<shown.length;i++){
     const a=shown[i],descriptor=TEACHER_REPORT_STEPS[a.component]||a.component.replace(/[-_]/g,' ');
@@ -9701,12 +9867,6 @@ function teacherReportDraft(player=S,options={}){
   else lines.push('No fresh clean finish without help or retries is established by the available records in this window.');
   lines.push('These checks are separate from supported corrections; neither establishes paper-and-pencil mastery.', '',
     'What would help at home? Please point us to the step, language, or representation you use in class, and one fresh problem we can use to check the explanation.');
-  if(options.includeNote===true&&p.saveTeacherNotes===true&&typeof teacherNoteNormalize==='function'){
-    const notes=teacherNoteNormalize(p.teacherFeedbackNotes,true);if(requested)reportedNoteKeys.add(requested.key);
-    const included=[...reportedNoteKeys].map(key=>({goal:catalog.find(g=>g.key===key),note:notes[key]})).filter(x=>x.goal&&x.note);
-    if(included.length)lines.push('', 'Parent explicitly included saved teacher notes');
-    for(const {goal,note}of included)lines.push(`${teacherReportPlain(goal.name,120)}${note.from?' · from '+teacherReportPlain(note.from,60):''}${note.date?' · '+note.date:''}: ${teacherReportPlain(note.note,280)}`);
-  }
   const text=lines.join('\n');return text.length>16000?text.slice(0,15700)+'\n\nReport shortened to fit. More saved observations are available in the local practice record.':text;
 }
 // Offline text PDF: standard fonts, no library download or remote rendering.
@@ -9724,7 +9884,7 @@ function teacherPDFBytes(value){
  const newPage=()=>{pages.push([]);y=691;};
  const command=(s,bold,size,at,color='0.12 0.17 0.23')=>`${color} rg BT /${bold?'F2':'F1'} ${size} Tf 1 0 0 1 52 ${at} Tm (${teacherPDFEscape(s)}) Tj ET\n`;
  for(const para of text.split('\n')){if(!para.trim()){if(y<bottom+12)newPage();else y-=8;continue;}
-  const bold=/^\d+\.\s/.test(para.trim())||['Where a check needed another look','Support and unfinished work','Clean checks recorded without help'].includes(para.trim())||/^(?:[A-Z][A-Z /-]{4,70}|\d+\. .{1,90}|(?:Student|Period|Generated|Questions for|Observed areas|Independent observations|Context and limits|Parent observations|Included teacher note):?)$/.test(para.trim());
+  const bold=/^\d+\.\s/.test(para.trim())||['Where a check needed another look','Support and unfinished work','Clean checks recorded without help','Teacher feedback (reported)','Parent observations','Notes with source not recorded','App observations from saved checks'].includes(para.trim())||/^(?:[A-Z][A-Z /-]{4,70}|\d+\. .{1,90}|(?:Student|Period|Generated|Questions for|Observed areas|Independent observations|Context and limits|Parent observations|Included teacher note):?)$/.test(para.trim());
   const size=bold?11.5:11,lines=teacherPDFWrap(para,width,bold,size),leading=15;
   if(bold&&y<bottom+leading*3)newPage();
   for(const line of lines){if(y<bottom+leading)newPage();pages.at(-1).push(command(line,bold,size,y));y-=leading;}y-=bold?3:1;
@@ -9740,7 +9900,7 @@ function teacherPDFBytes(value){
  return Uint8Array.from(pdf,c=>c.charCodeAt(0));
 }
 function teacherPDFDownload(text,name=S.name){const bytes=teacherPDFBytes(text),url=URL.createObjectURL(new Blob([bytes],{type:'application/pdf'})),a=document.createElement('a');a.href=url;a.download=(String(name||'Student').normalize('NFKD').replace(/[^a-zA-Z0-9_-]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'Student')+'-home-practice-teacher.pdf';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
-function teacherReportHTML(){return `<section class="card" id="teacherpdf"><h3>Home practice report for the teacher</h3><p>Make a short report of specific checked difficulties, steps that needed help, and questions to explore together.</p><label>Time period<select id="teacherpdfdays"><option value="14">Last 14 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option></select></label><button class="btn primary" id="teacherpdfprepare">Make teacher PDF</button><div id="teacherpdfpreview" hidden><p class="muted">Review and edit before downloading. Only this player's records are used. Saved teacher notes are excluded unless selected. Nothing is sent automatically.</p>${S.saveTeacherNotes===true?'<label class="row"><input type="checkbox" id="teacherpdfnotes"> Include saved teacher notes for the reported topics</label>':''}<label for="teacherpdftext">Editable report</label><textarea class="io" id="teacherpdftext" rows="16" maxlength="16000"></textarea><div class="actions"><button class="btn primary" id="teacherpdfdownload">Download PDF</button><button class="btn quiet" id="teacherpdfprint">Print / Save as PDF</button></div></div><p id="teacherpdfmsg" role="status" aria-live="polite"></p></section>`;}
+function teacherReportHTML(){return `<section class="card" id="teacherpdf"><h3>Home practice report for the teacher</h3><p>Make a short report of specific checked difficulties, steps that needed help, and questions to explore together.</p><label>Time period<select id="teacherpdfdays"><option value="14">Last 14 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option></select></label><button class="btn primary" id="teacherpdfprepare">Make teacher PDF</button><div id="teacherpdfpreview" hidden><p class="muted">Review and edit before downloading. Only this player's records are used. Saved teacher notes are excluded unless selected. Nothing is sent automatically.</p>${S.saveTeacherNotes===true?'<label class="row"><input type="checkbox" id="teacherpdfnotes"> Include saved feedback for reported or selected focus topics</label>':''}<label for="teacherpdftext">Editable report</label><textarea class="io" id="teacherpdftext" rows="16" maxlength="16000"></textarea><div class="actions"><button class="btn primary" id="teacherpdfdownload">Download PDF</button><button class="btn quiet" id="teacherpdfprint">Print / Save as PDF</button></div></div><p id="teacherpdfmsg" role="status" aria-live="polite"></p></section>`;}
 function teacherReportPrint(text){const win=window.open('','_blank');if(!win)return false;win.document.write('<!doctype html><html><head><title>Home practice questions for teacher</title><meta charset="utf-8"><style>@page{size:letter;margin:18mm}body{font:11pt Arial,sans-serif;line-height:1.4;color:#20303d}h1{font-size:20pt}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}</style></head><body><h1>Home practice questions for teacher</h1><pre>'+esc(text)+'</pre></body></html>');win.document.close();win.focus();win.print();return true;}
 function bindTeacherReport(panel){const q=id=>panel.querySelector('#'+id);if(!q('teacherpdfprepare'))return;
  let generated='',lastDays=q('teacherpdfdays').value,lastNotes=false;
@@ -9756,16 +9916,16 @@ function teacherNoteNormalize(value,enabled){
   for(const key of teacherFeedbackNormalize(Object.keys(value))){const row=value[key];if(!row||typeof row!=='object'||Array.isArray(row))continue;
     const note=typeof row.note==='string'?row.note.trim().slice(0,280):'',from=typeof row.from==='string'?row.from.trim().slice(0,60):'';
     const raw=typeof row.date==='string'?row.date:'';const valid=/^\d{4}-\d{2}-\d{2}$/.test(raw)&&raw>='2000-01-01'&&raw<='2100-12-31'&&Number.isFinite(Date.parse(raw+'T12:00:00Z'))&&new Date(raw+'T12:00:00Z').toISOString().slice(0,10)===raw;
-    if(note)Object.defineProperty(notes,key,{value:{note,from,date:valid?raw:''},enumerable:true,writable:true,configurable:true});
+    if(note)Object.defineProperty(notes,key,{value:{note,from,date:valid?raw:'',source:['teacher','parent'].includes(row.source)?row.source:'unrecorded'},enumerable:true,writable:true,configurable:true});
   }return notes;
 }
 function teacherNotesDatabase(db,includeNotes=true){return {...db,profiles:Object.fromEntries(Object.entries(db.profiles||{}).map(([name,p])=>{
   const copy={...p};if(includeNotes&&copy.saveTeacherNotes===true)copy.teacherFeedbackNotes=teacherNoteNormalize(copy.teacherFeedbackNotes,true);else delete copy.teacherFeedbackNotes;return [name,copy];}))};}
 function teacherSettingsHTML(){return `<section class="card"><h2>Walter and teacher-note settings</h2><label class="row"><input type="checkbox" id="mistakenotes" ${S.walterMistakeNotes!==false?'checked':''}> Mistake notes from Walter</label><p class="muted">Tentative hints about a checked mistake. Turning this off keeps generic checking help and the practice record.</p><label class="row"><input type="checkbox" id="readaloudenabled" ${S.readAloudEnabled!==false?'checked':''}> Show read-aloud buttons</label><p class="muted">Read-aloud is optional access support. Availability depends on a local voice on this device. ${typeof readAloudCountForPlayer==='function'?`Button taps this sitting: ${Math.max(0,Number(readAloudCountForPlayer())||0)} (access use, not learning evidence).`:""}</p><label class="row"><input type="checkbox" id="saveteachernotes" ${S.saveTeacherNotes===true?'checked':''}> Save teacher notes on this device</label><p class="muted">Notes stay on this device and in backups you make. The app does not send them automatically. You choose whether to include them when sharing a transfer code. Turn this off to delete saved notes.</p><p id="teachersettingsmsg" role="status" aria-live="polite"></p></section>`;}
-function teacherFeedbackExtrasHTML(){return `${typeof teacherReportHTML==='function'?teacherReportHTML():''}<details class="card"><summary>Paste a teacher's message or make a note back</summary><p class="muted">This helper uses topic words on this device. Review suggestions before adding a focus. Pasted text is discarded when you leave unless you explicitly save a note.</p><label for="teachermessage">Teacher's message</label><textarea id="teachermessage" class="io" maxlength="2000" placeholder="Paste here to find practice topics"></textarea><button class="btn" id="teachersuggest">Find suggested topics</button><div id="teachersuggestions" role="status" aria-live="polite"></div><div id="teachernoteeditor">${teacherNoteEditorHTML()}</div><div id="teachersummary" hidden></div></details><section class="card"><h3>How to help without giving the answer</h3><ul><li>Ask what the problem is asking.</li><li>Point to Walter's smaller-piece choice.</li><li>Praise a useful check or explanation.</li></ul></section>`;}
+function teacherFeedbackExtrasHTML(){return `${decimalStorySupportSettingsHTML()}${teacherContextImportHTML()}${typeof teacherReportHTML==='function'?teacherReportHTML():''}<details class="card"><summary>Paste a teacher's message or make a note back</summary><p class="muted">This helper uses topic words on this device. Review suggestions before adding a focus. Pasted text is discarded when you leave unless you explicitly save a note.</p><label for="teachermessage">Teacher's message</label><textarea id="teachermessage" class="io" maxlength="2000" placeholder="Paste here to find practice topics"></textarea><button class="btn" id="teachersuggest">Find suggested topics</button><div id="teachersuggestions" role="status" aria-live="polite"></div><div id="teachernoteeditor">${teacherNoteEditorHTML()}</div><div id="teachersummary" hidden></div></details><section class="card"><h3>How to help without giving the answer</h3><ul><li>Ask what the problem is asking.</li><li>Point to Walter's smaller-piece choice.</li><li>Praise a useful check or explanation.</li></ul></section>`;}
 function teacherNoteEditorHTML(){if(S.saveTeacherNotes!==true)return '<p class="muted">Saved teacher notes are off. Turn them on in Practice settings if you want to keep a note.</p>';
  const goals=selectedFocusGoals();if(!goals.length)return '<p class="muted">Add a focus before saving a note.</p>';
- return `<h3>Save a teacher note</h3><label>Focus<select id="teachernotekey">${goals.map(g=>`<option value="${esc(g.key)}">${esc(g.name)}</option>`).join('')}</select></label><label>Note (up to 280 characters)<textarea id="teachernotetext" class="io" maxlength="280"></textarea></label><label>From (optional)<input id="teachernotefrom" maxlength="60"></label><label>Date (optional)<input id="teachernotedate" type="date" min="2000-01-01" max="2100-12-31"></label><button class="btn" id="teachernoteuse">Use pasted text in this note</button><button class="btn primary" id="teachernotesave">Save note</button><button class="btn quiet" id="teachernotedelete">Delete this note</button><p id="teachernotemsg" role="status" aria-live="polite"></p>`;
+ return `<h3>Save a teacher note</h3><label>Focus<select id="teachernotekey">${goals.map(g=>`<option value="${esc(g.key)}">${esc(g.name)}</option>`).join('')}</select></label><label>Note (up to 280 characters)<textarea id="teachernotetext" class="io" maxlength="280"></textarea></label><label>Source<select id="teachernotesource"><option value="parent">Parent observation</option><option value="teacher">Teacher feedback (reported)</option><option value="unrecorded">Source not recorded</option></select></label><label>From (optional)<input id="teachernotefrom" maxlength="60"></label><label>Date (optional)<input id="teachernotedate" type="date" min="2000-01-01" max="2100-12-31"></label><button class="btn" id="teachernoteuse">Use pasted text in this note</button><button class="btn primary" id="teachernotesave">Save note</button><button class="btn quiet" id="teachernotedelete">Delete this note</button><p id="teachernotemsg" role="status" aria-live="polite"></p>`;
 }
 function teacherSummaryDraft(goal,includeNote=false){if(!goal)return '';
  const isPractice=goal.kind==='practice';const log=(isPractice?S.log:S.lessonLog)||[];
@@ -9782,21 +9942,21 @@ function teacherSummaryDraft(goal,includeNote=false){if(!goal)return '';
  const code=rows.slice(-20).flatMap(e=>Array.isArray(e.codes)?e.codes:[]).reverse().find(c=>LP_CODE_NAMES[c]);ongoing=code?`Earlier checks flagged ${LP_CODE_NAMES[code]}; a fresh check can show whether it still needs work.`:'A useful next step is a fresh check and an explanation; no specific remaining difficulty is established by these records.';
  }
  const note=includeNote&&S.saveTeacherNotes===true?teacherNoteNormalize(S.teacherFeedbackNotes,true)[goal.key]:null;
- return `${S.name} practiced ${goal.name} in ${isPractice?'ordinary practice':'step-by-step home lessons'}: ${rows.length} recorded checks across ${days} day${days===1?'':'s'}.\n${details}\n${ongoing}\nThis is home practice. It is not a test score or a measure of mastery.${note?`\nParent included teacher note${note.from?' from '+note.from:''}${note.date?' ('+note.date+')':''}: ${note.note}`:''}`;
+ return `${S.name} practiced ${goal.name} in ${isPractice?'ordinary practice':'step-by-step home lessons'}: ${rows.length} recorded checks across ${days} day${days===1?'':'s'}.\n${details}\n${ongoing}\nThis is home practice. It is not a test score or a measure of mastery.${note?`\n${note.source==='teacher'?'Teacher feedback (reported)':note.source==='parent'?'Parent observation':'Note with source not recorded'}${note.from?' from '+note.from:''}${note.date?' ('+note.date+')':''}: ${note.note}`:''}`;
 }
 function bindTeacherSettings(){for(const [id,key] of [['mistakenotes','walterMistakeNotes'],['readaloudenabled','readAloudEnabled'],['saveteachernotes','saveTeacherNotes']]){const box=app.querySelector('#'+id);if(!box)continue;
  box.onchange=()=>{const old=S[key],notes=S.teacherFeedbackNotes,want=box.checked;if(key==='saveTeacherNotes'&&!want&&!confirm('Turn off saved teacher notes and delete all saved teacher notes for this player? Backups already made keep their own copies.')){box.checked=!!old;return;}
  S[key]=want;if(key==='saveTeacherNotes'&&!want)S.teacherFeedbackNotes={};if(key==='readAloudEnabled'&&!want&&typeof stopSpeaking==='function')stopSpeaking();
  const stored=save();if(!stored){S[key]=old;S.teacherFeedbackNotes=notes;box.checked=!!old;}app.querySelector('#teachersettingsmsg').textContent=stored?'Settings saved for this player.':'Could not save. Previous settings remain active.';
- if(stored&&key==='saveTeacherNotes'){if(!want){const pdf=app.querySelector('#teacherpdfpreview');if(pdf){pdf.hidden=true;const box=pdf.querySelector('#teacherpdftext');if(box)box.value='';}const include=app.querySelector('#teacherpdfnotes');if(include)include.checked=false;const summary=app.querySelector('#teachersummary');if(summary){summary.hidden=true;summary.innerHTML='';}}const ed=app.querySelector('#teachernoteeditor');if(ed){ed.innerHTML=teacherNoteEditorHTML();bindTeacherNoteEditor(app.querySelector('#parentfocus'));}}
+ if(stored&&key==='saveTeacherNotes'){if(!want){const imported=app.querySelector('#teachercontextpreview');if(imported){imported.hidden=true;imported.innerHTML='';}const input=app.querySelector('#teachercontextfile');if(input){input.value='';if(input.clearTeacherContext)input.clearTeacherContext();}const pdf=app.querySelector('#teacherpdfpreview');if(pdf){pdf.hidden=true;const box=pdf.querySelector('#teacherpdftext');if(box)box.value='';}const include=app.querySelector('#teacherpdfnotes');if(include)include.checked=false;const summary=app.querySelector('#teachersummary');if(summary){summary.hidden=true;summary.innerHTML='';}}const ed=app.querySelector('#teachernoteeditor');if(ed){ed.innerHTML=teacherNoteEditorHTML();bindTeacherNoteEditor(app.querySelector('#parentfocus'));}}
  };}}
 function bindTeacherNoteEditor(panel){if(!panel)return;const q=id=>panel.querySelector('#'+id),key=q('teachernotekey');if(!key)return;
- const load=()=>{const note=teacherNoteNormalize(S.teacherFeedbackNotes,S.saveTeacherNotes)[key.value]||{};q('teachernotetext').value=note.note||'';q('teachernotefrom').value=note.from||'';q('teachernotedate').value=note.date||'';};key.onchange=load;load();
+ const load=()=>{const note=teacherNoteNormalize(S.teacherFeedbackNotes,S.saveTeacherNotes)[key.value]||{};q('teachernotetext').value=note.note||'';q('teachernotefrom').value=note.from||'';q('teachernotedate').value=note.date||'';q('teachernotesource').value=note.source||'parent';};key.onchange=load;load();
  q('teachernoteuse').onclick=()=>{q('teachernotetext').value=q('teachermessage').value.slice(0,280);q('teachernotemsg').textContent='Text copied into the editor. Tap Save note to keep it.';};
- const store=remove=>{if(S.saveTeacherNotes!==true)return;const old=S.teacherFeedbackNotes,rows={...teacherNoteNormalize(old,true)};if(remove)delete rows[key.value];else rows[key.value]={note:q('teachernotetext').value,date:q('teachernotedate').value,from:q('teachernotefrom').value};S.teacherFeedbackNotes=teacherNoteNormalize(rows,true);
+ const store=remove=>{if(S.saveTeacherNotes!==true)return;const old=S.teacherFeedbackNotes,rows={...teacherNoteNormalize(old,true)};if(remove)delete rows[key.value];else rows[key.value]={note:q('teachernotetext').value,date:q('teachernotedate').value,from:q('teachernotefrom').value,source:q('teachernotesource').value};S.teacherFeedbackNotes=teacherNoteNormalize(rows,true);
  const stored=save();if(!stored)S.teacherFeedbackNotes=old;q('teachernotemsg').textContent=stored?(remove?'Note deleted.':'Note saved on this device.'): 'Could not save. The previous note is kept.';if(stored&&remove)load();};q('teachernotesave').onclick=()=>store(false);q('teachernotedelete').onclick=()=>store(true);
 }
-function bindTeacherFeedbackExtras(panel){const q=id=>panel.querySelector('#'+id);if(!q('teachersuggest'))return;bindTeacherNoteEditor(panel);if(typeof bindTeacherReport==='function')bindTeacherReport(panel);
+function bindTeacherFeedbackExtras(panel){const q=id=>panel.querySelector('#'+id);if(!q('teachersuggest'))return;bindTeacherNoteEditor(panel);if(typeof bindTeacherReport==='function')bindTeacherReport(panel);bindDecimalStorySupport(panel);bindTeacherContextImport(panel);
  q('teachersuggest').onclick=()=>{const goals=focusSuggestions(q('teachermessage').value);q('teachersuggestions').innerHTML=goals.length?`<p>Did you mean one of these? Review before adding.</p>${goals.map(g=>focusToggleHTML(g)).join('')}`:'No supported topic match. Browse the catalog below and choose a focus yourself.';};
  panel.addEventListener('click',event=>{const trigger=event.target.closest('[data-teacher-summary]');if(!trigger)return;const goal=FOCUS_CATALOG.find(g=>g.key===trigger.dataset.teacherSummary);if(!goal)return;
  const region=q('teachersummary');region.hidden=false;region.closest('details').open=true;const hasNote=S.saveTeacherNotes===true&&!!teacherNoteNormalize(S.teacherFeedbackNotes,true)[goal.key];
@@ -9959,7 +10119,7 @@ function fractionHomeworkResume(){const r=fractionHomeworkResumeNorm(S?.homework
 function fractionHomeworkStart(request,resume){
   const task=fractionHomeworkTask(request);if(!task||!S)return;
   if(cur&&phase==='q')leaveProblem();cur=null;mode=task.wordStory?'hw:word':'hw:fraction';
-  const sp=fractionHomeworkSpec(task),bp={name:task.wordStory?'Word problem homework':'Fraction homework',lesson:0,skill:task.wordStory?'expressions':'fracaddsub',make:(load,phase,i=0)=>fractionHomeworkSpec(task.wordStory?wordHomeworkExample(task,i):task.op==='×'?{...task,a:{n:i+2,d:5},b:{n:1,d:3}}:task.op==='÷'?{...task,a:{n:i+2,d:1},b:{n:1,d:5}}:{...task,a:{n:i+3,d:4},b:{n:1,d:6}})};bp.model=()=>bp.make(1,'model',0);
+  const sp=fractionHomeworkSpec(task),bp={name:task.wordStory?'Word problem homework':'Fraction homework',lesson:0,skill:task.storyType==='decimal'?'decaddsub':task.wordStory?'expressions':'fracaddsub',make:(load,phase,i=0)=>fractionHomeworkSpec(task.wordStory?wordHomeworkExample(task,i):task.op==='×'?{...task,a:{n:i+2,d:5},b:{n:1,d:3}}:task.op==='÷'?{...task,a:{n:i+2,d:1},b:{n:1,d:5}}:{...task,a:{n:i+3,d:4},b:{n:1,d:6}})};bp.model=()=>bp.make(1,'model',0);
   const it={phase:'guided',spec:sp,load:1};lp={id:task.wordStory?'homework-word':'homework-fraction',homework:task,bp,items:[it,{phase:'summary'}],i:0,load:1,results:[],t0:Date.now()};
   lpItemStart(it);
   if(resume){it.st={...it.st,...resume.st,msg:'',msgKind:'',stepEvents:lpTrimEvents(resume.st.stepEvents)};it.step=sp.next(it.st);lpPrepareStep(it);it.recorded=!!resume.recorded;lp.results=Array.isArray(resume.results)?resume.results.slice(-2):[];}
@@ -9975,6 +10135,7 @@ function fractionHomeworkSummaryHTML(){return `<div class="card lpcard"><h2 styl
 // Bounded, local story recognition. Match the whole story and its references;
 // never infer an operation just from numbers or unrelated surrounding words.
 function parseWordHomework(text){
+ const decimal=decimalStoryParse(text);if(decimal)return decimal;
  const production=parsePaperHomework(text);if(production)return production;
  const story=String(text||'').replace(/\s+/g,' ').trim();if(story.length>1400)return null;
  const s=story.replace(/[’‘]/g,"'").replace(/^(?:(?:#|question|problem)\s*\d{1,2}\s*[.):]?|\d{1,2}[.)])\s+/i,'');
@@ -9993,6 +10154,7 @@ function parseWordHomework(text){
 }
 function wordHomeworkTask(task){const r=task?.wordStory&&typeof task.story==='string'?parseWordHomework(task.story):null;return r?.wordStory?r:null;}
 function wordHomeworkExpressionCheck(task,value){
+ if(task.storyType==='decimal')return decimalStoryExpressionCheck(task,value);
  const s=String(value||'').trim();if(s.length>512)return {ok:false,fmt:true,msg:'Keep the expression to the operations in this story.'};
  const e=lpEval(s),tree=lpAst(s);if(!e.ok||!Number.isFinite(e.val)||!tree)return {ok:false,fmt:true,msg:'Write a complete expression with operation signs and matching parentheses.'};
  const forms=op=>[...['÷ 2','× 0.5','× (1 ÷ 2)'].map(half=>`(${task.age} ${half}) ${op} ${task.change}`),`(${task.age} ${op} ${task.change} × 2) ÷ 2`,`(${task.age} ${op} ${task.change*2}) ÷ 2`,...(task.change===0?[`${task.age} ÷ 2`,`${task.age} × 0.5`,`${task.age} × (1 ÷ 2)`]:[])].map(form=>lpCanon(lpAst(form)));
@@ -10001,6 +10163,7 @@ function wordHomeworkExpressionCheck(task,value){
  return {ok:false,fmt:true,msg:'I cannot verify that expression against the story yet. Show the known age being halved and the year adjustment in your expression. Your work is still here to edit.'};
 }
 function wordHomeworkSpec(task){
+ if(task.storyType==='decimal')return decimalStorySpec(task);
  if(task.storyType==='production')return paperHomeworkSpec(task);
  const value=task.age/2+(task.op==='+'?task.change:-task.change),expr=`${task.age} ÷ 2 ${task.op} ${task.change}`;
  const expressionGuide=['Find the known age and the words describing the other person\'s age.','An expression must preserve the halving relationship and the year adjustment, in the order the story gives.','Write your proposed expression on scratch paper. Read each operation back as words and match it to the story.','Explain what each quantity and operation means. Check who the question asks about.','Revise any part that changes the relationship or its order. Keep the expression as your own work.'];
@@ -10010,8 +10173,9 @@ function wordHomeworkSpec(task){
   visual:st=>`<p class="lpstory">${esc(task.story)}</p>${st.expression?`<p class="lpeq">Your checked expression: ${esc(st.expression)}</p>`:''}`,
   done:()=>`${esc(task.person)} is <b>${value}</b> years old. You checked the expression and its value.`};
 }
-function wordHomeworkStateValid(task,st){if(task.storyType==='production')return paperHomeworkStateValid(task,st);return Number.isInteger(st.k)&&st.k>=0&&st.k<=2&&(st.k===0?st.expression===null:wordHomeworkExpressionCheck(task,st.expression).ok)&&(st.k===2?st.done===true:!st.done);}
+function wordHomeworkStateValid(task,st){if(task.storyType==='decimal')return decimalStoryStateValid(task,st);if(task.storyType==='production')return paperHomeworkStateValid(task,st);return Number.isInteger(st.k)&&st.k>=0&&st.k<=2&&(st.k===0?st.expression===null:wordHomeworkExpressionCheck(task,st.expression).ok)&&(st.k===2?st.done===true:!st.done);}
 function wordHomeworkExample(task,i=0){
+ if(task.storyType==='decimal')return decimalStoryExample(task,i);
  if(task.storyType==='production')return parsePaperHomework(`A paper company produces ${40+i*20} sheets of specialty paper each day. How many sheets are produced in 12 days? Twenty sheets placed in each package. How many packages of specialty paper are produced in 12 days? Four packages are bundled in a box for shipping. Would 100 boxes be enough to ship all the packages? Explain.`);
  const answer=task.age/2+(task.op==='+'?task.change:-task.change);let age=16+i*2;if(age/2-2===answer)age+=4;
  return parseWordHomework(`Maya is ${age} years old. Maya's younger sibling, Leo, is half of Maya's age minus two years. How old is Leo?`);
