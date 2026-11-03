@@ -1683,7 +1683,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.3 · October 14, 2026";
+const BUILD="v10.4 · November 2, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -4379,7 +4379,8 @@ function home(){
   const primary=homePrimaryAction();
   const todayHTML=`<div class="card home-today home-lead" id="dailycard" style="margin-top:0"><h2 style="margin-top:0">${primary.title}</h2><p class="muted home-desc">${primary.description}</p>${stale?`<p class="muted week-guess" id="stalepin">A grown-up set the class lesson ${esc(pinDayText())}. If your homework shows a newer lesson, ask a grown-up to update it.</p>`:""}<button class="btn primary mix" id="${primary.kind==='lesson'?'lpresume':'dailygo'}" data-dailygo ${primary.kind==='today'?'data-skill="today"':''}>${primary.label}</button></div>`;
   const feedbackHTML=teacherFeedbackHomeHTML()+decimalStoryHomeHTML();
-  const practiceCards=todayHTML;
+  const weekWork=weeklyHomeworkHomeHTML();
+  const practiceCards=primary.kind==='today'?weekWork+todayHTML.replace('btn primary mix','btn mix'):todayHTML+weekWork.replace('btn primary','btn');
   app.innerHTML=`
     <div class="topbar home-bar"><div class="walter-heading"><img class="walter-home" src="${WALTER_ART.work}" alt="" width="112" height="112"><h1 style="margin:0" tabindex="-1">Hi, ${esc(S.name)}.</h1></div><button class="btn quiet small" id="switch">Not ${esc(S.name)}?</button></div>${warnHTML()}
     <p class="home-intro">One step at a time. You can ask for help or stop whenever you need.</p>
@@ -4418,7 +4419,7 @@ function home(){
   if(primary.kind==='homework') app.querySelector('#dailygo').onclick=fractionHomeworkResume;
   if(primary.kind==='check') app.querySelector('#dailygo').onclick=()=>lpStart(primary.id,true,null,primary.focus);
   const secondaryResume=app.querySelector('#lpsecondaryresume');if(secondaryResume)secondaryResume.onclick=lpResume;
-  bindDecimalStoryHome(); bindFolds(); armWalterMotion();
+  bindWeeklyHomework(); bindDecimalStoryHome(); bindFolds(); armWalterMotion();
   app.querySelector(".topbar h1").focus({preventScroll:true});
   try{window.scrollTo(0,0);}catch(e){}
 }
@@ -8714,7 +8715,7 @@ function lpBind(it){ const q=s=>app.querySelector(s);
   app.querySelectorAll(".lpvideo .video-link").forEach(vid=>vid.addEventListener("click", ()=>{ lpRecord({phase:"video"}, {kind:"video-link-tap", video:1, videoType:vid.dataset.videoType, ok:0, methodOk:0, firstTry:0}); }));
   if(it.phase==="intro"){ q("#lpgo").onclick=lpNext; q("#lpgo").focus({preventScroll:true}); return; }
   if(it.phase==="explain"){ q("#lpexpsave").onclick=()=>{ const t=String(q("#lpexp").value||"").trim().slice(0,280); if(!t){ q("#lpexpmsg").textContent="Type a thought, choose ‘I said it aloud,’ or skip."; return; } lpRecord(it, {kind:"explain", ok:1, text:t, mode:"typed", skipped:0}); lpNext(); }; q("#lpexpsaid").onclick=()=>{ lpRecord(it, {kind:"explain", ok:0, mode:"spoken", selfReported:1, skipped:0}); lpNext(); }; q("#lpexpskip").onclick=()=>{ lpRecord(it, {kind:"explain", ok:0, mode:"skipped", skipped:1}); lpNext(); }; return; }
-  if(it.phase==="summary"){ q("#lphome").onclick=()=>{ lp=null; home(); }; q("#lpagain").onclick=()=>{if(lp.homework)hwEntry();else lpStart(lp.id, false, null, lp.focus);}; return; }
+  if(it.phase==="summary"){ q("#lphome").onclick=()=>{ lp=null; home(); }; q("#lpagain").onclick=()=>{if(lp.homework?.weekly)weeklyHomeworkHub('all');else if(lp.homework)hwEntry();else lpStart(lp.id, false, null, lp.focus);}; return; }
   if(it.phase==="repair" && it.rep.stage==="spot"){ app.querySelectorAll("[data-lpr]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.lpr, r=it.rspec, rp=it.rep; rp.picked=i;
       if(typeof walterLinkNextCheck==='function')walterLinkNextCheck(it.st.walterEvents||[],lpWalterContextKey(it),{status:i===r.wrongAt?'accepted':'miss',code:'spot'});
       if(i===r.wrongAt){ rp.stage="fix"; if(rp.tries) it.st.tries+=rp.tries; it.st.msg=`You found the first slip. Rebuild the step and check your own work.`; it.st.msgKind="ok"; lpRender(); }
@@ -10219,6 +10220,7 @@ function parseFractionHomework(text){
   return {fraction:true,a,b,op,method,explicitMethod,label:cxText(a)+' '+op+' '+cxText(b)};
 }
 function fractionHomeworkTask(task){
+  if(task?.weekly)return weeklyHomeworkTask(task);
   if(task?.wordStory)return wordHomeworkTask(task);
   if(!task||typeof task!=='object'||Array.isArray(task))return null;
   const operand=f=>f&&Number.isSafeInteger(f.n)&&Number.isSafeInteger(f.d)&&f.d>0?f.n+'/'+f.d:'?';
@@ -10227,12 +10229,14 @@ function fractionHomeworkTask(task){
   if(!r?.fraction)return null;return {...r,method:['algorithm','area','line'].includes(task.method)?task.method:r.method};
 }
 function fractionHomeworkSpec(task){
+  if(task.weekly)return weeklyHomeworkSpec(task);
   if(task.wordStory)return wordHomeworkSpec(task);
   if(task.op==='×')return cxFractionProduct({a:task.a,b:task.b,mode:'area'});
   if(task.op==='÷')return cxFractionDivision({d:task.a.d===1?task.b.d:task.a.d,N:task.a.d===1?task.a.n:task.b.n,share:task.a.d!==1,mode:'model'});
   return cxFractionCombine({...task,regroup:task.op==='−'&&task.a.n%task.a.d/task.a.d<task.b.n%task.b.d/task.b.d&&task.a.n>=task.a.d});
 }
 function fractionHomeworkStateValid(task,st){
+  if(task.weekly)return weeklyHomeworkStateValid(task,st);
   if(task.wordStory)return wordHomeworkStateValid(task,st);
   if(['+','−'].includes(task.op)){
     if(!['denominator','first','second','exchange','combine','jump','landing','final','done'].includes(st.stage))return false;
@@ -10267,7 +10271,7 @@ function fractionHomeworkResume(){const r=fractionHomeworkResumeNorm(S?.homework
 function fractionHomeworkStart(request,resume){
   const task=fractionHomeworkTask(request);if(!task||!S)return;
   if(cur&&phase==='q')leaveProblem();cur=null;mode=task.wordStory?'hw:word':'hw:fraction';
-  const sp=fractionHomeworkSpec(task),bp={name:task.wordStory?'Word problem homework':'Fraction homework',lesson:0,skill:task.storyType==='decimal'?'decaddsub':task.wordStory?'expressions':'fracaddsub',make:(load,phase,i=0)=>fractionHomeworkSpec(task.wordStory?wordHomeworkExample(task,i):task.op==='×'?{...task,a:{n:i+2,d:5},b:{n:1,d:3}}:task.op==='÷'?{...task,a:{n:i+2,d:1},b:{n:1,d:5}}:{...task,a:{n:i+3,d:4},b:{n:1,d:6}})};bp.model=()=>bp.make(1,'model',0);
+  const sp=fractionHomeworkSpec(task),bp={name:task.weekly?'Unit 4 homework':task.wordStory?'Word problem homework':'Fraction homework',lesson:0,skill:task.weekly?weeklyHomeworkItem(task.itemId).skill:task.storyType==='decimal'?'decaddsub':task.wordStory?'expressions':'fracaddsub',make:(load,phase,i=0)=>task.weekly?weeklyHomeworkExample(task,i):fractionHomeworkSpec(task.wordStory?wordHomeworkExample(task,i):task.op==='×'?{...task,a:{n:i+2,d:5},b:{n:1,d:3}}:task.op==='÷'?{...task,a:{n:i+2,d:1},b:{n:1,d:5}}:{...task,a:{n:i+3,d:4},b:{n:1,d:6}})};bp.model=()=>bp.make(1,'model',0);
   const it={phase:'guided',spec:sp,load:1};lp={id:task.wordStory?'homework-word':'homework-fraction',homework:task,bp,items:[it,{phase:'summary'}],i:0,load:1,results:[],t0:Date.now()};
   lpItemStart(it);
   if(resume){it.st={...it.st,...resume.st,msg:'',msgKind:'',stepEvents:lpTrimEvents(resume.st.stepEvents)};it.step=sp.next(it.st);lpPrepareStep(it);it.recorded=!!resume.recorded;lp.results=Array.isArray(resume.results)?resume.results.slice(-2):[];}
@@ -10276,7 +10280,7 @@ function fractionHomeworkStart(request,resume){
 function fractionHomeworkSave(){const it=lp.items[lp.i];S.homeworkResume={v:1,task:lp.homework,st:it.st,recorded:!!it.recorded,results:lp.results,t:Date.now()};save();}
 function fractionHomeworkRecord(it,extra){
   if(it.recorded)return null;it.recorded=true;const st=it.st||{};
-  const e={t:Date.now(),q:lp.homework.label,method:it.spec.methodName||it.spec.kind,ok:st.done?1:0,methodOk:st.done&&!st.skipped?1:0,helps:+st.helps||0,tries:+st.tries||0,firstTry:0,hw:1,phase:'homework',stepEvents:lpTrimEvents(st.stepEvents),walterHelp:(st.walterEvents||[]).slice(-60),...extra};
+  const e={t:Date.now(),q:lp.homework.label,...(lp.homework.weekly?{week:lp.homework.week,itemId:lp.homework.itemId}:{}),method:it.spec.methodName||it.spec.kind,ok:st.done?1:0,methodOk:st.done&&!st.skipped?1:0,helps:+st.helps||0,tries:+st.tries||0,firstTry:0,hw:1,phase:'homework',stepEvents:lpTrimEvents(st.stepEvents),walterHelp:(st.walterEvents||[]).slice(-60),...extra};
   S.homeworkLog=fractionHomeworkLogNorm([...(S.homeworkLog||[]),e]);lp.results.push(e);fractionHomeworkSave();return e;
 }
 function fractionHomeworkSummaryHTML(){return `<div class="card lpcard"><h2 style="margin-top:0">Homework problem finished</h2><p>You worked through ${esc(lp.homework.label)} with ${esc(lp.items[0].spec.methodName||'checked fraction steps')}.</p>${walterNote('rest','You did the work. Take a break whenever you need.',true)}<p class="muted">This records homework practice. It does not change levels or count as independent lesson evidence.</p><div class="actions"><button class="btn primary" id="lphome">Home</button><button class="btn quiet" id="lpagain">Another problem from my page</button></div></div>`;}
@@ -10396,6 +10400,177 @@ function paperHomeworkStateValid(task,st){
   if(st.k>i*2+1){if(st.values[i]!==expected[i])return false;}else if(st.values[i]!==undefined)return false;
  }
  return st.expressions.length<=Math.ceil(Math.min(st.k,count*2)/2)&&st.values.length<=Math.floor(Math.min(st.k,count*2)/2);
+}
+// Reviewed printed tasks from the November 2 homework photos. Student writing,
+// grades and photos are never embedded. Exact-page practice owns no mastery state.
+const WEEKLY_HOMEWORK={id:'2026-11-02',date:'Nov 2–8',unit:4};
+const WEEKLY_ITEMS=[];
+function weekAdd(id,lesson,number,method,a,b,story='',source=''){
+ const skill=method==='measuring'||method==='dealing'?'decdiv':method==='division'||method==='compatible'?'divide':'decmul';
+ WEEKLY_ITEMS.push({id,lesson,number,method,a,b,story,source,skill});
+}
+weekAdd('measure-tape',12,4,'measuring',1.32,.33,'Max has 1.32 yards of tape. If each project uses 0.33 yards of tape, how many projects can he complete?','3821');
+weekAdd('measure-yams',12,5,'measuring',1.2,.4,'John has 1.2 pounds of marshmallows to make candied yams for a holiday party. If the recipe calls for 0.4 pounds of marshmallows, how many batches of candied yams can he make?','3821');
+weekAdd('deal-milk',10,4,'dealing',.56,8,'Justine has 0.56 of a gallon of milk. She wants to fill 8 glasses equally. How much milk will she pour in each glass?','3823');
+weekAdd('deal-cotton',10,5,'dealing',1.2,4,'Karen has 1.2 ounces of cotton balls. She wants use the same amount of cotton balls to decorate each of her 4 dioramas of winter scenes. How many ounces of cotton balls can she use on each diorama?','3823');
+weekAdd('divide-5950',3,3,'division',5950,35,'','3809');
+weekAdd('divide-1976',5,1,'division',1976,13,'','3813');
+weekAdd('divide-7050',9,2,'compatible',7050,30,'','3820');
+weekAdd('u2-1',2,1,'area',2.75,2,'A recipe for a batch of cookies calls for one 2.75 ounce package of chocolate chips. How many ounces of chocolate chips are needed for 2 batches of cookies?','3805');
+weekAdd('u2-2',2,2,'area',4,2.45,'','3806');
+weekAdd('u2-3',2,3,'area',2,3.25,'Find the area of a poster that is 2 feet by 3.25 feet.','3806');
+weekAdd('u2-4',2,4,'area',1,1.12,'','3807');
+weekAdd('u2-5',2,5,'area',3.35,3,'Robert worked his paper route earning $3.35 an hour for 3 hours of work. How much money did he earn?','3807');
+weekAdd('u2-6',2,6,'area',2,4.13,'','3808');
+weekAdd('u2-7',2,7,'area',2,2.35,'Karen buys 2 folders for $2.35 each. How much do they cost?','3808');
+weekAdd('u3-4',3,4,'distributive',7,5.8,'','3810');
+weekAdd('u3-5',3,5,'distributive',5,3.6,'The plumber needs 5 lengths of pipe that are each 3.6 feet long. What is the total length of pipe needed?','3810');
+weekAdd('u4-1',4,1,'choice',.68,2,'A black marker costs $0.68. How much would it cost to buy 2 black markers?','3811');
+weekAdd('u4-2',4,2,'choice',3.05,6,'','3811');
+weekAdd('u4-3',4,3,'choice',13,.6,'Jenny bought a package of 13 chocolate cookies. Each cookie weighed 0.6 ounces. How much did the 13 cookies weigh altogether?','3811');
+weekAdd('u4-4',4,4,'choice',4.44,4,'','3812');
+weekAdd('u4-5',4,5,'choice',.1,8,'Each piece of cardboard is 0.1 centimeters thick. If Kurt stacks 8 pieces of cardboard on top of one another, how thick will the stack be?','3812');
+weekAdd('u4-6',4,6,'choice',9,1.5,'','3812');
+weekAdd('u4-7',4,7,'choice',8,.96,'How much does it cost to buy 8 kiwis if each kiwi costs $0.96?','3812');
+weekAdd('u5-4',5,4,'area',1.2,1.8,'','3814');
+weekAdd('u5-5',5,5,'area',3.2,2.8,'A floor measures 3.2 ft by 2.8 ft. What is the area of the floor?','3814');
+weekAdd('u6-1',6,1,'area',5.2,1.2,'David bought 5.2 pounds of oranges for $1.20 per pound. How much did David spend?','3815');
+weekAdd('u7-4',7,4,'distributive',4.1,3.9,'','3816');
+weekAdd('u7-5',7,5,'distributive',3.5,2.5,'A playing card is 3.5 inches long and 2.5 inches wide. What is the area of the card?','3816');
+weekAdd('u8-1',8,1,'choice',14.5,3.5,'School lunches cost $14.50 per week. How much would 3.5 weeks of lunches cost?','3817');
+weekAdd('u8-2',8,2,'choice',2.8,3.1,'','3818');
+weekAdd('u8-3',8,3,'choice',5.3,18,'A student earns $5.30 per hour for gardening. If she worked 18 hours this month, then how much did she earn?','3818');
+weekAdd('u8-4',8,4,'choice',5.67,1.2,'','3818');
+weekAdd('u8-5',8,5,'choice',19.7,8.2,"Nica’s car travels 19.7 miles for every gallon of gasoline she puts into the gas tank of her car. If she is able to put in 8.2 gallons of gasoline into her tank, how far will she be able to travel?",'3819');
+weekAdd('u8-6',8,6,'choice',7.4,3.1,'','3819');
+weekAdd('u8-7',8,7,'choice',6.8,7.5,"David and Dora are close friends studying in the same school. David’s home is 6.8 miles away from school. Dora’s home is 7.5 times as far as David’s home from school. Find the distance between Dora’s school and her home.",'3819');
+const weekReview=(id,lesson,number,story,source)=>WEEKLY_ITEMS.push({id,lesson,number,story,source,method:'review',skill:'expressions'});
+weekReview('times-ten',3,1,'Starting with .042, multiply by 10 until you fill the table.','3809');
+weekReview('divide-ten',3,2,'Starting with 370, divide by 10 until there are seven thousandths.','3809');
+weekReview('cilantro',5,2,'At the market, cilantro is on sale for 3 bunches for 99¢. At that price, how much would 9 bunches cost?','3813');
+weekReview('equation-bank',5,3,'Use numbers from the bank below to write a true equation. Bank: 3, 7, 100, 5, 10, 4. Fill A × B × C^D = 210,000.','3813');
+weekReview('power-bank',9,1,'Use the numbers in the box to complete each number sentence. Bank: 250,000; 0.52; 52; 10^4; 10^3; 24. A: ___ × 10^5 = 5,200,000. B: 520 ÷ 10^3 = ___. C: ___ ÷ 10^4 = 0.0024. D: 2.4 × ___ = 24,000.','3820');
+weekReview('place-two',9,3,'Write a number that has a 2 with a value 100 times less than the value of the 2 in the number 42,845.','3820');
+weekReview('compare-decimals',10,1,'Compare the decimals. Decide whether each statement is true or false. A: 0.561 > 0.559. B: 1.254 < 1.234. C: 4.404 < 4.444. D: 0.924 > 9.024.','3822');
+weekReview('round-thousandth',10,2,'Round to the nearest thousandth: 1,349.8345.','3822');
+weekReview('steaks',10,3,'On each of 3 plates near the barbeque, Dad had 4 seasoned steaks ready to grill. The neighbors came over and brought 6 more steaks. How many steaks were going to be grilled? Write and solve the expression.','3822');
+function weeklyHomeworkItem(id){return WEEKLY_ITEMS.find(x=>x.id===id);}
+function weekMethodName(m){return ({measuring:'Measuring Up',dealing:'Dealing',division:'Area-model division',compatible:'Division with compatible parts',area:'Area model',distributive:'Distributive property',choice:'Choose an area model or distributive property',review:'Spiral review'})[m];}
+function weekQuestion(x){return x.story||`${lpN(x.a)} ${['division','compatible','measuring','dealing'].includes(x.method)?'÷':'×'} ${lpN(x.b)}`;}
+function weeklyHomeworkTask(task){const x=task&&task.week===WEEKLY_HOMEWORK.id&&weeklyHomeworkItem(task.itemId);return x?{weekly:true,week:WEEKLY_HOMEWORK.id,itemId:x.id,label:`U4 L${x.lesson} #${x.number}: ${weekQuestion(x)}`}:null;}
+function weekTask(id){return weeklyHomeworkTask({week:WEEKLY_HOMEWORK.id,itemId:id});}
+function weeklyHomeworkHomeHTML(){
+ const d=new Date(),current=d.getFullYear()===2026&&d.getMonth()===10&&d.getDate()>=2&&d.getDate()<=8;
+ return `<section class="card weekly-work" id="weeklyhome" aria-labelledby="weekly-title"><span class="pill">Unit 4 · ${WEEKLY_HOMEWORK.date}</span><h2 id="weekly-title" style="margin:10px 0">${current?'This week’s work':'Homework pack · Nov 2'}</h2><p class="home-desc">Division first: count groups with <b>Measuring Up</b>, or share equally with <b>Dealing</b>.</p><div class="actions"><button class="btn primary" data-week-hub="division">Start division</button><button class="btn" data-week-hub="all">All this week’s problems</button></div><p class="muted week-note">Your page’s numbers, checked one step at a time. You can also practice with fresh numbers.</p></section>`;
+}
+function bindWeeklyHomework(){app.querySelectorAll('[data-week-hub]').forEach(b=>b.onclick=()=>weeklyHomeworkHub(b.dataset.weekHub));}
+function weeklyHomeworkHub(filter='division',pending=''){
+ if(!S)return;cur=null;lp=null;mode='weekly-homework';const paused=fractionHomeworkResumeNorm(S.homeworkResume),completed=new Set((S.homeworkLog||[]).filter(e=>e.ok&&e.week===WEEKLY_HOMEWORK.id).map(e=>e.itemId));
+ const section=(title,rows)=>`<section class="card"><h2 style="margin-top:0">${title}</h2><div class="skills">${rows.map(x=>`<button class="skill" data-week-item="${x.id}"><span style="flex:1"><span class="name" style="display:block">Lesson ${x.lesson} · #${x.number}${completed.has(x.id)?' · Practiced':''}</span><span style="display:block">${esc(weekQuestion(x))}</span><span class="blurb" style="display:block">${esc(weekMethodName(x.method))}</span></span></button>`).join('')}</div></section>`;
+ const div=WEEKLY_ITEMS.filter(x=>['measuring','dealing','division','compatible'].includes(x.method));
+ app.innerHTML=`<div class="topbar"><button class="btn quiet" id="week-home">Home</button><span class="pill week">Unit 4 · ${WEEKLY_HOMEWORK.date}</span></div>${warnHTML()}<h1 tabindex="-1" id="week-heading">${filter==='division'?'Division this week':'This week’s homework'}</h1><p>Choose one problem. Ask Walter whenever you need help. Exact homework is practice; fresh lesson checks keep separate records.</p>${paused?`<div class="card"><h2 style="margin-top:0">Your paused homework</h2><p>${esc(paused.task.label)}</p><button class="btn primary" id="week-resume">Resume my problem</button>${pending?`<p>Starting a different problem replaces this paused homework. Your recorded practice stays saved.</p><button class="btn" id="week-replace">Start the problem I chose</button>`:''}</div>`:''}<div class="actions"><button class="btn${filter==='division'?' primary':''}" data-week-hub="division">Division focus</button><button class="btn${filter==='all'?' primary':''}" data-week-hub="all">All problems</button></div><details class="card"><summary>Practice with fresh numbers</summary><div class="home-more-body"><p><b>Measuring Up:</b> the group size is known; find how many groups fit.<br><b>Dealing:</b> the group count is known; find the amount in each group.</p><div class="actions"><button class="btn" data-week-fresh="U4L9">Measuring Up practice</button><button class="btn" data-week-fresh="U4L10">Dealing practice</button><button class="btn quiet" data-week-fresh="U2L11">Whole-number division</button></div><p class="muted">The photographed Measuring Up page says Lesson 12; the class calendar calls this strategy Lesson 9. These buttons use the matching strategy.</p></div></details>${section('Measuring Up · how many groups?',div.filter(x=>x.method==='measuring'))}${section('Dealing · how much in each group?',div.filter(x=>x.method==='dealing'))}${section('Whole-number division review',div.filter(x=>['division','compatible'].includes(x.method)))}${filter==='all'?[2,3,4,5,6,7,8,9,10].map(n=>{const rows=WEEKLY_ITEMS.filter(x=>x.lesson===n&&!div.includes(x));return rows.length?section(`Lesson ${n} · multiplication and spiral review`,rows):'';}).join(''):''}`;
+ app.querySelector('#week-home').onclick=home;app.querySelector('#week-resume')?.addEventListener('click',fractionHomeworkResume);
+ app.querySelector('#week-replace')?.addEventListener('click',()=>fractionHomeworkStart(weekTask(pending)));
+ app.querySelectorAll('[data-week-item]').forEach(b=>b.onclick=()=>{const task=weekTask(b.dataset.weekItem);if(paused&&(!paused.task.weekly||paused.task.itemId!==task.itemId))weeklyHomeworkHub(filter,task.itemId);else fractionHomeworkStart(task,paused||undefined);});
+ app.querySelectorAll('[data-week-fresh]').forEach(b=>b.onclick=()=>{if(lpResumeReady()&&S.lessonResume.focus&&S.lessonResume.id===b.dataset.weekFresh)lpResume();else lpStart(b.dataset.weekFresh,false,null,true);});
+ bindWeeklyHomework();app.querySelector('#week-heading').focus({preventScroll:true});toProblemTop();
+}
+function weekGuide(step,lines){step.curriculumGuide=[...lines,'Check your proposed result using the original amounts or an inverse operation.','Keep your checked work. Revisit only the first part that does not match your check.'];return step;}
+function weekReviewSpec(x){
+ const guide=['Read the requested place or relationship. Keep each original amount attached to its unit.','Sketch a place-value chart or the story’s groups before calculating.','Read your proposal back against the question. Which quantity or place needs another check?'];
+ const num=(p,a)=>weekGuide(cxNum(p,a,'weekly-review'),guide),fields=(p,l,a)=>weekGuide(cxFields(p,l,a,'weekly-review'),guide),steps=[];
+ if(x.id==='times-ten')for(let i=1;i<=4;i++)steps.push(num(`After ${i===1?'the first multiplication':`${i} multiplications`} by 10, what number belongs in the table?`,42*10**(i-3)));
+ if(x.id==='divide-ten')for(let i=1;i<=4;i++)steps.push(num(`After dividing 370 by 10 ${i} time${i===1?'':'s'}, what number belongs in the table? Stop when the digit 7 is in the thousandths place.`,370/10**i));
+ if(x.id==='cilantro'){steps.push(num('How many groups of 3 bunches make 9 bunches?',3));steps.push(num('What is the total cost in cents? Use the price per group from the story.',297));steps.push(num('Write that cost in dollars.',2.97));}
+ if(x.id==='equation-bank')steps.push(weekGuide(cxStep({prompt:'Fill the four boxes using the bank: A × B × C^D = 210,000.',input:{type:'nums',labels:['A','B','C','D']},auto:[3,7,10,4],check:v=>{const a=Array.isArray(v)?v.map(lpDecRead):[];if(a.length!==4||a.some(n=>![3,7,100,5,10,4].includes(n)))return {ok:false,fmt:true,msg:'Use a number from the printed bank in each box.'};return a[0]*a[1]*a[2]**a[3]===210000?{ok:true}:{ok:false,code:'weekly-review',msg:'Apply the exponent first, then multiply. Does your equation reach the printed total?'};}},'weekly-review'),guide));
+ if(x.id==='power-bank')steps.push(fields('Fill A, B, C, and D from the bank. For a power of ten, enter its numerical value.',['A','B','C','D'],[52,.52,24,10000]));
+ if(x.id==='place-two'){
+  steps.push(num('What is the value of the digit 2 in 42,845?',2000));steps.push(num('What value is 100 times smaller than your checked digit value?',20));
+  steps.push(weekGuide(cxStep({prompt:'Write any nonnegative whole number with a 2 in that new place.',input:{type:'num'},auto:125,check:v=>{const n=lpNum(v);if(!Number.isSafeInteger(n)||n<0||n>999999)return {ok:false,fmt:true,msg:'Write a whole number from 0 to 999,999.'};return Math.floor(n/10)%10===2?{ok:true}:{ok:false,code:'weekly-review',msg:'Read the value of the 2 in your number. Does it match the value you checked?'};}},'weekly-review'),guide));
+ }
+ if(x.id==='compare-decimals')for(const [p,yes]of [['0.561 > 0.559',true],['1.254 < 1.234',false],['4.404 < 4.444',true],['0.924 > 9.024',false]])steps.push(weekGuide(cxChoice(`Is ${p} true or false?`,['True','False'],yes?0:1,'weekly-review'),guide));
+ if(x.id==='round-thousandth'){steps.push(fields('In 1,349.8345, identify the two places used to decide rounding.',['Thousandths digit','Next digit to its right'],[4,5]));steps.push(num('Round the original number to the nearest thousandth.',1349.835));}
+ if(x.id==='steaks'){steps.push(weekGuide(cxStep({prompt:'Write an expression for all the steaks. Use the original counts and show the plate groups before the extra steaks.',input:{type:'text'},auto:'3*4+6',check:v=>{const t={expression:'3*4+6'};return lessonStoryExpressionCheck(t,v);}},'weekly-review'),guide));steps.push(num('Evaluate your checked expression. How many steaks are there?',18));}
+ return cxSeq({kind:'weekly-review',title:`Unit 4 · Lesson ${x.lesson} · #${x.number}`,prompt:x.story,steps,visual:()=>`<p class="lpstory">${esc(x.story)}</p>`,done:()=> 'You checked the requested places and relationships. Read your work back to the original question.'});
+}
+// Measuring Up uses learner-chosen group counts, checked products and checked
+// remainders. Trial sizes do not imply a bad calculation or supply a quotient.
+function weekMeasuring(x){
+ const scale=100,N=Math.round(x.a*scale),d=Math.round(x.b*scale),q=N/d;
+ const g=['The total and the size of each group are given. Find how many groups fit.','Rename both amounts in the same small units so the size of a group stays unchanged.','Choose a number of groups to try. Multiply by the group size, then compare that amount with what remains.'];
+ return {kind:'weekly-measuring',methodName:'Measuring Up',methodEvidence:'measuring-groups-products-remainders',title:`${x.a} ÷ ${x.b}`,answer:q,audit:{family:'decdiv',N:x.a,d:x.b,result:q,method:'measuring'},
+  init:()=>({stage:'units',remaining:N,groups:0,trial:null,product:null,rows:[]}),
+  next:st=>{
+   const wrap=s=>weekGuide(s,g);
+   if(st.stage==='units')return wrap(cxFields('Rename both original amounts in hundredths.',['Total hundredths','Hundredths in one group'],[N,d],'decimal-unit',()=>{st.stage='trial';}));
+   if(st.stage==='trial')return wrap(cxStep({prompt:`There are ${st.remaining} hundredths left. Choose a positive whole number of groups to try.`,short:'Your trial count',input:{type:'num'},auto:1,check:v=>{const n=lpNum(v);if(!Number.isInteger(n)||n<1||n>100)return {ok:false,fmt:true,msg:'Choose a whole number of groups from 1 to 100.'};return {ok:true,apply:()=>{st.trial=n;st.stage='product';}};}},'decimal-groups'));
+   if(st.stage==='product')return wrap(cxNum(`How many hundredths are in your trial of ${st.trial} groups of ${d}?`,st.trial*d,'decimal-product',()=>{st.product=st.trial*d;st.stage='fit';}));
+   if(st.stage==='fit'){const fits=st.product<=st.remaining;return wrap(cxChoice(`Does your checked trial amount of ${st.product} hundredths fit into the ${st.remaining} hundredths left?`,['Yes','No'],fits?0:1,'decimal-groups',()=>{if(fits)st.stage='subtract';else {st.trial=null;st.product=null;st.stage='trial';}}));}
+   if(st.stage==='subtract')return wrap(cxNum('Subtract your checked trial amount from the amount left. How many hundredths remain?',st.remaining-st.product,'decimal-unit',()=>{st.remaining-=st.product;st.groups+=st.trial;st.rows.push([st.trial,st.product,st.remaining]);st.trial=null;st.product=null;st.stage=st.remaining?'trial':'final';}));
+   if(st.stage==='final')return wrap(cxNum('Add your accepted group counts. How many groups fit in the original total?',q,'decimal-groups',()=>{st.stage='check';}));
+   if(st.stage==='check')return wrap(cxNum(`Check by multiplying your checked group count by the original group size ${x.b}. What total do you get?`,x.a,'decimal-product',()=>{st.stage='done';}));
+   return null;
+  },visual:st=>`<p>Total: ${x.a}. Size of each group: ${x.b}. Find the <b>number of groups</b>.</p>${st.stage!=='units'?`<p>Hundredths still to group: ${st.remaining}</p>`:''}${st.rows.length?`<table class="cxgrid"><caption>Your checked groups</caption><tr><th>Groups</th><th>Hundredths used</th><th>Hundredths left</th></tr>${st.rows.map(r=>`<tr>${r.map(v=>`<td>${v}</td>`).join('')}</tr>`).join('')}</table>`:''}`,
+  done:()=>`${q} groups of ${x.b} make the original ${x.a}.`};
+}
+function weekCompatible(x){
+ const g=['Choose parts that add to the original dividend.','Each chosen part must divide evenly by the original divisor.','Divide each checked part, then add the partial quotients.'];
+ return {kind:'weekly-compatible',methodName:'division with compatible parts',answer:x.a/x.b,title:`${x.a} ÷ ${x.b}`,init:()=>({stage:'parts',parts:[],left:x.a,qs:[]}),next:st=>{
+  const wrap=s=>weekGuide(s,g);
+  if(st.stage==='parts')return wrap(cxStep({prompt:`Choose a part of ${x.a} that ${x.b} divides evenly. Left to split: ${st.left}.`,input:{type:'num'},auto:st.left,check:v=>{const n=lpNum(v);if(!Number.isInteger(n)||n<=0)return {ok:false,fmt:true,msg:'Choose a positive whole-number part.'};if(n>st.left)return {ok:false,safe:true,code:'trial',msg:'That part does not fit in the amount left. Try another part.'};if(n%x.b)return {ok:false,code:'not-compatible',msg:'Check whether the original divisor divides your part evenly.'};return {ok:true,apply:()=>{st.parts.push(n);st.left-=n;if(!st.left)st.stage='divide';}};}},'compatible-parts'));
+  if(st.stage==='divide')return wrap(cxNum(`Divide your checked part: ${st.parts[st.qs.length]} ÷ ${x.b}.`,st.parts[st.qs.length]/x.b,'compatible-parts',()=>{st.qs.push(st.parts[st.qs.length]/x.b);if(st.qs.length===st.parts.length)st.stage='sum';}));
+  if(st.stage==='sum')return wrap(cxNum('Add your checked partial quotients. What is the whole quotient?',x.a/x.b,'compatible-parts',()=>{st.stage='done';}));return null;
+ },visual:st=>`<p>${x.a} = ${st.parts.length?st.parts.map(lpN).join(' + '):'?'}${st.left&&st.parts.length?' + …':''}</p>${st.qs.length?`<p>Checked partial quotients: ${st.qs.map(lpN).join(' + ')}</p>`:''}`,done:()=> 'Your compatible parts cover the original dividend. Check by multiplying back.'};
+}
+function weekBaseSpec(x){
+ if(x.method==='review')return weekReviewSpec(x);
+ let base;
+ if(x.method==='measuring')base=weekMeasuring(x);
+ else if(x.method==='dealing'){base=cxDecimalDivide({N:x.a,d:x.b,method:'dealing'});base.methodName='Dealing';}
+ else if(x.method==='division')base=lpAreaDiv({N:x.a,d:x.b,askWidth:true});
+ else if(x.method==='compatible')base=weekCompatible(x);
+ else if(x.method==='choice')base=lpStrategyChoice({kind:'weekly-decimal-choice',choices:[{key:'area',name:'Area model',make:()=>cxDecimalMul({a:x.a,b:x.b,method:'area'})},{key:'distributive',name:'Distributive property',make:()=>cxDecimalMul({a:x.a,b:x.b,method:'distributive'})}]});
+ else base=cxDecimalMul({a:x.a,b:x.b,method:x.method});
+ if(!x.story)return base;
+ const division=['dealing','measuring'].includes(x.method),task={story:x.story,storyType:'weekly',label:`Unit 4 · Lesson ${x.lesson} · #${x.number}`,expression:`${x.a} ${division?'÷':'×'} ${x.b}`,given:[String(x.a),String(x.b)],relation:division?(x.method==='dealing'?'share':'groups'):'product',unknown:division?(x.method==='dealing'?'share-size':'group-count'):'result'};
+ return lpHomeworkStoryMethod(base,task);
+}
+function weeklyHomeworkSpec(task){
+ const x=weeklyHomeworkItem(task.itemId),base=weekBaseSpec(x),init=base.init||(()=>({}));
+ const sp={...base,init:()=>({...init(),weekAccepted:[]}),next:st=>{
+  const seed=Array.from(x.id).reduce((n,c)=>Math.imul(n,31)+c.charCodeAt(0),104)+st.k;
+  const step=lpSeeded(seed,()=>base.next(st));sp.methodName=base.methodName;sp.methodEvidence=base.methodEvidence;sp.audit=base.audit;if(!step)return null;
+  return {...step,check:(v,state)=>{const r=step.check(v,state);if(!r?.ok)return r;return {...r,apply:()=>{r.apply?.();st.weekAccepted.push(JSON.parse(JSON.stringify(v)));}};}};
+ }};return sp;
+}
+function weeklyHomeworkStateValid(task,st){
+ if(!Array.isArray(st.weekAccepted)||st.weekAccepted.length!==st.k||st.k>160)return false;
+ try{
+  const sp=weeklyHomeworkSpec(task),replay={model:false,k:0,codes:[],focusSupport:null,...sp.init()};
+  for(const v of st.weekAccepted){const step=sp.next(replay);if(!step)return false;const r=step.check(v,replay);if(!r?.ok)return false;r.apply?.();replay.k++;}
+  const next=sp.next(replay);if(!!st.done!==!next)return false;
+  const clean=v=>JSON.stringify(v, (k,value)=>['model','focusSupport'].includes(k)?undefined:value);
+  return Object.keys(replay).every(k=>['model','focusSupport','codes'].includes(k)||clean(st[k])===clean(replay[k]));
+ }catch(e){return false;}
+}
+function weeklyHomeworkExample(task,i=0){
+ const x=weeklyHomeworkItem(task.itemId);
+ if(x.method==='review'){
+  const g=['Name the place or relationship asked for in this example.','Draw the quantities or places, keeping their units.','Check by reversing the operation.'],n=(p,a)=>weekGuide(cxNum(p,a,'weekly-review'),g),f=(p,l,a)=>weekGuide(cxFields(p,l,a,'weekly-review'),g);
+  const options={
+   'times-ten':['Multiplying 0.063 by ten',630,[1,2,3,4].map(j=>n(`Multiply 0.063 by 10 ${j} time${j===1?'':'s'}.`,63*10**(j-3)))],
+   'divide-ten':['Dividing 480 by ten',.048,[1,2,3,4].map(j=>n(`Divide 480 by 10 ${j} time${j===1?'':'s'}.`,480/10**j))],
+   cilantro:['Herb bunches',3.6,[n('Four bunches cost 120 cents. How many groups of four are in 12 bunches?',3),n('Find the total price in cents.',360),n('Write the price in dollars.',3.6)]],
+   'equation-bank':['An equation with a power',600,[n('Evaluate 2 × 3 × 10^2. Apply the exponent first.',600)]],
+   'power-bank':['Powers of ten',6.4,[n('Fill the missing factor: ___ × 10^3 = 8,000.',8),n('Fill the missing result: 640 ÷ 10^2 = ___.',6.4)]],
+   'place-two':['Changing a digit’s value',30,[n('What is the value of the 3 in 13,245?',3000),n('What is 100 times less than that digit’s value?',30)]],
+   'compare-decimals':['Compare by place value',1,[weekGuide(cxChoice('Is 0.472 > 0.479 true or false?',['True','False'],1,'weekly-review'),g)]],
+   'round-thousandth':['Rounding to thousandths',2.718,[f('In 2.7183, name the deciding digits.',['Thousandths','Next digit'],[8,3]),n('Round 2.7183 to the nearest thousandth.',2.718)]],
+   steaks:['Equal groups and extras',24,[n('There are 5 groups of 4 counters and 4 extra counters. How many counters in all?',24)]]
+  },[title,answer,steps]=options[x.id];return cxSeq({kind:'weekly-review',title:'Different example: '+title,answer,steps,done:()=> 'This different example is finished. Return to your original problem with your work intact.'});
+ }
+ if(['division','compatible'].includes(x.method))return x.method==='division'?lpAreaDiv({N:864+i*36,d:12,askWidth:true}):weekCompatible({a:864+i*36,b:12});
+ const copy={...x,story:'',a:x.method==='dealing'?2.4+i*.8:x.method==='measuring'?2.4+i*.6:2.4+i*.1,b:x.method==='dealing'?3:x.method==='measuring'?.6:1.3};return weekBaseSpec(copy);
 }
 // UI derives a recommendation from existing plans and schedules, without writing evidence.
 function overviewMethodContext(sk,key){
