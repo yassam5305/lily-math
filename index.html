@@ -1683,7 +1683,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.4 · November 2, 2026";
+const BUILD="v10.4.1 · November 3, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -5879,6 +5879,8 @@ const WALTER_TEACHING={
 };
 // Current-card specializations take priority over broad family explanations.
 const WALTER_COMPONENTS={
+ 'group-count-setup':{base:'divide',orient:'Point to the total number of items and the number that fits in one group.',words:'Every full group holds the same number of items. The question asks you to count groups.',units:'Label the total in items and the group size in items per group. What unit should your result count?',meaning:'Draw one group and label its size. How many copies of that group can you fill?',plan:'Use the total and the size of one group in your expression. Read it back against the story.',test:'Does your expression start with all the items and find how many equal groups fit?',smaller:'Draw and label just one group. Then point to the total you can fill groups from.'},
+ 'group-count-calculation':{base:'divide',orient:'Keep your checked expression. Find how many complete groups it makes.',words:'Count only groups that can be completely filled.',units:'Your answer counts full groups. A leftover amount counts individual items.',meaning:'A full group uses the same number of items each time. Leftover items can make another group if there are enough to fill it.',plan:'Choose a group count to try. Multiply it by the number of items in one group.',test:'Multiply your group count by the size of one group. Does it fit the total with fewer items left than one group needs?',smaller:'Try one batch of groups at a time. Track the items used and the items still available.'},
  'decimal-build':{base:'placevalue',orient:'Match each given digit to its named place.',smaller:'Draw only the place named by this box.',test:'Read the place counts back as an amount.'},
  'decimal-combine':{base:'addsub',orient:'This card combines units in the same place.',smaller:'Draw only the units being combined in the active place.',test:'Compare your count with both checked rows in that place.'},
  'decimal-exchange':{base:'addsub',orient:'An exchange trades units while keeping the amount unchanged.',smaller:'Show the two named places before the exchange.',test:'Compare the amount before and after your exchange.'},
@@ -6136,7 +6138,7 @@ function hwEntry(prefill, err){
     <div class="topbar"><button class="btn quiet" id="back">Home</button><div class="row"><span class="pill week">Homework</span></div></div>${warnHTML()}
     <div class="card">
       <h2 style="margin-top:0">Check a problem from the page</h2>
-      <p class="muted" style="margin:0 0 10px">Copy an expression, including fractions or mixed numbers, like <b>3/4 + 5/6</b> or <b>2 1/3 − 3/4</b>. Decimal word-form, standard-form, and expanded-form questions can be typed as printed. Supported age and paper-company stories can also be typed in full. Walter can help with each step. Homework does not change levels.</p>
+      <p class="muted" style="margin:0 0 10px">Copy an expression, including fractions or mixed numbers, like <b>3/4 + 5/6</b> or <b>2 1/3 − 3/4</b>. Decimal word-form, standard-form, and expanded-form questions can be typed as printed. Supported age, equal-group, and paper-company stories can also be typed in full. Walter can help with each step. Homework does not change levels.</p>
       <label class="vh" for="hwq">The problem</label>
       <input class="ans text" id="hwq" type="text" inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="like 3/4 + 5/6 or 148 × 19" value="${esc(prefill||"")}">
       <label class="hwmethod" for="hwform">Problem type <select id="hwform"><option value="auto">Read the full question</option><option value="words">Decimal → word form</option><option value="standard">Number words → standard form</option><option value="expanded">Decimal → expanded form</option></select></label>
@@ -6144,8 +6146,8 @@ function hwEntry(prefill, err){
       <label class="hwmethod" for="hwfractionmethod">For fraction addition or subtraction, use <select id="hwfractionmethod"><option value="algorithm">Equivalent fractions</option><option value="area">Equal-part area model</option><option value="line">Number line</option></select></label>
       <div class="inline-err" id="hwerr" role="status" aria-live="polite">${esc(err||"")}</div>
       <div class="actions"><button class="btn primary" id="hwgo">Set it up</button></div>
-      <details class="lpwalter"><summary class="btn quiet">Ask Walter</summary>${walterNote('work','Copy the expression from your page, including decimal points and operation signs. If your teacher asks for an area model, add “area model” after it. For a supported age story, copy the full question. For another story shape, type the expression you wrote. After setting it up, I can help with the method while you do the arithmetic.',true)}</details>
-      <details class="home-more"><summary>Examples and supported problems</summary><p class="muted" style="font-size:14px;margin:14px 0 0">Fractions: <b>3/4 + 5/6</b>, <b>2 1/3 − 3/4</b>, <b>2/3 × 3/5</b>, <b>3 ÷ 1/4</b>, and <b>1/4 ÷ 3</b>. Other shapes the app knows: <b>148 × 19</b> (standard algorithm), <b>3,660 ÷ 30</b> (place value strategy), <b>8 × 10^5 × 6</b> or <b>47 × 10^6</b> (powers of ten), <b>4.5 × 1,000</b> or <b>36.5 ÷ 10^2</b> (moving the decimal point), <b>round 2.98 to the nearest tenth</b>, <b>3.45 + 2.7</b> or <b>12.5 − 3.75</b> (adding and subtracting decimals), <b>3.4 × 6</b>, <b>2.5 × 1.2</b> or <b>4.8 ÷ 0.6</b> (multiplying and dividing decimals), <b>2 + 3 × 4</b> or <b>49 ÷ (34 − 27) × 9</b> (order of operations), <b>1,144 ÷ 11</b> or <b>40)8,760</b> (dividing; add <b>area model</b> for the area model), <b>(24 ÷ 4) × 2 vs 12</b> (less than, equal to, or greater than), <b>A: 8 + 4 B: (8 + 4) ÷ 2</b> (the relationship), <b>half of the sum of 17 and 9</b> (write the expression), <b>six hundred forty-seven and eight hundred ninety-two thousandths</b> (standard form). Use x or × for times, ÷ or / for divide, ^ for the exponent. Add <b>area model</b> after a multiplication or division to walk through it as an area model. Age stories with a known age, half that age, and years added or taken away, and the paper-company story about sheets, packages, and boxes, can be typed in full. Other story shapes: type the expression you wrote, like <b>3 × 12 − 2</b>.</p></details>
+      <details class="lpwalter"><summary class="btn quiet">Ask Walter</summary>${walterNote('work','Copy the expression from your page, including decimal points and operation signs. If your teacher asks for an area model, add “area model” after it. For a supported story, copy the full question, including the sentence that asks what to find. For another story shape, type the expression you wrote. After setting it up, I can help with the method while you do the arithmetic.',true)}</details>
+      <details class="home-more"><summary>Examples and supported problems</summary><p class="muted" style="font-size:14px;margin:14px 0 0">Fractions: <b>3/4 + 5/6</b>, <b>2 1/3 − 3/4</b>, <b>2/3 × 3/5</b>, <b>3 ÷ 1/4</b>, and <b>1/4 ÷ 3</b>. Other shapes the app knows: <b>148 × 19</b> (standard algorithm), <b>3,660 ÷ 30</b> (place value strategy), <b>8 × 10^5 × 6</b> or <b>47 × 10^6</b> (powers of ten), <b>4.5 × 1,000</b> or <b>36.5 ÷ 10^2</b> (moving the decimal point), <b>round 2.98 to the nearest tenth</b>, <b>3.45 + 2.7</b> or <b>12.5 − 3.75</b> (adding and subtracting decimals), <b>3.4 × 6</b>, <b>2.5 × 1.2</b> or <b>4.8 ÷ 0.6</b> (multiplying and dividing decimals), <b>2 + 3 × 4</b> or <b>49 ÷ (34 − 27) × 9</b> (order of operations), <b>1,144 ÷ 11</b> or <b>40)8,760</b> (dividing; add <b>area model</b> for the area model), <b>(24 ÷ 4) × 2 vs 12</b> (less than, equal to, or greater than), <b>A: 8 + 4 B: (8 + 4) ÷ 2</b> (the relationship), <b>half of the sum of 17 and 9</b> (write the expression), <b>six hundred forty-seven and eight hundred ninety-two thousandths</b> (standard form). Use x or × for times, ÷ or / for divide, ^ for the exponent. Add <b>area model</b> after a multiplication or division to walk through it as an area model. Age stories with a known age, half that age, and years added or taken away, and the paper-company story about sheets, packages, and boxes, can be typed in full. For equal-group stories, include the total, how many fit in each group, and the question about how many groups can be filled. Other story shapes: type the expression you wrote, like <b>3 × 12 − 2</b>.</p></details>
     </div>`;
   const q=id=>app.querySelector("#"+id); const inp=q("hwq");
   q("back").onclick=home;
@@ -10271,7 +10273,7 @@ function fractionHomeworkResume(){const r=fractionHomeworkResumeNorm(S?.homework
 function fractionHomeworkStart(request,resume){
   const task=fractionHomeworkTask(request);if(!task||!S)return;
   if(cur&&phase==='q')leaveProblem();cur=null;mode=task.wordStory?'hw:word':'hw:fraction';
-  const sp=fractionHomeworkSpec(task),bp={name:task.weekly?'Unit 4 homework':task.wordStory?'Word problem homework':'Fraction homework',lesson:0,skill:task.weekly?weeklyHomeworkItem(task.itemId).skill:task.storyType==='decimal'?'decaddsub':task.wordStory?'expressions':'fracaddsub',make:(load,phase,i=0)=>task.weekly?weeklyHomeworkExample(task,i):fractionHomeworkSpec(task.wordStory?wordHomeworkExample(task,i):task.op==='×'?{...task,a:{n:i+2,d:5},b:{n:1,d:3}}:task.op==='÷'?{...task,a:{n:i+2,d:1},b:{n:1,d:5}}:{...task,a:{n:i+3,d:4},b:{n:1,d:6}})};bp.model=()=>bp.make(1,'model',0);
+  const sp=fractionHomeworkSpec(task),bp={name:task.weekly?'Unit 4 homework':task.wordStory?'Word problem homework':'Fraction homework',lesson:0,skill:task.weekly?weeklyHomeworkItem(task.itemId).skill:task.storyType==='decimal'?'decaddsub':task.storyType==='group-count'?'divide':task.wordStory?'expressions':'fracaddsub',make:(load,phase,i=0)=>task.weekly?weeklyHomeworkExample(task,i):fractionHomeworkSpec(task.wordStory?wordHomeworkExample(task,i):task.op==='×'?{...task,a:{n:i+2,d:5},b:{n:1,d:3}}:task.op==='÷'?{...task,a:{n:i+2,d:1},b:{n:1,d:5}}:{...task,a:{n:i+3,d:4},b:{n:1,d:6}})};bp.model=()=>bp.make(1,'model',0);
   const it={phase:'guided',spec:sp,load:1};lp={id:task.wordStory?'homework-word':'homework-fraction',homework:task,bp,items:[it,{phase:'summary'}],i:0,load:1,results:[],t0:Date.now()};
   lpItemStart(it);
   if(resume){it.st={...it.st,...resume.st,msg:'',msgKind:'',stepEvents:lpTrimEvents(resume.st.stepEvents)};it.step=sp.next(it.st);lpPrepareStep(it);it.recorded=!!resume.recorded;lp.results=Array.isArray(resume.results)?resume.results.slice(-2):[];}
@@ -10287,6 +10289,7 @@ function fractionHomeworkSummaryHTML(){return `<div class="card lpcard"><h2 styl
 // Bounded, local story recognition. Match the whole story and its references;
 // never infer an operation just from numbers or unrelated surrounding words.
 function parseWordHomework(text){
+ const groups=parseGroupCountHomework(text);if(groups)return groups;
  const decimal=decimalStoryParse(text);if(decimal)return decimal;
  const production=parsePaperHomework(text);if(production)return production;
  const story=String(text||'').replace(/\s+/g,' ').trim();if(story.length>1400)return null;
@@ -10306,6 +10309,11 @@ function parseWordHomework(text){
 }
 function wordHomeworkTask(task){const r=task?.wordStory&&typeof task.story==='string'?parseWordHomework(task.story):null;return r?.wordStory?r:null;}
 function wordHomeworkExpressionCheck(task,value){
+ if(task.storyType==='group-count'){
+  const entry=String(value||'').trim(),tree=entry.length<=512?lpAst(entry):null;
+  if(!tree||!lpEval(entry).ok)return {ok:false,fmt:true,msg:'Write a complete expression using the two amounts in the story.'};
+  return tree.o==='÷'&&tree.l===task.total&&tree.r===task.perGroup?{ok:true}:{ok:false,code:'story-expression',msg:'Check which amount counts all the items and which amount counts the items in one group.'};
+ }
  if(task.storyType==='decimal')return decimalStoryExpressionCheck(task,value);
  const s=String(value||'').trim();if(s.length>512)return {ok:false,fmt:true,msg:'Keep the expression to the operations in this story.'};
  const e=lpEval(s),tree=lpAst(s);if(!e.ok||!Number.isFinite(e.val)||!tree)return {ok:false,fmt:true,msg:'Write a complete expression with operation signs and matching parentheses.'};
@@ -10315,6 +10323,7 @@ function wordHomeworkExpressionCheck(task,value){
  return {ok:false,fmt:true,msg:'I cannot verify that expression against the story yet. Show the known age being halved and the year adjustment in your expression. Your work is still here to edit.'};
 }
 function wordHomeworkSpec(task){
+ if(task.storyType==='group-count')return groupCountHomeworkSpec(task);
  if(task.storyType==='decimal')return decimalStorySpec(task);
  if(task.storyType==='production')return paperHomeworkSpec(task);
  const value=task.age/2+(task.op==='+'?task.change:-task.change),expr=`${task.age} ÷ 2 ${task.op} ${task.change}`;
@@ -10327,6 +10336,11 @@ function wordHomeworkSpec(task){
 }
 function wordHomeworkStateValid(task,st){if(task.storyType==='decimal')return decimalStoryStateValid(task,st);if(task.storyType==='production')return paperHomeworkStateValid(task,st);return Number.isInteger(st.k)&&st.k>=0&&st.k<=2&&(st.k===0?st.expression===null:wordHomeworkExpressionCheck(task,st.expression).ok)&&(st.k===2?st.done===true:!st.done);}
 function wordHomeworkExample(task,i=0){
+ if(task.storyType==='group-count'){
+  const size=task.perGroup===6?7:6;
+  const count=5+i===Math.floor(task.total/task.perGroup)?6+i:5+i;
+  return parseGroupCountHomework(`A baker packs ${size*count} muffins into boxes of ${size}. How many boxes can be filled?`);
+ }
  if(task.storyType==='decimal')return decimalStoryExample(task,i);
  if(task.storyType==='production')return parsePaperHomework(`A paper company produces ${40+i*20} sheets of specialty paper each day. How many sheets are produced in 12 days? Twenty sheets placed in each package. How many packages of specialty paper are produced in 12 days? Four packages are bundled in a box for shipping. Would 100 boxes be enough to ship all the packages? Explain.`);
  const answer=task.age/2+(task.op==='+'?task.change:-task.change);let age=16+i*2;if(age/2-2===answer)age+=4;
@@ -10400,6 +10414,39 @@ function paperHomeworkStateValid(task,st){
   if(st.k>i*2+1){if(st.values[i]!==expected[i])return false;}else if(st.values[i]!==undefined)return false;
  }
  return st.expressions.length<=Math.ceil(Math.min(st.k,count*2)/2)&&st.values.length<=Math.floor(Math.min(st.k,count*2)/2);
+}
+
+
+// Match the whole group-count relationship, including the requested unit.
+function parseGroupCountHomework(text){
+ const story=String(text||'').replace(/\s+/g,' ').trim();
+ if(story.length>500)return null;
+ const s=story.replace(/^(?:(?:#|question|problem)\s*\d{1,2}\s*[.):]?|\d{1,2}[.)])\s+/i,'');
+ const total='(?<total>\\d{1,6}|\\d{1,3},\\d{3})',size='(?<size>\\d{1,3})';
+ const items='(?<items>[a-z]+(?: [a-z]+)?)',group='(?<group>rows|boxes|bags|baskets|trays|shelves|groups|teams|packs|packages)';
+ const question='How many (?:full |complete )?\\k<group> (?:can be (?:filled|made|formed)|can (?:you|they) (?:fill|make|form))[?.!]?$';
+ const patterns=[
+  '^(?:(?:A|An|The) [a-z]+|[a-z]+) (?:puts|places|packs|arranges|sorts|plants) '+total+' '+items+' (?:in|into|on) '+group+' of '+size+'(?: \\k<items>)?[.!] '+question,
+  '^There are '+total+' '+items+'[.!] Each (?<singular>row|box|bag|basket|tray|shelf|group|team|pack|package) holds '+size+' \\k<items>[.!] '+question.replace('\\k<group>',group)
+ ];
+ const match=patterns.map(pattern=>s.match(new RegExp(pattern,'i'))).find(Boolean);
+ if(!match)return null;
+ const {total:whole,size:per,group:groupName,singular}=match.groups;
+ const name=groupName.toLowerCase();
+ if(singular){
+  const one=singular.toLowerCase(),plural={box:'boxes',shelf:'shelves'}[one]||one+'s';
+  if(name!==plural)return null;
+ }
+ const count=Number(whole.replace(',','')),perGroup=Number(per);
+ if(count<1||perGroup<1)return {err:'Use a positive total and a positive number of items per group.'};
+ return {wordStory:true,storyType:'group-count',story,total:count,perGroup,group:name,label:'Equal groups: full '+name};
+}
+function groupCountHomeworkSpec(task){
+ const answer=Math.floor(task.total/task.perGroup);
+ return {kind:'build',methodName:'equal groups and whole-number division',methodEvidence:'homework-group-count',title:task.label,problemKey:task.story,answer,script:[],init:()=>({expression:null}),
+  next:st=>st.k===0?{prompt:'Write an expression for the number of '+task.group+'. Use the total and the number of items in one group.',short:'Your expression',input:{type:'text',ph:'Type your expression'},auto:`${task.total} ÷ ${task.perGroup}`,evidence:{component:'group-count-setup'},check:v=>{const r=wordHomeworkExpressionCheck(task,v);return r.ok?{ok:true,apply:()=>{st.expression=String(v).trim();}}:r;}}:st.k===1?{...lpNumStep({prompt:'Use your checked expression. How many full '+task.group+' can be filled?',short:'Full '+task.group,ans:answer,no:'Check your group count by multiplying it by the number of items in one group.'}),evidence:{component:'group-count-calculation'}}:null,
+  visual:st=>`<p class="lpstory">${esc(task.story)}</p>${st.expression?`<p class="lpeq">Your checked expression: ${esc(st.expression)}</p>`:''}`,
+  done:()=>`You checked the expression and found <b>${answer}</b> full ${task.group}.`};
 }
 // Reviewed printed tasks from the November 2 homework photos. Student writing,
 // grades and photos are never embedded. Exact-page practice owns no mastery state.
