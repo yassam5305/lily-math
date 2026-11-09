@@ -415,7 +415,7 @@ details.more>div{padding:4px 0 2px;color:var(--graphite)}
 .ddgrids svg { display:block; width:100%; max-width:250px; height:auto; }
 .ddgrid-places { width:100%; max-width:420px; font-size:.9rem; }
 .ddgrid-places th, .ddgrid-places td { padding:.35rem; }
-.ddgrid-spot { outline:2px solid #845005; outline-offset:-2px; background:#fff2bd; }
+.walter-target,.ddgrid-spot { outline:2px solid #845005; outline-offset:-2px; background:#fff2bd; }
 .ddgrid-equation { display:flex; flex-wrap:wrap; align-items:center; gap:.6rem; padding:.3rem; border-radius:8px; }
 .ddgrid-equation > span:first-child { font-size:1.25rem; font-weight:700; overflow-wrap:anywhere; }
 .ddgrid-equation input { flex:1 1 8rem; width:auto; min-width:0; }
@@ -1702,7 +1702,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.6 · November 8, 2026";
+const BUILD="v10.7 · November 8, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -6118,6 +6118,8 @@ function walterLinkNextCheck(events,context,outcome){
   if(!nextOutcome)return 0;
   const same=events.filter(e=>e&&e.context===context&&e.signature&&e.type!=='modeled');let linked=0;
   same.forEach((event,i)=>{if(event.nextOutcome)return;event.nextOutcome=nextOutcome;event.nextHelpBetween=same.length-i-1;event.nextCheckAt=Date.now();if(outcome?.code)event.nextCode=String(outcome.code).slice(0,64);if(outcome?.tag)event.nextTag=String(outcome.tag).slice(0,64);
+    const nextDraft=event.work?.field>=0?outcome?.fields?.[event.work.field]:outcome?.draft;
+    if(event.work?.draft&&nextDraft)event.nextDraftChanged=event.work.draft!==nextDraft;
     if(outcome?.gridDigits&&event.gridPlace){
       const digit=outcome.gridDigits[event.gridPlace];
       if(Number.isInteger(event.gridDigit)&&Number.isInteger(digit))event.nextPlaceChanged=digit!==event.gridDigit;
@@ -6148,33 +6150,69 @@ function walterClearText(value){let t=walterPlainHelp(value).replace(/\bproposed
   t=t.replace(/The last check flagged [^.]+\.\s*/g,'').replace(/The last check did not accept this step\.\s*/g,'').replace(/Your revised entry has not been checked yet\.\s*/g,'').replace(/First check the entry format; this check did not test the mathematics\.\s*/g,'');
   return t? t.charAt(0).toUpperCase()+t.slice(1):'';
 }
+function walterDraftFingerprint(draft){
+  const values=(Array.isArray(draft)?draft:[draft]).map(value=>String(value??'').trim().slice(0,64));
+  return values.some(Boolean)?walterHelpSignature(JSON.stringify(values)):'';
+}
+function walterWorkEvidence(ctx,move){
+  const code=ctx.tag||ctx.code;
+  if(!ctx.work||!['miss','checked-mismatch'].includes(ctx.status)||!code||!ctx.component||!ctx.family)return null;
+  return {family:ctx.family,component:ctx.component,code,move,draft:ctx.work.draft||'',field:Number.isInteger(ctx.work.field)?ctx.work.field:-1};
+}
+function walterPreferredMove(work){
+  if(!work?.draft||typeof S==='undefined'||!S)return '';
+  let preferred='';
+  const seen=new Set();
+  // Each row needs its own problem wording or stable arithmetic fingerprint.
+  // A successful later check is an observation about the reply, not a diagnosis.
+  const rows=[...(S.lessonLog||[]).slice(-40),...(S.homeworkLog||[]).slice(-40),...(S.log||[]).slice(-40)]
+    .sort((a,b)=>(b?.t||0)-(a?.t||0));
+  for(const row of rows){
+    const key=row?.fingerprint||row?.itemId||row?.q;if(!key||key===work.problem||seen.has(key)||!Array.isArray(row.walterHelp))continue;
+    const match=row.walterHelp.filter(e=>e?.work?.family===work.family&&e.work.component===work.component&&e.work.code===work.code);
+    if(!match.length)continue;
+    seen.add(key);
+    const useful=match.slice().reverse().find(e=>e.nextOutcome==='ok'&&e.nextDraftChanged===true&&e.nextHelpBetween===0&&e.rating!=='stuck'&&['smaller','plan','units'].includes(e.work.move));
+    if(useful&&!preferred)preferred=useful.work.move;
+    if(seen.size>=2&&preferred)return preferred;
+  }
+  return '';
+}
 function walterNextReply({guide,intent='start',move,lastMove,repeats=0,observation={},profile,context={}}={}){
   const get=(name,index,fallback)=>walterPlainHelp(Array.isArray(guide)?guide[index]:guide?.[name])||fallback;
   const content={orient:get('orient',0,'Name what you need to find.'),meaning:get('meaning',1,'Label what each amount means.'),plan:get('plan',2,'Draw your next step before calculating.'),test:get('test',3,'Use a different method to check your step.'),smaller:walterPlainHelp(Array.isArray(profile)?profile[0]:guide?.smaller),compare:walterPlainHelp(Array.isArray(profile)?profile[1]:guide?.compare)};
   let chosen=WALTER_MOVES.includes(move)?move:move==='continue'?'stuck':intent==='meaning'?'meaning':intent==='check'?'test':'orient';
   const status=typeof observation.status==='string'?observation.status:typeof observation.observation==='string'?observation.observation:typeof context.status==='string'?context.status:'';
-  const safe={family:context.family||observation.kind||'',kind:context.kind||observation.kind||'',component:context.component||observation.component||'',stage:context.stage||observation.stage||'',role:context.role||observation.role||'',last:context.last===true||observation.last===true,relationship:context.relationship||'',unknown:context.unknown||'',storyStage:context.storyStage||'',storyPlanChecked:context.storyPlanChecked===true,question:walterRenderedText(context.question||''),visibleText:walterRenderedText(context.visibleText||''),acceptedText:walterRenderedText(context.acceptedText||''),label:walterPlainHelp(context.label||observation.label||''),code:context.code||observation.code||'',tag:context.tag||'',status};
+  const safe={family:context.family||observation.kind||'',kind:context.kind||observation.kind||'',component:context.component||observation.component||'',stage:context.stage||observation.stage||'',role:context.role||observation.role||'',last:context.last===true||observation.last===true,relationship:context.relationship||'',unknown:context.unknown||'',storyStage:context.storyStage||'',storyPlanChecked:context.storyPlanChecked===true,question:walterRenderedText(context.question||''),visibleText:walterRenderedText(context.visibleText||''),acceptedText:walterRenderedText(context.acceptedText||''),label:walterPlainHelp(context.label||observation.label||''),code:context.code||observation.code||'',tag:context.tag||'',status,work:context.work||null};
   safe.visibleNumbers=typeof walterVisibleNumbers==='function'?walterVisibleNumbers({text:safe.visibleText,acceptedText:safe.acceptedText}):[];
   if(repeats>0&&lastMove===chosen&&['orient','meaning','plan','test','smaller','rephrase'].includes(chosen))chosen='stuck';
+  const previous=chosen==='orient'&&safe.work?walterPreferredMove({...walterWorkEvidence(safe,chosen),problem:safe.work.problem}):'';
+  if(previous)chosen=previous;
   let choices=[],resource='',concept='',text='';
-  if(chosen==='stuck'){text='Which part is getting in your way? Choose the words, the amounts, a plan, the calculation, or checking.';choices=['words','units','plan','calculation','test'];}
+  if(chosen==='stuck'){
+    const smaller=safe.work&&lastMove!=='smaller'&&typeof walterTeachingReply==='function'?walterTeachingReply(safe,'smaller')?.text:'';
+    text=smaller?walterClearText(smaller)+' Which part is getting in your way?':'Which part is getting in your way? Choose the words, the amounts, a plan, the calculation, or checking.';
+    choices=['words','units','plan','calculation','test'];}
   else{
     const authored=(typeof lessonStoryTeaching==='function'?lessonStoryTeaching(safe,chosen):null)||(typeof decimalStoryTeaching==='function'?decimalStoryTeaching(safe,chosen):null)||(typeof walterTeachingReply==='function'?walterTeachingReply(safe,chosen):null);
     if(authored){text=authored.text;resource=authored.resource;concept=authored.concept;}
 
     else text=({meaning:content.meaning,units:content.meaning,plan:content.plan,test:content.compare||content.test,connection:content.compare||content.test,smaller:content.smaller||content.plan,rephrase:content.smaller||content.plan,calculation:content.smaller||content.plan,words:content.orient})[chosen]||content.orient;
     if(safe.kind==='algorithm'&&['column','sum'].includes(safe.role)&&safe.last){text=({test:'Check the full column amount, including any incoming carry. Keep its remaining digits together.',smaller:'Work only on this final column before writing its remaining digits together.',meaning:'A final column can fill more than one place; its remaining digits stay together.',units:'A final column can fill more than one place; its remaining digits stay together.'})[chosen]||'This is the last column. Keep all remaining digits together in its box.';resource='component:final-column';}
-    const note=['miss','checked-mismatch'].includes(status)&&chosen==='test'&&typeof walterMisconceptionNote==='function'&&context.mistakeNotes!==false?walterMisconceptionNote(safe.tag||safe.code):'';
+    const note=['miss','checked-mismatch'].includes(status)&&(chosen==='test'||chosen==='orient'&&safe.work)&&typeof walterMisconceptionNote==='function'&&context.mistakeNotes!==false?walterMisconceptionNote(safe.tag||safe.code):'';
     if(note){text=note;resource='mistake:'+String(safe.tag||safe.code);}
     text=walterClearText(text);
     if(['miss','checked-mismatch'].includes(status)&&safe.label&&safe.label.length<=65&&!/^(this|selected)\b/i.test(safe.label)&&!/[0-9]/.test(safe.label))text='Check the '+safe.label.replace(/^write(?: remaining digits)? in /i,'').replace(/[.!?]+$/,'').toLowerCase()+' box. '+text;
+    if(safe.work?.earlier>0&&['orient','test'].includes(chosen)&&['miss','checked-mismatch'].includes(status)&&!safe.storyPlanChecked){
+      text='Keep the earlier work you checked. '+text;
+    }
     if(status==='revised')text='Your change has not been checked yet. '+text;
     else if(status==='draft'&&!/not been checked/i.test(text))text='Your draft has not been checked yet. '+text;
     else if(status==='format')text='Check the entry format first. '+text;
     else if(status==='trial'&&!/trial|choose|jump/i.test(text))text='This is a trial, not a wrong calculation. '+text;
   }
   text=walterClearText(text);
-  return {text,move:chosen,signature:walterHelpSignature([context.contextKey||'',intent,chosen,status,safe.label,text].join('|')),choices,resource,concept};
+  return {text,move:chosen,signature:walterHelpSignature([context.contextKey||'',intent,chosen,status,safe.label,text].join('|')),choices,resource,concept,work:walterWorkEvidence(safe,chosen)};
 }
 function hwEntry(prefill, err){
   mode="hw:check"; cur=null; pendingHW=null;
@@ -6883,7 +6921,7 @@ function hwMainHint(){
   if(!cur.hintLog.length||cur.hintLog.at(-1).signature!==reply.signature)cur.hintLog.push({t:`<b>Help for this part.</b> ${esc(reply.text)}`,signature:reply.signature,key:ctx.key});
   cur.hintLog=cur.hintLog.slice(-20);hintIdx=Math.max(1,hintIdx);
   if(reply.move==='stuck'||state.repeats>0)cur.hwWalter={context:ctx.key,open:true,choice:{id:'stuck',depth:0,text:reply.text,move:reply.move,signature:reply.signature},lastReply:state.lastReply};
-  cur.studied=true;hwRecordHelp(ctx,'hint','clue',0,reply.signature,reply.text);save();
+  cur.studied=true;hwRecordHelp(ctx,'hint','clue',0,reply.signature,reply.text,reply.work);save();
 }
 function hwStepHelp(){
   const inp=app.querySelector('#cans');if(inp)sc.val=inp.value;
@@ -6891,7 +6929,7 @@ function hwStepHelp(){
   const reply=hwOrganicReply(ctx,sc.organicHelp.lastReply?'stuck':'start',sc.organicHelp);
   cur.helpTaps=(cur.helpTaps||0)+1;cur.studied=true;sc.helped=true;
   if(missEntry){missEntry.helpTaps=cur.helpTaps;missEntry.studied=true;}
-  hwRecordHelp(ctx,'walkthrough','procedure',0,reply.signature,reply.text);sc.msg=esc(reply.text);
+  hwRecordHelp(ctx,'walkthrough','procedure',0,reply.signature,reply.text,reply.work);sc.msg=esc(reply.text);
   if(reply.move==='stuck'||sc.organicHelp.repeats>0)cur.hwWalter={context:ctx.key,open:true,choice:{id:'stuck',depth:0,text:reply.text,move:reply.move,signature:reply.signature},lastReply:sc.organicHelp.lastReply};
   sc.helpDepth=(sc.helpDepth||0)+1;save();render();
 }
@@ -6906,8 +6944,9 @@ function hwWalterContext(){
   const target=phase==='wt'?'This walkthrough step':box?`Selected ${row}: ${WHOLE_PLACES[+box[1]]||'place value'} place`:cur.pre?'The first-step card':'This problem';
   const draft=phase==='wt'?c?.type==='mc'?String(sc?.sel??-1):String(sc?.val||''):box?String(ws.vals?.[ws.sel]||''):cur.pre?c?.type==='mc'?String(preSel):String(preVal||''):cur.type==='mc'?String(selected):String(lastAnswer||'');
   const entered=c?.type==='mc'||(!c&&cur.type==='mc'&&!box)?Number(draft)>=0:!!draft.trim();
-  const checked=phase==='wt'?sc?.lastCheck:null;
-  return {key,target,c,comp:typeof c?.comp==='string'?c.comp:phase==='q'&&cur.pre?cur.pre.comp:'',q:plain(c?.q||''),draft,observation:phase==='wt'&&sc?.lastFormat?.draft===draft?'format':checked&&checked.draft===draft&&!checked.ok?'checked-mismatch':checked&&checked.draft!==draft&&entered?'revised':entered?'draft':'empty'};
+  const checked=phase==='wt'?sc?.lastCheck:cur.walterCheck?.key===key?cur.walterCheck:null;
+  return {key,target,c,checked,comp:typeof c?.comp==='string'?c.comp:phase==='q'&&cur.pre?cur.pre.comp:'',q:plain(c?.q||''),draft,observation:phase==='wt'&&sc?.lastFormat?.draft===draft||checked?.status==='format'&&checked.draft===draft?'format':
+   checked&&checked.draft===draft&&!checked.ok?'checked-mismatch':checked&&checked.draft!==draft&&entered?'revised':entered?'draft':'empty'};
 }
 function hwWalterSemanticContext(ctx){
   const question=phase==='wt'?walterRenderedText(ctx.c?.q||''):cur.pre?walterRenderedText(cur.pre.check.q||''):walterRenderedText(cur.prompt||'');
@@ -6915,16 +6954,24 @@ function hwWalterSemanticContext(ctx){
   // The selected box names the operation, independently of any expected digit.
   const box=phase==='q'&&cur.ws&&ws?String(ws.sel||'').split('-'):null;
   const component=box?box[0].startsWith('c')?'column-carry':box[0]==='t'&&cur.meta.b>=10?'column-sum':box[0]==='r1'&&box[1]==='0'?'tens-place':'column-product':ctx.comp;
-  return {contextKey:ctx.key,mistakeNotes:S?.walterMistakeNotes!==false,family:cur.skill,kind:box?'algorithm':cur.skill,component,stage:phase==='wt'?String(cur.steps[stepIdx]?.hwStage||''):'',question,visibleText:[walterRenderedText(cur.prompt||''),question].join(' '),acceptedText,status:ctx.observation,label:ctx.target,code:phase==='wt'?sc?.lastCheck?.code||'':'',tag:ctx.observation==='checked-mismatch'&&phase==='wt'?sc?.lastCheck?.tag||'':''};
+  return {contextKey:ctx.key,mistakeNotes:S?.walterMistakeNotes!==false,family:cur.skill,kind:box?'algorithm':cur.skill,component,stage:phase==='wt'?String(cur.steps[stepIdx]?.hwStage||''):'',question,visibleText:[walterRenderedText(cur.prompt||''),question].join(' '),acceptedText,work:{
+    earlier:phase==='wt'&&Array.isArray(stepRes)?stepRes.slice(0,stepIdx).filter(result=>result==='ok').length:0,
+    draft:walterDraftFingerprint(ctx.draft),problem:plain(cur.prompt||'')
+  },status:ctx.observation,label:ctx.target,
+  code:ctx.observation==='checked-mismatch'?ctx.checked?.code||'':'',tag:ctx.observation==='checked-mismatch'?ctx.checked?.tag||'':''};
 }
 function hwWalterSyncEvidence(){const store=cur.hw?'homeworkWalter':'practiceWalter';for(const event of cur.walterHelp||[]){const saved=(S[store]||[]).find(e=>e.delivery===event.delivery);if(saved)Object.assign(saved,event);}if(missEntry){missEntry.walterHelp=(cur.walterHelp||[]).map(e=>({...e}));missEntry.stepMisses=(cur.stepMisses||[]).map(e=>({...e,value:e.value.slice()}));}if(S.pendingQ)S.pendingQ.walterHelp=(cur.walterHelp||[]).map(e=>({...e}));}
-function hwWalterNextCheck(ctx,status,code='',tag=''){if(typeof walterLinkNextCheck==='function')walterLinkNextCheck(cur.walterHelp||[],ctx.key,{status,code,tag});hwWalterSyncEvidence();}
+function hwWalterNextCheck(ctx,status,code='',tag=''){
+  if(phase==='q')cur.walterCheck={key:ctx.key,draft:ctx.draft,status,ok:status==='accepted',code,tag};
+  if(typeof walterLinkNextCheck==='function')walterLinkNextCheck(cur.walterHelp||[],ctx.key,{status,code,tag,draft:walterDraftFingerprint(ctx.draft)});
+  hwWalterSyncEvidence();
+}
 function hwWalterRate(rating,signature){if(typeof walterRecordRating==='function')walterRecordRating(cur.walterHelp||[],signature,rating);hwWalterSyncEvidence();if(rating==='stuck')hwWalterDeliver('stuck');save();}
 function hwRememberStepMiss(c,value,tag=''){cur.stepMisses=Array.isArray(cur.stepMisses)?cur.stepMisses:[];cur.stepMisses.push({step:stepIdx,comp:typeof c.comp==='string'?c.comp:'',value:(Array.isArray(value)?value:[value]).slice(0,6).map(x=>String(x).slice(0,64)),tag:String(tag).slice(0,64),t:Date.now()});cur.stepMisses=cur.stepMisses.slice(-20);hwWalterSyncEvidence();}
 function hwWalterObservation(ctx){
   if(ctx.observation==='format')return 'This entry needs a readable format before the mathematics can be checked. Keep your work while you fix the entry format.';
   if(ctx.observation==='revised')return 'You changed your checked entry. This revision has not been checked yet; test your plan, then check it when you are ready.';
-  if(ctx.observation==='checked-mismatch')return 'Your checked entry did not agree with this card. The entry alone does not tell me why. Keep it visible while we test the plan for this step.';
+  if(ctx.observation==='checked-mismatch')return 'Keep your entry visible while we test the plan for this step.';
   if(ctx.observation==='draft')return 'You have a draft here. These clues do not judge an unchecked draft. Test your plan, then use Check to test the entry.';
   return 'Start with the quantity or structure named here. Choose a plan you can explain; you can ask for help before entering anything.';
 }
@@ -7030,15 +7077,15 @@ function hwWalterHTML(){ if(!hwWalterEligible())return ''; const ctx=hwWalterCon
   const qs=hwWalterQuestions(ctx),picked=st.choice&&qs.find(x=>x.id===st.choice.id);
   const reply=picked?(st.choice.text||picked.texts[Math.min(picked.texts.length-1,st.choice.depth||0)]):'';
   const primary=[['words',"I don't get the words"],['start',"I don't know how to start"],['check',"I think I'm wrong"],['smaller','Show me a smaller piece']];
-  return `<div class="lpwalter" id="hwwalter"><button type="button" class="btn quiet" id="hwask" aria-expanded="${!!st.open}" aria-controls="hwaskpanel">Ask Walter</button>${st.open?`<section id="hwaskpanel" aria-label="Ask Walter step help"><p><b>What would help?</b></p><div class="actions" aria-label="Choose what you need">${primary.map(([id,label])=>`<button type="button" class="btn quiet small" data-hw-walter="${id}" aria-pressed="${picked?.id===id}">${esc(label)}</button>`).join('')}</div>${picked?`<div id="hwaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('work',esc(reply),true)}${typeof readAloudButton==='function'?readAloudButton(reply,'hw-reply'):''}</div><div class="actions" aria-label="Optional reply feedback"><button type="button" class="btn quiet small" data-hw-rating="helped" data-signature="${esc(st.choice.signature||'')}">That helped</button><button type="button" class="btn quiet small" id="hwaskmore" data-hw-rating="stuck" data-signature="${esc(st.choice.signature||'')}">Still stuck</button><button type="button" class="btn quiet small" data-hw-walter="meaning">Why does this work?</button></div>${st.lastReply?.choices?.length?`<details><summary>Choose another part</summary><div class="actions">${st.lastReply.choices.map(id=>qs.find(x=>x.id===id)||({id:id==='test'?'check':id,label:id==='test'?'Checking':id})).map(x=>`<button type="button" class="btn quiet small" data-hw-walter="${x.id}">${esc(x.label)}</button>`).join('')}</div></details>`:''}`:''}${st.choice?.move==='test'&&walterFictionalEligible(hwWalterSemanticContext(ctx))?`<button type="button" class="btn quiet small" id="hwerror">Check a fictional mistake</button>`:''}<button type="button" class="btn quiet small" id="hwaskexample">See a different worked example</button><button type="button" class="btn quiet small" id="hwaskreturn">Back to my work</button>${walterFictionalHTML(cur.fictional,cur.fictionalNote,'hw')}</section>`:''}</div>`;
+  return `<div class="lpwalter" id="hwwalter"><button type="button" class="btn quiet" id="hwdirecthelp">Ask Walter</button> <button type="button" class="btn quiet" id="hwask" aria-expanded="${!!st.open}" aria-controls="hwaskpanel">Choose help</button>${st.open?`<section id="hwaskpanel" aria-label="Ask Walter step help"><p><b>What would help?</b></p><div class="actions" aria-label="Choose what you need">${primary.map(([id,label])=>`<button type="button" class="btn quiet small" data-hw-walter="${id}" aria-pressed="${picked?.id===id}">${esc(label)}</button>`).join('')}</div>${picked?`<div id="hwaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('work',esc(reply),true)}${typeof readAloudButton==='function'?readAloudButton(reply,'hw-reply'):''}</div><div class="actions" aria-label="Optional reply feedback"><button type="button" class="btn quiet small" data-hw-rating="helped" data-signature="${esc(st.choice.signature||'')}">That helped</button><button type="button" class="btn quiet small" id="hwaskmore" data-hw-rating="stuck" data-signature="${esc(st.choice.signature||'')}">Still stuck</button><button type="button" class="btn quiet small" data-hw-walter="meaning">Why does this work?</button></div>${st.lastReply?.choices?.length?`<details open><summary>Choose another part</summary><div class="actions">${st.lastReply.choices.map(id=>qs.find(x=>x.id===id)||({id:id==='test'?'check':id,label:id==='test'?'Checking':id})).map(x=>`<button type="button" class="btn quiet small" data-hw-walter="${x.id}">${esc(x.label)}</button>`).join('')}</div></details>`:''}`:''}${st.choice?.move==='test'&&walterFictionalEligible(hwWalterSemanticContext(ctx))?`<button type="button" class="btn quiet small" id="hwerror">Check a fictional mistake</button>`:''}<button type="button" class="btn quiet small" id="hwaskexample">See a different worked example</button><button type="button" class="btn quiet small" id="hwaskreturn">Back to my work</button>${walterFictionalHTML(cur.fictional,cur.fictionalNote,'hw')}</section>`:''}</div>`;
 }
 
-function hwRecordHelp(ctx,id,type,depth,signature,text=''){
+function hwRecordHelp(ctx,id,type,depth,signature,text='',work=null){
   cur.walterHelp=cur.walterHelp||[];
   if(!cur.walterHelp.some(e=>e.context===ctx.key&&e.id===id&&(signature?e.signature===signature:e.depth===depth))){
     cur.walterSession=cur.walterSession||`${TAB_ID}:${Date.now()}:${Math.random()}`;
     cur.walterDeliveryN=Math.max(cur.walterDeliveryN||0,cur.walterHelp.length)+1;
-    const event={delivery:`${cur.walterSession}:${cur.walterDeliveryN}:${Date.now()}`, context:ctx.key,id,type:type,depth,...(signature?{signature}:{}),phase,tries:phase==='wt'?sc.tries:0,t:Date.now(),sk:cur.skill,text:String(text).slice(0,500),contextLabel:ctx.q||ctx.target};cur.walterHelp.push(event);cur.walterHelp=cur.walterHelp.slice(-200);
+    const event={delivery:`${cur.walterSession}:${cur.walterDeliveryN}:${Date.now()}`, context:ctx.key,id,type:type,depth,...(signature?{signature}:{}),phase,tries:phase==='wt'?sc.tries:0,t:Date.now(),sk:cur.skill,text:String(text).slice(0,500),contextLabel:ctx.q||ctx.target,...(work?{work}:{})};cur.walterHelp.push(event);cur.walterHelp=cur.walterHelp.slice(-200);
     const store=cur.hw?'homeworkWalter':'practiceWalter';S[store]=Array.isArray(S[store])?S[store]:[];S[store].push({...event});S[store]=S[store].slice(-200);
   }
   if(missEntry)missEntry.walterHelp=cur.walterHelp.map(e=>({...e}));
@@ -7047,7 +7094,7 @@ function hwRecordHelp(ctx,id,type,depth,signature,text=''){
 function hwWalterDeliver(id){ if(!hwWalterEligible())return;const ctx=hwWalterContext(),q=hwWalterQuestions(ctx).find(x=>x.id===id);if(!q)return;
   if(!cur.hwWalter||cur.hwWalter.context!==ctx.key)cur.hwWalter={context:ctx.key,open:true,choice:null};
   const st=cur.hwWalter,reply=hwOrganicReply(ctx,id,st);
-  hwRecordHelp(ctx,id,q.type,0,reply.signature,reply.text);
+  hwRecordHelp(ctx,id,q.type,0,reply.signature,reply.text,reply.work);
   st.open=true;st.choice={id,depth:0,text:reply.text,move:reply.move,signature:reply.signature};cur.studied=true;if(phase==='wt')sc.helped=true;
   if(missEntry)missEntry.walterHelp=cur.walterHelp.map(e=>({...e}));
   if(S.pendingQ){S.pendingQ.studied=true;S.pendingQ.engaged=true;S.pendingQ.walterHelp=cur.walterHelp.map(e=>({...e}));}
@@ -7057,6 +7104,13 @@ function hwWalterDeliver(id){ if(!hwWalterEligible())return;const ctx=hwWalterCo
 function hwWalterBind(){ const q=id=>app.querySelector('#'+id),keep=()=>{const a=q('ans'),p=q('preans'),c=q('cans');if(a)lastAnswer=a.value;if(p)preVal=p.value;if(c&&sc)sc.val=c.value;};
   const redraw=()=>{keep();render();const r=q('hwaskreply');if(r){r.focus({preventScroll:true});r.scrollIntoView({block:'nearest'});}};
   if(q('hwask'))q('hwask').onclick=()=>{keep();cur.hwWalter.open=!cur.hwWalter.open;render();const f=q(cur.hwWalter.open?'hwaskreturn':'hwask');if(f)f.focus({preventScroll:true});};
+  if(q('hwdirecthelp'))q('hwdirecthelp').onclick=()=>{keep();hwWalterDeliver('start');redraw();};
+  const ctx=hwWalterEligible()?hwWalterContext():null;
+  if(ctx&&cur.hwWalter?.open&&cur.hwWalter.choice){
+    const target=ctx.key.startsWith('box:')?[...app.querySelectorAll('.ws .cell[data-k]')].find(cell=>cell.dataset.k===ws.sel):
+      ['format','checked-mismatch'].includes(ctx.observation)?q(phase==='wt'?'cans':cur.pre?'preans':'ans'):null;
+    if(target){target.classList.add('walter-target');target.addEventListener('input',()=>target.classList.remove('walter-target'),{once:true});}
+  }
   app.querySelectorAll('[data-hw-walter]').forEach(b=>b.onclick=()=>{keep();hwWalterDeliver(b.dataset.hwWalter);redraw();});
   app.querySelectorAll('[data-hw-rating]').forEach(b=>b.onclick=()=>{keep();hwWalterRate(b.dataset.hwRating,b.dataset.signature);redraw();});
   if(typeof bindReadAloud==='function')bindReadAloud(app);
@@ -7259,7 +7313,9 @@ function submit(){
     { const rn=twoPoints ? "" : estReasonNote(parseAnswer(v)); if(rn){ inlineErr=rn; render(); return; } } // v9.19: far from her estimate: one gentle note, no attempt counted; a second Check grades it
     ok=twoPoints ? false : !!checkInput(cur,v); yours=v.trim(); raw=v; }
   else { if(selected<0){ inlineErr=""; const f=app.querySelector("#opts .opt"); if(f) f.focus(); return; } ok=(selected===cur.answer); yours=cur.options[selected]; raw=selected; }
-  hwWalterNextCheck(walterContext,walterContext.key.startsWith('pre:')?(preRes?.ok?'accepted':'miss'):ok?'accepted':'miss');
+  const checkedPre=walterContext.key.startsWith('pre:'),tag=wsGrade?.main||(!checkedPre&&cur.type==='mc'?cur.optionTags?.[selected]:'')||'';
+  hwWalterNextCheck(walterContext,checkedPre?(preRes?.ok?'accepted':'miss'):ok?'accepted':'miss',
+    checkedPre?String(cur.pre?.comp||''):tag,tag);
   inlineErr=""; if(S) S.pendingQ=null; // answered: nothing pending
   const sk=cur.skill; S=normalize(S); if(!((cur.placement||cur.onramp) && !ok)){ S.attempted++; S.today.a++; } /* a missed quick check is not scored: it is not in the accuracy counts */
   if(stage==="fresh"){ sessionN++; if(!cur.placement && !(cur.onramp && !ok)) sessionMissRun = ok ? 0 : sessionMissRun+1; } // v9.12: a missed quick check on a brand-new skill is not a "tough one in a row"
@@ -7504,8 +7560,9 @@ function checkStep(){
     else { sc.msg = c.type==="mc" ? "Not that one. Pick the answer to continue." : "Not quite. Type the answer to continue."; sc.val=""; sc.sel=-1; }
     save(); render(); return; // saved now, not on the next action: a reload here must not lose the record
   }
-  sc.lastCheck={draft:c.type==='mc'?String(sc.sel):String(sc.val),ok:!!ok};
-  hwWalterNextCheck(walterContext,ok?(cur.steps[stepIdx].hwStage==='trial'?'trial':'accepted'):'miss');
+  const code=typeof c.comp==='string'?c.comp:'',tag=!ok&&c.type==='mc'?c.optionTags?.[sc.sel]||'':'';
+  sc.lastCheck={draft:c.type==='mc'?String(sc.sel):String(sc.val),ok:!!ok,code,tag};
+  hwWalterNextCheck(walterContext,ok?(cur.steps[stepIdx].hwStage==='trial'?'trial':'accepted'):'miss',code,tag);
   if(!ok)hwRememberStepMiss(c,c.type==='mc'?String((c.options||[])[sc.sel]):sc.val);
   const last = stepIdx===cur.steps.length-1;
   const shown=`It's <b>${esc(c.display)}</b>.`, lockIn = c.type==="mc" ? "Tap it to lock it in." : "Type it in to lock it in.";
@@ -8421,7 +8478,7 @@ function lpApply(item, v){ const st=item.st, step=item.step; if(!step) return; c
   if(item.spec.walterStory?.checkedRoute&&!r.ok&&!r.fmt&&!r.safe&&!['decimal-story-meaning','word-story-meaning','strategy-choice'].includes(step.evidence?.component))st.storyArithmeticMisses=(Math.max(0,+st.storyArithmeticMisses||0))+1;
   const helpContext=typeof lpWalterContextKey==='function'?lpWalterContextKey(item):'';
   lpObserve(item,v,r);
-  if(item.phase!=='model'&&typeof walterLinkNextCheck==='function')walterLinkNextCheck(st.walterEvents||[],helpContext,{status:r.fmt?'format':r.safe||r.ok&&step.short==='Your trial count'?'trial':r.ok?'ok':'miss',code:r.code||'',gridDigits:item.spec.walterCheck?.(st,v)});
+  if(item.phase!=='model'&&typeof walterLinkNextCheck==='function')walterLinkNextCheck(st.walterEvents||[],helpContext,{status:r.fmt?'format':r.safe||r.ok&&step.short==='Your trial count'?'trial':r.ok?'ok':'miss',code:r.code||'',draft:walterDraftFingerprint(v),fields:Array.isArray(v)?v.map(value=>walterDraftFingerprint(value)):null,gridDigits:item.spec.walterCheck?.(st,v)});
   if(r.ok){ if(r.apply) r.apply(); st.k++; st.draft=null; st.badIndex=-1; st.walterOpen=false; st.walterChoice=null; st.exampleNarr="";st.exampleNote=""; st.msg=r.msg||""; st.msgKind="ok"; st.helpShown=[]; item.step=item.spec.next(st); lpPrepareStep(item); if(!item.step){ st.done=true; } return true; }
   if(item.phase!=="model" && !r.fmt){ if(r.safe){ if(r.code) st.codes.push(r.code); } else { st.tries++; if(r.code) st.codes.push(r.code); } } st.badIndex=Number.isInteger(r.badIndex)?r.badIndex:-1; st.msg=item.phase!=="model"?lpCheckFeedback(item,r):r.msg||"Not yet. Check that step and try again."; st.msgKind=r.safe?"":"no"; return false; }
 
@@ -8625,10 +8682,17 @@ const LP_WALTER_PRIMARY=[['words',"I don't get the words"],['start',"I don't kno
 function lpWalterQuestions(it){const qs=lpWalterLegacyQuestions(it),g=qs[0]?.texts||lpStrategyGuide(it);
   for(const [id,label]of [...decimalStoryPrimary(lpWalterSemanticContext(it),LP_WALTER_PRIMARY),['meaning','Why does this work?']]){const existing=qs.find(q=>q.id===id);if(existing)existing.label=label;else qs.push({id,label,type:id==='check'||id==='calculation'?'checking':id==='words'||id==='meaning'?'explanation':id==='smaller'?'representation':'clue',texts:g});}return qs;}
 function lpWalterContextKey(it){return `${it.lid||lp?.id||'homework'}:${it.phase}:${it.rep?.stage==='spot'?'repair-spot':it.step?.walter?.id||`${it.spec?.kind}:${it.st.k}:${it.st.stage||''}`}`;}
-function lpWalterSemanticContext(it){const c=lpHelpContext(it),question=walterRenderedText((['independent','delayed','mixed'].includes(it.phase)&&it.step.short)||it.step.prompt||'');
+function lpWalterSemanticContext(it){const c=lpHelpContext(it),st=it.st,question=walterRenderedText((['independent','delayed','mixed'].includes(it.phase)&&it.step.short)||it.step.prompt||'');
   // Titles and active prompt are rendered givens. Do not use sp.prompt (collapsed context),
   // future script entries, hidden checker values, or unchecked drafts as number provenance.
-  return {contextKey:lpWalterContextKey(it),mistakeNotes:S?.walterMistakeNotes!==false,storyCheckedRoute:it.spec.walterStory?.checkedRoute===true,storyPlanChecked:it.spec.walterStory?.checkedRoute===true&&it.st.storyPlanChecked===true,family:it.spec.walterStory?.checkedRoute===true&&it.spec.storyTask?.storyType==='lesson-story'?'lesson-story':(it.spec.walterStory&&(it.spec.walterStory.checkedRoute===true||decimalStorySupportEnabled()))||it.step.evidence?.component?.startsWith('decimal-story-')?'decimal-story':LP_LESSONS[it.lid||lp?.id]?.skill||(lp?.homework?.fraction?'fracaddsub':lp?.homework?.wordStory?'expressions':''),kind:c.kind,component:c.component,stage:c.stage,role:c.role,last:c.last,relationship:it.step.walter?.relationship||it.spec.walterStory?.relationship||'',unknown:it.step.walter?.unknown||it.spec.walterStory?.unknown||'',storyStage:it.step.walter?.stage||'',question,visibleText:[walterRenderedText(it.spec.title||''),it.spec.walterStory&&(it.spec.walterStory.checkedRoute===true||decimalStorySupportEnabled())?walterRenderedText(it.spec.walterStory.story):'',question].join(' '),acceptedText:'',status:c.status,label:c.label,code:c.code||'',tag:c.status==='miss'?c.code||'':''};}
+  return {contextKey:lpWalterContextKey(it),mistakeNotes:S?.walterMistakeNotes!==false,storyCheckedRoute:it.spec.walterStory?.checkedRoute===true,storyPlanChecked:it.spec.walterStory?.checkedRoute===true&&it.st.storyPlanChecked===true,family:it.spec.walterStory?.checkedRoute===true&&it.spec.storyTask?.storyType==='lesson-story'?'lesson-story':(it.spec.walterStory&&(it.spec.walterStory.checkedRoute===true||decimalStorySupportEnabled()))||it.step.evidence?.component?.startsWith('decimal-story-')?'decimal-story':LP_LESSONS[it.lid||lp?.id]?.skill||(lp?.homework?lp.bp.skill:''),kind:c.kind,component:c.component,stage:c.stage,role:c.role,last:c.last,relationship:it.step.walter?.relationship||it.spec.walterStory?.relationship||'',unknown:it.step.walter?.unknown||it.spec.walterStory?.unknown||'',storyStage:it.step.walter?.stage||'',question,visibleText:[walterRenderedText(it.spec.title||''),it.spec.walterStory&&(it.spec.walterStory.checkedRoute===true||decimalStorySupportEnabled())?walterRenderedText(it.spec.walterStory.story):'',question].join(' '),acceptedText:'',work:{
+    earlier:(st.stepEvents||[]).filter(e=>e.step<st.k&&e.outcome==='ok'&&e.support!=='answer-confirmed').length,
+    field:c.field,
+    draft:walterDraftFingerprint(st.draft?.k===st.k?
+      (c.field>=0?st.draft.values?.[c.field]:it.step.input?.type==='tiles'?
+       st.draft.values?.[0]||st.tiles:st.draft.values||st.draft.selected||st.draft.group):''),
+    problem:lp?.homework?.itemId||lp?.homework?.label||lpFingerprint(it.spec)
+  },status:c.status,label:c.label,code:c.code||'',tag:c.status==='miss'?c.code||'':''};}
 // Explicit fictional models use separate values. Answer admission runs only after
 // the learner requests a modeled example, never while choosing pending help.
 function walterModelValue(value){if(typeof value==='number')return value;if(value&&typeof value==='object'&&Number.isFinite(value.n)&&Number.isFinite(value.d))return value.n/value.d;const f=typeof value==='string'?parseFraction(value):null;return f?f.w+f.n/f.d:NaN;}
@@ -8691,6 +8755,7 @@ function lpWalterRespond(it,id,move){if(!lpWalterEligible(it))return;
   st.walterEvents=Array.isArray(st.walterEvents)?st.walterEvents:[];
   if(!st.walterEvents.some(e=>e.step===st.k&&e.stepId===stepId&&(targeted||e.id===id)&&e.signature===reply.signature)){
     st.walterEvents.push({step:st.k,stepId,id,type:q.type,move:reply.move,signature:reply.signature,context:lpWalterContextKey(it),text:reply.text.slice(0,500),t:Date.now(),contextLabel:lpPlain(it.step.prompt||'').slice(0,180),tries:+st.tries||0,
+      ...(reply.work?{work:reply.work}:{}),
       ...(reply.gridCode?{gridCode:reply.gridCode,gridPlace:reply.gridPlace,gridDigit:reply.gridDigit,gridMove:reply.gridMove}:{})});st.helps=(+st.helps||0)+1;
     if(['delayed','mixed'].includes(it.phase)&&!st.walterProbe)st.walterProbe=st.tries?'miss-before-help':'help-before-miss';
   }
@@ -8702,7 +8767,8 @@ function lpWalterHTML(it){if(!lpWalterEligible(it))return '';
   const st=it.st,selected=st.walterChoice?.step===st.k?st.walterChoice:null,qs=lpWalterQuestions(it),picked=selected&&qs.find(x=>x.id===selected.id);
   // Older saved replies retain their authored text, without restoring the old sequence.
   const text=picked?(selected.text||picked.texts[Math.max(0,Math.min(picked.texts.length-1,selected.depth||0))]):'';
-  return `<div class="lpwalter"><button type="button" class="btn quiet" id="lpask" aria-expanded="${!!st.walterOpen}" aria-controls="lpaskpanel">Ask Walter</button>${st.walterOpen?`<section id="lpaskpanel" aria-label="Ask Walter help"><p><b>What would help with this step?</b></p><div class="actions">${decimalStoryPrimary(lpWalterSemanticContext(it),LP_WALTER_PRIMARY).map(([id,label])=>`<button type="button" class="btn quiet small" data-walter-question="${id}" aria-pressed="${picked?.id===id}">${esc(label)}</button>`).join('')}</div>${picked?`<div id="lpaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('work',esc(text),true)}${typeof readAloudButton==='function'?readAloudButton(text,'lp-reply'):''}${picked.id==='carry-model'||selected.move==='smaller'&&it.step.walter?.role==='column'&&!it.step.walter.last?lpCarryModelHTML():''}</div>${lpWalterChoiceButtons(selected.choices,it.spec.kind==='decimal-division-grid')}${lpWalterRatingButtons(selected.signature)}${selected.move==='test'&&walterFictionalEligible(lpWalterSemanticContext(it))?`<button type="button" class="btn quiet small" id="lperror">Check a fictional mistake</button>`:''}<button type="button" class="btn quiet small" id="lpaskreturn">Back to my step</button>`:''}<button type="button" class="btn quiet small" id="lpother">See a different worked example</button></section>`:''}</div>`;
+  return `<div class="lpwalter">${it.spec.walterReply?'':'<button type="button" class="btn quiet" id="lpdirecthelp">Ask Walter</button> '}
+  <button type="button" class="btn quiet" id="lpask" aria-expanded="${!!st.walterOpen}" aria-controls="lpaskpanel">${it.spec.walterReply?'Ask Walter':'Choose help'}</button>${st.walterOpen?`<section id="lpaskpanel" aria-label="Ask Walter help"><p><b>What would help with this step?</b></p><div class="actions">${decimalStoryPrimary(lpWalterSemanticContext(it),LP_WALTER_PRIMARY).map(([id,label])=>`<button type="button" class="btn quiet small" data-walter-question="${id}" aria-pressed="${picked?.id===id}">${esc(label)}</button>`).join('')}</div>${picked?`<div id="lpaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('work',esc(text),true)}${typeof readAloudButton==='function'?readAloudButton(text,'lp-reply'):''}${picked.id==='carry-model'||selected.move==='smaller'&&it.step.walter?.role==='column'&&!it.step.walter.last?lpCarryModelHTML():''}</div>${lpWalterChoiceButtons(selected.choices,true)}${lpWalterRatingButtons(selected.signature)}${selected.move==='test'&&walterFictionalEligible(lpWalterSemanticContext(it))?`<button type="button" class="btn quiet small" id="lperror">Check a fictional mistake</button>`:''}<button type="button" class="btn quiet small" id="lpaskreturn">Back to my step</button>`:''}<button type="button" class="btn quiet small" id="lpother">See a different worked example</button></section>`:''}</div>`;
 }
 function lpWalterDeliver(it,id,depth){ if(!lpWalterEligible(it)) return;
   const st=it.st, q=lpWalterQuestions(it).find(x=>x.id===id); if(!q) return;
@@ -8745,7 +8811,7 @@ function lpRepairWalterRespond(it,id,move){const q=lpRepairWalterQuestions(it).f
   const st=it.st,rp=it.rep,old=rp.walterChoice?.id===id?rp.walterChoice:null,requested=move||lpWalterInitialMove(q),draftKey=JSON.stringify([rp.picked,rp.tries]),repeats=old?.requestedMove===requested&&old.draftKey===draftKey?(old.repeats||0)+1:0;
   // The selected proposed line is learner work. The hidden slip index and correction are excluded.
   const observation={kind:'repair-spot',component:'repair-lines',status:rp.tries?'miss':'draft',misses:rp.tries||0,label:'',picked:Number.isInteger(rp.picked)?rp.picked:-1};
-  const profile=['Copy just the transition between two proposed lines. Mark what changed and what stayed the same.','Test that transition using the original quantities, signs, and units. Can you explain why it preserves the problem?','Which change can you justify? Keep checking from the beginning, and stop at the first change you cannot justify.'];
+  const profile=[rp.picked===0?'Compare the first line with the question. Check whether it keeps the given amounts and relationship.':'Copy just the transition between two proposed lines. Mark what changed and what stayed the same.','Test that transition using the original quantities, signs, and units. Can you explain why it preserves the problem?','Which change can you justify? Keep checking from the beginning, and stop at the first change you cannot justify.'];
   const reply=walterNextReply({guide:q.texts,intent:id,move:requested,lastMove:old?.move,repeats,observation,context:{contextKey:lpWalterContextKey(it),mistakeNotes:S?.walterMistakeNotes!==false,family:(LP_LESSONS[it.lid||lp?.id]||lp.bp).skill,kind:'repair-spot',component:'repair-lines',stage:'spot',question:walterRenderedText(it.rspec.story||''),visibleText:walterRenderedText(it.rspec.story||''),acceptedText:'',status:observation.status,label:'',code:'',tag:''},profile});
   st.walterEvents=Array.isArray(st.walterEvents)?st.walterEvents:[];
   if(!st.walterEvents.some(e=>e.stepId==='repair-spot'&&e.id===id&&e.signature===reply.signature)){st.walterEvents.push({step:st.k,stepId:'repair-spot',id,type:q.type,move:reply.move,signature:reply.signature,context:lpWalterContextKey(it),text:reply.text.slice(0,500),t:Date.now(),contextLabel:'Repair lines',tries:rp.tries||0});st.helps=(+st.helps||0)+1;}
@@ -8754,7 +8820,7 @@ function lpRepairWalterRespond(it,id,move){const q=lpRepairWalterQuestions(it).f
 }
 function lpRepairWalterHTML(it){const rp=it.rep,qs=lpRepairWalterQuestions(it),picked=qs.find(x=>x.id===rp.walterChoice?.id),selected=rp.walterChoice;
   const text=picked?(selected.text||picked.texts[Math.max(0,Math.min(picked.texts.length-1,selected.depth||0))]):'';
-  return `<div class="lpwalter"><button type="button" class="btn quiet" id="lpask" aria-expanded="${!!rp.walterOpen}" aria-controls="lpaskpanel">Ask Walter</button>${rp.walterOpen?`<section id="lpaskpanel" aria-label="Ask Walter help"><p><b>What would help with these lines?</b></p><div class="actions">${decimalStoryPrimary(lpWalterSemanticContext(it),LP_WALTER_PRIMARY).map(([id,label])=>`<button type="button" class="btn quiet small" data-walter-question="${id}" aria-pressed="${picked?.id===id}">${esc(label)}</button>`).join('')}</div>${picked?`<div id="lpaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('work',esc(text),true)}${typeof readAloudButton==='function'?readAloudButton(text,'lp-reply'):''}</div>${lpWalterChoiceButtons(selected.choices)}${lpWalterRatingButtons(selected.signature)}`:''}<button type="button" class="btn quiet small" id="lpaskreturn">Back to the lines</button></section>`:''}</div>`;
+  return `<div class="lpwalter"><button type="button" class="btn quiet" id="lpdirecthelp">Ask Walter</button> <button type="button" class="btn quiet" id="lpask" aria-expanded="${!!rp.walterOpen}" aria-controls="lpaskpanel">Choose help</button>${rp.walterOpen?`<section id="lpaskpanel" aria-label="Ask Walter help"><p><b>What would help with these lines?</b></p><div class="actions">${decimalStoryPrimary(lpWalterSemanticContext(it),LP_WALTER_PRIMARY).map(([id,label])=>`<button type="button" class="btn quiet small" data-walter-question="${id}" aria-pressed="${picked?.id===id}">${esc(label)}</button>`).join('')}</div>${picked?`<div id="lpaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('work',esc(text),true)}${typeof readAloudButton==='function'?readAloudButton(text,'lp-reply'):''}</div>${lpWalterChoiceButtons(selected.choices,true)}${lpWalterRatingButtons(selected.signature)}`:''}<button type="button" class="btn quiet small" id="lpaskreturn">Back to the lines</button></section>`:''}</div>`;
 }
 function lpRepairWalterDeliver(it,id,depth){const q=lpRepairWalterQuestions(it).find(x=>x.id===id);if(!q)return;const st=it.st,rp=it.rep;depth=Math.max(0,Math.min(4,depth|0));st.walterEvents=Array.isArray(st.walterEvents)?st.walterEvents:[];
   if(!st.walterEvents.some(e=>e.id===id&&e.depth===depth&&e.stepId==='repair-spot')){st.walterEvents.push({step:st.k,stepId:'repair-spot',id,type:q.type,depth,tries:rp.tries||0});st.helps=(+st.helps||0)+1;}
@@ -8786,6 +8852,7 @@ function lpBind(it){ const q=s=>app.querySelector(s);
       else { rp.tries++; rp.msg = 'That is not the first slip. Check each change from the original question, then test the line you selected.'; it.st.codes.push("spot"); lpRender(); } });
     const ask=q('#lpask');if(ask)ask.onclick=()=>{it.rep.walterOpen=!it.rep.walterOpen;lpRender();};
     const deliver=(id,move)=>{lpRepairWalterRespond(it,id,move);lpRender();q('#lpaskreply')?.focus({preventScroll:true});};
+    if(q('#lpdirecthelp'))q('#lpdirecthelp').onclick=()=>deliver('start');
     app.querySelectorAll('[data-walter-question]').forEach(b=>b.onclick=()=>deliver(b.dataset.walterQuestion));
     app.querySelectorAll('[data-walter-move]').forEach(b=>b.onclick=()=>deliver(it.rep.walterChoice.id,b.dataset.walterMove));
     app.querySelectorAll('[data-walter-rating]').forEach(b=>b.onclick=()=>{lpWalterRate(it,b.dataset.walterRating,b.dataset.signature,true);lpRender();});
@@ -8814,6 +8881,12 @@ function lpBind(it){ const q=s=>app.querySelector(s);
     lpRender(); (q("#lpaskreply")||q("[data-walter-question]")||q("#lpask")).focus({preventScroll:true});
   };
   const reply=()=>{ lpRender(); q("#lpaskreply")?.focus({preventScroll:true}); };
+  if(q('#lpdirecthelp'))q('#lpdirecthelp').onclick=()=>{keepDraft();lpWalterRespond(it,'start');reply();};
+  const observation=lpHelpContext(it);
+  if(st.walterOpen&&st.walterChoice?.step===st.k&&['miss','format'].includes(observation.status)){
+    const target=observation.field>=0?q(`[data-lpi="${observation.field}"]`):q('#lpin');
+    if(target){target.classList.add('walter-target');target.addEventListener('input',()=>target.classList.remove('walter-target'),{once:true});}
+  }
   app.querySelectorAll("[data-walter-question]").forEach(b=>b.onclick=()=>{ keepDraft(); lpWalterRespond(it,b.dataset.walterQuestion); reply(); });
   app.querySelectorAll("[data-walter-move]").forEach(b=>b.onclick=()=>{keepDraft();lpWalterRespond(it,st.walterChoice.id,b.dataset.walterMove);reply();});
   app.querySelectorAll('[data-walter-rating]').forEach(b=>b.onclick=()=>{keepDraft();lpWalterRate(it,b.dataset.walterRating,b.dataset.signature);reply();});
@@ -10659,10 +10732,30 @@ function decimalGridPastHelp(task,code){
  return '';
 }
 
+// Recognize the explicit self-and-friends wording in the story. This cue
+// compares a learner entry with a visible given, not with the quotient.
+function decimalGridRecipientCue(item,value){
+ if(item.method!=='dealing'||typeof value!=='string'||value.length>128)return null;
+ const subject=item.story.match(/^([A-Z][a-z'-]{1,24}) has /)?.[1];
+ const phrase=item.story.match(/\b(?:himself|herself) and ([1-9]\d?) friends\b/);
+ if(!subject||!phrase)return null;
+ const friends=Number(phrase[1]),expression=lpAst(value.replace(/(^|[^\d.])\.(?=\d)/g,(_,prefix)=>prefix+'0.'));
+ if(lpNum(value)!==friends&&!(expression?.o==='÷'&&expression.l===item.total/100&&expression.r===friends))return null;
+ return {subject,phrase:phrase[0],friends};
+}
+function decimalGridRecipientReply(cue,move){
+ return move==='smaller'||move==='plan'
+  ? `Draw one spot for ${cue.subject}. Draw a spot for each friend. Count all the spots before you write the division expression.`
+  : `${cue.friends} counts the friends. Read “${cue.phrase}.” Does ${cue.subject} get a share too? Count everyone who gets one.`;
+}
 // The tutor sees the current checked observation and learner's marks. The
 // checker supplies a place tag only when exactly one place differs.
 function decimalGridReply(st,observation,move,item){
  const {stage}=st;
+ if(stage==='expression'&&['orient','words','test','smaller','plan','units'].includes(move)){
+  const cue=decimalGridRecipientCue(item,st.draft?.values?.[0]);
+  if(cue)return {text:decimalGridRecipientReply(cue,move),gridFocus:true,gridPlace:'recipients'};
+ }
  if(stage==='equation'&&['orient','smaller','plan','words','units','meaning','test'].includes(move)&&
    !['grid-copy-expression','grid-share-place'].includes(observation.code)){
   return {text:item.method==='measuring'
@@ -10727,7 +10820,9 @@ function decimalDivisionGridSpec(item){
     prompt:'Write the division expression for the story.',
     input:{type:'text',ph:'Type your expression'},auto:expression,
     check:v=>{const s=String(v||'').trim(),tree=s.length<=512?parseExpression(s):null;
-     if(!tree)return {ok:false,fmt:true,msg:'Use a division expression with ÷ or /.'};
+     const recipients=decimalGridRecipientCue(item,s);
+     if(recipients)return {ok:false,fmt:tree?.o!=='÷',code:'grid-recipient-group',msg:decimalGridRecipientReply(recipients,'test')};
+     if(!tree||typeof tree==='number')return {ok:false,fmt:true,msg:'Use a division expression with ÷ or /.'};
      if(matchesExpression(tree))return {ok:true,apply:()=>{st.expression=s;st.stage='shade';}};
      const reversed=tree.o==='÷'&&tree.l===divisor&&tree.r===dividend;
      return {ok:false,code:reversed?'grid-reversed':measuring?'grid-setup-measure':'grid-setup-deal'};
@@ -10753,9 +10848,12 @@ function decimalDivisionGridSpec(item){
    },measuring?'grid-equation':'grid-equation-share');
    return null;
   },
-  visual:st=>`<p class="lpstory">${esc(story)}</p>${st.expression?`<p class="lpeq">Your checked expression: ${esc(st.expression)}</p>
+  visual:st=>{
+   const cue=decimalGridFocus(st)==='recipients'?decimalGridRecipientCue(item,st.draft?.values?.[0]):null;
+   const storyText=cue?esc(story).replace(esc(cue.phrase),`<mark class="ddgrid-spot">${esc(cue.phrase)}</mark>`):esc(story);
+   return `<p class="lpstory">${storyText}</p>${st.expression?`<p class="lpeq">Your checked expression: ${esc(st.expression)}</p>
    <p class="muted">One grid is one whole. Each small square is one hundredth.${measuring?' A group that crosses grids keeps its color and letter.':''}</p>
-   <div id="ddgrid-preview">${show(st,draft(st))}</div>`:''}`,
+   <div id="ddgrid-preview">${show(st,draft(st))}</div>`: ''}`;},
   controls:st=>markStage(st)&&!st.model?`${st.stage==='shade'?decimalGridShadeComparison(total,draft(st),decimalGridFocus(st)):''}<div class="actions">
     <button class="btn quiet small" type="button" data-grid-mark="1">${st.stage==='deal'?'Deal next square':'Mark 1 square'}</button>
     <button class="btn quiet small" type="button" data-grid-mark="${st.stage==='deal'?size:10}">${st.stage==='deal'?'Deal one round':'Mark 10 squares'}</button>
@@ -10764,7 +10862,12 @@ function decimalDivisionGridSpec(item){
     <button class="btn quiet small" type="button" data-grid-mark="0">Clear draft marks</button>
    </div>`:'',
   bind:it=>{
-   const st=it.st;if(!markStage(st))return;
+   const st=it.st;
+   if(st.stage==='expression'){
+    app.querySelector('#lpin')?.addEventListener('input',()=>{const mark=app.querySelector('.lpstory mark');if(mark)mark.replaceWith(mark.textContent);});
+    return;
+   }
+   if(!markStage(st))return;
    const field=app.querySelector('#lpin'),preview=app.querySelector('#ddgrid-preview');
    if(!field||!preview)return;
    field.addEventListener('input',()=>{
