@@ -1695,7 +1695,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.5 · November 8, 2026";
+const BUILD="v10.5.1 · November 8, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -5893,14 +5893,15 @@ const WALTER_TEACHING={
 };
 // Current-card specializations take priority over broad family explanations.
 const WALTER_COMPONENTS={
- 'grid-setup-measure':{base:'decdiv',orient:'Point to the total and the amount used by one group. Which one is the amount being divided?',test:'Read your expression back as a question about how many groups fit in the total.'},
- 'grid-setup-deal':{base:'decdiv',orient:'Find the total amount. Then count every recipient, including the person sharing if they get a share.',test:'Does your expression divide the total among everyone who gets a share?'},
- 'grid-shade':{base:'decdiv',orient:'One small square is one hundredth. Show the whole part with full grids, then shade the decimal part.',plan:'Use full columns for tenths and individual squares for hundredths.',smaller:'Mark just the whole part first. Then look at the tenths and hundredths.',test:'Read your shaded squares back as wholes, tenths, and hundredths. Do they match the total?'},
- 'grid-measure':{base:'decdiv',orient:'Use the given size of one group. How many hundredth squares show that amount?',smaller:'Make just one group. A full column has ten hundredths.',test:'Read your new group as a decimal. Does it match the amount used by one group?'},
- 'grid-deal':{base:'decdiv',orient:'Deal one small square to each recipient in order. Return to recipient 1 after the last recipient.',smaller:'Deal just one round first, then check that each recipient got one square.',test:'Check that you used all the shaded squares and that each recipient got the same number.'},
- 'grid-count-groups':{base:'decdiv',orient:'Count the outlined groups once each. A group that crosses two grids still counts as one group.',test:'Multiply your group count by the given group size to see whether it matches the total.'},
- 'grid-count-share':{base:'decdiv',orient:'Find the squares marked 1 on each grid. Count only those squares.',test:'Check that another recipient has the same count as recipient 1.'},
- 'grid-equation':{base:'decdiv',orient:'Use the expression you already checked. Put the quotient after the equals sign in the unit the story asks for.',test:'Multiply the quotient by the divisor. Does it give the original total?'},
+ 'grid-setup-measure':{base:'decdiv',orient:'Point to the total and the amount used by one group. Which one is the amount being divided?',words:'The question asks how many groups you can make. The amount used by each group is already given.',units:'Label both given amounts with their units. Then name what the answer will count.',meaning:'You are counting how many copies of the same-sized group fit in the total.',plan:'Draw one group and label how much it uses. Leave the number of groups blank.',smaller:'Find the total amount in the story first. Which words tell you it is the total?',test:'Read your expression back as a question about how many groups fit in the total.'},
+ 'grid-setup-deal':{base:'decdiv',orient:'Find the total amount. Then count every recipient, including the person sharing if they get a share.',words:'Equal shares means every recipient gets the same amount. Find who or what gets a share.',units:'Label the total with its unit. Label the other given number as the count of recipients.',meaning:'You know how many shares to make. The question asks for the amount in one share.',plan:'Sketch a spot for each recipient. Write the total beside the sketch, ready to share.',smaller:'List who gets a share. If someone is sharing with friends, check whether that person gets one too.',test:'Does your expression divide the total among everyone who gets a share?'},
+ 'grid-shade':{base:'decdiv',orient:'One small square is one hundredth. Show the whole part with full grids, then shade the decimal part.',words:'Shade means mark the amount you start with. The small squares are pieces of a whole.',units:'A whole grid is one whole. A column is one tenth. A small square is one hundredth.',meaning:'The shaded squares show the total before you make groups or give anyone a share.',plan:'Use full columns for tenths and individual squares for hundredths.',smaller:'Look at the digit before the decimal point in the total. If there are wholes, use Mark 1 whole grid for each one. Then compare your shaded tenths with the first digit after the point.',test:'Compare the whole, tenth, and hundredth counts under your grid with the digits in the total. Which place will you change?'},
+ 'grid-measure':{base:'decdiv',orient:'Use the given size of one group. How many hundredth squares show that amount?',words:'Outline means mark off the squares that belong to one group.',units:'Read the group size in hundredths. Each square represents one hundredth of the given unit.',meaning:'Every outlined group must use the same amount, even if it crosses into another grid.',plan:'Use whole columns for the tenths in one group, then add the individual hundredths.',smaller:'Try one group. Use Mark 10 squares for each tenth in the group size, then Mark 1 square for each remaining hundredth.',test:'Read your new group as a decimal. Does it match the amount used by one group?'},
+ 'grid-deal':{base:'decdiv',orient:'Deal one small square to each recipient in order. Return to recipient 1 after the last recipient.',words:'One round means everyone receives one square.',units:'The label on a square names its recipient. The square itself is one hundredth.',meaning:'Each full round gives every recipient the same amount. The labels let you see who gets each square.',plan:'Deal a full round. Then look at the shaded squares that have no recipient yet.',smaller:'Deal just one round first, then check that each recipient got one square.',test:'Check that you used all the shaded squares and that each recipient got the same number.'},
+ 'grid-count-groups':{base:'decdiv',orient:'Count the outlined groups once each. A group that crosses two grids still counts as one group.',words:'A full group is the whole outline for one copy of the given group size.',units:'Count groups here. The tiny squares measure the size of the groups.',meaning:'Each outline represents one completed group of the same size.',plan:'Follow the outlines in order. Carry your count across to the next grid.',smaller:'Check the boundary between the first two grids. Matching pieces that continue one outline count together.',test:'Multiply your group count by the given group size to see whether it matches the total.'},
+ 'grid-count-share':{base:'decdiv',orient:'Find the squares marked 1 on each grid. Count only those squares.',words:'Recipient 1 means one person or object getting a share. Every square marked 1 belongs to that same recipient.',units:'Each square you count is a hundredth of the amount being shared.',meaning:'Because the rounds are equal, the squares for one recipient show the size of any one share.',plan:'Count the squares marked 1 on one grid at a time. Then combine those counts.',smaller:'Find just the first two squares marked 1. Notice how the recipient numbers cycle between them.',test:'Check that another recipient has the same count as recipient 1.'},
+ 'grid-equation':{base:'decdiv',orient:'Keep the checked division expression. Put the number of full groups after the equals sign.',words:'The quotient tells how many groups fit in the total.',units:'The quotient counts groups, such as the number of containers you can fill.',meaning:'Your equation connects the total, the size of one group, and how many groups you made.',plan:'Copy the expression you already checked. Use your checked group count to finish the equation.',smaller:'Copy only the left side and the equals sign first.',test:'Multiply your group count by the given group size. Does it give the original total?'},
+ 'grid-equation-share':{base:'decdiv',orient:'Keep the checked expression. Write one recipient’s share as a decimal after the equals sign.',words:'The quotient tells the amount for one recipient.',units:'Your count tells how many hundredths one recipient gets. Write the value of those hundredths in the story’s unit.',meaning:'The equation connects the total, the number of recipients, and the amount each one gets.',plan:'Copy the expression you already checked. Use the place values of the checked share to write the right side.',smaller:'Look at just the share. Decide which digits show tenths and which show hundredths.',test:'Multiply the decimal share by the number of recipients. Does it give the original total?'},
 
  'group-count-setup':{base:'divide',orient:'Point to the total number of items and the number that fits in one group.',words:'Every full group holds the same number of items. The question asks you to count groups.',units:'Label the total in items and the group size in items per group. What unit should your result count?',meaning:'Draw one group and label its size. How many copies of that group can you fill?',plan:'Use the total and the size of one group in your expression. Read it back against the story.',test:'Does your expression start with all the items and find how many equal groups fit?',smaller:'Draw and label just one group. Then point to the total you can fill groups from.'},
  'group-count-calculation':{base:'divide',orient:'Keep your checked expression. Find how many complete groups it makes.',words:'Count only groups that can be completely filled.',units:'Your answer counts full groups. A leftover amount counts individual items.',meaning:'A full group uses the same number of items each time. Leftover items can make another group if there are enough to fill it.',plan:'Choose a group count to try. Multiply it by the number of items in one group.',test:'Multiply your group count by the size of one group. Does it fit the total with fewer items left than one group needs?',smaller:'Try one batch of groups at a time. Track the items used and the items still available.'},
@@ -5962,6 +5963,14 @@ function walterTeachingReply(ctx={},move='orient'){
   const alias={start:'orient',check:'test',calculation:'plan',rephrase:'smaller',connection:'meaning'};
   const chosen=alias[move]||move;
   let text=local?.[chosen]||base[chosen];
+  if(kind==='decimal-division-grid'&&ctx.status==='miss'&&['test','orient'].includes(chosen)){
+    const checkedPattern={
+      'grid-reversed':'Your expression has the two story amounts in reverse order. Start with the total being divided, then use the amount or count that tells how to divide it.',
+      'grid-copy-expression':'Compare the left side with your checked expression above the grid. Keep that setup and write your result after the equals sign.',
+      'grid-share-place':'Your entry counts the hundredths in one share. Write what those hundredths are worth as a decimal, using the place-value grid.'
+    };
+    if(Object.hasOwn(checkedPattern,ctx.code))text=checkedPattern[ctx.code];
+  }
   if(baseKey==='expanded'){
     if(/how many addends/i.test(question)){
       const count={orient:'Each nonzero digit needs its own addend. Mark the nonzero digits before counting.',meaning:'An addend is a part being added; each nonzero digit contributes a place-value part.',plan:'Mark every nonzero digit you need to represent.',smaller:'Match one marked digit to its place before counting all the parts.',test:'Can you match every nonzero digit to exactly one addend?',words:'“How many addends” asks how many parts will be added.',units:'Label the place of each marked digit.'};text=count[chosen]||text;
@@ -8538,7 +8547,7 @@ function lpFinish(){ if(lp.homework){delete S.homeworkResume;save();return;} con
 
 // ---- rendering ----
 function lpRender(){ const it=lp.items[lp.i], bp=lp.bp, n=lp.items.length;
-  const head=`<div class="topbar"><button class="btn quiet" id="back">${it.phase==="summary"?"Home":"Pause & Home"}</button><div class="row"><span class="pill week">${lp.homework?"From your page":lp.focus?"Teacher's focus":lpLessonLabel(it.lid||lp.id)}</span></div></div>${warnHTML()}
+  const head=`<div class="topbar"><button class="btn quiet" id="back">${it.phase==="summary"?"Home":"Pause & Home"}</button><div class="row"><span class="pill week">${lp.homework?(weeklyHomeworkItem(lp.homework.itemId)?.fresh?"Grid practice":"From your page"):lp.focus?"Teacher's focus":lpLessonLabel(it.lid||lp.id)}</span></div></div>${warnHTML()}
     <div class="lpprog" aria-label="${lp.homework?'Homework progress':'Lesson steps'}">${lp.items.map((x,j)=>`<span class="lpdot${j<lp.i?" done":j===lp.i?" now":""}" title="${esc(LP_PHASE_NAME[x.phase])}"></span>`).join("")}<span class="muted lpprogtxt">${esc(LP_PHASE_NAME[it.phase])}${lp.delayed?"":` · ${lp.i+1} of ${n}`}</span></div>`;
   let body="";
   if(it.phase==="intro") body=lpIntroHTML();
@@ -8644,14 +8653,16 @@ function lpWalterTrimEvents(st){const events=st.walterEvents||[];if(events.lengt
   st.walterEventsTrimmed=(+st.walterEventsTrimmed||0)+events.length-keep.length;st.walterEvents=keep;
 }
 // The text arrays above are an authored content library, never a learner-facing ladder.
-function lpWalterChoiceButtons(choices){const labels={words:'The words',units:'The amounts',plan:'A plan',calculation:'The calculation',test:'Checking'};return Array.isArray(choices)&&choices.length?`<details><summary>Choose another part</summary><div class="actions">${choices.filter(x=>labels[x]).map(move=>`<button type="button" class="btn quiet small" data-walter-move="${move}">${labels[move]}</button>`).join('')}</div></details>`:'';}
+function lpWalterChoiceButtons(choices,expanded=false){const labels={words:'The words',units:'The amounts',plan:'A plan',calculation:'The calculation',test:'Checking'};return Array.isArray(choices)&&choices.length?`<details${expanded?' open':''}><summary>Choose another part</summary><div class="actions">${choices.filter(x=>labels[x]).map(move=>`<button type="button" class="btn quiet small" data-walter-move="${move}">${labels[move]}</button>`).join('')}</div></details>`:'';}
 function lpWalterMoveButtons(){return '';}
 function lpWalterInitialMove(q){return q.id==='calculation'?'calculation':q.id==='words'?'words':q.type==='checking'?'test':['explanation','vocabulary'].includes(q.type)?'meaning':q.type==='representation'?'smaller':'orient';}
 function lpWalterRespond(it,id,move){if(!lpWalterEligible(it))return;
   const st=it.st,q=lpWalterQuestions(it).find(x=>x.id===id);if(!q)return;
   const c=lpHelpContext(it),old=st.walterChoice?.step===st.k&&st.walterChoice.id===id?st.walterChoice:null;
   const requested=move||lpWalterInitialMove(q),draftKey=JSON.stringify([lpWalterContextKey(it),c.status,c.code,it.st.draft||null,it.st.grp||[],it.st.tiles||[]]),repeats=old?.requestedMove===requested&&old.draftKey===draftKey?(old.repeats||0)+1:0;
-  const reply=walterNextReply({guide:q.texts,intent:id,move:requested,lastMove:old?.move,repeats,observation:c,context:lpWalterSemanticContext(it),profile:lpHelpProfile(c)});
+  const moveForGrid=it.spec.kind==='decimal-division-grid'&&(requested==='stuck'||repeats>0)
+    ? (['smaller','stuck'].includes(old?.move)?'stuck':'smaller') : requested;
+  const reply=walterNextReply({guide:q.texts,intent:id,move:moveForGrid,lastMove:old?.move,repeats,observation:c,context:lpWalterSemanticContext(it),profile:lpHelpProfile(c)});
   const stepId=it.step.walter?.id||`${it.spec.kind}:${st.k}:${st.stage||''}`;
   st.walterEvents=Array.isArray(st.walterEvents)?st.walterEvents:[];
   if(!st.walterEvents.some(e=>e.step===st.k&&e.stepId===stepId&&e.id===id&&e.signature===reply.signature)){
@@ -8665,7 +8676,7 @@ function lpWalterHTML(it){if(!lpWalterEligible(it))return '';
   const st=it.st,selected=st.walterChoice?.step===st.k?st.walterChoice:null,qs=lpWalterQuestions(it),picked=selected&&qs.find(x=>x.id===selected.id);
   // Older saved replies retain their authored text, without restoring the old sequence.
   const text=picked?(selected.text||picked.texts[Math.max(0,Math.min(picked.texts.length-1,selected.depth||0))]):'';
-  return `<div class="lpwalter"><button type="button" class="btn quiet" id="lpask" aria-expanded="${!!st.walterOpen}" aria-controls="lpaskpanel">Ask Walter</button>${st.walterOpen?`<section id="lpaskpanel" aria-label="Ask Walter help"><p><b>What would help with this step?</b></p><div class="actions">${decimalStoryPrimary(lpWalterSemanticContext(it),LP_WALTER_PRIMARY).map(([id,label])=>`<button type="button" class="btn quiet small" data-walter-question="${id}" aria-pressed="${picked?.id===id}">${esc(label)}</button>`).join('')}</div>${picked?`<div id="lpaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('work',esc(text),true)}${typeof readAloudButton==='function'?readAloudButton(text,'lp-reply'):''}${picked.id==='carry-model'||selected.move==='smaller'&&it.step.walter?.role==='column'&&!it.step.walter.last?lpCarryModelHTML():''}</div>${lpWalterChoiceButtons(selected.choices)}${lpWalterRatingButtons(selected.signature)}${selected.move==='test'&&walterFictionalEligible(lpWalterSemanticContext(it))?`<button type="button" class="btn quiet small" id="lperror">Check a fictional mistake</button>`:''}<button type="button" class="btn quiet small" id="lpaskreturn">Back to my step</button>`:''}<button type="button" class="btn quiet small" id="lpother">See a different worked example</button></section>`:''}</div>`;
+  return `<div class="lpwalter"><button type="button" class="btn quiet" id="lpask" aria-expanded="${!!st.walterOpen}" aria-controls="lpaskpanel">Ask Walter</button>${st.walterOpen?`<section id="lpaskpanel" aria-label="Ask Walter help"><p><b>What would help with this step?</b></p><div class="actions">${decimalStoryPrimary(lpWalterSemanticContext(it),LP_WALTER_PRIMARY).map(([id,label])=>`<button type="button" class="btn quiet small" data-walter-question="${id}" aria-pressed="${picked?.id===id}">${esc(label)}</button>`).join('')}</div>${picked?`<div id="lpaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('work',esc(text),true)}${typeof readAloudButton==='function'?readAloudButton(text,'lp-reply'):''}${picked.id==='carry-model'||selected.move==='smaller'&&it.step.walter?.role==='column'&&!it.step.walter.last?lpCarryModelHTML():''}</div>${lpWalterChoiceButtons(selected.choices,it.spec.kind==='decimal-division-grid')}${lpWalterRatingButtons(selected.signature)}${selected.move==='test'&&walterFictionalEligible(lpWalterSemanticContext(it))?`<button type="button" class="btn quiet small" id="lperror">Check a fictional mistake</button>`:''}<button type="button" class="btn quiet small" id="lpaskreturn">Back to my step</button>`:''}<button type="button" class="btn quiet small" id="lpother">See a different worked example</button></section>`:''}</div>`;
 }
 function lpWalterDeliver(it,id,depth){ if(!lpWalterEligible(it)) return;
   const st=it.st, q=lpWalterQuestions(it).find(x=>x.id===id); if(!q) return;
@@ -8686,7 +8697,7 @@ function lpWorkHTML(it){ lpPrepareStep(it); const sp=it.spec, st=it.st, ph=it.ph
   else if(model){ const hist=(it.narr||[]).map(x=>`<li>${x}</li>`).join(""); work=`<ol class="lpnarr">${hist}</ol><p class="lpstep"><b>Next:</b> ${step.prompt}</p><div class="actions"><button class="btn primary" id="lpshow">Show this step</button></div>`; }
   else { const prompt = own && step.short ? step.short : step.prompt;
     const clues=(st.helpShown||[]).map(t=>`<div class="lpclue">${t}</div>`).join("");
-    work=`<p class="lpstep">${prompt}</p>${typeof readAloudButton==='function'?readAloudButton([sp.title||'',prompt].join('. '),'lp-prompt'):''}${lpInputHTML(step, st, false)}<div class="inline-err lpmsg${st.msgKind==="ok"?" ok":""}" id="lpmsg" role="status" aria-live="polite">${st.msg||""}</div>${clues}
+    work=`<p class="lpstep">${prompt}</p>${typeof readAloudButton==='function'?readAloudButton([sp.title||'',prompt].join('. '),'lp-prompt'):''}${sp.controls?.(st)||''}${lpInputHTML(step, st, false)}<div class="inline-err lpmsg${st.msgKind==="ok"?" ok":""}" id="lpmsg" role="status" aria-live="polite">${st.msg||""}</div>${clues}
       <div class="actions"><button class="btn primary" id="lpcheck">${step.input&&step.input.type==="button"?esc(step.input.label||"Next"):"Check"}</button>${!lpWalterEligible(it)&&(step.help||[]).length>(st.helpShown||[]).length?`<button class="btn quiet" id="lphelp">${own?"I need a clue":"Clue"}</button>`:""}${own&&sp.answer!==undefined&&st.answerOnly===null?`<button class="btn quiet small" id="lpknow">I know the answer</button>`:""}${own&&st.answerOnly===true?`<button class="btn quiet small" id="lpskip">Skip building it</button>`:""}</div>
       ${lpWalterHTML(it)}${walterFictionalHTML(st.fictional,st.fictionalNote,'lp')}${st.exampleNarr||""}${st.exampleNote?`<p class="muted">${esc(st.exampleNote)}</p>`:""}${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
   const walterLesson=st.done && ph!=="model" && !st.skipped && (st.tries>0 || st.helps>0) ? walterNote("nice","You worked through the steps and finished this one.",true) : ph==="delayed" ? walterNote("checkin","Here are new numbers. Show what you remember.",true) : ph==="guided" || (st.helpShown||[]).length ? walterNote("work","Let's check one step at a time.",true) : "";
@@ -8740,7 +8751,7 @@ function lpBind(it){ const q=s=>app.querySelector(s);
   app.querySelectorAll(".lpvideo .video-link").forEach(vid=>vid.addEventListener("click", ()=>{ lpRecord({phase:"video"}, {kind:"video-link-tap", video:1, videoType:vid.dataset.videoType, ok:0, methodOk:0, firstTry:0}); }));
   if(it.phase==="intro"){ q("#lpgo").onclick=lpNext; q("#lpgo").focus({preventScroll:true}); return; }
   if(it.phase==="explain"){ q("#lpexpsave").onclick=()=>{ const t=String(q("#lpexp").value||"").trim().slice(0,280); if(!t){ q("#lpexpmsg").textContent="Type a thought, choose ‘I said it aloud,’ or skip."; return; } lpRecord(it, {kind:"explain", ok:1, text:t, mode:"typed", skipped:0}); lpNext(); }; q("#lpexpsaid").onclick=()=>{ lpRecord(it, {kind:"explain", ok:0, mode:"spoken", selfReported:1, skipped:0}); lpNext(); }; q("#lpexpskip").onclick=()=>{ lpRecord(it, {kind:"explain", ok:0, mode:"skipped", skipped:1}); lpNext(); }; return; }
-  if(it.phase==="summary"){ q("#lphome").onclick=()=>{ lp=null; home(); }; q("#lpagain").onclick=()=>{if(lp.homework?.weekly)weeklyHomeworkHub(lp.homework.week===DECIMAL_GRID_PACK?'grid':'all');else if(lp.homework)hwEntry();else lpStart(lp.id, false, null, lp.focus);}; return; }
+  if(it.phase==="summary"){ q("#lphome").onclick=()=>{ lp=null; home(); }; q("#lpagain").onclick=()=>{if(lp.homework?.weekly){const item=weeklyHomeworkItem(lp.homework.itemId);if(item?.fresh)decimalDivisionGridStart(item.method);else weeklyHomeworkHub(item?.grid?'grid':'all');}else if(lp.homework)hwEntry();else lpStart(lp.id, false, null, lp.focus);}; return; }
   if(it.phase==="repair" && it.rep.stage==="spot"){ app.querySelectorAll("[data-lpr]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.lpr, r=it.rspec, rp=it.rep; rp.picked=i;
       if(typeof walterLinkNextCheck==='function')walterLinkNextCheck(it.st.walterEvents||[],lpWalterContextKey(it),{status:i===r.wrongAt?'accepted':'miss',code:'spot'});
       if(i===r.wrongAt){ rp.stage="fix"; if(rp.tries) it.st.tries+=rp.tries; it.st.msg=`You found the first slip. Rebuild the step and check your own work.`; it.st.msgKind="ok"; lpRender(); }
@@ -10312,7 +10323,11 @@ function fractionHomeworkRecord(it,extra){
   const e={t:Date.now(),q:lp.homework.label,...(lp.homework.weekly?{week:lp.homework.week,itemId:lp.homework.itemId}:{}),method:it.spec.methodName||it.spec.kind,ok:st.done?1:0,methodOk:st.done&&!st.skipped?1:0,helps:+st.helps||0,tries:+st.tries||0,firstTry:0,hw:1,phase:'homework',stepEvents:lpTrimEvents(st.stepEvents),walterHelp:(st.walterEvents||[]).slice(-60),...extra};
   S.homeworkLog=fractionHomeworkLogNorm([...(S.homeworkLog||[]),e]);lp.results.push(e);fractionHomeworkSave();return e;
 }
-function fractionHomeworkSummaryHTML(){return `<div class="card lpcard"><h2 style="margin-top:0">Homework problem finished</h2><p>You worked through ${esc(lp.homework.label)} with ${esc(lp.items[0].spec.methodName||'checked fraction steps')}.</p>${walterNote('rest','You did the work. Take a break whenever you need.',true)}<p class="muted">This records homework practice. It does not change levels or count as independent lesson evidence.</p><div class="actions"><button class="btn primary" id="lphome">Home</button><button class="btn quiet" id="lpagain">Another problem from my page</button></div></div>`;}
+function fractionHomeworkSummaryHTML(){
+ const grid=lp.homework.week===DECIMAL_GRID_PACK?weeklyHomeworkItem(lp.homework.itemId):null;
+ const title=grid?.fresh?'Grid problem finished':'Homework problem finished';
+ const again=grid?.fresh?'Another '+weekMethodName(grid.method)+' problem':'Another problem from my page';
+ return `<div class="card lpcard"><h2 style="margin-top:0">${title}</h2><p>You worked through ${esc(lp.homework.label)} with ${esc(lp.items[0].spec.methodName||'checked fraction steps')}.</p>${walterNote('rest','You did the work. Take a break whenever you need.',true)}<p class="muted">This records homework practice. It does not change levels or count as independent lesson evidence.</p><div class="actions"><button class="btn primary" id="lphome">Home</button><button class="btn quiet" id="lpagain">${esc(again)}</button></div></div>`;}
 // Bounded, local story recognition. Match the whole story and its references;
 // never infer an operation just from numbers or unrelated surrounding words.
 function parseWordHomework(text){
@@ -10478,7 +10493,7 @@ function groupCountHomeworkSpec(task){
 }
 // Printed givens only. The learner supplies the marks, count, and equation.
 const DECIMAL_GRID_PACK='unit4-division-grids';
-const DECIMAL_GRID_ITEMS=[
+const DECIMAL_GRID_PHOTO_ITEMS=decimalGridItems([
  ['grid-butter','measuring','Butter for cookies',375,25,'I have 3.75 pounds of butter. The recipe for one dozen cookies calls for 0.25 pounds of butter. How many dozens of cookies can I make?'],
  ['grid-ribbon','measuring','Ribbon for bows',108,18,'Rosie has 1.08 of a yard of ribbon. She is making bows that require 0.18 of a yard of ribbon. How many bows can Rosie make?'],
  ['grid-nails','measuring','Nails for projects',180,36,'Regina has 1.8 pounds of nails. If each of her projects requires 0.36 pounds of nails, how many projects can she complete?'],
@@ -10487,20 +10502,55 @@ const DECIMAL_GRID_ITEMS=[
  ['grid-lemonade','dealing','Lemonade for friends',160,4,'Carol has 1.6 cups of lemonade. She wants to share it equally with herself and 3 friends. How much lemonade will each person get?'],
  ['grid-rope','dealing','Rope cut into equal lengths',189,7,'Jenny needs 1.89 feet of rope cut into 7 equal lengths. How long will each piece be after they are cut?'],
  ['grid-gel','dealing','Gel used each day',38,19,'Bill had a tube of hair gel that contained 0.38 pounds of gel. He finished the hair gel in 19 days. If he used the same amount every day, how much hair gel did he use each day?']
-].map(([id,method,title,total,size,story])=>({id,method,title,total,size,story,grid:true,skill:'decdiv',lesson:method==='measuring'?9:10}));
+]);
+const DECIMAL_GRID_FRESH_ITEMS=decimalGridItems([
+ ['ribbon','measuring','Ribbon for bookmarks',84,14,'Hermione has 0.84 meters of ribbon. Each bookmark needs 0.14 meters. How many bookmarks can she make?'],
+ ['fabric','measuring','Fabric for patches',135,27,'Luna has 1.35 meters of fabric. Each patch takes 0.27 meters. How many patches can she make?'],
+ ['trail','measuring','Trail markers',144,18,'Jamal has 1.44 kilometers of trail to mark. He places a marker after every 0.18 kilometers. How many markers will he place?'],
+ ['paint','measuring','Paint for signs',96,24,'Harry has 0.96 liters of paint. Each sign uses 0.24 liters. How many signs can he paint?'],
+ ['clay','measuring','Clay for bowls',180,20,'Priya has 1.8 kilograms of clay. Each bowl uses 0.20 kilograms. How many bowls can she make?'],
+ ['cord','measuring','Cord for bracelets',112,16,'Ginny has 1.12 meters of cord. Each bracelet needs 0.16 meters. How many bracelets can she make?'],
+ ['soil','measuring','Soil for planters',216,36,'Neville has 2.16 liters of soil. Each planter takes 0.36 liters. How many planters can he fill?'],
+ ['juice','measuring','Juice for bottles',126,21,'Amara has 1.26 liters of juice. Each bottle holds 0.21 liters. How many bottles can she fill?'],
+ ['water','dealing','Water for plants',72,6,'Neville shares 0.72 liters of water equally among 6 plants. How many liters does each plant get?'],
+ ['dough','dealing','Dough for rolls',125,5,'Priya splits 1.25 kilograms of dough into 5 equal portions. How many kilograms are in each portion?'],
+ ['milk','dealing','Milk for a group',168,8,'Ron has 1.68 liters of milk. He shares it equally with himself and 7 friends. How many liters does each person get?'],
+ ['wire','dealing','Wire for models',63,9,'Hermione cuts 0.63 meters of wire into 9 equal pieces. How long is each piece in meters?'],
+ ['beans','dealing','Beans for bags',120,10,'Nora puts 1.2 kilograms of beans into 10 bags with equal amounts. How many kilograms go in each bag?'],
+ ['ribbon-share','dealing','Ribbon for costumes',132,12,'Luna cuts 1.32 meters of ribbon into 12 equal lengths. How many meters long is each length?'],
+ ['soup','dealing','Soup for bowls',136,4,'Diego pours 1.36 liters of soup into 4 bowls with equal amounts. How many liters go in each bowl?'],
+ ['tape','dealing','Tape for projects',98,7,'Ginny uses equal lengths of tape for 7 projects. She uses 0.98 meters in all. How many meters does she use for each project?']
+],true);
+function decimalGridItems(rows,fresh=false){
+ return rows.map(([id,method,title,total,size,story])=>({id:fresh?'grid-practice-'+id:id,method,title,total,size,story,grid:true,fresh,skill:'decdiv',lesson:method==='measuring'?9:10}));
+}
+function decimalDivisionGridStart(method){
+ const options=DECIMAL_GRID_FRESH_ITEMS.filter(item=>item.method===method);
+ if(!S||!options.length)return;
+ const paused=fractionHomeworkResumeNorm(S.homeworkResume);
+ if(paused?.task.week===DECIMAL_GRID_PACK&&weeklyHomeworkItem(paused.task.itemId)?.method===method){
+  fractionHomeworkStart(paused.task,paused);return;
+ }
+ const last=(S.homeworkLog||[]).slice().reverse().find(e=>e.ok&&e.week===DECIMAL_GRID_PACK&&options.some(item=>item.id===e.itemId));
+ const index=options.findIndex(item=>item.id===last?.itemId);
+ const next=options[(index+1)%options.length];
+ if(paused){decimalDivisionGridHub(next.id);return;}
+ fractionHomeworkStart(weekTask(next.id));
+}
 
-function decimalGridPicture(capacity,shaded,marked,measuring,size){
+function decimalGridPicture(capacity,shaded,marked,measuring,size,checked){
  const fills=['#a7dbe8','#f5cf8e','#b9dfaa','#d8c8f3'];
  const grids=[];
  for(let base=0;base<capacity;base+=100){
   let cells='',edges='';
-  const group=i=>i>=base&&i<base+100&&i<marked?Math.floor(i/size):-1;
+  // An unchecked measuring draft is one outline, even if it is too large.
+  const group=i=>i<base||i>=base+100||i>=marked?-1:i>=checked?-2:Math.floor(i/size);
   for(let j=0;j<100;j++){
    const i=base+j,x=Math.floor(j/10)*10,y=(j%10)*10,g=group(i);
-   const fill=i>=shaded?'#fff':i>=marked?'#dbeafe':measuring?fills[g%fills.length]:'#b9dfaa';
+   const fill=i>=shaded?'#fff':i>=marked?'#dbeafe':measuring?(g===-2?'#fde68a':fills[g%fills.length]):'#b9dfaa';
    cells+=`<rect x="${x}" y="${y}" width="10" height="10" fill="${fill}" stroke="#69788a" stroke-width=".4"/>`;
    if(i>=marked)continue;
-   if(!measuring||i%size===0||j===0)cells+=`<text x="${x+5}" y="${y+7}" text-anchor="middle" font-size="6" fill="#17253a">${measuring?'ABCD'[g%4]:i%size+1}</text>`;
+   if(!measuring||g>=0&&(i%size===0||j===0))cells+=`<text x="${x+5}" y="${y+7}" text-anchor="middle" font-size="6" fill="#17253a">${measuring?'ABCD'[g%4]:i%size+1}</text>`;
    if(measuring){
     if(j<10||group(i-10)!==g)edges+=`M${x} ${y}v10 `;
     if(j>=90||group(i+10)!==g)edges+=`M${x+10} ${y}v10 `;
@@ -10523,8 +10573,11 @@ function decimalDivisionGridSpec(item){
  const show=(st,n)=>{
   const preview=markStage(st)&&Number.isInteger(n)?Math.min(cap(st),Math.max(0,n)):0;
   const shaded=st.stage==='shade'?preview:st.shaded,marked=st.stage==='shade'?0:st.marked+preview;
-  return `<p role="status">${st.stage==='shade'?shaded+' squares shaded in your draft':st.marked+' checked marks'+(preview?' + '+preview+' draft marks':'')}</p>`+
-   decimalGridPicture(capacity,shaded,marked,measuring,size);
+  const [whole,tenth,hundredth]=[Math.floor(shaded/100),Math.floor(shaded/10)%10,shaded%10];
+  const summary=st.stage==='shade'
+   ? `${shaded} squares shaded in your draft · ${whole} whole, ${tenth} tenths, ${hundredth} hundredths`
+   : st.marked+' checked marks'+(preview?' + '+preview+' draft marks':'');
+  return `<p role="status">${summary}</p>`+decimalGridPicture(capacity,shaded,marked,measuring,size,st.marked);
  };
  const parseExpression=value=>lpAst(value.replace(/(^|[^\d.])\.(?=\d)/g,(_,prefix)=>prefix+'0.'));
  const matchesExpression=tree=>tree?.o==='÷'&&tree.l===dividend&&tree.r===divisor;
@@ -10536,7 +10589,7 @@ function decimalDivisionGridSpec(item){
    return n===expected?{ok:true,apply}:{ok:false,code:component};
   }
  },component);
- return {kind:'decimal-division-grid',title:name+' · '+esc(item.title),problemKey:expression,methodName:name+' on hundredths grids',
+ return {kind:'decimal-division-grid',title:name+' · '+esc(item.title),problemKey:expression,recordQuestion:story,methodName:name+' on hundredths grids',
   methodEvidence:'hundredths-grid-'+method,answer,script:[],
   init:()=>({stage:'expression',expression:null,shaded:0,marked:0}),
   next:st=>{
@@ -10545,11 +10598,13 @@ function decimalDivisionGridSpec(item){
     input:{type:'text',ph:'Type your expression'},auto:expression,
     check:v=>{const s=String(v||'').trim(),tree=s.length<=512?parseExpression(s):null;
      if(!tree)return {ok:false,fmt:true,msg:'Use a division expression with ÷ or /.'};
-     return matchesExpression(tree)?{ok:true,apply:()=>{st.expression=s;st.stage='shade';}}:{ok:false,code:measuring?'grid-setup-measure':'grid-setup-deal'};
+     if(matchesExpression(tree))return {ok:true,apply:()=>{st.expression=s;st.stage='shade';}};
+     const reversed=tree.o==='÷'&&tree.l===divisor&&tree.r===dividend;
+     return {ok:false,code:reversed?'grid-reversed':measuring?'grid-setup-measure':'grid-setup-deal'};
     }
    },measuring?'grid-setup-measure':'grid-setup-deal');
-   if(st.stage==='shade')return markStep(st,'Shade the total on the hundredths grids. Each small square is 0.01. How many squares will you shade?','grid-shade',total,()=>{st.shaded=total;st.stage=measuring?'measure':'deal';});
-   if(st.stage==='measure')return markStep(st,'Outline one more group of the given size. How many hundredths belong in one group?','grid-measure',size,()=>{st.marked+=size;if(st.marked===st.shaded)st.stage='count';});
+   if(st.stage==='shade')return markStep(st,`Shade the <b>total of ${dividend}</b> on the hundredths grids. Each small square is 0.01. How many squares will you shade?`,'grid-shade',total,()=>{st.shaded=total;st.stage=measuring?'measure':'deal';});
+   if(st.stage==='measure')return markStep(st,`Outline <b>one group of ${divisor}</b>. Mark or type its number of hundredth squares, then check.`,'grid-measure',size,()=>{st.marked+=size;if(st.marked===st.shaded)st.stage='count';});
    if(st.stage==='deal')return markStep(st,`Deal the shaded squares in order to recipients 1 through ${size}, then start again at 1. Use the controls or enter the number of squares to deal. Check when you have dealt the whole amount.`,'grid-deal',total,()=>{st.marked=total;st.stage='count';});
    if(st.stage==='count')return cxNum(measuring?'Count your outlined groups. How many full groups did you make?':'Count the squares marked 1. How many hundredths did the first recipient get?',total/size,measuring?'grid-count-groups':'grid-count-share',()=>{st.stage='equation';});
    if(st.stage==='equation')return cxStep({
@@ -10558,29 +10613,32 @@ function decimalDivisionGridSpec(item){
     check:v=>{const s=String(v||'').trim(),parts=s.length<=512?s.split('='):[];
      const q=parts.length===2?lpDecRead(parts[1]):NaN;
      if(!Number.isFinite(q))return {ok:false,fmt:true,msg:'Write a division expression, an equals sign, and a number.'};
-     return matchesExpression(parseExpression(parts[0]))&&q===answer?{ok:true,apply:()=>{st.stage='done';}}:{ok:false,code:'grid-equation'};
+     if(!matchesExpression(parseExpression(parts[0])))return {ok:false,code:'grid-copy-expression'};
+     if(q!==answer)return {ok:false,code:!measuring&&q===total/size?'grid-share-place':'grid-equation'};
+     return {ok:true,apply:()=>{st.stage='done';}};
     }
-   },'grid-equation');
+   },measuring?'grid-equation':'grid-equation-share');
    return null;
   },
   visual:st=>`<p class="lpstory">${esc(story)}</p>${st.expression?`<p class="lpeq">Your checked expression: ${esc(st.expression)}</p>
    <p class="muted">One grid is one whole. Each small square is one hundredth.${measuring?' A group that crosses grids keeps its color and letter.':''}</p>
-   <div id="ddgrid-preview">${show(st,draft(st))}</div>
-   ${markStage(st)&&!st.model?`<div class="actions">
+   <div id="ddgrid-preview">${show(st,draft(st))}</div>`:''}`,
+  controls:st=>markStage(st)&&!st.model?`<div class="actions">
     <button class="btn quiet small" type="button" data-grid-mark="1">${st.stage==='deal'?'Deal next square':'Mark 1 square'}</button>
     <button class="btn quiet small" type="button" data-grid-mark="${st.stage==='deal'?size:10}">${st.stage==='deal'?'Deal one round':'Mark 10 squares'}</button>
-    ${st.stage==='shade'&&capacity>100?'<button class="btn quiet small" type="button" data-grid-mark="100">Mark 1 whole grid</button>':''}
+    ${st.stage==='shade'&&dividend>=1?'<button class="btn quiet small" type="button" data-grid-mark="100">Mark 1 whole grid</button>':''}
+    ${st.stage==='measure'&&st.marked>0?`<button class="btn quiet small" type="button" data-grid-mark="same">Mark another group of ${size}</button>`:''}
     <button class="btn quiet small" type="button" data-grid-mark="0">Clear draft marks</button>
-   </div>`:''}`:''}`,
+   </div>`:'',
   bind:it=>{
    const st=it.st;if(!markStage(st))return;
    const field=app.querySelector('#lpin'),preview=app.querySelector('#ddgrid-preview');
    if(!field||!preview)return;
    field.addEventListener('input',()=>{preview.innerHTML=show(st,lpNum(field.value));});
    app.querySelectorAll('[data-grid-mark]').forEach(button=>button.onclick=()=>{
-    const delta=Number(button.dataset.gridMark),value=lpNum(field.value);
+    const same=button.dataset.gridMark==='same',delta=Number(button.dataset.gridMark),value=lpNum(field.value);
     const count=Number.isInteger(value)&&value>0?value:0;
-    field.value=delta?String(Math.min(cap(st),count+delta)):'';
+    field.value=same?String(size):delta?String(Math.min(cap(st),count+delta)):'';
     field.dispatchEvent(new Event('input',{bubbles:true}));
    });
   },
@@ -10599,16 +10657,16 @@ function decimalDivisionGridExample(item,i){
 function decimalDivisionGridHub(pending=''){
  if(!S)return;
  cur=null;lp=null;mode='weekly-homework';
- const paused=fractionHomeworkResumeNorm(S.homeworkResume);
+ const paused=fractionHomeworkResumeNorm(S.homeworkResume),chosen=weeklyHomeworkItem(pending);
  const section=(method,title,description)=>[
   '<section class="card"><h2>'+title+'</h2><p>'+description+'</p><div class="skills">',
-  ...DECIMAL_GRID_ITEMS.filter(item=>item.method===method).map(item=>'<button class="skill" data-grid-item="'+item.id+'">'+esc(item.title)+'</button>'),
+  ...DECIMAL_GRID_PHOTO_ITEMS.filter(item=>item.method===method).map(item=>'<button class="skill" data-grid-item="'+item.id+'">'+esc(item.title)+'</button>'),
   '</div></section>'
  ].join('');
  app.innerHTML='<div class="topbar"><button class="btn quiet" id="grid-home">Home</button><span class="pill week">Unit 4 · Lessons 9 and 10</span></div>'+
   warnHTML()+'<h1 tabindex="-1" id="grid-heading">Divide with hundredths grids</h1>'+
   (paused?'<div class="card"><p>Paused homework: '+esc(paused.task.label)+'</p><div class="actions"><button class="btn primary" id="grid-resume">Resume my problem</button>'+
-   (pending?'<button class="btn quiet" id="grid-replace">Start the problem I chose</button>':'')+'</div>'+
+   (pending?'<button class="btn quiet" id="grid-replace">Start '+esc(weekMethodName(chosen?.method)||'the new problem')+'</button>':'')+'</div>'+
    (pending?'<p>Starting the new problem replaces this paused draft. Finished practice stays saved.</p>':'')+'</div>':'')+
   section('measuring','Measuring Up','You know the size of each group. Mark groups of that size and count how many fit.')+
   section('dealing','Dealing','You know how many recipients there are. Deal in turn and count how much one recipient gets.');
@@ -10675,7 +10733,7 @@ weekReview('place-two',9,3,'Write a number that has a 2 with a value 100 times l
 weekReview('compare-decimals',10,1,'Compare the decimals. Decide whether each statement is true or false. A: 0.561 > 0.559. B: 1.254 < 1.234. C: 4.404 < 4.444. D: 0.924 > 9.024.','3822');
 weekReview('round-thousandth',10,2,'Round to the nearest thousandth: 1,349.8345.','3822');
 weekReview('steaks',10,3,'On each of 3 plates near the barbeque, Dad had 4 seasoned steaks ready to grill. The neighbors came over and brought 6 more steaks. How many steaks were going to be grilled? Write and solve the expression.','3822');
-function weeklyHomeworkItem(id){return WEEKLY_ITEMS.find(x=>x.id===id)||DECIMAL_GRID_ITEMS.find(x=>x.id===id);}
+function weeklyHomeworkItem(id){return WEEKLY_ITEMS.find(x=>x.id===id)||DECIMAL_GRID_PHOTO_ITEMS.find(x=>x.id===id)||DECIMAL_GRID_FRESH_ITEMS.find(x=>x.id===id);}
 function weekMethodName(m){return ({measuring:'Measuring Up',dealing:'Dealing',division:'Area-model division',compatible:'Division with compatible parts',area:'Area model',distributive:'Distributive property',choice:'Choose an area model or distributive property',review:'Spiral review'})[m];}
 function weekQuestion(x){return x.story||`${lpN(x.a)} ${['division','compatible','measuring','dealing'].includes(x.method)?'÷':'×'} ${lpN(x.b)}`;}
 function weeklyHomeworkTask(task){
@@ -10687,9 +10745,18 @@ function weeklyHomeworkTask(task){
 function weekTask(id){return weeklyHomeworkTask({week:weeklyHomeworkItem(id)?.grid?DECIMAL_GRID_PACK:WEEKLY_HOMEWORK.id,itemId:id});}
 function weeklyHomeworkHomeHTML(){
  const d=new Date(),current=d.getFullYear()===2026&&d.getMonth()===10&&d.getDate()>=2&&d.getDate()<=8;
- return `<section class="card weekly-work" id="weeklyhome" aria-labelledby="weekly-title"><span class="pill">Unit 4 · ${WEEKLY_HOMEWORK.date}</span><h2 id="weekly-title" style="margin:10px 0">${current?'This week’s work':'Homework pack · Nov 2'}</h2><p class="home-desc">Division first: count groups with <b>Measuring Up</b>, or share equally with <b>Dealing</b>.</p><div class="actions"><button class="btn primary" data-week-hub="division">Start division</button><button class="btn" data-week-hub="grid">Measuring Up &amp; Dealing grids</button><button class="btn" data-week-hub="all">All this week’s problems</button></div><p class="muted week-note">Your page’s numbers, checked one step at a time. You can also practice with fresh numbers.</p></section>`;
+ return `<section class="card weekly-work" id="weeklyhome" aria-labelledby="weekly-title">
+  <span class="pill">Unit 4 · Divide with hundredths grids</span>
+  <h2 id="weekly-title" style="margin:10px 0">Practice division</h2>
+  <p class="home-desc">Pick a strategy to start a problem. Ask Walter whenever you need help.</p>
+  <div class="actions"><button class="btn primary" data-grid-start="measuring">Measuring Up</button><button class="btn" data-grid-start="dealing">Dealing</button></div>
+  <div class="actions"><button class="btn quiet" data-week-hub="grid">Problems from the photos</button><button class="btn quiet" data-week-hub="division">Other division problems</button><button class="btn quiet" data-week-hub="all">${current?'This week’s homework':'Homework pack · Nov 2'}</button></div>
+ </section>`;
 }
-function bindWeeklyHomework(){app.querySelectorAll('[data-week-hub]').forEach(b=>b.onclick=()=>weeklyHomeworkHub(b.dataset.weekHub));}
+function bindWeeklyHomework(){
+ app.querySelectorAll('[data-week-hub]').forEach(b=>b.onclick=()=>weeklyHomeworkHub(b.dataset.weekHub));
+ app.querySelectorAll('[data-grid-start]').forEach(b=>b.onclick=()=>decimalDivisionGridStart(b.dataset.gridStart));
+}
 function weeklyHomeworkHub(filter='division',pending=''){
  if(filter==='grid'){decimalDivisionGridHub(pending);return;}
  if(!S)return;cur=null;lp=null;mode='weekly-homework';const paused=fractionHomeworkResumeNorm(S.homeworkResume),completed=new Set((S.homeworkLog||[]).filter(e=>e.ok&&e.week===WEEKLY_HOMEWORK.id).map(e=>e.itemId));
