@@ -413,6 +413,13 @@ details.more>div{padding:4px 0 2px;color:var(--graphite)}
 
 .ddgrids { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,148px),1fr)); gap:12px; max-width:720px; }
 .ddgrids svg { display:block; width:100%; max-width:250px; height:auto; }
+.ddgrid-places { width:100%; max-width:420px; font-size:.9rem; }
+.ddgrid-places th, .ddgrid-places td { padding:.35rem; }
+.ddgrid-spot { outline:2px solid #845005; outline-offset:-2px; background:#fff2bd; }
+.ddgrid-equation { display:flex; flex-wrap:wrap; align-items:center; gap:.6rem; padding:.3rem; border-radius:8px; }
+.ddgrid-equation > span:first-child { font-size:1.25rem; font-weight:700; overflow-wrap:anywhere; }
+.ddgrid-equation input { flex:1 1 8rem; width:auto; min-width:0; }
+
 </style>
 </head>
 <body>
@@ -1695,7 +1702,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.5.1 · November 8, 2026";
+const BUILD="v10.6 · November 8, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -6110,7 +6117,12 @@ function walterLinkNextCheck(events,context,outcome){
   const nextOutcome=({accepted:'ok',ok:'ok',miss:'miss',format:'format',trial:'trial'})[status];
   if(!nextOutcome)return 0;
   const same=events.filter(e=>e&&e.context===context&&e.signature&&e.type!=='modeled');let linked=0;
-  same.forEach((event,i)=>{if(event.nextOutcome)return;event.nextOutcome=nextOutcome;event.nextHelpBetween=same.length-i-1;event.nextCheckAt=Date.now();if(outcome?.code)event.nextCode=String(outcome.code).slice(0,64);if(outcome?.tag)event.nextTag=String(outcome.tag).slice(0,64);linked++;});return linked;
+  same.forEach((event,i)=>{if(event.nextOutcome)return;event.nextOutcome=nextOutcome;event.nextHelpBetween=same.length-i-1;event.nextCheckAt=Date.now();if(outcome?.code)event.nextCode=String(outcome.code).slice(0,64);if(outcome?.tag)event.nextTag=String(outcome.tag).slice(0,64);
+    if(outcome?.gridDigits&&event.gridPlace){
+      const digit=outcome.gridDigits[event.gridPlace];
+      if(Number.isInteger(event.gridDigit)&&Number.isInteger(digit))event.nextPlaceChanged=digit!==event.gridDigit;
+    }
+    linked++;});return linked;
 }
 function walterReviewRows(player=S){
   const lists=[player?.practiceWalter,player?.homeworkWalter,...(player?.lessonLog||[]).map(e=>e.walterHelp),...(player?.homeworkLog||[]).map(e=>e.walterHelp),player?.lessonResume?.st?.walterEvents,...(player?.lessonResume?.results||[]).map(e=>e.walterHelp),player?.homeworkResume?.st?.walterEvents];
@@ -8373,6 +8385,8 @@ function lpAdaptiveGuide(it,base,intent='start'){
 function lpCheckFeedback(it,r){
   if(r.fmt)return r.msg||'Check the entry format before testing the calculation.';
   const c=lpHelpContext(it),target=c.label?`Check ${c.label}. `:'';
+  const targeted=it.spec.walterReply?.(it.st,c,'test');
+  if(targeted)return targeted.text;
   if(r.safe)return 'That trial does not fit. '+walterNextReply({guide:it.step.help||[],move:'smaller',observation:c,context:typeof lpWalterSemanticContext==='function'?lpWalterSemanticContext(it):{},profile:lpHelpProfile(c)}).text;
   return typeof walterNextReply==='function'?walterNextReply({guide:lpAdaptiveGuide(it,it.step.help||[]),intent:'check',move:'test',observation:c,context:typeof lpWalterSemanticContext==='function'?lpWalterSemanticContext(it):{},profile:lpHelpProfile(c)}).text:target+lpHelpProfile(c)[1]+' Revise your entry and check again.';
 }
@@ -8407,12 +8421,17 @@ function lpApply(item, v){ const st=item.st, step=item.step; if(!step) return; c
   if(item.spec.walterStory?.checkedRoute&&!r.ok&&!r.fmt&&!r.safe&&!['decimal-story-meaning','word-story-meaning','strategy-choice'].includes(step.evidence?.component))st.storyArithmeticMisses=(Math.max(0,+st.storyArithmeticMisses||0))+1;
   const helpContext=typeof lpWalterContextKey==='function'?lpWalterContextKey(item):'';
   lpObserve(item,v,r);
-  if(item.phase!=='model'&&typeof walterLinkNextCheck==='function')walterLinkNextCheck(st.walterEvents||[],helpContext,{status:r.fmt?'format':r.safe||r.ok&&step.short==='Your trial count'?'trial':r.ok?'ok':'miss',code:r.code||''});
+  if(item.phase!=='model'&&typeof walterLinkNextCheck==='function')walterLinkNextCheck(st.walterEvents||[],helpContext,{status:r.fmt?'format':r.safe||r.ok&&step.short==='Your trial count'?'trial':r.ok?'ok':'miss',code:r.code||'',gridDigits:item.spec.walterCheck?.(st,v)});
   if(r.ok){ if(r.apply) r.apply(); st.k++; st.draft=null; st.badIndex=-1; st.walterOpen=false; st.walterChoice=null; st.exampleNarr="";st.exampleNote=""; st.msg=r.msg||""; st.msgKind="ok"; st.helpShown=[]; item.step=item.spec.next(st); lpPrepareStep(item); if(!item.step){ st.done=true; } return true; }
   if(item.phase!=="model" && !r.fmt){ if(r.safe){ if(r.code) st.codes.push(r.code); } else { st.tries++; if(r.code) st.codes.push(r.code); } } st.badIndex=Number.isInteger(r.badIndex)?r.badIndex:-1; st.msg=item.phase!=="model"?lpCheckFeedback(item,r):r.msg||"Not yet. Check that step and try again."; st.msgKind=r.safe?"":"no"; return false; }
 
 // ---- input widgets ----
 function lpInputHTML(step, st, locked){ const I=step.input||{type:"num"}, dis=locked?" disabled":"", draft=st.draft&&st.draft.k===st.k?st.draft.values:[];
+  if(I.type==="text"&&I.prefix){
+    const focus=st.walterOpen&&st.walterChoice?.step===st.k&&st.walterChoice.gridPlace==='equation';
+    const prefix=String(draft?.[0]||'').includes('=')?'':I.prefix;
+    return `<label class="ddgrid-equation${focus?' ddgrid-spot':''}"><span>${esc(prefix)}</span><span class="vh">${esc(step.short||'Result after the equals sign')}</span><input class="ans text lpans" id="lpin" inputmode="${esc(I.inputmode||'text')}" autocapitalize="off" spellcheck="false" autocomplete="off" placeholder="${esc(I.ph||'')}" value="${esc(draft?.[0]||'')}"${dis}></label>`;
+  }
   if(I.type==="text") return `<label class="vh" for="lpin">${esc(lpPlain(step.short||step.prompt))}</label><input class="ans text lpans" id="lpin" inputmode="text" autocapitalize="off" spellcheck="false" autocomplete="off" placeholder="${esc(I.ph||"")}" value="${esc(draft[0]||"")}"${dis}>`;
   if(I.type==="num") return `<label class="vh" for="lpin">${esc(lpPlain(step.short||step.prompt))}</label><input class="ans lpans" id="lpin" inputmode="decimal" autocomplete="off" placeholder="${esc(I.ph||"Type a number")}" value="${esc(draft[0]||"")}"${dis}>`;
   if(I.type==="nums") return `<div class="lpnums">${I.labels.map((l,i)=>`<label class="lpnum"><span>${l}</span><input class="ans small lpans" data-lpi="${i}" inputmode="decimal" autocomplete="off" value="${esc(draft[i]||"")}"${dis}></label>`).join("")}</div>`;
@@ -8656,21 +8675,28 @@ function lpWalterTrimEvents(st){const events=st.walterEvents||[];if(events.lengt
 function lpWalterChoiceButtons(choices,expanded=false){const labels={words:'The words',units:'The amounts',plan:'A plan',calculation:'The calculation',test:'Checking'};return Array.isArray(choices)&&choices.length?`<details${expanded?' open':''}><summary>Choose another part</summary><div class="actions">${choices.filter(x=>labels[x]).map(move=>`<button type="button" class="btn quiet small" data-walter-move="${move}">${labels[move]}</button>`).join('')}</div></details>`:'';}
 function lpWalterMoveButtons(){return '';}
 function lpWalterInitialMove(q){return q.id==='calculation'?'calculation':q.id==='words'?'words':q.type==='checking'?'test':['explanation','vocabulary'].includes(q.type)?'meaning':q.type==='representation'?'smaller':'orient';}
+function lpWalterDraftKey(it,c){
+  const st=it.st;return JSON.stringify([lpWalterContextKey(it),c.status,c.code,st.draft||null,st.grp||[],st.tiles||[]]);
+}
 function lpWalterRespond(it,id,move){if(!lpWalterEligible(it))return;
   const st=it.st,q=lpWalterQuestions(it).find(x=>x.id===id);if(!q)return;
   const c=lpHelpContext(it),old=st.walterChoice?.step===st.k&&st.walterChoice.id===id?st.walterChoice:null;
-  const requested=move||lpWalterInitialMove(q),draftKey=JSON.stringify([lpWalterContextKey(it),c.status,c.code,it.st.draft||null,it.st.grp||[],it.st.tiles||[]]),repeats=old?.requestedMove===requested&&old.draftKey===draftKey?(old.repeats||0)+1:0;
+  const requested=move||lpWalterInitialMove(q),draftKey=lpWalterDraftKey(it,c),repeats=old?.requestedMove===requested&&old.draftKey===draftKey?(old.repeats||0)+1:0;
   const moveForGrid=it.spec.kind==='decimal-division-grid'&&(requested==='stuck'||repeats>0)
     ? (['smaller','stuck'].includes(old?.move)?'stuck':'smaller') : requested;
-  const reply=walterNextReply({guide:q.texts,intent:id,move:moveForGrid,lastMove:old?.move,repeats,observation:c,context:lpWalterSemanticContext(it),profile:lpHelpProfile(c)});
+  const targeted=it.spec.walterReply?.(st,c,moveForGrid);
+  const reply=targeted?{...targeted,move:moveForGrid,signature:walterHelpSignature([lpWalterContextKey(it),targeted.text,targeted.gridPlace].join('|')),choices:[]}:
+    walterNextReply({guide:q.texts,intent:id,move:moveForGrid,lastMove:old?.move,repeats,observation:c,context:lpWalterSemanticContext(it),profile:lpHelpProfile(c)});
   const stepId=it.step.walter?.id||`${it.spec.kind}:${st.k}:${st.stage||''}`;
   st.walterEvents=Array.isArray(st.walterEvents)?st.walterEvents:[];
-  if(!st.walterEvents.some(e=>e.step===st.k&&e.stepId===stepId&&e.id===id&&e.signature===reply.signature)){
-    st.walterEvents.push({step:st.k,stepId,id,type:q.type,move:reply.move,signature:reply.signature,context:lpWalterContextKey(it),text:reply.text.slice(0,500),t:Date.now(),contextLabel:lpPlain(it.step.prompt||'').slice(0,180),tries:+st.tries||0});st.helps=(+st.helps||0)+1;
+  if(!st.walterEvents.some(e=>e.step===st.k&&e.stepId===stepId&&(targeted||e.id===id)&&e.signature===reply.signature)){
+    st.walterEvents.push({step:st.k,stepId,id,type:q.type,move:reply.move,signature:reply.signature,context:lpWalterContextKey(it),text:reply.text.slice(0,500),t:Date.now(),contextLabel:lpPlain(it.step.prompt||'').slice(0,180),tries:+st.tries||0,
+      ...(reply.gridCode?{gridCode:reply.gridCode,gridPlace:reply.gridPlace,gridDigit:reply.gridDigit,gridMove:reply.gridMove}:{})});st.helps=(+st.helps||0)+1;
     if(['delayed','mixed'].includes(it.phase)&&!st.walterProbe)st.walterProbe=st.tries?'miss-before-help':'help-before-miss';
   }
   lpWalterTrimEvents(st);
-  st.walterChoice={step:st.k,id,text:reply.text,move:reply.move,signature:reply.signature,requestedMove:requested,draftKey,repeats,choices:reply.choices};st.walterOpen=true;lpSaveResume();
+  st.walterChoice={step:st.k,id,text:reply.text,move:reply.move,signature:reply.signature,requestedMove:requested,draftKey,repeats,choices:reply.choices,
+    ...(reply.gridFocus?{gridFocus:true,gridPlace:reply.gridPlace,gridMarks:reply.gridMarks,gridMove:reply.gridMove}:{})};st.walterOpen=true;lpSaveResume();
 }
 function lpWalterHTML(it){if(!lpWalterEligible(it))return '';
   const st=it.st,selected=st.walterChoice?.step===st.k?st.walterChoice:null,qs=lpWalterQuestions(it),picked=selected&&qs.find(x=>x.id===selected.id);
@@ -8691,7 +8717,9 @@ function lpWalterDeliver(it,id,depth){ if(!lpWalterEligible(it)) return;
 }
 function lpWorkHTML(it){ lpPrepareStep(it); const sp=it.spec, st=it.st, ph=it.phase, model=ph==="model", own=ph==="independent"||ph==="delayed"||ph==="mixed";
   const step=it.step; const visual=sp.visual?sp.visual(st, ph):"";
-  const intro = own&&(st.helps||st.walterProbe) ? `<p class="lpmodel-note"><b>Practice with help.</b> Try the step, then check back with another problem later.</p>` : own&&it.repeated ? `<p class="lpmodel-note"><b>Practice repeat.</b> These numbers have appeared before. Work through the steps again.</p>` : ph==="repair" ? `<p class="lpmodel-note"><b>Fix it.</b> ${esc(lpPlain(it.rspec?it.rspec.story:""))} Clues are there if you want one.</p>` : model ? `<p class="lpmodel-note"><b>Watch one.</b> Each step shows what to do and why. Think about what you would do before you tap.</p>` : own ? `<p class="lpmodel-note"><b>On your own.</b> The steps get checked, but the clues are off unless you ask.</p>` : `<p class="lpmodel-note"><b>Together.</b> Do each step; ask for a clue any time.</p>`;
+  const intro = lp.homework?.gridCheck
+    ? `<p class="lpmodel-note"><b>Fresh check.</b> ${st.helps?'You’re working with Walter’s help.':'Try it on your own. Walter is here if you need him.'}</p>`
+    : own&&(st.helps||st.walterProbe) ? `<p class="lpmodel-note"><b>Practice with help.</b> Try the step, then check back with another problem later.</p>` : own&&it.repeated ? `<p class="lpmodel-note"><b>Practice repeat.</b> These numbers have appeared before. Work through the steps again.</p>` : ph==="repair" ? `<p class="lpmodel-note"><b>Fix it.</b> ${esc(lpPlain(it.rspec?it.rspec.story:""))} Clues are there if you want one.</p>` : model ? `<p class="lpmodel-note"><b>Watch one.</b> Each step shows what to do and why. Think about what you would do before you tap.</p>` : own ? `<p class="lpmodel-note"><b>On your own.</b> The steps get checked, but the clues are off unless you ask.</p>` : `<p class="lpmodel-note"><b>Together.</b> Do each step; ask for a clue any time.</p>`;
   let work="";
   if(st.done){ work=`<div class="lpdone" role="status">${sp.done?sp.done(st):"Done."}</div><div class="actions"><button class="btn primary" id="lpnext">${lp.i+1<lp.items.length-1?"Next":"Finish"}</button></div>`; }
   else if(model){ const hist=(it.narr||[]).map(x=>`<li>${x}</li>`).join(""); work=`<ol class="lpnarr">${hist}</ol><p class="lpstep"><b>Next:</b> ${step.prompt}</p><div class="actions"><button class="btn primary" id="lpshow">Show this step</button></div>`; }
@@ -8779,7 +8807,12 @@ function lpBind(it){ const q=s=>app.querySelector(s);
   app.querySelectorAll(".lptile").forEach(b=>b.onclick=()=>{ st.tiles=st.tiles||[]; const t=b.dataset.lptile; if(t==="⌫") st.tiles.pop(); else if(t==="clear") st.tiles=[]; else st.tiles.push(t);
     const typed=q("#lptype"); if(typed && typed.value)typed.value=""; // choosing a tile switches away from the typed alternative
     const sh=q("#lptshow"); if(sh) sh.innerHTML=st.tiles.length?esc(lpShow(st.tiles.join(" "))):"<span class='muted'>Tap tiles to build it</span>"; keepDraft(); });
-  const ask=q("#lpask"); if(ask) ask.onclick=()=>{ keepDraft(); st.walterOpen=!st.walterOpen; lpRender(); (q("[data-walter-question]")||q("#lpask")).focus({preventScroll:true}); };
+  const ask=q("#lpask"); if(ask) ask.onclick=()=>{
+    keepDraft();
+    if(it.spec.walterReply&&!st.walterOpen&&st.walterChoice?.draftKey!==lpWalterDraftKey(it,lpHelpContext(it)))lpWalterRespond(it,'start');
+    else st.walterOpen=!st.walterOpen;
+    lpRender(); (q("#lpaskreply")||q("[data-walter-question]")||q("#lpask")).focus({preventScroll:true});
+  };
   const reply=()=>{ lpRender(); q("#lpaskreply")?.focus({preventScroll:true}); };
   app.querySelectorAll("[data-walter-question]").forEach(b=>b.onclick=()=>{ keepDraft(); lpWalterRespond(it,b.dataset.walterQuestion); reply(); });
   app.querySelectorAll("[data-walter-move]").forEach(b=>b.onclick=()=>{keepDraft();lpWalterRespond(it,st.walterChoice.id,b.dataset.walterMove);reply();});
@@ -10321,13 +10354,20 @@ function fractionHomeworkSave(){const it=lp.items[lp.i];S.homeworkResume={v:1,ta
 function fractionHomeworkRecord(it,extra){
   if(it.recorded)return null;it.recorded=true;const st=it.st||{};
   const e={t:Date.now(),q:lp.homework.label,...(lp.homework.weekly?{week:lp.homework.week,itemId:lp.homework.itemId}:{}),method:it.spec.methodName||it.spec.kind,ok:st.done?1:0,methodOk:st.done&&!st.skipped?1:0,helps:+st.helps||0,tries:+st.tries||0,firstTry:0,hw:1,phase:'homework',stepEvents:lpTrimEvents(st.stepEvents),walterHelp:(st.walterEvents||[]).slice(-60),...extra};
+  if(lp.homework.week===DECIMAL_GRID_PACK){
+    e.gridOutcome=st.helps?'supported':st.tries?'retried':'no-hint';
+    if(lp.homework.gridCheck)e.gridCheck=true;
+  }
   S.homeworkLog=fractionHomeworkLogNorm([...(S.homeworkLog||[]),e]);lp.results.push(e);fractionHomeworkSave();return e;
 }
 function fractionHomeworkSummaryHTML(){
  const grid=lp.homework.week===DECIMAL_GRID_PACK?weeklyHomeworkItem(lp.homework.itemId):null;
+ const result=lp.homework.gridCheck?
+  (lp.results.at(-1)?.gridOutcome==='no-hint'?'You completed a fresh check without hints or math retries.':
+    lp.results.at(-1)?.gridOutcome==='supported'?'You completed a fresh check with Walter’s help.':'You completed a fresh check after a retry.'):'';
  const title=grid?.fresh?'Grid problem finished':'Homework problem finished';
  const again=grid?.fresh?'Another '+weekMethodName(grid.method)+' problem':'Another problem from my page';
- return `<div class="card lpcard"><h2 style="margin-top:0">${title}</h2><p>You worked through ${esc(lp.homework.label)} with ${esc(lp.items[0].spec.methodName||'checked fraction steps')}.</p>${walterNote('rest','You did the work. Take a break whenever you need.',true)}<p class="muted">This records homework practice. It does not change levels or count as independent lesson evidence.</p><div class="actions"><button class="btn primary" id="lphome">Home</button><button class="btn quiet" id="lpagain">${esc(again)}</button></div></div>`;}
+ return `<div class="card lpcard"><h2 style="margin-top:0">${title}</h2><p>You worked through ${esc(lp.homework.label)} with ${esc(lp.items[0].spec.methodName||'checked fraction steps')}.</p>${walterNote('rest','You did the work. Take a break whenever you need.',true)}${result?`<p>${result}</p>`:''}<p class="muted">This records homework practice. It does not change levels or count as independent lesson evidence.</p><div class="actions"><button class="btn primary" id="lphome">Home</button><button class="btn quiet" id="lpagain">${esc(again)}</button></div></div>`;}
 // Bounded, local story recognition. Match the whole story and its references;
 // never infer an operation just from numbers or unrelated surrounding words.
 function parseWordHomework(text){
@@ -10522,20 +10562,34 @@ const DECIMAL_GRID_FRESH_ITEMS=decimalGridItems([
  ['tape','dealing','Tape for projects',98,7,'Ginny uses equal lengths of tape for 7 projects. She uses 0.98 meters in all. How many meters does she use for each project?']
 ],true);
 function decimalGridItems(rows,fresh=false){
- return rows.map(([id,method,title,total,size,story])=>({id:fresh?'grid-practice-'+id:id,method,title,total,size,story,grid:true,fresh,skill:'decdiv',lesson:method==='measuring'?9:10}));
+ const groupUnits={butter:'dozens of cookies',ribbon:fresh?'bookmarks':'bows',nails:'projects',fabric:'patches',
+  trail:'markers',paint:'signs',clay:'bowls',cord:'bracelets',soil:'planters',juice:'bottles'};
+ const shareUnits={candy:'pounds per bag',sand:'tons per sandbox',lemonade:'cups per person',rope:'feet per piece',
+  gel:'pounds per day',water:'liters per plant',dough:'kilograms per portion',milk:'liters per person',
+  wire:'meters per piece',beans:'kilograms per bag','ribbon-share':'meters per length',soup:'liters per bowl',tape:'meters per project'};
+ return rows.map(([id,method,title,total,size,story])=>({id:fresh?'grid-practice-'+id:id,method,title,total,size,story,
+  unit:(method==='measuring'?groupUnits:shareUnits)[id.replace(/^grid-/,'')],grid:true,fresh,skill:'decdiv',lesson:method==='measuring'?9:10}));
 }
-function decimalDivisionGridStart(method){
+function decimalGridFollowup(method,now=Date.now()){
+ const rows=(S?.homeworkLog||[]).filter(e=>e.ok&&e.week===DECIMAL_GRID_PACK&&weeklyHomeworkItem(e.itemId)?.method===method);
+ const last=rows.slice().reverse().find(e=>e.gridCheck||e.helps>0||e.tries>0);
+ if(!last||now-last.t<3*864e5||last.gridCheck&&last.gridOutcome==='no-hint')return null;
+ const practiced=new Set(rows.map(e=>e.itemId));
+ return DECIMAL_GRID_FRESH_ITEMS.find(item=>item.method===method&&!practiced.has(item.id))||null;
+}
+function decimalDivisionGridStart(method,check=false){
  const options=DECIMAL_GRID_FRESH_ITEMS.filter(item=>item.method===method);
  if(!S||!options.length)return;
  const paused=fractionHomeworkResumeNorm(S.homeworkResume);
- if(paused?.task.week===DECIMAL_GRID_PACK&&weeklyHomeworkItem(paused.task.itemId)?.method===method){
+ if(paused?.task.week===DECIMAL_GRID_PACK&&weeklyHomeworkItem(paused.task.itemId)?.method===method&&(!check||paused.task.gridCheck)){
   fractionHomeworkStart(paused.task,paused);return;
  }
  const last=(S.homeworkLog||[]).slice().reverse().find(e=>e.ok&&e.week===DECIMAL_GRID_PACK&&options.some(item=>item.id===e.itemId));
  const index=options.findIndex(item=>item.id===last?.itemId);
- const next=options[(index+1)%options.length];
- if(paused){decimalDivisionGridHub(next.id);return;}
- fractionHomeworkStart(weekTask(next.id));
+ const next=check?decimalGridFollowup(method):options[(index+1)%options.length];
+ if(!next)return;
+ if(paused){decimalDivisionGridHub(next.id,check);return;}
+ fractionHomeworkStart(weekTask(next.id,check));
 }
 
 function decimalGridPicture(capacity,shaded,marked,measuring,size,checked){
@@ -10563,6 +10617,77 @@ function decimalGridPicture(capacity,shaded,marked,measuring,size,checked){
  return `<div class="ddgrids">${grids.join('')}</div>`;
 }
 
+const GRID_PLACES=['wholes','tenths','hundredths'];
+function decimalGridPlaces(n){
+ return [Math.floor(n/100),Math.floor(n/10)%10,n%10];
+}
+function decimalGridShadeMiss(entered,total){
+ const draft=decimalGridPlaces(entered),given=decimalGridPlaces(total);
+ const different=GRID_PLACES.filter((_,i)=>draft[i]!==given[i]);
+ return different.length===1?'grid-shade-'+different[0]:'grid-shade';
+}
+function decimalGridResultUnit(item){
+ if(item.unit)return item.unit;
+ return item.method==='measuring'?'groups':'per share';
+}
+function decimalGridFocus(st){
+ const choice=st.walterChoice;
+ return st.walterOpen&&choice?.step===st.k&&choice.gridFocus===true&&
+   (st.stage!=='shade'||choice.gridMarks===lpNum(st.draft?.values?.[0]))?choice.gridPlace:'';
+}
+function decimalGridShadeComparison(total,marks,place){
+ const draft=Number.isInteger(marks)&&marks>=0&&marks<=Math.ceil(total/100)*100?decimalGridPlaces(marks):[];
+ const given=decimalGridPlaces(total);
+ return `<table class="cxgrid ddgrid-places" aria-label="Compare the starting amount with your marks">
+  <thead><tr><th scope="col">Compare</th>${GRID_PLACES.map(p=>`<th scope="col"${p===place?' class="ddgrid-spot"':''}>${p}</th>`).join('')}</tr></thead>
+  <tbody><tr><th scope="row">Starting amount</th>${given.map((n,i)=>`<td${GRID_PLACES[i]===place?' class="ddgrid-spot"':''}>${n}</td>`).join('')}</tr>
+  <tr><th scope="row">My marks</th>${GRID_PLACES.map((p,i)=>`<td${p===place?' class="ddgrid-spot"':''}>${draft[i]??'—'}</td>`).join('')}</tr></tbody></table>`;
+}
+function decimalGridPastHelp(task,code){
+ const seen=new Set();let helpful='';
+ for(const row of (S?.homeworkLog||[]).slice().reverse()){
+  if(row.week!==DECIMAL_GRID_PACK||row.itemId===task?.itemId||
+    !Array.isArray(row.stepEvents)||!row.stepEvents.some(e=>e?.outcome==='miss'&&e.code===code))continue;
+  seen.add(row.itemId);
+  if(!helpful){
+   const event=Array.isArray(row.walterHelp)&&row.walterHelp.slice().reverse().find(e=>e?.gridCode===code&&e.nextOutcome==='ok'&&
+     e.nextHelpBetween===0&&e.nextPlaceChanged===true&&e.rating!=='stuck'&&['compare','columns'].includes(e.gridMove));
+   if(event)helpful=event.gridMove;
+  }
+  if(seen.size>=2&&helpful)return helpful;
+ }
+ return '';
+}
+
+// The tutor sees the current checked observation and learner's marks. The
+// checker supplies a place tag only when exactly one place differs.
+function decimalGridReply(st,observation,move,item){
+ const {stage}=st;
+ if(stage==='equation'&&['orient','smaller','plan','words','units','meaning','test'].includes(move)&&
+   !['grid-copy-expression','grid-share-place'].includes(observation.code)){
+  return {text:item.method==='measuring'
+   ?'Your expression and group count are checked. Put the count you found after the equals sign. It tells how many '+decimalGridResultUnit(item)+' fit.'
+   :'Your expression and one recipient’s square count are checked. Use that count to write the share as a decimal after the equals sign.',
+   gridFocus:true,gridPlace:'equation'};
+ }
+ if(stage!=='shade'||observation.status!=='miss'||!['orient','test','smaller','plan','units'].includes(move))return null;
+ const place=GRID_PLACES.find(p=>observation.code==='grid-shade-'+p);
+ const entered=lpNum(st.draft?.values?.[0]);
+ if(!place||!Number.isInteger(entered))return null;
+ const digit=decimalGridPlaces(entered)[GRID_PLACES.indexOf(place)];
+ const smaller=move==='smaller'||move==='plan';
+ const representation=smaller?(st.walterChoice?.gridMove==='columns'?'compare':'columns'):
+  move==='orient'&&decimalGridPastHelp(lp?.homework,observation.code)==='columns'?'columns':'compare';
+ const action={
+  wholes:'Count the completely shaded grids. Match that count to the highlighted starting amount.',
+  tenths:'Count the full shaded columns on the partial grid. Compare that count with the highlighted tenths.',
+  hundredths:'Count the extra shaded squares beyond the full columns. Compare that count with the highlighted hundredths.'
+ };
+ const text=representation==='columns'?action[place]:
+  `Your division setup is checked. Your marks show ${digit} in the ${place} place. Compare the two highlighted ${place} entries.`;
+ return {text,gridFocus:true,gridPlace:place,gridDigit:digit,gridMarks:entered,gridCode:observation.code,gridMove:representation};
+}
+
 function decimalDivisionGridSpec(item){
  const {total,size,story,method}=item,measuring=method==='measuring',capacity=Math.ceil(total/100)*100;
  const dividend=total/100,divisor=measuring?size/100:size,answer=measuring?total/size:total/size/100;
@@ -10576,7 +10701,7 @@ function decimalDivisionGridSpec(item){
   const [whole,tenth,hundredth]=[Math.floor(shaded/100),Math.floor(shaded/10)%10,shaded%10];
   const summary=st.stage==='shade'
    ? `${shaded} squares shaded in your draft · ${whole} whole, ${tenth} tenths, ${hundredth} hundredths`
-   : st.marked+' checked marks'+(preview?' + '+preview+' draft marks':'');
+   : st.marked+(measuring?' hundredths grouped':' hundredths dealt')+(preview?' + '+preview+' draft marks':'');
   return `<p role="status">${summary}</p>`+decimalGridPicture(capacity,shaded,marked,measuring,size,st.marked);
  };
  const parseExpression=value=>lpAst(value.replace(/(^|[^\d.])\.(?=\d)/g,(_,prefix)=>prefix+'0.'));
@@ -10586,11 +10711,16 @@ function decimalDivisionGridSpec(item){
   check:v=>{const n=lpNum(v);
    if(!Number.isInteger(n)||n<1||n>capacity)return {ok:false,fmt:true,msg:'Enter a positive whole number of squares on these grids.'};
    if(n>cap(st))return {ok:false,safe:true,code:component};
-   return n===expected?{ok:true,apply}:{ok:false,code:component};
+   return n===expected?{ok:true,apply}:{ok:false,code:st.stage==='shade'?decimalGridShadeMiss(n,total):component};
   }
  },component);
  return {kind:'decimal-division-grid',title:name+' · '+esc(item.title),problemKey:expression,recordQuestion:story,methodName:name+' on hundredths grids',
   methodEvidence:'hundredths-grid-'+method,answer,script:[],
+  walterReply:(st,observation,move)=>decimalGridReply(st,observation,move,item),
+  walterCheck:(st,value)=>{
+   const n=lpNum(value);
+   return st.stage==='shade'&&Number.isInteger(n)&&n>=0?Object.fromEntries(decimalGridPlaces(n).map((digit,i)=>[GRID_PLACES[i],digit])):null;
+  },
   init:()=>({stage:'expression',expression:null,shaded:0,marked:0}),
   next:st=>{
    if(st.stage==='expression')return cxStep({
@@ -10608,12 +10738,15 @@ function decimalDivisionGridSpec(item){
    if(st.stage==='deal')return markStep(st,`Deal the shaded squares in order to recipients 1 through ${size}, then start again at 1. Use the controls or enter the number of squares to deal. Check when you have dealt the whole amount.`,'grid-deal',total,()=>{st.marked=total;st.stage='count';});
    if(st.stage==='count')return cxNum(measuring?'Count your outlined groups. How many full groups did you make?':'Count the squares marked 1. How many hundredths did the first recipient get?',total/size,measuring?'grid-count-groups':'grid-count-share',()=>{st.stage='equation';});
    if(st.stage==='equation')return cxStep({
-    prompt:measuring?'Write the full division equation with the number of groups after the equals sign.':'Write the full division equation. Express the share as a decimal after the equals sign.',
-    input:{type:'text',ph:'Division expression = quotient'},auto:`${expression} = ${answer}`,
-    check:v=>{const s=String(v||'').trim(),parts=s.length<=512?s.split('='):[];
-     const q=parts.length===2?lpDecRead(parts[1]):NaN;
-     if(!Number.isFinite(q))return {ok:false,fmt:true,msg:'Write a division expression, an equals sign, and a number.'};
-     if(!matchesExpression(parseExpression(parts[0])))return {ok:false,code:'grid-copy-expression'};
+    prompt:measuring?`Write the checked group count after the equals sign. Your answer counts ${esc(decimalGridResultUnit(item))}.`:
+     `Write the amount in one share as a decimal after the equals sign. Your answer is in ${esc(decimalGridResultUnit(item))}.`,
+    short:measuring?'Number of '+decimalGridResultUnit(item):'Decimal amount in '+decimalGridResultUnit(item),
+    input:{type:'text',ph:measuring?'Group count':'Decimal share',prefix:st.expression+' =',inputmode:'decimal'},
+    auto:answer,
+    check:v=>{const s=String(v??'').trim(),parts=s.length<=512?s.split('='):[];
+     const q=lpDecRead(parts.length===1?parts[0]:parts.length===2?parts[1]:'');
+     if(!Number.isFinite(q))return {ok:false,fmt:true,msg:'Type a number for the blank after the equals sign.'};
+     if(parts.length===2&&!matchesExpression(parseExpression(parts[0])))return {ok:false,code:'grid-copy-expression'};
      if(q!==answer)return {ok:false,code:!measuring&&q===total/size?'grid-share-place':'grid-equation'};
      return {ok:true,apply:()=>{st.stage='done';}};
     }
@@ -10623,7 +10756,7 @@ function decimalDivisionGridSpec(item){
   visual:st=>`<p class="lpstory">${esc(story)}</p>${st.expression?`<p class="lpeq">Your checked expression: ${esc(st.expression)}</p>
    <p class="muted">One grid is one whole. Each small square is one hundredth.${measuring?' A group that crosses grids keeps its color and letter.':''}</p>
    <div id="ddgrid-preview">${show(st,draft(st))}</div>`:''}`,
-  controls:st=>markStage(st)&&!st.model?`<div class="actions">
+  controls:st=>markStage(st)&&!st.model?`${st.stage==='shade'?decimalGridShadeComparison(total,draft(st),decimalGridFocus(st)):''}<div class="actions">
     <button class="btn quiet small" type="button" data-grid-mark="1">${st.stage==='deal'?'Deal next square':'Mark 1 square'}</button>
     <button class="btn quiet small" type="button" data-grid-mark="${st.stage==='deal'?size:10}">${st.stage==='deal'?'Deal one round':'Mark 10 squares'}</button>
     ${st.stage==='shade'&&dividend>=1?'<button class="btn quiet small" type="button" data-grid-mark="100">Mark 1 whole grid</button>':''}
@@ -10634,7 +10767,11 @@ function decimalDivisionGridSpec(item){
    const st=it.st;if(!markStage(st))return;
    const field=app.querySelector('#lpin'),preview=app.querySelector('#ddgrid-preview');
    if(!field||!preview)return;
-   field.addEventListener('input',()=>{preview.innerHTML=show(st,lpNum(field.value));});
+   field.addEventListener('input',()=>{
+    const marks=lpNum(field.value);preview.innerHTML=show(st,marks);
+    const comparison=app.querySelector('.ddgrid-places');
+    if(comparison)comparison.outerHTML=decimalGridShadeComparison(total,marks,'');
+   });
    app.querySelectorAll('[data-grid-mark]').forEach(button=>button.onclick=()=>{
     const same=button.dataset.gridMark==='same',delta=Number(button.dataset.gridMark),value=lpNum(field.value);
     const count=Number.isInteger(value)&&value>0?value:0;
@@ -10651,10 +10788,10 @@ function decimalDivisionGridExample(item,i){
  const total=size*shares;
  const story=measuring?`A craft uses ${size/100} meters of cord. How many crafts can you make with ${total/100} meters?`:
   `Share ${total/100} liters of water equally among ${size} cups. How much goes into each cup?`;
- return decimalDivisionGridSpec({...item,total,size,story,title:'Different example'});
+ return decimalDivisionGridSpec({...item,total,size,story,title:'Different example',unit:measuring?'crafts':'liters per cup'});
 }
 
-function decimalDivisionGridHub(pending=''){
+function decimalDivisionGridHub(pending='',check=false){
  if(!S)return;
  cur=null;lp=null;mode='weekly-homework';
  const paused=fractionHomeworkResumeNorm(S.homeworkResume),chosen=weeklyHomeworkItem(pending);
@@ -10672,7 +10809,7 @@ function decimalDivisionGridHub(pending=''){
   section('dealing','Dealing','You know how many recipients there are. Deal in turn and count how much one recipient gets.');
  app.querySelector('#grid-home').onclick=home;
  app.querySelector('#grid-resume')?.addEventListener('click',fractionHomeworkResume);
- app.querySelector('#grid-replace')?.addEventListener('click',()=>fractionHomeworkStart(weekTask(pending)));
+ app.querySelector('#grid-replace')?.addEventListener('click',()=>fractionHomeworkStart(weekTask(pending,check)));
  app.querySelectorAll('[data-grid-item]').forEach(button=>button.onclick=()=>{
   const id=button.dataset.gridItem;
   if(paused&&paused.task.itemId!==id){decimalDivisionGridHub(id);return;}
@@ -10740,22 +10877,25 @@ function weeklyHomeworkTask(task){
  const x=weeklyHomeworkItem(task?.itemId),pack=x?.grid?DECIMAL_GRID_PACK:WEEKLY_HOMEWORK.id;
  if(!x||task.week!==pack)return null;
  const label=x.grid?x.title+' · '+weekMethodName(x.method):'U4 L'+x.lesson+' #'+x.number+': '+weekQuestion(x);
- return {weekly:true,week:pack,itemId:x.id,label};
+ return {weekly:true,week:pack,itemId:x.id,label,...(x.grid&&x.fresh&&task.gridCheck===true?{gridCheck:true}:{})};
 }
-function weekTask(id){return weeklyHomeworkTask({week:weeklyHomeworkItem(id)?.grid?DECIMAL_GRID_PACK:WEEKLY_HOMEWORK.id,itemId:id});}
+function weekTask(id,gridCheck=false){return weeklyHomeworkTask({week:weeklyHomeworkItem(id)?.grid?DECIMAL_GRID_PACK:WEEKLY_HOMEWORK.id,itemId:id,gridCheck});}
 function weeklyHomeworkHomeHTML(){
+ const followups=['measuring','dealing'].filter(method=>decimalGridFollowup(method));
  const d=new Date(),current=d.getFullYear()===2026&&d.getMonth()===10&&d.getDate()>=2&&d.getDate()<=8;
  return `<section class="card weekly-work" id="weeklyhome" aria-labelledby="weekly-title">
   <span class="pill">Unit 4 · Divide with hundredths grids</span>
   <h2 id="weekly-title" style="margin:10px 0">Practice division</h2>
   <p class="home-desc">Pick a strategy to start a problem. Ask Walter whenever you need help.</p>
   <div class="actions"><button class="btn primary" data-grid-start="measuring">Measuring Up</button><button class="btn" data-grid-start="dealing">Dealing</button></div>
+  ${followups.length?`<div class="actions">${followups.map(method=>`<button class="btn quiet" data-grid-check="${method}">Fresh ${weekMethodName(method)} check</button>`).join('')}</div>`:''}
   <div class="actions"><button class="btn quiet" data-week-hub="grid">Problems from the photos</button><button class="btn quiet" data-week-hub="division">Other division problems</button><button class="btn quiet" data-week-hub="all">${current?'This week’s homework':'Homework pack · Nov 2'}</button></div>
  </section>`;
 }
 function bindWeeklyHomework(){
  app.querySelectorAll('[data-week-hub]').forEach(b=>b.onclick=()=>weeklyHomeworkHub(b.dataset.weekHub));
  app.querySelectorAll('[data-grid-start]').forEach(b=>b.onclick=()=>decimalDivisionGridStart(b.dataset.gridStart));
+ app.querySelectorAll('[data-grid-check]').forEach(b=>b.onclick=()=>decimalDivisionGridStart(b.dataset.gridCheck,true));
 }
 function weeklyHomeworkHub(filter='division',pending=''){
  if(filter==='grid'){decimalDivisionGridHub(pending);return;}
