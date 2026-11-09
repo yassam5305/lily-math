@@ -91,6 +91,17 @@ h2{font-size:20px;margin:18px 0 6px}
 .home-lead .lpdue{width:100%}
 .home-lead .lpdue .btn{white-space:normal;text-align:left}
 .home-lead .btn.small,.home-fold .btn.small,.hw .btn.small{min-height:44px;font-size:15px;padding:9px 12px}
+.home-saved{margin-bottom:12px}
+.home-saved h2,.home-help h2,.home-today h2{margin:0}
+.home-saved-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 12px;margin-top:8px;overflow-wrap:anywhere}
+.home-saved-row+.home-saved-row{border-top:1px solid var(--line);padding-top:8px}
+.home-saved-row p{margin:2px 0;font-size:15px}
+.home-saved details summary{padding-top:10px}
+.home-kicker{font-size:14px;font-weight:700;color:var(--graphite);margin:0 0 2px}
+.home-help{background:#eef5fc}
+.home-bar #grown{min-height:44px}
+.hw-intake{width:100%;display:block;margin:8px 0;text-align:left;resize:vertical}
+#home-practice-lesson{max-width:100%;min-width:0}
 .home-desc{font-size:15px!important;margin:8px 0 10px}
 .home-win{background:#F2FBF4;margin:0 0 12px}
 .home-win h2{margin:0}
@@ -259,14 +270,14 @@ pre.stack .cr{color:#B45309;font-weight:600}
 .walter-note b{display:inline;margin:0;color:#684622}
 .walter-note.compact{margin:8px 0;padding:5px 8px}
 .walter-note.compact img{width:96px;height:96px}
-.walter-home{width:112px;height:112px;object-fit:contain;flex:none}
+.walter-home{width:56px;height:56px;object-fit:contain;flex:none}
 .walter-heading{display:flex;align-items:center;gap:10px;min-width:0;flex:1 1 auto}
 .walter-heading h1{min-width:0;overflow-wrap:anywhere}
 .walter-heading+.btn{flex:none}
 .home-bar{flex-wrap:wrap}
-.home-bar .walter-heading{flex-basis:220px}
-.home-bar #switch{margin-left:auto;max-width:100%;min-height:32px;overflow-wrap:anywhere}
-@media (max-width:380px){.walter-home{width:88px;height:88px}.walter-note img{width:96px;height:96px}.walter-note.compact img{width:88px;height:88px}}
+.home-bar .walter-heading{min-width:0}
+.home-bar #grown{margin-left:auto;max-width:100%;overflow-wrap:anywhere}
+@media (max-width:380px){.walter-note img{width:96px;height:96px}.walter-note.compact img{width:88px;height:88px}}
 /* Keep a narrow help reply readable while Walter remains beside the learner. */
 @media (max-width:380px){.lpwalter .walter-note{align-items:flex-start;gap:8px}.lpwalter .walter-note.compact img{width:48px;height:48px}.lpwalter .walter-note p{min-width:0}}
 /* Walter moves for a moment when an effort cue appears. Only a finished session gets a slow idle breath. */
@@ -413,7 +424,7 @@ details.more>div{padding:4px 0 2px;color:var(--graphite)}
 .lpwalter{margin-top:12px}.lpwalter section{margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fffdf5}.lpwalter .actions{flex-wrap:wrap}.lpwalter section>.btn{margin:8px 8px 0 0}
 /* v9.54: one daily action, readable optional sections, and current-task proximity. */
 .gu-section label.row{min-width:0;max-width:100%}.gu-section select,.parent-focus select,.parent-focus input:not([type=checkbox]){min-width:0;max-width:100%;box-sizing:border-box}
-#dailygo{width:100%;min-height:48px}.home-fold>summary,.lpcontext>summary,.gu-section>summary{cursor:pointer;font-weight:700;padding:10px 0;min-height:44px}.gu-section{margin:16px 0;border:1px solid var(--line);border-radius:12px;padding:8px 14px}.gu-overview h2{font-size:20px}.gu-observation{padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}.hwmethod{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:15px;margin:12px 0}.hwmethod select{max-width:100%;font-size:16px;padding:8px}.lpcontext{margin:12px 0 0}.lpboard .cxpolygon{max-width:240px}.lpboard .cxpolygon+p{font-size:15px;margin:6px 0}.lpcard .lptitle{font-size:22px;overflow-wrap:anywhere}.gu-overview .muted{font-size:14px}
+.home-today #dailygo{min-height:48px}.home-fold>summary,.lpcontext>summary,.gu-section>summary{cursor:pointer;font-weight:700;padding:10px 0;min-height:44px}.gu-section{margin:16px 0;border:1px solid var(--line);border-radius:12px;padding:8px 14px}.gu-overview h2{font-size:20px}.gu-observation{padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}.hwmethod{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:15px;margin:12px 0}.hwmethod select{max-width:100%;font-size:16px;padding:8px}.lpcontext{margin:12px 0 0}.lpboard .cxpolygon{max-width:240px}.lpboard .cxpolygon+p{font-size:15px;margin:6px 0}.lpcard .lptitle{font-size:22px;overflow-wrap:anywhere}.gu-overview .muted{font-size:14px}
 
 .ddgrids { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,148px),1fr)); gap:12px; max-width:720px; }
 .ddgrids svg { display:block; width:100%; max-width:250px; height:auto; }
@@ -1706,7 +1717,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.7.1 · November 8, 2026";
+const BUILD="v10.8.0 · November 8, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -3869,7 +3880,8 @@ function normalize(p){ // fill in anything missing (older saves, imports)
   out.saveTeacherNotes=p.saveTeacherNotes===true;out.teacherFeedbackNotes=teacherNoteNormalize(p.teacherFeedbackNotes,out.saveTeacherNotes);
   out.teacherFeedback=teacherFeedbackNormalize(p.teacherFeedback);out.focusRecent=teacherFeedbackNormalize(p.focusRecent).slice(0,4);
   out.homeworkLog=fractionHomeworkLogNorm(p.homeworkLog);
-  out.homeworkResume=fractionHomeworkResumeNorm(p.homeworkResume);
+  setHomeworkDrafts(out,homeworkDraftList(p));
+  out.homePracticeLesson=homePracticeLessonId(p.homePracticeLesson);
   return out;
 }
 // Player names are data, including names that happen to match Object prototype keys.
@@ -4474,30 +4486,22 @@ function home(){
   const focusLine = target ? `Next up: <b>${esc(SKILLS[target.sk].name)}</b>, ${esc(target.kid||target.why)}${/* v9.19 review: no "0 of 2 on your own" and no "N more on the list" on her screen */""}${wsum.review.length?`; ${wsum.review.length} in review`:""}.` : wsum.review.length ? `Nothing to focus on right now: ${wsum.review.length} thing${wsum.review.length===1?"":"s"} in review. Next check-in ${new Date(nextDue).toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}.` : "";
   const showFocus = !!target; // with nothing open or due, Focus would just be Mix; the note below says when the next check-in is
   const doneLine = sessionDone ? walterNote("rest","You reached a stopping point. Rest now, and come back when you're ready.",true,true) : "";
-  const homeworkPaused=fractionHomeworkResumeReady();
-  const primary=homePrimaryAction();
-  const todayHTML=`<div class="card home-today home-lead" id="dailycard" style="margin-top:0"><h2 style="margin-top:0">${primary.title}</h2><p class="muted home-desc">${primary.description}</p>${stale?`<p class="muted week-guess" id="stalepin">A grown-up set the class lesson ${esc(pinDayText())}. If your homework shows a newer lesson, ask a grown-up to update it.</p>`:""}<button class="btn primary mix" id="${primary.kind==='lesson'?'lpresume':'dailygo'}" data-dailygo ${primary.kind==='today'?'data-skill="today"':''}>${primary.label}</button></div>`;
+  const saved=homeSavedWork(),nextUp=homePracticeRecommendation();
+  const resumeRow=(row,i)=>`<div class="home-saved-row"><div><b>${esc(row.title)}</b><p class="muted">${row.kind==='lesson'?(row.resume.focus?"Teacher’s focus · ":"Lesson practice · ")+(LP_PHASE_NAME[row.resume.phase]||'Saved steps'):row.resume.st.k===0&&row.resume.task.wordStory?'Homework · Write the expression':'Homework · Saved steps'}</p></div><button class="btn${i===0?' primary':''}" ${row.kind==='lesson'?'id="lpresume"':i===0?'id="dailygo"':''} ${i===0?'data-dailygo':''} data-home-resume="${i}" aria-label="Resume ${esc(row.title)}">Resume ${row.kind==='homework'?'my homework':'lesson'}</button></div>`;
+  const resumeHTML=saved.length?`<section class="card home-saved" id="dailycard"><h2>Keep going</h2>${saved.slice(0,2).map(resumeRow).join('')}${saved.length>2?`<details><summary>More saved work (${saved.length-2})</summary>${saved.slice(2).map((row,i)=>resumeRow(row,i+2)).join('')}</details>`:''}</section>`:'';
+  const practiceHTML=`<section class="card home-today" id="${saved.length?'homerecommendation':'dailycard'}"><p class="home-kicker">Recommended practice</p><h2>${esc(nextUp.title)}</h2><p class="muted home-desc">${esc(nextUp.description)}</p>${stale&&!S.homePracticeLesson&&(nextUp.kind==='assigned'||nextUp.kind==='mapped')?`<p class="muted week-guess" id="stalepin">If your class moved on, ask a grown-up to update the lesson in Parents.</p>`:''}<div class="actions"><button class="btn${saved.length?'':' primary'}" id="${saved.length?'homepractice':'dailygo'}" ${saved.length?'':'data-dailygo'} ${nextUp.kind==='today'?'data-skill="today"':nextUp.kind==='mapped'?'data-skill="week"':''}>${esc(nextUp.label)}</button></div></section>`;
+  const homeworkHTML=`<section class="card hw home-help" id="homehelp"><h2>Get homework help</h2><p class="home-desc">Bring a problem from your page. Walter can help you with a step.</p><div class="actions"><button class="btn" data-skill="hw:check">Type my problem</button><button class="btn quiet" data-week-hub="grid">Find my worksheet</button></div><details class="home-more"${foldAttr("hw")}><summary>Practice with new numbers</summary><div class="home-more-body">${Object.keys(HW_MODES).map(id=>{const h=HW_MODES[id];return `<button class="skill" data-skill="hw:${id}"><span class="name">${esc(h.name)}</span></button>`;}).join('')}</div></details></section>`;
   const feedbackHTML=teacherFeedbackHomeHTML()+decimalStoryHomeHTML();
   const weekWork=weeklyHomeworkHomeHTML();
-  const practiceCards=primary.kind==='today'?weekWork+todayHTML.replace('btn primary mix','btn mix'):todayHTML+weekWork.replace('btn primary','btn');
   app.innerHTML=`
-    <div class="topbar home-bar"><div class="walter-heading"><img class="walter-home" src="${WALTER_ART.work}" alt="" width="112" height="112"><h1 style="margin:0" tabindex="-1">Hi, ${esc(S.name)}.</h1></div><button class="btn quiet small" id="switch">Not ${esc(S.name)}?</button></div>${warnHTML()}
-    <p class="home-intro">One step at a time. You can ask for help or stop whenever you need.</p>
-    ${doneLine}${practiceCards}
+    <div class="topbar home-bar"><div class="walter-heading"><img class="walter-home" src="${WALTER_ART.work}" alt="" width="56" height="56"><h1 style="margin:0" tabindex="-1">Hi, ${esc(S.name)}.</h1></div><button class="btn quiet small" id="grown">Parents</button></div>${warnHTML()}
+    ${resumeHTML}
+    ${saved.length?homeworkHTML+practiceHTML:practiceHTML+homeworkHTML}
+    ${doneLine}
     ${homeWinHTML()}
+    ${weekWork}
     ${feedbackHTML}
-    
-    <div class="card hw">
-      <div class="week-head"><h2 style="margin:0">Homework practice</h2></div>
-      <p class="muted home-desc">Have a problem from your page? Type it here to work through it.</p>
-      <button class="skill" data-skill="hw:check"><div style="flex:1"><div class="name">Check a problem from the page</div><div class="blurb">Use the exact numbers from your homework.</div></div></button>
-      <details class="home-more"${foldAttr("hw")}><summary>${Object.keys(HW_MODES).length===1?"Practice with new numbers":"More homework choices"}</summary><div class="home-more-body">
-        <p class="muted home-desc">Practice the same kinds of problems with new numbers. These do not change your level.</p>
-        ${Object.keys(HW_MODES).map(id=>{ const h=HW_MODES[id]; return `<button class="skill" data-skill="hw:${id}"><div style="flex:1"><div class="name">${esc(h.name)}</div><div class="blurb">${esc(h.blurb)}</div></div></button>`; }).join("")}
-        <p class="muted week-note">Want to build up to a homework problem? Choose a math topic below for practice that grows with you.</p>
-      </div></details>
-    </div>
-    <details class="card home-fold" id="homealternatives"${foldAttr("alternatives")}><summary>Choose another way to practice</summary><div class="home-more-body">${primary.kind!=='today'?`<div class="actions"><button class="btn quiet" data-skill="today">Start new daily practice</button></div>`:""}${weekHTML.replace(/btn primary/g,'btn quiet').replace(/id="lpresume"/g,'id="lpsecondaryresume"')}${unit3FocusHomeHTML()}${nsHomeTile()}${foundationsHomeHTML()}
+    <details class="card home-fold" id="homealternatives"${foldAttr("alternatives")}><summary>Browse all math</summary><div class="home-more-body">${nextUp.kind!=='today'?`<div class="actions"><button class="btn quiet" data-skill="today">Start new daily practice</button></div>`:""}${weekHTML.replace(/btn primary/g,'btn quiet')}${unit3FocusHomeHTML()}${nsHomeTile()}${foundationsHomeHTML()}
     <details class="card home-fold home-topics"${foldAttr("topics")}><summary>Choose a math topic</summary><div class="home-more-body">
       <p class="muted home-desc">Pick one thing you want to work on.</p>
       <div class="skills">${SKILL_ORDER.filter(k=>!SKILLS[k].foundation)/* v9.21: foundation skills live only in "Build your foundations" */.map(k=>`<button class="skill" data-skill="${k}"><div style="flex:1"><div class="name">${SKILLS[k].name}</div><div class="blurb">${esc(SKILLS[k].blurb)}</div>${tagsHTML(k)}</div>${dots(S.levels[k])}</button>`).join("")}</div>
@@ -4508,17 +4512,19 @@ function home(){
     </div>
     </div></details>
     <div class="stats muted">${homeEffortHTML()}</div>
-    <div class="footer"><button class="btn quiet small" id="grown">For grown-ups</button><span class="muted build">Build ${esc(BUILD)}</span></div>`;
+    <div class="footer"><button class="btn quiet small" id="switch">Not ${esc(S.name)}?</button><span class="muted build">Build ${esc(BUILD)}</span></div>`;
   app.querySelectorAll("[data-skill]").forEach(b=>b.onclick=()=>start(b.dataset.skill));
   app.querySelectorAll("[data-decimal-focus]").forEach(b=>b.onclick=unit3Focus);
   app.querySelectorAll("[data-teacher-focus]").forEach(b=>b.onclick=()=>openTeacherFocus(b.dataset.teacherFocus));
-  app.querySelectorAll("[data-teacher-check]").forEach(b=>b.onclick=()=>lpStart(b.dataset.focusId,true,null,true));
+  app.querySelectorAll("[data-teacher-check]").forEach(b=>b.onclick=()=>startHomeLesson(b.dataset.focusId,true,true));
   app.querySelector("#switch").onclick=players;
   app.querySelector("#grown").onclick=grownups; if(typeof lpHomeBind==="function") lpHomeBind(); // v9.33: Unit 2 lesson practice
-  if(primary.kind==='lesson') app.querySelector('#lpresume').onclick=lpResume;
-  if(primary.kind==='homework') app.querySelector('#dailygo').onclick=fractionHomeworkResume;
-  if(primary.kind==='check') app.querySelector('#dailygo').onclick=()=>lpStart(primary.id,true,null,primary.focus);
-  const secondaryResume=app.querySelector('#lpsecondaryresume');if(secondaryResume)secondaryResume.onclick=lpResume;
+  app.querySelectorAll('[data-home-resume]').forEach(button=>button.onclick=()=>{
+    const row=saved[+button.dataset.homeResume];
+    if(row.kind==='lesson')lpResume();else fractionHomeworkStart(row.resume.task,row.resume);
+  });
+  const recommended=app.querySelector(saved.length?'#homepractice':'#dailygo');
+  if(nextUp.kind==='assigned'||nextUp.kind==='check')recommended.onclick=()=>startHomeLesson(nextUp.id,nextUp.kind==='check',!!nextUp.focus);
   bindWeeklyHomework(); bindDecimalStoryHome(); bindFolds(); armWalterMotion();
   app.querySelector(".topbar h1").focus({preventScroll:true});
   try{window.scrollTo(0,0);}catch(e){}
@@ -6300,25 +6306,27 @@ function hwEntry(prefill, err){
   app.innerHTML=`
     <div class="topbar"><button class="btn quiet" id="back">Home</button><div class="row"><span class="pill week">Homework</span></div></div>${warnHTML()}
     <div class="card">
-      <h2 style="margin-top:0">Check a problem from the page</h2>
-      <p class="muted" style="margin:0 0 10px">Copy an expression, including fractions or mixed numbers, like <b>3/4 + 5/6</b> or <b>2 1/3 − 3/4</b>. Decimal word-form, standard-form, and expanded-form questions can be typed as printed. Supported age, equal-group, and paper-company stories can also be typed in full. Walter can help with each step. Homework does not change levels.</p>
-      <label class="vh" for="hwq">The problem</label>
-      <input class="ans text" id="hwq" type="text" inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="like 3/4 + 5/6 or 148 × 19" value="${esc(prefill||"")}">
+      <h2 style="margin-top:0">Get homework help</h2>
+      <label for="hwq">Copy the whole question, or type the math from your page.</label>
+      <textarea class="ans text hw-intake" id="hwq" rows="3" inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="Type the words and numbers from your page">${esc(prefill||"")}</textarea>
+      <div class="inline-err" id="hwerr" role="status" aria-live="polite">${esc(err||"")}</div>
+      <div class="actions"><button class="btn primary" id="hwgo">Get step-by-step help</button></div>
+      <details class="home-more"><summary>Problem options</summary>
       <label class="hwmethod" for="hwform">Problem type <select id="hwform"><option value="auto">Read the full question</option><option value="words">Decimal → word form</option><option value="standard">Number words → standard form</option><option value="expanded">Decimal → expanded form</option></select></label>
       <p class="muted" style="font-size:14px">If a form question uses different wording, choose its type above and enter just its number or number words.</p>
       <label class="hwmethod" for="hwfractionmethod">For fraction addition or subtraction, use <select id="hwfractionmethod"><option value="algorithm">Equivalent fractions</option><option value="area">Equal-part area model</option><option value="line">Number line</option></select></label>
-      <div class="inline-err" id="hwerr" role="status" aria-live="polite">${esc(err||"")}</div>
-      <div class="actions"><button class="btn primary" id="hwgo">Set it up</button></div>
+      </details>
       <details class="lpwalter"><summary class="btn quiet">Ask Walter</summary>${walterNote('work','Copy the expression from your page, including decimal points and operation signs. If your teacher asks for an area model, add “area model” after it. For a supported story, copy the full question, including the sentence that asks what to find. For another story shape, type the expression you wrote. After setting it up, I can help with the method while you do the arithmetic.',true)}</details>
       <details class="home-more"><summary>Examples and supported problems</summary><p class="muted" style="font-size:14px;margin:14px 0 0">Fractions: <b>3/4 + 5/6</b>, <b>2 1/3 − 3/4</b>, <b>2/3 × 3/5</b>, <b>3 ÷ 1/4</b>, and <b>1/4 ÷ 3</b>. Other shapes the app knows: <b>148 × 19</b> (standard algorithm), <b>3,660 ÷ 30</b> (place value strategy), <b>8 × 10^5 × 6</b> or <b>47 × 10^6</b> (powers of ten), <b>4.5 × 1,000</b> or <b>36.5 ÷ 10^2</b> (moving the decimal point), <b>round 2.98 to the nearest tenth</b>, <b>3.45 + 2.7</b> or <b>12.5 − 3.75</b> (adding and subtracting decimals), <b>3.4 × 6</b>, <b>2.5 × 1.2</b> or <b>4.8 ÷ 0.6</b> (multiplying and dividing decimals), <b>2 + 3 × 4</b> or <b>49 ÷ (34 − 27) × 9</b> (order of operations), <b>1,144 ÷ 11</b> or <b>40)8,760</b> (dividing; add <b>area model</b> for the area model), <b>(24 ÷ 4) × 2 vs 12</b> (less than, equal to, or greater than), <b>A: 8 + 4 B: (8 + 4) ÷ 2</b> (the relationship), <b>half of the sum of 17 and 9</b> (write the expression), <b>six hundred forty-seven and eight hundred ninety-two thousandths</b> (standard form). Use x or × for times, ÷ or / for divide, ^ for the exponent. Add <b>area model</b> after a multiplication or division to walk through it as an area model. Age stories with a known age, half that age, and years added or taken away, and the paper-company story about sheets, packages, and boxes, can be typed in full. For equal-group stories, include the total, how many fit in each group, and the question about how many groups can be filled. Other story shapes: type the expression you wrote, like <b>3 × 12 − 2</b>.</p></details>
     </div>`;
   const q=id=>app.querySelector("#"+id); const inp=q("hwq");
   q("back").onclick=home;
   const go=()=>{ const form=q('hwform').value,prefix={words:'Word form of ',standard:'Standard form of ',expanded:'Expanded form of '};let r;
-    if(form==='auto')r=parseHomework(inp.value);
+    if(form==='auto'&&/^\s*(?:#|problem\s+|question\s+)\s*\d+[.)]?\s*$/i.test(inp.value))r={err:'Copy the whole question, including what it asks you to find.'};
+    else if(form==='auto')r=parseHomework(inp.value);
     else {r=parseDecimalFormHomework(inp.value)||parseDecimalFormHomework(prefix[form]+inp.value)||{err:'Enter the decimal number or number words for the selected form first.'};if(r?.skill&&r.skill!==form)r={err:'The selected problem type and the question ask for different forms. Change the type or edit the entry; your work is still here.'};}
     if(r.err){ q("hwerr").textContent=r.err; inp.focus(); return; } if(r.fraction||r.wordStory){if(r.fraction&&!r.explicitMethod)r.method=q("hwfractionmethod").value;fractionHomeworkStart(r);return;} pendingHW=r; next(); };
-  q("hwgo").onclick=go; inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); go(); } });
+  q("hwgo").onclick=go; inp.addEventListener("keydown",e=>{ if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){ e.preventDefault(); go(); } });
   inp.focus({preventScroll:true});
 }
 function next(){ // a fresh problem: new help chain
@@ -8272,7 +8280,7 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
       <h2 style="margin-top:0">Class position</h2>
       ${calChoiceHTML}${calOn?`
       <p class="muted" style="font-size:14px;margin:12px 0 8px">The app follows the pacing calendar unless you pin a lesson. The calendar's lesson is an estimate from the unit dates; Home labels it “Estimate” and says it is a guess. If the homework header says otherwise ("Homework · Unit 2 Lesson 5"), pick that lesson and pin it. A pin stays on that lesson until you change it or choose “Follow the calendar”; after ${PIN_STALE_SCHOOL_DAYS} school days, Home and this page ask you to check it.</p>
-      <p class="muted" style="font-size:14px;margin:0 0 8px">On Home, one main action resumes unfinished work, offers a due lesson check-in, or starts the daily plan. Class lessons and other choices are under “Choose another way to practice”. For instructional lessons in Units 2–11, the class card offers “Practice Lesson N step by step”; mixed review of the lesson (mostly this lesson, some from the two before it) is under “More class options” as “Mixed review: this week.” For a lesson without a step-by-step route, the card shows “Practice this week,” with the same mix.</p>
+      <p class="muted" style="font-size:14px;margin:0 0 8px">Home shows saved work separately. In Automatic, a due check-in takes priority, followed by the class lesson you set and then the daily plan. More class options are under “Browse all math”. For instructional lessons in Units 2–11, the class card offers “Practice Lesson N step by step”; mixed review of the lesson (mostly this lesson, some from the two before it) is under “More class options” as “Mixed review: this week.” For a lesson without a step-by-step route, the card shows “Practice this week,” with the same mix.</p>
       <p class="muted" style="font-size:14px;margin:0 0 8px"><b>Pin the topic, not just the page number.</b> A page titled "Spiral Review U2 L7" practices Lesson 7's skill even when it sits in Lesson 9's homework. Pin the lesson whose name matches what the page is actually doing; for tonight's exact problem shapes, use "Homework practice" on the home screen, which ignores levels and the calendar.</p>
       <p class="muted classmode" id="classmode" style="font-size:14px;margin:0 0 8px" role="status" aria-live="polite">${classModeHTML()}</p>
       <label class="vh" for="classat">Lesson the class is on</label>
@@ -8285,8 +8293,17 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
   const notYetUnitsHTML = (calOn && notYetUnits.length) ? `<p class="muted" style="font-size:13px;margin:10px 0 4px">Units with nothing in the app yet:</p><ul class="units muted">${notYetUnits.map(t=>`<li>${t}</li>`).join("")}</ul>` : "";
   const notYet = !calOn ? `The unit-by-unit lesson list appears here when the class pacing calendar is on (see "Class position").` // v9.24: the unit list belongs to the pacing calendar
     : typeof NOT_YET_COVERED==="string" && NOT_YET_COVERED.trim() ? NOT_YET_COVERED : `See the lesson map above for what each skill covers.`;
+  const nextOptions=byUnit.map(g=>{
+    const lessons=g.ls.filter(l=>homePracticeLessonId(l.id));
+    return lessons.length?`<optgroup label="${esc(unitTitle(g.unit))}">${lessons.map(l=>`<option value="${esc(l.id)}"${S.homePracticeLesson===l.id?' selected':''}>${esc(lessonShort(l)+' · '+homeLessonTopic(l.id))}</option>`).join('')}</optgroup>`:'';
+  }).join('');
+  const practiceSetting=`<section class="card" id="home-practice-setting"><h2>Recommended practice</h2>
+    <p class="muted">Choose the lesson ${esc(S.name)} sees on Home, or leave it on Automatic for check-ins, the class lesson you set, and a short practice plan.</p>
+    <label for="home-practice-lesson">What to practice next</label>
+    <div class="actions"><select class="sel" id="home-practice-lesson"><option value="">Automatic</option>${nextOptions}</select><button class="btn" id="save-home-practice">Save recommendation</button></div>
+    <p id="home-practice-status" class="muted" role="status">${esc(homePracticeRecommendation().title)}</p></section>`;
   app.innerHTML=`
-    <div class="topbar" id="gupage"><button class="btn quiet" id="back">Home</button><h1 style="margin:0">${esc(S.name)}'s progress</h1><span class="muted build">Build ${esc(BUILD)}</span></div>${warnHTML()}${guBannerHTML()}${teacherFeedbackGrownupsHTML()}${evidenceOverviewHTML()}
+    <div class="topbar" id="gupage"><button class="btn quiet" id="back">Home</button><h1 style="margin:0">${esc(S.name)}’s Parents tab</h1><span class="muted build">Build ${esc(BUILD)}</span></div>${warnHTML()}${guBannerHTML()}${practiceSetting}${teacherFeedbackGrownupsHTML()}${evidenceOverviewHTML()}
     <details class="gu-section" id="gurecords"><summary>Detailed practice and lesson records</summary>
     <p class="muted" style="margin:6px 0 0">${(()=>{ const cls=e=>classifyEntry(e); const wk=log.filter(e=>Number.isFinite(e.t)&&e.t>=weekAgo); const wi=wk.filter(e=>["independent","indep-miss"].includes(cls(e))); const wiR=wi.filter(e=>cls(e)==="independent").length; const wHelp=wk.filter(e=>["supported","prompted","guided"].includes(cls(e))).length; const wCopied=wk.filter(e=>cls(e)==="copied").length;
       const c={}; for(const e of log){ const k=cls(e); c[k]=(c[k]||0)+1; } let lastCopied=-1; log.forEach((e,i)=>{ if(cls(e)==="copied") lastCopied=i; }); const sinceCopied=log.slice(lastCopied+1).filter(e=>cls(e)==="guided").length;
@@ -8352,6 +8369,18 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
   for(const [id,open] of Object.entries(openSections)){const section=app.querySelector("#"+id);if(section)section.open=open;}
   const q=id=>app.querySelector("#"+id);
   q("back").onclick=home; q("back").focus({preventScroll:true});
+  q("save-home-practice").onclick=()=>{
+    const selected=homePracticeLessonId(q("home-practice-lesson").value),before=S.homePracticeLesson;
+    S.homePracticeLesson=selected;
+    if(!save()){
+      S.homePracticeLesson=before;
+      q("home-practice-status").textContent="This device could not save the recommendation. Try again.";
+      return;
+    }
+    grownupsPage();
+    q("home-practice-status").textContent=`Saved for Home. ${homePracticeRecommendation().title}.`;
+    q("save-home-practice").focus({preventScroll:true});
+  };
   const setClassMode=()=>{ const m=q("classmode"); if(m) m.innerHTML=classModeHTML(); };
   bindNsGrownups(); bindFoundations(); bindGuCard();
   bindTeacherFeedback();bindTeacherSettings();if(typeof bindWalterReview==="function")bindWalterReview();
@@ -8378,7 +8407,7 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
   q("tcopy").onclick=async()=>{ q("tmsg").textContent="Building…"; try{ const code=await codeFor(); const ok=await copyText(code);if(ok)noteBackupCreated("copiedAt"); q("tmsg").textContent= ok ? `Copied (${fmtBytes(code.length)}). Now paste it into Restore on the new iPad.` : "Could not copy automatically; the code is shown below, select it and copy by hand."; if(!ok){ q("tcode").hidden=false; q("tcode").value=code; } }catch(e){ q("tmsg").textContent="Could not build the code: "+(e.message||e); } };
   if(q("tshare")) q("tshare").onclick=async()=>{ try{ const code=await codeFor(!!q("tsharenotes")?.checked); await navigator.share({title:"Math Practice transfer code", text:code}); q("tmsg").textContent="Shared. On the new iPad, copy the code from where it landed and paste it into Restore."; }catch(e){ if(e && e.name!=="AbortError") q("tmsg").textContent="Sharing did not work here; use Copy instead."; } };
   q("tshow").onclick=async()=>{ const ta=q("tcode"); if(!ta.hidden){ ta.hidden=true; q("tshow").textContent="Show the code"; return; } ta.value="Building…"; ta.hidden=false; ta.value=await codeFor(); q("tshow").textContent="Hide the code"; };
-  q("reset").onclick=()=>{ if(confirm(`Erase ${S.name}'s levels and history and start from level 1?`)){ const n=S.name, cal=S.classCal===true; S=normalize({...blankProfile(n), classCal:cal}); DB.profiles[n]=S; save(); home(); } }; // v9.24: the class pacing calendar choice is a setting, not progress, so it survives
+  q("reset").onclick=()=>{ if(confirm(`Erase ${S.name}'s levels and history and start from level 1?`)){ const n=S.name, cal=S.classCal===true, homePracticeLesson=S.homePracticeLesson; S=normalize({...blankProfile(n), classCal:cal, homePracticeLesson}); DB.profiles[n]=S; save(); home(); } }; // v9.24: the class pacing calendar choice is a setting, not progress, so it survives
   q("remove").onclick=()=>{ if(confirm(`Remove ${S.name} completely? This cannot be undone (unless you saved a backup).`)){ delete DB.profiles[S.name]; DB.current=null; S=null; save(); home(); } };
 }
 // ===== v9.34: Unit 2 lesson practice ("Practice Lesson N") =====
@@ -8682,7 +8711,7 @@ function lpRecord(it, extra){ if(lp.homework)return fractionHomeworkRecord(it,ex
     supportClass:model?"model":!method?"incomplete-method":st.answerPreviewed?"answer-confirmed":st.helps?"supported":st.tries?"retried":repeated?"repeated":"clean-checked",
     route:sp.route&&st.done?sp.route(st):undefined}, extra||{});
   S.lessonLog=Array.isArray(S.lessonLog)?S.lessonLog:[]; S.lessonLog.push(e); while(S.lessonLog.length>LP_LOG_CAP) S.lessonLog.shift(); lp.results.push(e); lpSaveResume(); return e; }
-function lpFinish(){ if(lp.homework){delete S.homeworkResume;save();return;} const o=lp.focus?teacherFocusState(lp.id):lpState(lp.id), own=lp.results.filter(e=>(e.phase==="independent"||e.phase==="delayed") && e.id===lp.id);
+function lpFinish(){ if(lp.homework){removeHomeworkDraft(lp.homework);save();return;} const o=lp.focus?teacherFocusState(lp.id):lpState(lp.id), own=lp.results.filter(e=>(e.phase==="independent"||e.phase==="delayed") && e.id===lp.id);
   o.sessions=(+o.sessions||0)+(lp.delayed?0:1); o.last=Date.now();
   if(own.length){ const keys=own.map(lpRecordFingerprint), distinct=keys.every(Boolean)&&new Set(keys).size===own.length, clean=distinct&&own.every(e=>e.firstTry&&e.methodOk&&!e.repeated);
     o.adjustment="held";
@@ -10140,7 +10169,8 @@ function teacherReportDraft(player=S,options={}){
       helps:st.helps,tries:st.tries,stepEvents:st.stepEvents,walterHelp:st.walterEvents,
       teacherFocus:!!r.focus,answerPreviewed:!!st.answerPreviewed,steps:st.k,ok:0,methodOk:0},source,true);
   };
-  resume(p.lessonResume,'lesson');resume(p.homeworkResume,'homework');
+  resume(p.lessonResume,'lesson');
+  for(const draft of [p.homeworkResume,...list(p.homeworkDrafts).slice(0,5)])resume(draft,'homework');
   // Ordinary pending work stores a visible prompt and support, not every typed step.
   const pending=p.pendingQ;
   if(pending&&typeof pending==='object'&&validTime(pending.at)&&(pending.typed||pending.engaged))add({...pending,t:pending.at,phase:'unfinished',ok:0},pending.hw?'homework':'ordinary',true);
@@ -10350,19 +10380,19 @@ function lpHomeHTML(curL, opt){ opt=opt||{}; const reached=lpReached(); if(!reac
   const paused=lpResumeReady()?S.lessonResume:null;
   const includesU3=reached.some(id=>lpUnit(id)===3); const later=reached.some(id=>lpUnit(id)>3); const pickLabel=later?"Lessons, step by step":includesU3?"Unit 2 & 3 lessons, step by step":here?"Other Unit 2 lessons":"Unit 2 lessons, step by step";
   const nowCls=paused?"quiet":opt.guess?"":"primary"; // v9.36: an estimated lesson is offered, not made the main button
-  return `<div class="lphome">${paused?`<button class="btn primary" id="lpresume">${paused.focus?"Resume teacher's focus":"Resume "+lpLessonLabel(paused.id)}</button>`:""}${here?`<button class="btn ${nowCls}" id="lpnow" data-lp="${here}">Practice Lesson ${LP_LESSONS[here].lesson} step by step</button>`:""}</div>${opt.mid||""}<div class="lphome"><button class="btn quiet small" id="lppick">${pickLabel}</button>
+  return `<div class="lphome">${here?`<button class="btn ${nowCls}" id="lpnow" data-lp="${here}">Practice Lesson ${LP_LESSONS[here].lesson} step by step</button>`:""}</div>${opt.mid||""}<div class="lphome"><button class="btn quiet small" id="lppick">${pickLabel}</button>
     ${due.length?`<div class="lpdue"><button class="btn quiet small lpcheckin" data-lpcheck="${due[0]}">${lpLessonLabel(due[0])} check-in: new numbers, on your own</button></div>`:""}</div>
     ${due.length>1?`<p class="muted lpmore">${due.length-1} more check-in${due.length===2?" is":"s are"} ready in “${pickLabel}.”</p>`:""}`; }
-function lpHomeBind(){ const q=s=>app.querySelector(s); const b=q("#lpnow"); if(b) b.onclick=()=>lpStart(b.dataset.lp, false); const r=q("#lpresume"); if(r) r.onclick=lpResume; const p=q("#lppick"); if(p) p.onclick=lpPicker;
-  app.querySelectorAll("[data-lpcheck]").forEach(x=>x.onclick=()=>lpStart(x.dataset.lpcheck, true)); }
+function lpHomeBind(){ const q=s=>app.querySelector(s); const b=q("#lpnow"); if(b) b.onclick=()=>startHomeLesson(b.dataset.lp); const r=q("#lpresume"); if(r) r.onclick=lpResume; const p=q("#lppick"); if(p) p.onclick=lpPicker;
+  app.querySelectorAll("[data-lpcheck]").forEach(x=>x.onclick=()=>startHomeLesson(x.dataset.lpcheck,true)); }
 function lpPicker(){ if(!S) return; mode="lesson"; cur=null; lpSanitize(); const reached=lpReached(), due=lpDue(), L=LP_LESSONS, units=reached.some(id=>lpUnit(id)>3)?"Grade 5":reached.some(id=>lpUnit(id)===3)?"Unit 2 & 3":"Unit 2";
   app.innerHTML=`<div class="topbar"><button class="btn quiet" id="back">Home</button><div class="row"><span class="pill week">${units}</span></div></div>${warnHTML()}
     <div class="card"><h2 style="margin-top:0">${units} lessons, step by step</h2><p class="muted" style="font-size:14px;margin:0 0 10px">Each one practices the lesson's listed method with original examples: watch one, try two together, find a slip, then two on your own. Mixed review is still on Home, in “This week in class.”</p>
     ${due.length?`<h3 style="margin:12px 0 6px">Check-ins ready</h3><div class="lpdue">${due.map(id=>`<button class="btn quiet small lpcheckin" data-lpcheck="${id}">${lpLessonLabel(id)} check-in: new numbers, on your own</button>`).join("")}</div><h3 style="margin:14px 0 6px">Practice a lesson</h3>`:""}
     <div class="skills">${reached.map(id=>{ const o=(S.lessons||{})[id]||{}; return `<button class="skill" data-lp="${id}"><div style="flex:1"><div class="name">${lpLessonLabel(id)}: ${esc(L[id].name)}</div><div class="blurb">${esc(lpPlain(L[id].goal))}</div>${o.sessions?`<div class="tags"><span class="tag">Practiced ${o.sessions} time${o.sessions===1?"":"s"}</span>${due.includes(id)?`<span class="tag">Check-in ready</span>`:""}</div>`:""}</div></button>`; }).join("")}</div>
     ${reached.length<Object.keys(L).length?`<p class="muted" style="font-size:13px;margin:10px 0 0">Later lessons show up here when the class calendar reaches them.</p>`:""}</div>`;
-  app.querySelector("#back").onclick=home; app.querySelectorAll("[data-lp]").forEach(b=>b.onclick=()=>lpStart(b.dataset.lp, false));
-  app.querySelectorAll("[data-lpcheck]").forEach(x=>x.onclick=()=>lpStart(x.dataset.lpcheck, true)); }
+  app.querySelector("#back").onclick=home; app.querySelectorAll("[data-lp]").forEach(b=>b.onclick=()=>startHomeLesson(b.dataset.lp));
+  app.querySelectorAll("[data-lpcheck]").forEach(x=>x.onclick=()=>startHomeLesson(x.dataset.lpcheck,true)); }
 // Grown-ups: process evidence kept apart from answer evidence, per lesson.
 function lpGrownupsHTML(){ lpSanitize(); const log=S.lessonLog; if(!log.length && !lpReached().length) return "";
   const normalLog=log.filter(e=>!e.teacherFocus); if(!normalLog.length && !lpReached().length) return teacherFocusGrownupsHTML();
@@ -10495,10 +10525,44 @@ function fractionHomeworkResumeNorm(r){
   return {...r,task,st:{...r.st,stepEvents:lpTrimEvents(r.st.stepEvents)}};
 }
 function fractionHomeworkLogNorm(log){return (Array.isArray(log)?log:[]).filter(e=>e&&typeof e==='object'&&!Array.isArray(e)&&Number.isFinite(e.t)&&typeof e.q==='string').slice(-100).map(e=>({...e,q:e.q.slice(0,100),firstTry:0,hw:1,stepEvents:lpTrimEvents(e.stepEvents)}));}
-function fractionHomeworkResumeReady(){return !!fractionHomeworkResumeNorm(S?.homeworkResume);}
-function fractionHomeworkResume(){const r=fractionHomeworkResumeNorm(S?.homeworkResume);if(r)fractionHomeworkStart(r.task,r);}
+const HOMEWORK_DRAFT_LIMIT=6;
+function homeworkDraftKey(task){
+  if(task.weekly)return JSON.stringify([task.week,task.itemId,!!task.gridCheck]);
+  if(task.wordStory)return JSON.stringify([task.storyType,task.story]);
+  return JSON.stringify([task.op,task.a,task.b,['+','−'].includes(task.op)?task.method:null]);
+}
+function homeworkDraftList(profile=S){
+  const rows=[profile?.homeworkResume,...(Array.isArray(profile?.homeworkDrafts)?profile.homeworkDrafts.slice(0,HOMEWORK_DRAFT_LIMIT):[])];
+  const seen=new Set();
+  return rows.map(fractionHomeworkResumeNorm).filter(Boolean).sort((a,b)=>b.t-a.t).filter(row=>{
+    const key=homeworkDraftKey(row.task);
+    if(seen.has(key))return false;
+    seen.add(key);return true;
+  }).slice(0,HOMEWORK_DRAFT_LIMIT);
+}
+function setHomeworkDrafts(profile,rows){
+  profile.homeworkResume=rows[0]||null;
+  profile.homeworkDrafts=rows.slice(1);
+}
+function fractionHomeworkResumeReady(){return homeworkDraftList().length>0;}
+function fractionHomeworkResume(){const r=homeworkDraftList()[0];if(r)fractionHomeworkStart(r.task,r);}
+function homeworkDraftLabel(task){
+  if(!task.wordStory)return task.label;
+  const start=task.story.match(/^.*?[.!?](?=\s|$)/)?.[0]||task.story;
+  return start.length>76?start.slice(0,73).trimEnd()+'…':start;
+}
+function removeHomeworkDraft(task){
+  const key=homeworkDraftKey(task);
+  setHomeworkDrafts(S,homeworkDraftList().filter(row=>homeworkDraftKey(row.task)!==key));
+}
 function fractionHomeworkStart(request,resume){
   const task=fractionHomeworkTask(request);if(!task||!S)return;
+  const key=homeworkDraftKey(task),drafts=homeworkDraftList();
+  resume=resume||drafts.find(row=>homeworkDraftKey(row.task)===key);
+  if(!resume&&drafts.length>=HOMEWORK_DRAFT_LIMIT){
+    const oldest=drafts.at(-1);
+    if(!window.confirm(`You have ${HOMEWORK_DRAFT_LIMIT} saved homework problems. Replace the oldest one, “${homeworkDraftLabel(oldest.task)},” with this problem?`))return;
+  }
   if(cur&&phase==='q')leaveProblem();cur=null;mode=task.wordStory?'hw:word':'hw:fraction';
   const sp=fractionHomeworkSpec(task),bp={name:task.weekly?'Unit 4 homework':task.wordStory?'Word problem homework':'Fraction homework',lesson:0,skill:task.weekly?weeklyHomeworkItem(task.itemId).skill:task.storyType==='decimal'?'decaddsub':task.storyType==='group-count'?'divide':task.wordStory?'expressions':'fracaddsub',make:(load,phase,i=0)=>task.weekly?weeklyHomeworkExample(task,i):fractionHomeworkSpec(task.wordStory?wordHomeworkExample(task,i):task.op==='×'?{...task,a:{n:i+2,d:5},b:{n:1,d:3}}:task.op==='÷'?{...task,a:{n:i+2,d:1},b:{n:1,d:5}}:{...task,a:{n:i+3,d:4},b:{n:1,d:6}})};bp.model=()=>bp.make(1,'model',0);
   const it={phase:'guided',spec:sp,load:1};lp={id:task.wordStory?'homework-word':'homework-fraction',homework:task,bp,items:[it,{phase:'summary'}],i:0,load:1,results:[],t0:Date.now()};
@@ -10506,7 +10570,12 @@ function fractionHomeworkStart(request,resume){
   if(resume){it.st={...it.st,...resume.st,msg:'',msgKind:'',stepEvents:lpTrimEvents(resume.st.stepEvents)};it.step=sp.next(it.st);lpPrepareStep(it);it.recorded=!!resume.recorded;lp.results=Array.isArray(resume.results)?resume.results.slice(-2):[];}
   lpRender();toProblemTop();
 }
-function fractionHomeworkSave(){const it=lp.items[lp.i];S.homeworkResume={v:1,task:lp.homework,st:it.st,recorded:!!it.recorded,results:lp.results,t:Date.now()};save();}
+function fractionHomeworkSave(){
+  const it=lp.items[lp.i],key=homeworkDraftKey(lp.homework);
+  const others=[S.homeworkResume,...(S.homeworkDrafts||[])].filter(row=>row&&homeworkDraftKey(row.task)!==key);
+  setHomeworkDrafts(S,[{v:1,task:lp.homework,st:it.st,recorded:!!it.recorded,results:lp.results,t:Date.now()},...others].slice(0,HOMEWORK_DRAFT_LIMIT));
+  save();
+}
 function fractionHomeworkRecord(it,extra){
   if(it.recorded)return null;it.recorded=true;const st=it.st||{};
   const e={t:Date.now(),q:lp.homework.label,...(lp.homework.weekly?{week:lp.homework.week,itemId:lp.homework.itemId}:{}),method:it.spec.methodName||it.spec.kind,ok:st.done?1:0,methodOk:st.done&&!st.skipped?1:0,helps:+st.helps||0,tries:+st.tries||0,firstTry:0,hw:1,phase:'homework',stepEvents:lpTrimEvents(st.stepEvents),walterHelp:(st.walterEvents||[]).slice(-60),...extra};
@@ -10734,15 +10803,13 @@ function decimalGridFollowup(method,now=Date.now()){
 function decimalDivisionGridStart(method,check=false){
  const options=DECIMAL_GRID_FRESH_ITEMS.filter(item=>item.method===method);
  if(!S||!options.length)return;
- const paused=fractionHomeworkResumeNorm(S.homeworkResume);
- if(paused?.task.week===DECIMAL_GRID_PACK&&weeklyHomeworkItem(paused.task.itemId)?.method===method&&(!check||paused.task.gridCheck)){
-  fractionHomeworkStart(paused.task,paused);return;
- }
+ const paused=homeworkDraftList().find(({task})=>task.week===DECIMAL_GRID_PACK&&
+  weeklyHomeworkItem(task.itemId)?.method===method&&!!task.gridCheck===check);
+ if(paused){fractionHomeworkStart(paused.task,paused);return;}
  const last=(S.homeworkLog||[]).slice().reverse().find(e=>e.ok&&e.week===DECIMAL_GRID_PACK&&options.some(item=>item.id===e.itemId));
  const index=options.findIndex(item=>item.id===last?.itemId);
  const next=check?decimalGridFollowup(method):options[(index+1)%options.length];
  if(!next)return;
- if(paused){decimalDivisionGridHub(next.id,check);return;}
  fractionHomeworkStart(weekTask(next.id,check));
 }
 
@@ -10975,30 +11042,22 @@ function decimalDivisionGridExample(item,i){
  return decimalDivisionGridSpec({...item,total,size,story,title:'Different example',unit:measuring?'crafts':'liters per cup'});
 }
 
-function decimalDivisionGridHub(pending='',check=false){
+function decimalDivisionGridHub(){
  if(!S)return;
  cur=null;lp=null;mode='weekly-homework';
- const paused=fractionHomeworkResumeNorm(S.homeworkResume),chosen=weeklyHomeworkItem(pending);
+
  const section=(method,title,description)=>[
   '<section class="card"><h2>'+title+'</h2><p>'+description+'</p><div class="skills">',
   ...DECIMAL_GRID_PHOTO_ITEMS.filter(item=>item.method===method).map(item=>'<button class="skill" data-grid-item="'+item.id+'">'+esc(item.title)+'</button>'),
   '</div></section>'
  ].join('');
  app.innerHTML='<div class="topbar"><button class="btn quiet" id="grid-home">Home</button><span class="pill week">Unit 4 · Lessons 9 and 10</span></div>'+
-  warnHTML()+'<h1 tabindex="-1" id="grid-heading">Divide with hundredths grids</h1>'+
-  (paused?'<div class="card"><p>Paused homework: '+esc(paused.task.label)+'</p><div class="actions"><button class="btn primary" id="grid-resume">Resume my problem</button>'+
-   (pending?'<button class="btn quiet" id="grid-replace">Start '+esc(weekMethodName(chosen?.method)||'the new problem')+'</button>':'')+'</div>'+
-   (pending?'<p>Starting the new problem replaces this paused draft. Finished practice stays saved.</p>':'')+'</div>':'')+
+  warnHTML()+'<h1 tabindex="-1" id="grid-heading">Find my worksheet</h1><p>Divide with hundredths grids</p><div class="actions"><button class="btn quiet" data-week-hub="all">Nov 2 homework pack</button></div>'+
   section('measuring','Measuring Up','You know the size of each group. Mark groups of that size and count how many fit.')+
   section('dealing','Dealing','You know how many recipients there are. Deal in turn and count how much one recipient gets.');
  app.querySelector('#grid-home').onclick=home;
- app.querySelector('#grid-resume')?.addEventListener('click',fractionHomeworkResume);
- app.querySelector('#grid-replace')?.addEventListener('click',()=>fractionHomeworkStart(weekTask(pending,check)));
- app.querySelectorAll('[data-grid-item]').forEach(button=>button.onclick=()=>{
-  const id=button.dataset.gridItem;
-  if(paused&&paused.task.itemId!==id){decimalDivisionGridHub(id);return;}
-  fractionHomeworkStart(weekTask(id),paused||undefined);
- });
+ app.querySelectorAll('[data-grid-item]').forEach(button=>button.onclick=()=>fractionHomeworkStart(weekTask(button.dataset.gridItem)));
+ bindWeeklyHomework();
  app.querySelector('#grid-heading').focus({preventScroll:true});toProblemTop();
 }
 // Reviewed printed tasks from the November 2 homework photos. Student writing,
@@ -11069,11 +11128,11 @@ function weeklyHomeworkHomeHTML(){
  const d=new Date(),current=d.getFullYear()===2026&&d.getMonth()===10&&d.getDate()>=2&&d.getDate()<=8;
  return `<section class="card weekly-work" id="weeklyhome" aria-labelledby="weekly-title">
   <span class="pill">Unit 4 · Divide with hundredths grids</span>
-  <h2 id="weekly-title" style="margin:10px 0">Practice division</h2>
+  <h2 id="weekly-title" style="margin:10px 0">Practice with division grids</h2>
   <p class="home-desc">Pick a strategy to start a problem. Ask Walter whenever you need help.</p>
-  <div class="actions"><button class="btn primary" data-grid-start="measuring">Measuring Up</button><button class="btn" data-grid-start="dealing">Dealing</button></div>
+  <div class="actions"><button class="btn" data-grid-start="measuring">Measuring Up · How many groups fit?</button><button class="btn" data-grid-start="dealing">Dealing · How much does each get?</button></div>
   ${followups.length?`<div class="actions">${followups.map(method=>`<button class="btn quiet" data-grid-check="${method}">Fresh ${weekMethodName(method)} check</button>`).join('')}</div>`:''}
-  <div class="actions"><button class="btn quiet" data-week-hub="grid">Problems from the photos</button><button class="btn quiet" data-week-hub="division">Other division problems</button><button class="btn quiet" data-week-hub="all">${current?'This week’s homework':'Homework pack · Nov 2'}</button></div>
+  <div class="actions"><button class="btn quiet" data-week-hub="division">Other division problems</button><button class="btn quiet" data-week-hub="all">${current?'This week’s homework':'Homework pack · Nov 2'}</button></div>
  </section>`;
 }
 function bindWeeklyHomework(){
@@ -11081,15 +11140,14 @@ function bindWeeklyHomework(){
  app.querySelectorAll('[data-grid-start]').forEach(b=>b.onclick=()=>decimalDivisionGridStart(b.dataset.gridStart));
  app.querySelectorAll('[data-grid-check]').forEach(b=>b.onclick=()=>decimalDivisionGridStart(b.dataset.gridCheck,true));
 }
-function weeklyHomeworkHub(filter='division',pending=''){
- if(filter==='grid'){decimalDivisionGridHub(pending);return;}
- if(!S)return;cur=null;lp=null;mode='weekly-homework';const paused=fractionHomeworkResumeNorm(S.homeworkResume),completed=new Set((S.homeworkLog||[]).filter(e=>e.ok&&e.week===WEEKLY_HOMEWORK.id).map(e=>e.itemId));
+function weeklyHomeworkHub(filter='division'){
+ if(filter==='grid'){decimalDivisionGridHub();return;}
+ if(!S)return;cur=null;lp=null;mode='weekly-homework';const completed=new Set((S.homeworkLog||[]).filter(e=>e.ok&&e.week===WEEKLY_HOMEWORK.id).map(e=>e.itemId));
  const section=(title,rows)=>`<section class="card"><h2 style="margin-top:0">${title}</h2><div class="skills">${rows.map(x=>`<button class="skill" data-week-item="${x.id}"><span style="flex:1"><span class="name" style="display:block">Lesson ${x.lesson} · #${x.number}${completed.has(x.id)?' · Practiced':''}</span><span style="display:block">${esc(weekQuestion(x))}</span><span class="blurb" style="display:block">${esc(weekMethodName(x.method))}</span></span></button>`).join('')}</div></section>`;
  const div=WEEKLY_ITEMS.filter(x=>['measuring','dealing','division','compatible'].includes(x.method));
- app.innerHTML=`<div class="topbar"><button class="btn quiet" id="week-home">Home</button><span class="pill week">Unit 4 · ${WEEKLY_HOMEWORK.date}</span></div>${warnHTML()}<h1 tabindex="-1" id="week-heading">${filter==='division'?'Division this week':'This week’s homework'}</h1><p>Choose one problem. Ask Walter whenever you need help. Exact homework is practice; fresh lesson checks keep separate records.</p>${paused?`<div class="card"><h2 style="margin-top:0">Your paused homework</h2><p>${esc(paused.task.label)}</p><button class="btn primary" id="week-resume">Resume my problem</button>${pending?`<p>Starting a different problem replaces this paused homework. Your recorded practice stays saved.</p><button class="btn" id="week-replace">Start the problem I chose</button>`:''}</div>`:''}<div class="actions"><button class="btn${filter==='division'?' primary':''}" data-week-hub="division">Division focus</button><button class="btn${filter==='all'?' primary':''}" data-week-hub="all">All problems</button><button class="btn" data-week-hub="grid">Use hundredths grids</button></div><details class="card"><summary>Practice with fresh numbers</summary><div class="home-more-body"><p><b>Measuring Up:</b> the group size is known; find how many groups fit.<br><b>Dealing:</b> the group count is known; find the amount in each group.</p><div class="actions"><button class="btn" data-week-fresh="U4L9">Measuring Up practice</button><button class="btn" data-week-fresh="U4L10">Dealing practice</button><button class="btn quiet" data-week-fresh="U2L11">Whole-number division</button></div><p class="muted">The photographed Measuring Up page says Lesson 12; the class calendar calls this strategy Lesson 9. These buttons use the matching strategy.</p></div></details>${section('Measuring Up · how many groups?',div.filter(x=>x.method==='measuring'))}${section('Dealing · how much in each group?',div.filter(x=>x.method==='dealing'))}${section('Whole-number division review',div.filter(x=>['division','compatible'].includes(x.method)))}${filter==='all'?[2,3,4,5,6,7,8,9,10].map(n=>{const rows=WEEKLY_ITEMS.filter(x=>x.lesson===n&&!div.includes(x));return rows.length?section(`Lesson ${n} · multiplication and spiral review`,rows):'';}).join(''):''}`;
- app.querySelector('#week-home').onclick=home;app.querySelector('#week-resume')?.addEventListener('click',fractionHomeworkResume);
- app.querySelector('#week-replace')?.addEventListener('click',()=>fractionHomeworkStart(weekTask(pending)));
- app.querySelectorAll('[data-week-item]').forEach(b=>b.onclick=()=>{const task=weekTask(b.dataset.weekItem);if(paused&&(!paused.task.weekly||paused.task.itemId!==task.itemId))weeklyHomeworkHub(filter,task.itemId);else fractionHomeworkStart(task,paused||undefined);});
+ app.innerHTML=`<div class="topbar"><button class="btn quiet" id="week-home">Home</button><span class="pill week">Unit 4 · ${WEEKLY_HOMEWORK.date}</span></div>${warnHTML()}<h1 tabindex="-1" id="week-heading">${filter==='division'?'Division this week':'This week’s homework'}</h1><p>Choose one problem. Ask Walter whenever you need help. Exact homework is practice; fresh lesson checks keep separate records.</p><div class="actions"><button class="btn${filter==='division'?' primary':''}" data-week-hub="division">Division focus</button><button class="btn${filter==='all'?' primary':''}" data-week-hub="all">All problems</button><button class="btn" data-week-hub="grid">Use hundredths grids</button></div><details class="card"><summary>Practice with fresh numbers</summary><div class="home-more-body"><p><b>Measuring Up:</b> the group size is known; find how many groups fit.<br><b>Dealing:</b> the group count is known; find the amount in each group.</p><div class="actions"><button class="btn" data-week-fresh="U4L9">Measuring Up practice</button><button class="btn" data-week-fresh="U4L10">Dealing practice</button><button class="btn quiet" data-week-fresh="U2L11">Whole-number division</button></div><p class="muted">The photographed Measuring Up page says Lesson 12; the class calendar calls this strategy Lesson 9. These buttons use the matching strategy.</p></div></details>${section('Measuring Up · how many groups?',div.filter(x=>x.method==='measuring'))}${section('Dealing · how much in each group?',div.filter(x=>x.method==='dealing'))}${section('Whole-number division review',div.filter(x=>['division','compatible'].includes(x.method)))}${filter==='all'?[2,3,4,5,6,7,8,9,10].map(n=>{const rows=WEEKLY_ITEMS.filter(x=>x.lesson===n&&!div.includes(x));return rows.length?section(`Lesson ${n} · multiplication and spiral review`,rows):'';}).join(''):''}`;
+ app.querySelector('#week-home').onclick=home;
+ app.querySelectorAll('[data-week-item]').forEach(b=>b.onclick=()=>fractionHomeworkStart(weekTask(b.dataset.weekItem)));
  app.querySelectorAll('[data-week-fresh]').forEach(b=>b.onclick=()=>{if(lpResumeReady()&&S.lessonResume.focus&&S.lessonResume.id===b.dataset.weekFresh)lpResume();else lpStart(b.dataset.weekFresh,false,null,true);});
  bindWeeklyHomework();app.querySelector('#week-heading').focus({preventScroll:true});toProblemTop();
 }
@@ -11206,12 +11264,54 @@ function homeLessonCheck(){
   for(const [id,o] of Object.entries(S.teacherFocus||{}))if(o&&teacherFocusIsActive(id)&&o.due>0&&o.due<=Date.now())due.push({id,focus:true,t:o.due});
   return due.sort((a,b)=>a.t-b.t)[0]||null;
 }
+function homePracticeLessonId(id){
+  return typeof id==="string"&&Object.hasOwn(LP_LESSONS,id)?id:null;
+}
+function homeLessonTopic(id){
+  if(id==="U4L9")return "Divide decimals with Measuring Up";
+  if(id==="U4L10")return "Divide decimals with Dealing";
+  return lessonById(id)?.name||lpLessonLabel(id);
+}
+function homePracticeRecommendation(){
+  const parent=homePracticeLessonId(S.homePracticeLesson);
+  if(parent){
+    const due=S.lessons?.[parent]?.due;
+    if(due>0&&due<=Date.now())return {kind:'check',id:parent,title:homeLessonTopic(parent),label:'Try a quick check-in',description:'Try your recommended topic with new numbers.'};
+    return {kind:'assigned',id:parent,title:homeLessonTopic(parent),label:'Start recommended practice',description:'Set for you in Parents.'};
+  }
+  const due=homeLessonCheck();
+  if(due)return {kind:'check',id:due.id,focus:due.focus,title:homeLessonTopic(due.id),label:'Try a quick check-in',description:'Try the same idea with new numbers.'};
+  const pinned=classCalOn()?S.classPin:null;
+  if(homePracticeLessonId(pinned))return {kind:'assigned',id:pinned,title:homeLessonTopic(pinned),label:'Start class practice',description:pinIsStale()?'Last class topic set by a grown-up.':'Your class topic, set by a grown-up.'};
+  if(pinned&&lessonSkills(lessonById(pinned)).length)return {kind:'mapped',title:homeLessonTopic(pinned),label:'Start class practice',description:'Practice skills from this topic and recent lessons.'};
+  const plan=buildTodayPlan();
+  return {kind:'today',title:plan[0]==='starter'?'Warm up with place value':'Practice a few problems',label:'Start today',
+    description:plan[0]==='starter'?'Start with three short place-value problems.':`About ${todayCountWords(plan)} problems: ${[...new Set(plan.map(k=>k==='mix'?'math you’ve practiced':todayLabel(k)))].join(', ')}.`};
+}
+function homeSavedWork(){
+  const work=homeworkDraftList().map(resume=>({kind:'homework',resume,t:resume.t,title:homeworkDraftLabel(resume.task)}));
+  if(lpResumeReady()){
+    const resume=S.lessonResume;
+    work.push({kind:'lesson',resume,t:resume.t,title:homeLessonTopic(resume.id)});
+  }
+  work.sort((a,b)=>b.t-a.t);
+  const other=work.findIndex(row=>row.kind!==work[0].kind);
+  if(other>1)work.splice(1,0,work.splice(other,1)[0]);
+  return work;
+}
 function homePrimaryAction(){
-  const hr=fractionHomeworkResumeNorm(S?.homeworkResume),lr=lpResumeReady()?S.lessonResume:null;
-  if(hr&&(!lr||hr.t>=lr.t))return {kind:'homework',title:'Keep going',label:'Resume my homework',description:esc(hr.task.label)+'. Your checked work and draft are saved.'};
-  if(lr)return {kind:'lesson',title:'Keep going',label:lr.focus?"Resume teacher's focus":'Resume '+lpLessonLabel(lr.id),description:'Your checked steps and unfinished work are saved. Continue, ask Walter, or pause.'};
-  const due=homeLessonCheck();if(due)return {kind:'check',id:due.id,focus:due.focus,title:'Check back after a break',label:'Start today',description:'A short check-in with new numbers for '+esc(due.focus?"your teacher's focus":lpLessonLabel(due.id))+'. Try it yourself, or ask Walter.'};
-  const plan=buildTodayPlan();return {kind:'today',title:'Ready for today?',label:'Start today',description:plan[0]==='starter'?'A quick look, then three gentle place-value warm-ups. You can choose a different topic below.':`About ${todayCountWords(plan)} problems: ${[...new Set(plan.map(k=>k==='mix'&&(!classCalOn()||!S.classPin)?"math you've practiced":todayLabel(k)))].join(', ')}. You can stop at any time.${classCalOn()&&!S.classPin?" We’ll use math you have practiced here, or a foundation builder, until a grown-up sets the class lesson.":""}`};
+  const saved=homeSavedWork()[0];
+  if(saved?.kind==='homework')return {kind:'homework',label:'Resume my homework',description:esc(saved.title)};
+  if(saved?.kind==='lesson')return {kind:'lesson',label:'Resume '+lpLessonLabel(saved.resume.id),description:esc(saved.title)};
+  return homePracticeRecommendation();
+}
+function startHomeLesson(id,delayed=false,focus=false){
+  if(lpResumeReady()){
+    const r=S.lessonResume;
+    if(r.id===id&&!!r.delayed===delayed&&!!r.focus===focus){lpResume();return;}
+    if(!window.confirm(`You have saved practice for “${homeLessonTopic(r.id)}.” Replace that lesson draft with this practice?`))return;
+  }
+  lpStart(id,delayed,null,focus);
 }
 function evidenceOverviewHTML(){
   const summary=summarizeEvidence(S,Date.now(),classifyEntry),action=homePrimaryAction(),target=recoveryTarget(),due=[];
@@ -11220,7 +11320,7 @@ function evidenceOverviewHTML(){
   for(const [id,o] of Object.entries(S.teacherFocus||{}))if(o&&teacherFocusIsActive(id)&&o.due>0)due.push({label:lpLessonLabel(id)+" · teacher's focus",t:o.due});
   due.sort((a,b)=>a.t-b.t);
   const recommendation=action.kind!=='today'?action.label:target?'Practice '+SKILLS[target.sk].name:due.some(x=>x.t<=Date.now())?'Start today and take a due check-in':classCalOn()&&S.classPin?'Start today with the pinned class lesson':'Start today';
-  const reason=action.kind==='check'?'A scheduled lesson-method check is ready after a break.':action.kind!=='today'?'There is unfinished work to continue.':target?esc(target.why):due.some(x=>x.t<=Date.now())?'A scheduled check is ready after a break.':action.description;
+  const reason=['assigned','mapped'].includes(action.kind)?esc(action.description):action.kind==='check'?'A scheduled lesson-method check is ready after a break.':action.kind!=='today'?'There is unfinished work to continue.':target?esc(target.why):due.some(x=>x.t<=Date.now())?'A scheduled check is ready after a break.':action.description;
   const ordinary=summary.ordinary.slice(0,6),lessons=summary.lessons.slice(0,6);
   return `<section class="card gu-overview" id="evidenceoverview"><h2 style="margin-top:0">What to practice next</h2><p><b>${esc(recommendation)}</b></p><p class="muted">${reason}</p><h3>Recent independent observations</h3><p class="muted">Last 7 days. Ordinary answers and checked lesson methods stay separate. The difficulty shown is the one practiced, not the next assigned difficulty.</p>
   <div id="ordinaryoverview"><b>Ordinary practice</b>${ordinary.length?ordinary.map(g=>`<div class="gu-observation">${esc(SKILLS[g.sk]?.name||g.sk)} · ${g.level===null?'difficulty not recorded':'level '+g.level}: ${g.right} right / ${g.tried} independent attempts; ${g.distinct} distinct recorded problem${g.distinct===1?'':'s'}${g.context?`<br><span class="muted">${esc(overviewMethodContext(g.sk,g.context))}</span>`:''}.</div>`).join(''):'<p class="muted">No independent ordinary attempts recorded in this period.</p>'}</div>
@@ -11230,9 +11330,9 @@ function evidenceOverviewHTML(){
   </section>`;
 }
 function fractionHomeworkReportHTML(){
-  const rows=fractionHomeworkLogNorm(S.homeworkLog),pending=fractionHomeworkResumeNorm(S.homeworkResume);
-  if(!rows.length&&!pending)return '';
-  return `<div class="card"><h2 style="margin-top:0">Exact fraction homework</h2><p class="muted">Homework stays separate from independent readiness and lesson difficulty. Help is counted when delivered; unfinished work keeps its draft.</p>${pending?`<p>Unfinished: ${esc(pending.task.label)} · ${+pending.st.helps||0} help deliveries · ${+pending.st.tries||0} calculation misses.</p>`:''}${rows.slice(-10).reverse().map(e=>`<div class="gu-observation">${esc(e.q)} · ${esc(e.method)} · ${e.ok?'finished':'unfinished'} · ${e.helps} help deliveries · ${e.tries} calculation misses.</div>`).join('')}</div>`;
+  const rows=fractionHomeworkLogNorm(S.homeworkLog),pending=homeworkDraftList();
+  if(!rows.length&&!pending.length)return '';
+  return `<div class="card"><h2 style="margin-top:0">Exact fraction homework</h2><p class="muted">Homework stays separate from independent readiness and lesson difficulty. Help is counted when delivered; unfinished work keeps its draft.</p>${pending.map(r=>`<p>Unfinished: ${esc(homeworkDraftLabel(r.task))} · ${+r.st.helps||0} help deliveries · ${+r.st.tries||0} calculation misses.</p>`).join('')}${rows.slice(-10).reverse().map(e=>`<div class="gu-observation">${esc(e.q)} · ${esc(e.method)} · ${e.ok?'finished':'unfinished'} · ${e.helps} help deliveries · ${e.tries} calculation misses.</div>`).join('')}</div>`;
 }
 // One bootstrap: late-added skills must exist before saved check-ins are normalized.
 load();
