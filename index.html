@@ -270,33 +270,35 @@ pre.stack .cr{color:#B45309;font-weight:600}
 .walter-note b{display:inline;margin:0;color:#684622}
 .walter-note.compact{margin:8px 0;padding:5px 8px}
 .walter-note.compact img{width:96px;height:96px}
-.walter-home{width:56px;height:56px;object-fit:contain;flex:none}
+.walter-home{width:112px;height:112px;object-fit:contain;flex:none}
 .walter-heading{display:flex;align-items:center;gap:10px;min-width:0;flex:1 1 auto}
 .walter-heading h1{min-width:0;overflow-wrap:anywhere}
 .walter-heading+.btn{flex:none}
-.home-bar{flex-wrap:wrap}
+.home-bar{display:grid;grid-template-columns:minmax(0,1fr) auto}
+.walter-greeting{min-width:0}
+.walter-greeting p{color:var(--graphite);font-size:15px;line-height:1.3;margin:3px 0 0}
 .home-bar .walter-heading{min-width:0}
 .home-bar #grown{margin-left:auto;max-width:100%;overflow-wrap:anywhere}
+@media (max-width:480px){.walter-home{width:88px;height:88px}}
 @media (max-width:380px){.walter-note img{width:96px;height:96px}.walter-note.compact img{width:88px;height:88px}}
 /* Keep a narrow help reply readable while Walter remains beside the learner. */
-@media (max-width:380px){.lpwalter .walter-note{align-items:flex-start;gap:8px}.lpwalter .walter-note.compact img{width:48px;height:48px}.lpwalter .walter-note p{min-width:0}}
-/* Walter moves for a moment when an effort cue appears. Only a finished session gets a slow idle breath. */
+@media (max-width:380px){.lpwalter .walter-note{align-items:flex-start;gap:8px}.lpwalter .walter-note.compact img{width:72px;height:72px}.lpwalter .walter-note p{min-width:0;overflow-wrap:anywhere}}
+/* One brief gesture accompanies each new visible cue. */
 .walter-note img,.walter-home{transform-origin:50% 85%}
-.walter-home{animation:walter-hello 720ms ease-out both}
+.walter-home.walter-play{animation:walter-hello 680ms ease-in-out both}
 .walter-note.walter-play.walter-nice img{animation:walter-happy 850ms ease-in-out both}
 .walter-note.walter-play.walter-keep img{animation:walter-settle 850ms ease-out both}
-.walter-note.walter-play.walter-work img{animation:walter-lean 950ms ease-in-out both}
+.walter-note.walter-play.walter-work img{animation:walter-lean 680ms ease-in-out both}
+.walter-note.walter-play.walter-clue img{animation:walter-listen 720ms ease-in-out both}
 .walter-note.walter-play.walter-checkin img{animation:walter-perk 760ms ease-out both}
 .walter-note.walter-play.walter-rest img{animation:walter-nest 850ms ease-out both}
-.walter-note.walter-rest.walter-idle img{animation:walter-breathe 4.6s ease-in-out infinite}
-.walter-note.walter-rest.walter-idle.walter-play img{animation:walter-nest 850ms ease-out both,walter-breathe 4.6s ease-in-out 850ms infinite}
-@keyframes walter-hello{0%{opacity:.7;transform:translateY(3px) rotate(-3deg)}55%{opacity:1;transform:translateY(-2px) rotate(2deg)}100%{opacity:1;transform:none}}
+@keyframes walter-hello{0%,100%{transform:none}42%{transform:translateY(-4px) rotate(-4deg)}66%{transform:translateY(-2px) rotate(2deg)}}
+@keyframes walter-listen{0%,100%{transform:none}45%,60%{transform:translateX(2px) rotate(4deg)}}
 @keyframes walter-happy{0%,100%{transform:none}28%{transform:translateY(-5px) rotate(-3deg)}58%{transform:translateY(-2px) rotate(3deg)}78%{transform:translateY(-4px) rotate(-1deg)}}
 @keyframes walter-settle{0%{transform:translateY(4px) rotate(-2deg)}55%{transform:translateY(-1px) rotate(1deg)}100%{transform:none}}
 @keyframes walter-lean{0%,100%{transform:none}38%{transform:translateX(2px) rotate(2deg)}68%{transform:translateX(1px) rotate(1deg)}}
 @keyframes walter-perk{0%{transform:translateY(4px) scale(.97)}48%{transform:translateY(-4px) scale(1.015)}100%{transform:none}}
 @keyframes walter-nest{0%{transform:translateY(3px) scale(.98)}55%{transform:translateY(-1px) scale(1.01)}100%{transform:none}}
-@keyframes walter-breathe{0%,100%{transform:none}50%{transform:scale(1.018) translateY(-1px)}}
 @media (prefers-reduced-motion:reduce){.walter-note img,.walter-home{animation:none!important;transform:none!important}}
 .tiers{display:grid;gap:12px;margin-top:8px}
 @media (min-width:1000px){ .tiers{grid-template-columns:1fr 1fr 1fr} }
@@ -1717,7 +1719,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.8.0 · November 8, 2026";
+const BUILD="v10.8.1 · November 8, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -3876,7 +3878,7 @@ function normalize(p){ // fill in anything missing (older saves, imports)
   out.foundations=foundNorm(p.foundations); if(typeof out.foundLast!=="string") delete out.foundLast; out.foundNudgeAt=Math.max(0,+out.foundNudgeAt||0); // v9.21 (Agent M): the grown-ups' foundation choices (all off by default), the last one served, the last nudge served
   // Teacher notes are parent opt-in per player, local and included in backups only while enabled. No personal note is embedded in the app.
   out.schema=Math.max(10,Number.isInteger(p.schema)&&p.schema>0?p.schema:10);
-  out.decimalStorySupport=typeof p.decimalStorySupport==='boolean'?p.decimalStorySupport:false;out.walterMistakeNotes=p.walterMistakeNotes!==false;out.readAloudEnabled=p.readAloudEnabled!==false;
+  out.decimalStorySupport=typeof p.decimalStorySupport==='boolean'?p.decimalStorySupport:false;out.walterMistakeNotes=p.walterMistakeNotes!==false;out.walterMotion=p.walterMotion!==false;out.readAloudEnabled=p.readAloudEnabled!==false;
   out.saveTeacherNotes=p.saveTeacherNotes===true;out.teacherFeedbackNotes=teacherNoteNormalize(p.teacherFeedbackNotes,out.saveTeacherNotes);
   out.teacherFeedback=teacherFeedbackNormalize(p.teacherFeedback);out.focusRecent=teacherFeedbackNormalize(p.focusRecent).slice(0,4);
   out.homeworkLog=fractionHomeworkLogNorm(p.homeworkLog);
@@ -4409,9 +4411,10 @@ function walterCueKey(kind, message){
   const problem=cur ? `${cur.skill}|${plain(cur.prompt)}|${phase}|${stage}|${stepIdx}` : "";
   return `${kind}|${message}|${lesson||problem||`home|${sessionN}|${todaySid}`}`;
 }
-function walterNote(kind, message, compact=false, idle=false){
-  if(!WALTER_ART[kind]) return "";
-  return `<div class="walter-note walter-${kind}${compact?" compact":""}${idle?" walter-idle":""}" data-walter-cue="${esc(walterCueKey(kind,message))}"><img src="${WALTER_ART[kind]}" alt="" width="112" height="112" loading="lazy"><p><b>Walter:</b> ${message}</p></div>`;
+function walterNote(kind, message, compact=false){
+  const art=WALTER_ART[kind==="clue"?"work":kind];
+  if(!art) return "";
+  return `<div class="walter-note walter-${kind}${compact?" compact":""}" data-walter-cue="${esc(walterCueKey(kind,message))}"><img src="${art}" alt="" width="112" height="112" loading="lazy"><p><b>Walter:</b> ${message}</p></div>`;
 }
 function walterStepMessage(step, helped){
   if(cur && cur.skill==="multiply" && step && Number.isInteger(step.place) && step.place>=0 && step.place<3){
@@ -4420,18 +4423,40 @@ function walterStepMessage(step, helped){
   }
   return helped?"You used help to finish this step.":"You revised this step and finished it.";
 }
-const walterMotionSeen=new Set(); let walterObserver=null;
+const walterMotionSeen=new Set();
+let walterObserver=null, walterGreeted=false, lastWalterClueAt=-Infinity;
 function armWalterMotion(){
   if(walterObserver){ walterObserver.disconnect(); walterObserver=null; }
-  const notes=[...app.querySelectorAll(".walter-note")]; if(!notes.length) return;
-  if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  const play=el=>{ const key=el.dataset.walterCue; if(walterMotionSeen.has(key)) return;
-    walterMotionSeen.add(key); if(walterMotionSeen.size>120) walterMotionSeen.delete(walterMotionSeen.values().next().value);
-    el.classList.add("walter-play"); };
+  if(S?.walterMotion===false||window.matchMedia?.("(prefers-reduced-motion: reduce)").matches)return;
+  const notes=[...app.querySelectorAll("[data-walter-cue]")].filter(el=>el.classList.contains("walter-home")
+    ?!walterGreeted:!walterMotionSeen.has(el.dataset.walterCue));
+  if(!notes.length)return;
+  const play=el=>{
+    if(el.classList.contains("walter-home")){
+      if(walterGreeted)return;
+      walterGreeted=true;
+    }else{
+      const key=el.dataset.walterCue;
+      if(walterMotionSeen.has(key))return;
+      walterMotionSeen.add(key);
+      if(walterMotionSeen.size>120)walterMotionSeen.delete(walterMotionSeen.values().next().value);
+      if(el.classList.contains("walter-clue")){
+        const now=performance.now();
+        if(now-lastWalterClueAt<1800)return;
+        lastWalterClueAt=now;
+      }
+    }
+    el.classList.add("walter-play");
+  };
   if(!window.IntersectionObserver){ notes.forEach(play); return; }
   const observer=new IntersectionObserver(entries=>{ for(const entry of entries) if(entry.isIntersecting){ play(entry.target); observer.unobserve(entry.target); } },{threshold:0.5});
-  walterObserver=observer; notes.filter(el=>!walterMotionSeen.has(el.dataset.walterCue)).forEach(el=>observer.observe(el));
+  walterObserver=observer; notes.forEach(el=>observer.observe(el));
 }
+// Editing the math takes over immediately, even during a short cue.
+app.addEventListener("input",()=>{
+  walterObserver?.disconnect();
+  app.querySelectorAll(".walter-play").forEach(el=>el.classList.remove("walter-play"));
+});
 // v9.36: which Home disclosures are open, kept in memory for this sitting only (per player), so coming back to Home does not re-close them.
 const homeOpen={};
 const foldAttr=key=>{ const k=(S&&S.name||"")+"|"+key; return ` data-fold="${key}"${homeOpen[k]?" open":""}`; };
@@ -4485,7 +4510,7 @@ function home(){
   const nextDue = wsum.review.length ? Math.min(...wsum.review.map(w=>w.due)) : 0;
   const focusLine = target ? `Next up: <b>${esc(SKILLS[target.sk].name)}</b>, ${esc(target.kid||target.why)}${/* v9.19 review: no "0 of 2 on your own" and no "N more on the list" on her screen */""}${wsum.review.length?`; ${wsum.review.length} in review`:""}.` : wsum.review.length ? `Nothing to focus on right now: ${wsum.review.length} thing${wsum.review.length===1?"":"s"} in review. Next check-in ${new Date(nextDue).toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}.` : "";
   const showFocus = !!target; // with nothing open or due, Focus would just be Mix; the note below says when the next check-in is
-  const doneLine = sessionDone ? walterNote("rest","You reached a stopping point. Rest now, and come back when you're ready.",true,true) : "";
+  const doneLine = sessionDone ? walterNote("rest","You reached a stopping point. Rest now, and come back when you're ready.",true) : "";
   const saved=homeSavedWork(),nextUp=homePracticeRecommendation();
   const resumeRow=(row,i)=>`<div class="home-saved-row"><div><b>${esc(row.title)}</b><p class="muted">${row.kind==='lesson'?(row.resume.focus?"Teacher’s focus · ":"Lesson practice · ")+(LP_PHASE_NAME[row.resume.phase]||'Saved steps'):row.resume.st.k===0&&row.resume.task.wordStory?'Homework · Write the expression':'Homework · Saved steps'}</p></div><button class="btn${i===0?' primary':''}" ${row.kind==='lesson'?'id="lpresume"':i===0?'id="dailygo"':''} ${i===0?'data-dailygo':''} data-home-resume="${i}" aria-label="Resume ${esc(row.title)}">Resume ${row.kind==='homework'?'my homework':'lesson'}</button></div>`;
   const resumeHTML=saved.length?`<section class="card home-saved" id="dailycard"><h2>Keep going</h2>${saved.slice(0,2).map(resumeRow).join('')}${saved.length>2?`<details><summary>More saved work (${saved.length-2})</summary>${saved.slice(2).map((row,i)=>resumeRow(row,i+2)).join('')}</details>`:''}</section>`:'';
@@ -4494,7 +4519,7 @@ function home(){
   const feedbackHTML=teacherFeedbackHomeHTML()+decimalStoryHomeHTML();
   const weekWork=weeklyHomeworkHomeHTML();
   app.innerHTML=`
-    <div class="topbar home-bar"><div class="walter-heading"><img class="walter-home" src="${WALTER_ART.work}" alt="" width="56" height="56"><h1 style="margin:0" tabindex="-1">Hi, ${esc(S.name)}.</h1></div><button class="btn quiet small" id="grown">Parents</button></div>${warnHTML()}
+    <div class="topbar home-bar"><div class="walter-heading"><img class="walter-home" data-walter-cue="home-greeting" src="${WALTER_ART.work}" alt="" width="112" height="112"><div class="walter-greeting"><h1 style="margin:0" tabindex="-1">Hi, ${esc(S.name)}.</h1><p>Walter’s here if you get stuck.</p></div></div><button class="btn quiet small" id="grown">Parents</button></div>${warnHTML()}
     ${resumeHTML}
     ${saved.length?homeworkHTML+practiceHTML:practiceHTML+homeworkHTML}
     ${doneLine}
@@ -7166,7 +7191,7 @@ function hwWalterHTML(){ if(!hwWalterEligible())return ''; const ctx=hwWalterCon
   const qs=hwWalterQuestions(ctx),picked=st.choice&&qs.find(x=>x.id===st.choice.id);
   const reply=picked?(st.choice.text||picked.texts[Math.min(picked.texts.length-1,st.choice.depth||0)]):'';
   const primary=[['words',"I don't get the words"],['start',"I don't know how to start"],['check',"I think I'm wrong"],['smaller','Show me a smaller piece']];
-  return `<div class="lpwalter" id="hwwalter"><button type="button" class="btn quiet" id="hwdirecthelp">Ask Walter</button> <button type="button" class="btn quiet" id="hwask" aria-expanded="${!!st.open}" aria-controls="hwaskpanel">Choose help</button>${st.open?`<section id="hwaskpanel" aria-label="Ask Walter step help"><p><b>What would help?</b></p><div class="actions" aria-label="Choose what you need">${primary.map(([id,label])=>`<button type="button" class="btn quiet small" data-hw-walter="${id}" aria-pressed="${picked?.id===id}">${esc(label)}</button>`).join('')}</div>${picked?`<div id="hwaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('work',esc(reply),true)}${typeof readAloudButton==='function'?readAloudButton(reply,'hw-reply'):''}</div><div class="actions" aria-label="Optional reply feedback"><button type="button" class="btn quiet small" data-hw-rating="helped" data-signature="${esc(st.choice.signature||'')}">That helped</button><button type="button" class="btn quiet small" id="hwaskmore" data-hw-rating="stuck" data-signature="${esc(st.choice.signature||'')}">Still stuck</button><button type="button" class="btn quiet small" data-hw-walter="meaning">Why does this work?</button></div>${st.lastReply?.choices?.length?`<details open><summary>Choose another part</summary><div class="actions">${st.lastReply.choices.map(id=>qs.find(x=>x.id===id)||({id:id==='test'?'check':id,label:id==='test'?'Checking':id})).map(x=>`<button type="button" class="btn quiet small" data-hw-walter="${x.id}">${esc(x.label)}</button>`).join('')}</div></details>`:''}`:''}${st.choice?.move==='test'&&walterFictionalEligible(hwWalterSemanticContext(ctx))?`<button type="button" class="btn quiet small" id="hwerror">Check a fictional mistake</button>`:''}<button type="button" class="btn quiet small" id="hwaskexample">See a different worked example</button><button type="button" class="btn quiet small" id="hwaskreturn">Back to my work</button>${walterFictionalHTML(cur.fictional,cur.fictionalNote,'hw')}</section>`:''}</div>`;
+  return `<div class="lpwalter" id="hwwalter"><button type="button" class="btn quiet" id="hwdirecthelp">Ask Walter</button> <button type="button" class="btn quiet" id="hwask" aria-expanded="${!!st.open}" aria-controls="hwaskpanel">Choose help</button>${st.open?`<section id="hwaskpanel" aria-label="Ask Walter step help"><p><b>What would help?</b></p><div class="actions" aria-label="Choose what you need">${primary.map(([id,label])=>`<button type="button" class="btn quiet small" data-hw-walter="${id}" aria-pressed="${picked?.id===id}">${esc(label)}</button>`).join('')}</div>${picked?`<div id="hwaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('clue',esc(reply),true)}${typeof readAloudButton==='function'?readAloudButton(reply,'hw-reply'):''}</div><div class="actions" aria-label="Optional reply feedback"><button type="button" class="btn quiet small" data-hw-rating="helped" data-signature="${esc(st.choice.signature||'')}">That helped</button><button type="button" class="btn quiet small" id="hwaskmore" data-hw-rating="stuck" data-signature="${esc(st.choice.signature||'')}">Still stuck</button><button type="button" class="btn quiet small" data-hw-walter="meaning">Why does this work?</button></div>${st.lastReply?.choices?.length?`<details open><summary>Choose another part</summary><div class="actions">${st.lastReply.choices.map(id=>qs.find(x=>x.id===id)||({id:id==='test'?'check':id,label:id==='test'?'Checking':id})).map(x=>`<button type="button" class="btn quiet small" data-hw-walter="${x.id}">${esc(x.label)}</button>`).join('')}</div></details>`:''}`:''}${st.choice?.move==='test'&&walterFictionalEligible(hwWalterSemanticContext(ctx))?`<button type="button" class="btn quiet small" id="hwerror">Check a fictional mistake</button>`:''}<button type="button" class="btn quiet small" id="hwaskexample">See a different worked example</button><button type="button" class="btn quiet small" id="hwaskreturn">Back to my work</button>${walterFictionalHTML(cur.fictional,cur.fictionalNote,'hw')}</section>`:''}</div>`;
 }
 
 function hwRecordHelp(ctx,id,type,depth,signature,text='',work=null){
@@ -8880,7 +8905,7 @@ function lpWalterHTML(it){if(!lpWalterEligible(it))return '';
   // Older saved replies retain their authored text, without restoring the old sequence.
   const text=picked?(selected.text||picked.texts[Math.max(0,Math.min(picked.texts.length-1,selected.depth||0))]):'';
   return `<div class="lpwalter">${it.spec.walterReply?'':'<button type="button" class="btn quiet" id="lpdirecthelp">Ask Walter</button> '}
-  <button type="button" class="btn quiet" id="lpask" aria-expanded="${!!st.walterOpen}" aria-controls="lpaskpanel">${it.spec.walterReply?'Ask Walter':'Choose help'}</button>${st.walterOpen?`<section id="lpaskpanel" aria-label="Ask Walter help"><p><b>What would help with this step?</b></p><div class="actions">${decimalStoryPrimary(lpWalterSemanticContext(it),LP_WALTER_PRIMARY).map(([id,label])=>`<button type="button" class="btn quiet small" data-walter-question="${id}" aria-pressed="${picked?.id===id}">${esc(label)}</button>`).join('')}</div>${picked?`<div id="lpaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('work',esc(text),true)}${typeof readAloudButton==='function'?readAloudButton(text,'lp-reply'):''}${picked.id==='carry-model'||selected.move==='smaller'&&it.step.walter?.role==='column'&&!it.step.walter.last?lpCarryModelHTML():''}</div>${lpWalterChoiceButtons(selected.choices,true)}${lpWalterRatingButtons(selected.signature)}${selected.move==='test'&&walterFictionalEligible(lpWalterSemanticContext(it))?`<button type="button" class="btn quiet small" id="lperror">Check a fictional mistake</button>`:''}<button type="button" class="btn quiet small" id="lpaskreturn">Back to my step</button>`:''}<button type="button" class="btn quiet small" id="lpother">See a different worked example</button></section>`:''}</div>`;
+  <button type="button" class="btn quiet" id="lpask" aria-expanded="${!!st.walterOpen}" aria-controls="lpaskpanel">${it.spec.walterReply?'Ask Walter':'Choose help'}</button>${st.walterOpen?`<section id="lpaskpanel" aria-label="Ask Walter help"><p><b>What would help with this step?</b></p><div class="actions">${decimalStoryPrimary(lpWalterSemanticContext(it),LP_WALTER_PRIMARY).map(([id,label])=>`<button type="button" class="btn quiet small" data-walter-question="${id}" aria-pressed="${picked?.id===id}">${esc(label)}</button>`).join('')}</div>${picked?`<div id="lpaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('clue',esc(text),true)}${typeof readAloudButton==='function'?readAloudButton(text,'lp-reply'):''}${picked.id==='carry-model'||selected.move==='smaller'&&it.step.walter?.role==='column'&&!it.step.walter.last?lpCarryModelHTML():''}</div>${lpWalterChoiceButtons(selected.choices,true)}${lpWalterRatingButtons(selected.signature)}${selected.move==='test'&&walterFictionalEligible(lpWalterSemanticContext(it))?`<button type="button" class="btn quiet small" id="lperror">Check a fictional mistake</button>`:''}<button type="button" class="btn quiet small" id="lpaskreturn">Back to my step</button>`:''}<button type="button" class="btn quiet small" id="lpother">See a different worked example</button></section>`:''}</div>`;
 }
 function lpWalterDeliver(it,id,depth){ if(!lpWalterEligible(it)) return;
   const st=it.st, q=lpWalterQuestions(it).find(x=>x.id===id); if(!q) return;
@@ -8932,7 +8957,7 @@ function lpRepairWalterRespond(it,id,move){const q=lpRepairWalterQuestions(it).f
 }
 function lpRepairWalterHTML(it){const rp=it.rep,qs=lpRepairWalterQuestions(it),picked=qs.find(x=>x.id===rp.walterChoice?.id),selected=rp.walterChoice;
   const text=picked?(selected.text||picked.texts[Math.max(0,Math.min(picked.texts.length-1,selected.depth||0))]):'';
-  return `<div class="lpwalter"><button type="button" class="btn quiet" id="lpdirecthelp">Ask Walter</button> <button type="button" class="btn quiet" id="lpask" aria-expanded="${!!rp.walterOpen}" aria-controls="lpaskpanel">Choose help</button>${rp.walterOpen?`<section id="lpaskpanel" aria-label="Ask Walter help"><p><b>What would help with these lines?</b></p><div class="actions">${decimalStoryPrimary(lpWalterSemanticContext(it),LP_WALTER_PRIMARY).map(([id,label])=>`<button type="button" class="btn quiet small" data-walter-question="${id}" aria-pressed="${picked?.id===id}">${esc(label)}</button>`).join('')}</div>${picked?`<div id="lpaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('work',esc(text),true)}${typeof readAloudButton==='function'?readAloudButton(text,'lp-reply'):''}</div>${lpWalterChoiceButtons(selected.choices,true)}${lpWalterRatingButtons(selected.signature)}`:''}<button type="button" class="btn quiet small" id="lpaskreturn">Back to the lines</button></section>`:''}</div>`;
+  return `<div class="lpwalter"><button type="button" class="btn quiet" id="lpdirecthelp">Ask Walter</button> <button type="button" class="btn quiet" id="lpask" aria-expanded="${!!rp.walterOpen}" aria-controls="lpaskpanel">Choose help</button>${rp.walterOpen?`<section id="lpaskpanel" aria-label="Ask Walter help"><p><b>What would help with these lines?</b></p><div class="actions">${decimalStoryPrimary(lpWalterSemanticContext(it),LP_WALTER_PRIMARY).map(([id,label])=>`<button type="button" class="btn quiet small" data-walter-question="${id}" aria-pressed="${picked?.id===id}">${esc(label)}</button>`).join('')}</div>${picked?`<div id="lpaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('clue',esc(text),true)}${typeof readAloudButton==='function'?readAloudButton(text,'lp-reply'):''}</div>${lpWalterChoiceButtons(selected.choices,true)}${lpWalterRatingButtons(selected.signature)}`:''}<button type="button" class="btn quiet small" id="lpaskreturn">Back to the lines</button></section>`:''}</div>`;
 }
 function lpRepairWalterDeliver(it,id,depth){const q=lpRepairWalterQuestions(it).find(x=>x.id===id);if(!q)return;const st=it.st,rp=it.rep;depth=Math.max(0,Math.min(4,depth|0));st.walterEvents=Array.isArray(st.walterEvents)?st.walterEvents:[];
   if(!st.walterEvents.some(e=>e.id===id&&e.depth===depth&&e.stepId==='repair-spot')){st.walterEvents.push({step:st.k,stepId:'repair-spot',id,type:q.type,depth,tries:rp.tries||0});st.helps=(+st.helps||0)+1;}
@@ -8947,7 +8972,7 @@ function lpRepairHTML(it){ const r=it.rspec, rp=it.rep;
 function lpSummaryHTML(){ if(lp.homework)return fractionHomeworkSummaryHTML(); const rs=lp.results, own=rs.filter(e=>e.phase==="independent"||e.phase==="delayed"||e.phase==="mixed"), right=own.filter(checkedProgressComplete).length, o=lp.focus?teacherFocusState(lp.id):lpState(lp.id);
   const due=+o.due>0?new Date(+o.due).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}):"";
   return `<div class="card lpcard"><h2 style="margin-top:0">${lp.delayed?"Check-in done":lp.focus?"Teacher's focus practice done":"Lesson "+lp.bp.lesson+" practice done"}</h2>
-    <p>${right?practiceCelebrationHTML(right,latestCheckedProgressWin(own)):"You worked through the lesson steps."+practiceCelebrationHTML(0,latestCheckedProgressWin(rs))}</p>${walterNote("rest","You finished this lesson. Time for a rest.",true,true)}
+    <p>${right?practiceCelebrationHTML(right,latestCheckedProgressWin(own)):"You worked through the lesson steps."+practiceCelebrationHTML(0,latestCheckedProgressWin(rs))}</p>${walterNote("rest","You finished this lesson. Time for a rest.",true)}
     ${due?`<p class="muted">A quick check-in with new numbers will be ready ${esc(due)}. Checking back later is how it sticks.</p>`:""}
     <p class="muted lpgrown"><b>Grown-up:</b> ${lp.bp.talk}</p>
     <div class="actions"><button class="btn primary" id="lphome">Home</button><button class="btn quiet" id="lpagain">${lp.focus?"Practice this focus again":"Practice this lesson again"}</button></div></div>`; }
@@ -10329,7 +10354,7 @@ function teacherNoteNormalize(value,enabled){
 }
 function teacherNotesDatabase(db,includeNotes=true){return {...db,profiles:Object.fromEntries(Object.entries(db.profiles||{}).map(([name,p])=>{
   const copy={...p};if(includeNotes&&copy.saveTeacherNotes===true)copy.teacherFeedbackNotes=teacherNoteNormalize(copy.teacherFeedbackNotes,true);else delete copy.teacherFeedbackNotes;return [name,copy];}))};}
-function teacherSettingsHTML(){return `<section class="card"><h2>Walter and teacher-note settings</h2><label class="row"><input type="checkbox" id="mistakenotes" ${S.walterMistakeNotes!==false?'checked':''}> Mistake notes from Walter</label><p class="muted">Tentative hints about a checked mistake. Turning this off keeps generic checking help and the practice record.</p><label class="row"><input type="checkbox" id="readaloudenabled" ${S.readAloudEnabled!==false?'checked':''}> Show read-aloud buttons</label><p class="muted">Read-aloud is optional access support. Availability depends on a local voice on this device. ${typeof readAloudCountForPlayer==='function'?`Button taps this sitting: ${Math.max(0,Number(readAloudCountForPlayer())||0)} (access use, not learning evidence).`:""}</p><label class="row"><input type="checkbox" id="saveteachernotes" ${S.saveTeacherNotes===true?'checked':''}> Save teacher notes on this device</label><p class="muted">Notes stay on this device and in backups you make. The app does not send them automatically. You choose whether to include them when sharing a transfer code. Turn this off to delete saved notes.</p><p id="teachersettingsmsg" role="status" aria-live="polite"></p></section>`;}
+function teacherSettingsHTML(){return `<section class="card"><h2>Walter and teacher-note settings</h2><label class="row"><input type="checkbox" id="waltermotion" ${S.walterMotion!==false?'checked':''}> Animate Walter</label><p class="muted">Brief gestures when Walter greets you or helps. Device Reduce Motion also keeps him still.</p><label class="row"><input type="checkbox" id="mistakenotes" ${S.walterMistakeNotes!==false?'checked':''}> Mistake notes from Walter</label><p class="muted">Tentative hints about a checked mistake. Turning this off keeps generic checking help and the practice record.</p><label class="row"><input type="checkbox" id="readaloudenabled" ${S.readAloudEnabled!==false?'checked':''}> Show read-aloud buttons</label><p class="muted">Read-aloud is optional access support. Availability depends on a local voice on this device. ${typeof readAloudCountForPlayer==='function'?`Button taps this sitting: ${Math.max(0,Number(readAloudCountForPlayer())||0)} (access use, not learning evidence).`:""}</p><label class="row"><input type="checkbox" id="saveteachernotes" ${S.saveTeacherNotes===true?'checked':''}> Save teacher notes on this device</label><p class="muted">Notes stay on this device and in backups you make. The app does not send them automatically. You choose whether to include them when sharing a transfer code. Turn this off to delete saved notes.</p><p id="teachersettingsmsg" role="status" aria-live="polite"></p></section>`;}
 function teacherFeedbackExtrasHTML(){return `${decimalStorySupportSettingsHTML()}${teacherContextImportHTML()}${typeof teacherReportHTML==='function'?teacherReportHTML():''}<details class="card"><summary>Paste a teacher's message or make a note back</summary><p class="muted">This helper uses topic words on this device. Review suggestions before adding a focus. Pasted text is discarded when you leave unless you explicitly save a note.</p><label for="teachermessage">Teacher's message</label><textarea id="teachermessage" class="io" maxlength="2000" placeholder="Paste here to find practice topics"></textarea><button class="btn" id="teachersuggest">Find suggested topics</button><div id="teachersuggestions" role="status" aria-live="polite"></div><div id="teachernoteeditor">${teacherNoteEditorHTML()}</div><div id="teachersummary" hidden></div></details><section class="card"><h3>How to help without giving the answer</h3><ul><li>Ask what the problem is asking.</li><li>Point to Walter's smaller-piece choice.</li><li>Praise a useful check or explanation.</li></ul></section>`;}
 function teacherNoteEditorHTML(){if(S.saveTeacherNotes!==true)return '<p class="muted">Saved teacher notes are off. Turn them on in Practice settings if you want to keep a note.</p>';
  const goals=selectedFocusGoals();if(!goals.length)return '<p class="muted">Add a focus before saving a note.</p>';
@@ -10352,7 +10377,7 @@ function teacherSummaryDraft(goal,includeNote=false){if(!goal)return '';
  const note=includeNote&&S.saveTeacherNotes===true?teacherNoteNormalize(S.teacherFeedbackNotes,true)[goal.key]:null;
  return `${S.name} practiced ${goal.name} in ${isPractice?'ordinary practice':'step-by-step home lessons'}: ${rows.length} recorded checks across ${days} day${days===1?'':'s'}.\n${details}\n${ongoing}\nThis is home practice. It is not a test score or a measure of mastery.${note?`\n${note.source==='teacher'?'Teacher feedback (reported)':note.source==='parent'?'Parent observation':'Note with source not recorded'}${note.from?' from '+note.from:''}${note.date?' ('+note.date+')':''}: ${note.note}`:''}`;
 }
-function bindTeacherSettings(){for(const [id,key] of [['mistakenotes','walterMistakeNotes'],['readaloudenabled','readAloudEnabled'],['saveteachernotes','saveTeacherNotes']]){const box=app.querySelector('#'+id);if(!box)continue;
+function bindTeacherSettings(){for(const [id,key] of [['waltermotion','walterMotion'],['mistakenotes','walterMistakeNotes'],['readaloudenabled','readAloudEnabled'],['saveteachernotes','saveTeacherNotes']]){const box=app.querySelector('#'+id);if(!box)continue;
  box.onchange=()=>{const old=S[key],notes=S.teacherFeedbackNotes,want=box.checked;if(key==='saveTeacherNotes'&&!want&&!confirm('Turn off saved teacher notes and delete all saved teacher notes for this player? Backups already made keep their own copies.')){box.checked=!!old;return;}
  S[key]=want;if(key==='saveTeacherNotes'&&!want)S.teacherFeedbackNotes={};if(key==='readAloudEnabled'&&!want&&typeof stopSpeaking==='function')stopSpeaking();
  const stored=save();if(!stored){S[key]=old;S.teacherFeedbackNotes=notes;box.checked=!!old;}app.querySelector('#teachersettingsmsg').textContent=stored?'Settings saved for this player.':'Could not save. Previous settings remain active.';
