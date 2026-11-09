@@ -432,6 +432,9 @@ details.more>div{padding:4px 0 2px;color:var(--graphite)}
 .ddgrids svg { display:block; width:100%; max-width:250px; height:auto; }
 .ddgrid-places { width:100%; max-width:420px; font-size:.9rem; }
 .ddgrid-places th, .ddgrid-places td { padding:.35rem; }
+.ddgrid-tools { padding-block-end:14px; border-block-end:1px solid var(--line); margin-block-end:16px; }
+.ddgrid-tools .btn.small { min-height:44px; padding:8px 12px; }
+.lp-answer-label { display:block; font-weight:700; margin-block-end:10px; }
 .walter-target,.ddgrid-spot { outline:2px solid #845005; outline-offset:-2px; background:#fff2bd; }
 .ddgrid-equation { display:flex; flex-wrap:wrap; align-items:center; gap:.6rem; padding:.3rem; border-radius:8px; }
 .ddgrid-equation > span:first-child { font-size:1.25rem; font-weight:700; overflow-wrap:anywhere; }
@@ -1719,7 +1722,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.8.1 · November 8, 2026";
+const BUILD="v10.8.3 · November 8, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -6024,6 +6027,7 @@ const WALTER_COMPONENTS={
 
  'group-count-setup':{base:'divide',orient:'Point to the total number of items and the number that fits in one group.',words:'Every full group holds the same number of items. The question asks you to count groups.',units:'Label the total in items and the group size in items per group. What unit should your result count?',meaning:'Draw one group and label its size. How many copies of that group can you fill?',plan:'Use the total and the size of one group in your expression. Read it back against the story.',test:'Does your expression start with all the items and find how many equal groups fit?',smaller:'Draw and label just one group. Then point to the total you can fill groups from.'},
  'group-count-calculation':{base:'divide',orient:'Keep your checked expression. Find how many complete groups it makes.',words:'Count only groups that can be completely filled.',units:'Your answer counts full groups. A leftover amount counts individual items.',meaning:'A full group uses the same number of items each time. Leftover items can make another group if there are enough to fill it.',plan:'Choose a group count to try. Multiply it by the number of items in one group.',test:'Multiply your group count by the size of one group. Does it fit the total with fewer items left than one group needs?',smaller:'Try one batch of groups at a time. Track the items used and the items still available.'},
+ 'box-count-needed':{base:'facts'},
  'decimal-build':{base:'placevalue',orient:'Match each given digit to its named place.',smaller:'Draw only the place named by this box.',test:'Read the place counts back as an amount.'},
  'decimal-combine':{base:'addsub',orient:'This card combines units in the same place.',smaller:'Draw only the units being combined in the active place.',test:'Compare your count with both checked rows in that place.'},
  'decimal-exchange':{base:'addsub',orient:'An exchange trades units while keeping the amount unchanged.',smaller:'Show the two named places before the exchange.',test:'Compare the amount before and after your exchange.'},
@@ -6342,7 +6346,7 @@ function hwEntry(prefill, err){
       <label class="hwmethod" for="hwfractionmethod">For fraction addition or subtraction, use <select id="hwfractionmethod"><option value="algorithm">Equivalent fractions</option><option value="area">Equal-part area model</option><option value="line">Number line</option></select></label>
       </details>
       <details class="lpwalter"><summary class="btn quiet">Ask Walter</summary>${walterNote('work','Copy the expression from your page, including decimal points and operation signs. If your teacher asks for an area model, add “area model” after it. For a supported story, copy the full question, including the sentence that asks what to find. For another story shape, type the expression you wrote. After setting it up, I can help with the method while you do the arithmetic.',true)}</details>
-      <details class="home-more"><summary>Examples and supported problems</summary><p class="muted" style="font-size:14px;margin:14px 0 0">Fractions: <b>3/4 + 5/6</b>, <b>2 1/3 − 3/4</b>, <b>2/3 × 3/5</b>, <b>3 ÷ 1/4</b>, and <b>1/4 ÷ 3</b>. Other shapes the app knows: <b>148 × 19</b> (standard algorithm), <b>3,660 ÷ 30</b> (place value strategy), <b>8 × 10^5 × 6</b> or <b>47 × 10^6</b> (powers of ten), <b>4.5 × 1,000</b> or <b>36.5 ÷ 10^2</b> (moving the decimal point), <b>round 2.98 to the nearest tenth</b>, <b>3.45 + 2.7</b> or <b>12.5 − 3.75</b> (adding and subtracting decimals), <b>3.4 × 6</b>, <b>2.5 × 1.2</b> or <b>4.8 ÷ 0.6</b> (multiplying and dividing decimals), <b>2 + 3 × 4</b> or <b>49 ÷ (34 − 27) × 9</b> (order of operations), <b>1,144 ÷ 11</b> or <b>40)8,760</b> (dividing; add <b>area model</b> for the area model), <b>(24 ÷ 4) × 2 vs 12</b> (less than, equal to, or greater than), <b>A: 8 + 4 B: (8 + 4) ÷ 2</b> (the relationship), <b>half of the sum of 17 and 9</b> (write the expression), <b>six hundred forty-seven and eight hundred ninety-two thousandths</b> (standard form). Use x or × for times, ÷ or / for divide, ^ for the exponent. Add <b>area model</b> after a multiplication or division to walk through it as an area model. Age stories with a known age, half that age, and years added or taken away, and the paper-company story about sheets, packages, and boxes, can be typed in full. For equal-group stories, include the total, how many fit in each group, and the question about how many groups can be filled. Other story shapes: type the expression you wrote, like <b>3 × 12 − 2</b>.</p></details>
+      <details class="home-more"><summary>Examples and supported problems</summary><p class="muted" style="font-size:14px;margin:14px 0 0">Fractions: <b>3/4 + 5/6</b>, <b>2 1/3 − 3/4</b>, <b>2/3 × 3/5</b>, <b>3 ÷ 1/4</b>, and <b>1/4 ÷ 3</b>. Other shapes the app knows: <b>148 × 19</b> (standard algorithm), <b>3,660 ÷ 30</b> (place value strategy), <b>8 × 10^5 × 6</b> or <b>47 × 10^6</b> (powers of ten), <b>4.5 × 1,000</b> or <b>36.5 ÷ 10^2</b> (moving the decimal point), <b>round 2.98 to the nearest tenth</b>, <b>3.45 + 2.7</b> or <b>12.5 − 3.75</b> (adding and subtracting decimals), <b>3.4 × 6</b>, <b>2.5 × 1.2</b> or <b>4.8 ÷ 0.6</b> (multiplying and dividing decimals), <b>2 + 3 × 4</b> or <b>49 ÷ (34 − 27) × 9</b> (order of operations), <b>1,144 ÷ 11</b> or <b>40)8,760</b> (dividing; add <b>area model</b> for the area model), <b>(24 ÷ 4) × 2 vs 12</b> (less than, equal to, or greater than), <b>A: 8 + 4 B: (8 + 4) ÷ 2</b> (the relationship), <b>half of the sum of 17 and 9</b> (write the expression), <b>six hundred forty-seven and eight hundred ninety-two thousandths</b> (standard form). Use x or × for times, ÷ or / for divide, ^ for the exponent. Add <b>area model</b> after a multiplication or division to walk through it as an area model. Age stories with a known age, half that age, and years added or taken away, and the paper-company story about sheets, packages, and boxes, can be typed in full. For equal-group stories, include the total, how many fit in each group, and the question about how many groups can be filled or how many boxes are needed to hold everything. Other story shapes: type the expression you wrote, like <b>3 × 12 − 2</b>.</p></details>
     </div>`;
   const q=id=>app.querySelector("#"+id); const inp=q("hwq");
   q("back").onclick=home;
@@ -8627,7 +8631,7 @@ function lpInputHTML(step, st, locked){ const I=step.input||{type:"num"}, dis=lo
     return `<label class="ddgrid-equation${focus?' ddgrid-spot':''}"><span>${esc(prefix)}</span><span class="vh">${esc(step.short||'Result after the equals sign')}</span><input class="ans text lpans" id="lpin" inputmode="${esc(I.inputmode||'text')}" autocapitalize="off" spellcheck="false" autocomplete="off" placeholder="${esc(I.ph||'')}" value="${esc(draft?.[0]||'')}"${dis}></label>`;
   }
   if(I.type==="text") return `<label class="vh" for="lpin">${esc(lpPlain(step.short||step.prompt))}</label><input class="ans text lpans" id="lpin" inputmode="text" autocapitalize="off" spellcheck="false" autocomplete="off" placeholder="${esc(I.ph||"")}" value="${esc(draft[0]||"")}"${dis}>`;
-  if(I.type==="num") return `<label class="vh" for="lpin">${esc(lpPlain(step.short||step.prompt))}</label><input class="ans lpans" id="lpin" inputmode="decimal" autocomplete="off" placeholder="${esc(I.ph||"Type a number")}" value="${esc(draft[0]||"")}"${dis}>`;
+  if(I.type==="num") return `<label class="${I.label?'lp-answer-label':'vh'}" for="lpin">${esc(I.label||lpPlain(step.short||step.prompt))}</label><input class="ans lpans" id="lpin" inputmode="decimal" autocomplete="off"${I.label?' aria-describedby="lpstep-prompt"':''} placeholder="${esc(I.ph||(I.label?"":"Type a number"))}" value="${esc(draft[0]||"")}"${dis}>`;
   if(I.type==="nums") return `<div class="lpnums">${I.labels.map((l,i)=>`<label class="lpnum"><span>${l}</span><input class="ans small lpans" data-lpi="${i}" inputmode="decimal" autocomplete="off" value="${esc(draft[i]||"")}"${dis}></label>`).join("")}</div>`;
   if(I.type==="mc") return `<div class="opts" role="radiogroup" aria-label="Choices">${I.options.map((o,i)=>`<button type="button" class="opt lpopt${st.draft?.k===st.k&&st.draft.selected===i?" sel":""}" role="radio" aria-checked="${st.draft?.k===st.k&&st.draft.selected===i}" data-lpo="${i}"${dis}><b aria-hidden="true">${choiceLabel(i)}.</b>&nbsp; ${o}</button>`).join("")}</div>`;
   if(I.type==="multi") return `<div class="lpchips" role="group" aria-label="Choose all that fit">${I.options.map((o,i)=>{const on=st.draft?.k===st.k&&Array.isArray(st.draft.selected)&&st.draft.selected.includes(i);return `<button type="button" class="btn quiet small lpchip${on?" on":""}" aria-pressed="${!!on}" data-lpm="${i}"${dis}>${o}</button>`;}).join("")}</div>`;
@@ -8928,7 +8932,7 @@ function lpWorkHTML(it){ lpPrepareStep(it); const sp=it.spec, st=it.st, ph=it.ph
   else if(model){ const hist=(it.narr||[]).map(x=>`<li>${x}</li>`).join(""); work=`<ol class="lpnarr">${hist}</ol><p class="lpstep"><b>Next:</b> ${step.prompt}</p><div class="actions"><button class="btn primary" id="lpshow">Show this step</button></div>`; }
   else { const prompt = own && step.short ? step.short : step.prompt;
     const clues=(st.helpShown||[]).map(t=>`<div class="lpclue">${t}</div>`).join("");
-    work=`<p class="lpstep">${prompt}</p>${typeof readAloudButton==='function'?readAloudButton([sp.title||'',prompt].join('. '),'lp-prompt'):''}${sp.controls?.(st)||''}${lpInputHTML(step, st, false)}<div class="inline-err lpmsg${st.msgKind==="ok"?" ok":""}" id="lpmsg" role="status" aria-live="polite">${st.msg||""}</div>${clues}
+    work=`<p class="lpstep" id="lpstep-prompt">${prompt}</p>${typeof readAloudButton==='function'?readAloudButton([sp.title||'',prompt].join('. '),'lp-prompt'):''}${sp.controls?.(st)||''}${lpInputHTML(step, st, false)}<div class="inline-err lpmsg${st.msgKind==="ok"?" ok":""}" id="lpmsg" role="status" aria-live="polite">${st.msg||""}</div>${clues}
       <div class="actions"><button class="btn primary" id="lpcheck">${step.input&&step.input.type==="button"?esc(step.input.label||"Next"):"Check"}</button>${!lpWalterEligible(it)&&(step.help||[]).length>(st.helpShown||[]).length?`<button class="btn quiet" id="lphelp">${own?"I need a clue":"Clue"}</button>`:""}${own&&sp.answer!==undefined&&st.answerOnly===null?`<button class="btn quiet small" id="lpknow">I know the answer</button>`:""}${own&&st.answerOnly===true?`<button class="btn quiet small" id="lpskip">Skip building it</button>`:""}</div>
       ${lpWalterHTML(it)}${walterFictionalHTML(st.fictional,st.fictionalNote,'lp')}${st.exampleNarr||""}${st.exampleNote?`<p class="muted">${esc(st.exampleNote)}</p>`:""}${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
   const walterLesson=st.done && ph!=="model" && !st.skipped && (st.tries>0 || st.helps>0) ? walterNote("nice","You worked through the steps and finished this one.",true) : ph==="delayed" ? walterNote("checkin","Here are new numbers. Show what you remember.",true) : ph==="guided" || (st.helpShown||[]).length ? walterNote("work","Let's check one step at a time.",true) : "";
@@ -10668,7 +10672,8 @@ function wordHomeworkStateValid(task,st){if(task.storyType==='decimal')return de
 function wordHomeworkExample(task,i=0){
  if(task.storyType==='group-count'){
   const size=task.perGroup===6?7:6;
-  const count=5+i===Math.floor(task.total/task.perGroup)?6+i:5+i;
+  const count=5+i===groupCountAnswer(task)?6+i:5+i;
+  if(task.countMode==='needed')return parseGroupCountHomework(`A baker packs ${size*(count-1)+1} muffins into boxes of ${size}. How many boxes are needed?`);
   return parseGroupCountHomework(`A baker packs ${size*count} muffins into boxes of ${size}. How many boxes can be filled?`);
  }
  if(task.storyType==='decimal')return decimalStoryExample(task,i);
@@ -10753,31 +10758,56 @@ function parseGroupCountHomework(text){
  const story=String(text||'').replace(/\s+/g,' ').trim();
  if(story.length>500)return null;
  const s=story.replace(/^(?:(?:#|question|problem)\s*\d{1,2}\s*[.):]?|\d{1,2}[.)])\s+/i,'');
- const total='(?<total>\\d{1,6}|\\d{1,3},\\d{3})',size='(?<size>\\d{1,3})';
+ const [,facts=s,query='']=s.match(/^(.*[.!,]) (How many .+)$/i)||[];
+ const total='(?<total>\\d{1,6}|\\d{1,3},\\d{3}|some|_+)',size='(?<size>\\d{1,3}|some|_+)';
  const items='(?<items>[a-z]+(?: [a-z]+)?)',group='(?<group>rows|boxes|bags|baskets|trays|shelves|groups|teams|packs|packages)';
- const question='How many (?:full |complete )?\\k<group> (?:can be (?:filled|made|formed)|can (?:you|they) (?:fill|make|form))[?.!]?$';
+ const full=query.match(new RegExp('^How many (?:full |complete )?'+group+' (?:can be (?:filled|made|formed)|can (?:you|they) (?:fill|make|form))[?.!]?$','i'));
+ const needed=query.match(/^How many boxes (?:are needed|do you need|will you use)(?: to (?:hold|pack) all(?: of them| (?:the )?(?<items>[a-z]+(?: [a-z]+)?))?)?[?.!]?$/i);
+ if(query&&!full&&!needed)return null;
+ const singular='(?<singular>row|box|bag|basket|tray|shelf|group|team|pack|package)';
+ const capacity='Each '+singular+' holds(?: '+size+'(?: or (?<otherSize>\\d{1,3}))?)?';
  const patterns=[
-  '^(?:(?:A|An|The) [a-z]+|[a-z]+) (?:puts|places|packs|arranges|sorts|plants) '+total+' '+items+' (?:in|into|on) '+group+' of '+size+'(?: \\k<items>)?[.!] '+question,
-  '^There are '+total+' '+items+'[.!] Each (?<singular>row|box|bag|basket|tray|shelf|group|team|pack|package) holds '+size+' \\k<items>[.!] '+question.replace('\\k<group>',group)
+  '^(?:(?:A|An|The) [a-z]+|[a-z]+) (?:puts|places|packs|arranges|sorts|plants) '+total+' '+items+' (?:in|into|on) '+group+' of '+size+'(?: \\k<items>)?[.!]$',
+  '^There are (?:'+total+' )?'+items+'(?: to organize)?[.!](?: '+capacity+'(?: \\k<items>)?[.!])?$',
+  '^'+capacity+' '+items+'[.!]$',
+  '^You have '+total+' '+items+' to pack[.!] If each (?<singular>box) contains '+size+'(?: \\k<items>)?,$',
+  '^To pack all '+total+' '+items+', use (?<group>boxes) that hold '+size+'(?: \\k<items>)? apiece[.!]$',
+  '^There are '+total+' '+items+'[.!] The directions say each (?<singular>box) holds '+size+' \\k<items>, but the label says (?<otherSize>\\d{1,3})(?: \\k<items>)?[.!]$'
  ];
- const match=patterns.map(pattern=>s.match(new RegExp(pattern,'i'))).find(Boolean);
+ const match=patterns.map(pattern=>facts.match(new RegExp(pattern,'i'))).find(Boolean);
  if(!match)return null;
- const {total:whole,size:per,group:groupName,singular}=match.groups;
- const name=groupName.toLowerCase();
- if(singular){
-  const one=singular.toLowerCase(),plural={box:'boxes',shelf:'shelves'}[one]||one+'s';
-  if(name!==plural)return null;
- }
+ const {total:whole,size:per,items:itemName,group:groupName,singular:groupUnit,otherSize}=match.groups;
+ const one=groupUnit?.toLowerCase(),givenGroup=groupName?.toLowerCase()||(one?({box:'boxes',shelf:'shelves'}[one]||one+'s'):'');
+ const name=needed?'boxes':full?.groups.group.toLowerCase();
+ if(!name)return givenGroup&&(whole||per)?{err:'Copy the question that asks what to find.'}:null;
+ if(givenGroup&&name!==givenGroup)return null;
+ if(needed?.groups.items&&needed.groups.items.toLowerCase()!==itemName.toLowerCase())return null;
+ const unit=one||({boxes:'box',shelves:'shelf'}[name]||name.slice(0,-1));
+ if(otherSize&&Number(otherSize)!==Number(per))return {err:`Which number of ${itemName} fits in each ${unit}? Check the two different amounts in the question.`};
+ if(!/^\d/.test(whole||''))return {err:`How many ${itemName} are there in all? Add the total from your page.`};
+ if(!/^\d/.test(per||''))return {err:`How many ${itemName} fit in each ${unit}? Add the amount from your page.`};
  const count=Number(whole.replace(',','')),perGroup=Number(per);
  if(count<1||perGroup<1)return {err:'Use a positive total and a positive number of items per group.'};
- return {wordStory:true,storyType:'group-count',story,total:count,perGroup,group:name,label:'Equal groups: full '+name};
+ const countMode=needed?'needed':'full';
+ return {wordStory:true,storyType:'group-count',story,total:count,perGroup,group:name,countMode,label:needed?'Equal groups: boxes needed':'Equal groups: full '+name};
+}
+function groupCountAnswer(task){
+ const quotient=task.total/task.perGroup;
+ return task.countMode==='needed'?Math.ceil(quotient):Math.floor(quotient);
 }
 function groupCountHomeworkSpec(task){
- const answer=Math.floor(task.total/task.perGroup);
+ const needed=task.countMode==='needed',answer=groupCountAnswer(task);
+ const countStep=needed?{
+  prompt:'Use your checked expression. What is the fewest boxes that can hold all the items?',
+  short:'Boxes needed',ans:answer,no:'Check whether your boxes can hold all the items.'
+ }:{
+  prompt:'Use your checked expression. How many full '+task.group+' can be filled?',
+  short:'Full '+task.group,ans:answer,no:'Check your group count by multiplying it by the number of items in one group.'
+ };
  return {kind:'build',methodName:'equal groups and whole-number division',methodEvidence:'homework-group-count',title:task.label,problemKey:task.story,answer,script:[],init:()=>({expression:null}),
-  next:st=>st.k===0?{prompt:'Write an expression for the number of '+task.group+'. Use the total and the number of items in one group.',short:'Your expression',input:{type:'text',ph:'Type your expression'},auto:`${task.total} ÷ ${task.perGroup}`,evidence:{component:'group-count-setup'},check:v=>{const r=wordHomeworkExpressionCheck(task,v);return r.ok?{ok:true,apply:()=>{st.expression=String(v).trim();}}:r;}}:st.k===1?{...lpNumStep({prompt:'Use your checked expression. How many full '+task.group+' can be filled?',short:'Full '+task.group,ans:answer,no:'Check your group count by multiplying it by the number of items in one group.'}),evidence:{component:'group-count-calculation'}}:null,
+  next:st=>st.k===0?{prompt:'Write an expression for the number of '+task.group+'. Use the total and the number of items in one group.',short:'Your expression',input:{type:'text',ph:'Type your expression'},auto:`${task.total} ÷ ${task.perGroup}`,evidence:{component:'group-count-setup'},check:v=>{const r=wordHomeworkExpressionCheck(task,v);return r.ok?{ok:true,apply:()=>{st.expression=String(v).trim();}}:r;}}:st.k===1?{...lpNumStep(countStep),evidence:{component:needed?'box-count-needed':'group-count-calculation'}}:null,
   visual:st=>`<p class="lpstory">${esc(task.story)}</p>${st.expression?`<p class="lpeq">Your checked expression: ${esc(st.expression)}</p>`:''}`,
-  done:()=>`You checked the expression and found <b>${answer}</b> full ${task.group}.`};
+  done:()=>needed?`You checked the expression and found that <b>${answer}</b> ${answer===1?'box is':'boxes are'} needed.`:`You checked the expression and found <b>${answer}</b> full ${task.group}.`};
 }
 // Printed givens only. The learner supplies the marks, count, and equation.
 const DECIMAL_GRID_PACK='unit4-division-grids';
@@ -10973,7 +11003,7 @@ function decimalDivisionGridSpec(item){
  const parseExpression=value=>lpAst(value.replace(/(^|[^\d.])\.(?=\d)/g,(_,prefix)=>prefix+'0.'));
  const matchesExpression=tree=>tree?.o==='÷'&&tree.l===dividend&&tree.r===divisor;
  const markStep=(st,prompt,component,expected,apply)=>cxStep({
-  prompt,input:{type:'num',ph:'Number of squares'},auto:expected,
+  prompt,input:{type:'num',label:'Number of squares'},auto:expected,
   check:v=>{const n=lpNum(v);
    if(!Number.isInteger(n)||n<1||n>capacity)return {ok:false,fmt:true,msg:'Enter a positive whole number of squares on these grids.'};
    if(n>cap(st))return {ok:false,safe:true,code:component};
@@ -11027,13 +11057,13 @@ function decimalDivisionGridSpec(item){
    return `<p class="lpstory">${storyText}</p>${st.expression?`<p class="lpeq">Your checked expression: ${esc(st.expression)}</p>
    <p class="muted">One grid is one whole. Each small square is one hundredth.${measuring?' A group that crosses grids keeps its color and letter.':''}</p>
    <div id="ddgrid-preview">${show(st,draft(st))}</div>`: ''}`;},
-  controls:st=>markStage(st)&&!st.model?`${st.stage==='shade'?decimalGridShadeComparison(total,draft(st),decimalGridFocus(st)):''}<div class="actions">
+  controls:st=>markStage(st)&&!st.model?`<div class="ddgrid-tools">${st.stage==='shade'?decimalGridShadeComparison(total,draft(st),decimalGridFocus(st)):''}<div class="actions" role="group" aria-label="Grid marking tools">
     <button class="btn quiet small" type="button" data-grid-mark="1">${st.stage==='deal'?'Deal next square':'Mark 1 square'}</button>
     <button class="btn quiet small" type="button" data-grid-mark="${st.stage==='deal'?size:10}">${st.stage==='deal'?'Deal one round':'Mark 10 squares'}</button>
     ${st.stage==='shade'&&dividend>=1?'<button class="btn quiet small" type="button" data-grid-mark="100">Mark 1 whole grid</button>':''}
     ${st.stage==='measure'&&st.marked>0?`<button class="btn quiet small" type="button" data-grid-mark="same">Mark another group of ${size}</button>`:''}
     <button class="btn quiet small" type="button" data-grid-mark="0">Clear draft marks</button>
-   </div>`:'',
+   </div></div>`:'',
   bind:it=>{
    const st=it.st;
    if(st.stage==='expression'){
