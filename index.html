@@ -92,6 +92,10 @@ h2{font-size:20px;margin:18px 0 6px}
 .home-lead .lpdue .btn{white-space:normal;text-align:left}
 .home-lead .btn.small,.home-fold .btn.small,.hw .btn.small{min-height:44px;font-size:15px;padding:9px 12px}
 .home-desc{font-size:15px!important;margin:8px 0 10px}
+.home-win{background:#F2FBF4;margin:0 0 12px}
+.home-win h2{margin:0}
+.home-win p{margin:8px 0 0}
+.round-win{display:block;margin-top:6px}
 .home-more{border-top:1px solid var(--line);margin-top:14px;padding-top:5px}
 .home-more summary,.home-fold summary{cursor:pointer;list-style:none;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:700;color:var(--ink)}
 .home-more summary::-webkit-details-marker,.home-fold summary::-webkit-details-marker{display:none}
@@ -1702,7 +1706,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.7 · November 8, 2026";
+const BUILD="v10.7.1 · November 8, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -4154,6 +4158,78 @@ const optsHTML=(id, options, sel, answer, done, cls, mark, crossed)=>{ // MC rad
   return `<div class="opts ${longOpts?"long":""}" id="${id}" role="radiogroup" aria-label="Answer choices">${options.map((o,i)=>{ let c=cls; const off=!done && x.includes(i); if(done){ if(i===answer) c+=" right"; else if(i===sel) c+=" wrong"; } else { if(i===sel) c+=" sel"; if(mark!==undefined&&mark>=0&&i===mark) c+=" right"; if(off) c+=" crossed"; }
     return `<button type="button" class="${c}" role="radio" aria-checked="${i===sel}" data-i="${i}" ${done||off?"disabled":""}><b aria-hidden="true">${choiceLabel(i)}.</b>&nbsp; ${esc(o)}</button>`; }).join("")}</div>`; };
 
+// These messages describe checked work. They never change scheduling or evidence.
+function practiceProgressWin(e){
+  const skill=Object.hasOwn(SKILLS,e?.sk)?SKILLS[e.sk].name.toLowerCase():"";
+  if(!skill||!e.ok||e.shown||e.abandoned||e.transfer)return "";
+  const topic=e.sk==="divide"?"a division problem":`a problem about ${skill}`;
+  if(e.pre&&!e.pre.ok)return `You got the final answer right on ${topic}.`;
+  if(e.walterHelp?.length)return `You asked Walter for help and solved ${topic}.`;
+  if(e.freshAfterHelp&&e.independent&&classifyEntry(e)==="independent")return `You solved a new problem about ${skill} on your own after practicing with help.`;
+  if(e.independent&&classifyEntry(e)==="independent")return `You solved ${topic} on your own.`;
+  if(e.hints||e.guided||e.studied)return `You worked through ${topic} with help.`;
+  return `You got the answer right on ${topic}.`;
+}
+
+function checkedProgressComplete(e){
+  return e?.ok&&e.methodOk&&!e.answerOnly&&!e.answerPreviewed&&e.supportClass!=="answer-confirmed"&&
+    !e.stepEvents?.some(s=>s.support==="answer-confirmed");
+}
+function checkedProgressWin(e){
+  if(!checkedProgressComplete(e))return "";
+  if(e.phase==="homework"){
+    const grid=e.week===DECIMAL_GRID_PACK?weeklyHomeworkItem(e.itemId):null;
+    if(grid?.method==="dealing"){
+      const events=e.stepEvents||[];
+      const corrected=events.some((s,i)=>s.component==="grid-setup-deal"&&s.code==="grid-recipient-group"&&
+        ["format","miss"].includes(s.outcome)&&s.values?.some(v=>v.trim())&&
+        events.slice(i+1).some(n=>n.stepId===s.stepId&&n.step===s.step&&n.outcome==="ok"&&
+          JSON.stringify(n.values)!==JSON.stringify(s.values)));
+      if(corrected)return "You fixed your division setup to include everyone who got a share.";
+    }
+    if(grid){
+      const method=weekMethodName(grid.method);
+      if(grid.fresh&&e.gridCheck===true&&e.gridOutcome==="no-hint"&&!e.helps&&!e.tries&&!e.walterHelp?.length&&
+        !e.stepEvents?.some(s=>s.outcome==="miss"||s.outcome==="format"||s.support==="helped")){
+        return `You solved a fresh ${method} problem on your own.`;
+      }
+      if(e.helps||e.walterHelp?.length)return `You worked through a ${method} problem with Walter’s help.`;
+      if(e.tries)return `You kept going and finished a ${method} problem after a retry.`;
+      return `You used ${method} to solve a decimal division problem.`;
+    }
+    return e.helps||e.walterHelp?.length?"You asked for help and worked through a homework problem.":"You finished a homework problem by checking your steps.";
+  }
+  if(e.phase==="repair")return "You found a slip in the worked steps and fixed it.";
+  const own=["independent","delayed","mixed"].includes(e.phase);
+  if(!own&&e.phase!=="guided")return "";
+  if(own&&e.firstTry&&e.supportClass==="clean-checked"&&!e.repeated&&!e.helps&&!e.tries&&!e.walterHelp?.length){
+    return e.phase==="delayed"?"You came back later and solved a check-in problem on your own.":"You solved a lesson practice problem on your own.";
+  }
+  if(e.helps||e.walterHelp?.length)return "You asked for help and finished the checked steps in a lesson problem.";
+  if(e.tries)return "You tried again and finished the checked steps in a lesson problem.";
+  return "You finished the checked steps in a lesson problem.";
+}
+
+function latestCheckedProgressWin(rows){
+  for(let i=rows.length-1;i>=0;i--){
+    const win=checkedProgressWin(rows[i]);
+    if(win)return win;
+  }
+  return "";
+}
+
+function homeWinHTML(){
+  const now=Date.now(), earliest=now-7*864e5;
+  let win="", newest=earliest;
+  for(const [rows,message] of [[S.log,practiceProgressWin],[S.lessonLog,checkedProgressWin],[S.homeworkLog,checkedProgressWin]]){
+    for(const row of rows||[]){
+      if(!(row?.t>=newest&&row.t<=now))continue;
+      const next=message(row);
+      if(next){ win=next; newest=row.t; }
+    }
+  }
+  return win?`<section class="card home-win" id="homewin" aria-labelledby="homewin-title"><h2 id="homewin-title">A recent win</h2><p>${esc(win)}</p></section>`:"";
+}
 // ===== Screens =====
 let mode=null;   // skill key or "mix"
 let cur=null;    // current problem
@@ -4168,6 +4244,7 @@ let revealed=0, passed=0, expanded=0, missEntry=null, wtSignals=0; // wtSignals 
 let whyState=null, okEntry=null;
 let lastPraise=[];   // recovery / independence messages for the current right answer: [{t, big}]
 let sessionN=0, stopOfferedAt=-1, sessionDone=false, sessionMissRun=0, breakOfferedAt=-1, wtKeepGoing=false;
+let practiceRight=0, practiceWin="";
 let pendingTransfer=null, helpPrompts=[], pendingStretch=null; // pendingStretch (v9.13): after a warm-up success she chose "Try a bigger one"
  // after a help chain (miss → walkthrough → one like it), the next fresh problem is the same skill with the coach hidden: an immediate, unprompted transfer check
 let todayPlan=null, todayIdx=0, todayExtra=0, todaySid=0; /* todaySid: this sitting's id; every fresh problem served in it is tagged, so the summary counts the sitting's own problems and nothing else */ // "Start today": the planned slots for this sitting, and how many extra problems were added to end on a win
@@ -4179,8 +4256,13 @@ function buildTodayPlan(){ if(!classCalOn()&&!foundActive().length&&!nsUnit1Acti
   if(openWeak) plan.push("focus");
   plan.push("mix"); while(plan.length<5) plan.push("mix"); if(plan.length>6) plan.length=6; return foundPlanSlots(plan); } // v9.21: foundPlanSlots adds the "found" slot only when a grown-up switched a foundation on
 const todayLabel=k=>({review:"a check-in on something you have shown before", week:"this week's lesson", focus:"one from your practice list", mix:"mixed practice", starter:"a gentle place-value warm-up", found:"a foundation builder"})[k]||k; // v9.19 review: kid-facing, so no labels ("weakest" is not a word she sees)
-function todaySummaryHTML(){ const done=S.log.filter(e=>e.today===todaySid && isFresh(e) && !(e.placement && !e.ok)); const n=done.length; const right=done.filter(e=>e.ok).length, ind=done.filter(e=>classifyEntry(e)==="independent").length; const last=done[done.length-1]; const endedSolo=!!(last && classifyEntry(last)==="independent"); const t=recoveryTarget(); /* the sitting's own primary problems, by session id; a missed quick check is not scored */
-  return `<div class="stop" role="status"><b>That is today.</b> ${n} problem${n===1?"":"s"}: ${right} right, ${ind} on your own.${endedSolo?"":" The last ones took some help, and that is fine: next time starts fresh."} ${t?(()=>{ const nm=t.why.split(" · ")[0], skn=SKILLS[t.sk].name.toLowerCase(); return `Next time: ${esc(nm.toLowerCase().startsWith(skn)?nm:`${skn}, ${nm}`)}.`; })():"Nothing on the watch list right now."}${walterNote("rest","You worked through today's practice. A break is part of learning.",true)}<div class="actions" style="margin-top:8px"><button class="btn primary" id="stopnow">Done for today</button><button class="btn quiet" id="onemore">One more anyway</button></div></div>`; } // fresh problems answered since the app opened; the last count at which the stopping point was offered; she tapped "Done for today"
+function practiceCelebrationHTML(right, win){
+  return (right ? ` <span class="round-count">You got ${right} ${right===1?"answer":"answers"} right this round.</span>` : "")+
+    (win ? ` <span class="round-win">${esc(win)}</span>` : "");
+}
+function todaySummaryHTML(){
+  return `<div class="stop" role="status"><b>Today’s practice is done.</b>${practiceCelebrationHTML(practiceRight,practiceWin)}${walterNote("rest","You worked through today's practice. A break is part of learning.",true)}<div class="actions" style="margin-top:8px"><button class="btn primary" id="stopnow">Done for today</button><button class="btn quiet" id="onemore">One more anyway</button></div></div>`;
+}
 let ws=null;         // multiplication workspace state for the current problem: {vals:{cellKey:digit}, sel:cellKey}
 let preVal="", preSel=-1; // her response to the "show your step" component check on the current problem
 // The one component each representation exists to teach. A problem in that representation asks for this step on the task itself,
@@ -4200,7 +4282,8 @@ function preHTML(){ if(!cur.pre || phase!=="q") return ""; const c=cur.pre.check
   return `<div class="substep pre" id="pre"><div class="cq"><b>First step: ${esc(nm)}.</b> ${c.q}</div>${c.type==="mc" ? optsHTML("preopts", c.options||[], preSel, c.answer, false, "opt copt") : `<label class="vh" for="preans">Your answer for this step</label><input class="ans small${isTextTarget(c)?" text":""}" id="preans" ${ansAttrs(c)} autocomplete="off" placeholder="this step first" value="${esc(preVal)}">`}<p class="prenext" id="prenext" aria-live="polite">${esc(preNextText())}</p></div>`; }
 function gradePre(){ if(!cur.pre) return null; const c=cur.pre.check; if(c.type==="mc"){ if(preSel<0) return {missing:true}; return {ok:preSel===c.answer, yours:String((c.options||[])[preSel])}; } const inp=app.querySelector("#preans"); const v=inp?inp.value:preVal; preVal=v; if(!String(v).trim()) return {missing:true}; const iss=issueFor(c,v); if(iss) return {missing:true, issue:iss}; return {ok:!!checkAccepts(c,v), yours:String(v).trim()}; }
 const SUPPORT_NAMES={3:"the pre-written tens-row zero and the opening coach line", 2:"the column labels", 1:"the carry boxes"}; // what each support level adds on top of the one below it
-function resetSession(){ sessionN=0; stopOfferedAt=-1; sessionDone=false; sessionMissRun=0; breakOfferedAt=-1; } // a new learner starts a fresh sitting
+function resetPracticeCelebration(){ practiceRight=0; practiceWin=""; }
+function resetSession(){ resetPracticeCelebration(); sessionN=0; stopOfferedAt=-1; sessionDone=false; sessionMissRun=0; breakOfferedAt=-1; } // a new learner starts a fresh sitting
 const coachLevel=sk=>Math.max(0,Math.min(2,(S.coach||{})[sk]===undefined?2:+S.coach[sk]||0)); // v9.46: stored support can return; an old success is not a permanent ceiling.
 const wsSup=()=>cur?.hwPrepared?Math.min(2,S.support.multiply||0):(cur && cur.placement && !cur.toolsOn) ? 0 : (S.support.multiply||0); /* the supports actually on screen: a quick placement check runs on the bare page unless she asks for a tool back */
 const coachOn=()=>(cur && cur.onramp && !cur.ws) ? !!(cur.nudgeOpen && cur.hints && cur.hints[0]) : !!(cur && cur.hints && cur.hints[0] && !cur.placement && !cur.transferCheck && (cur.ws ? wsSup()>=3 : (coachLevel(cur.skill)>=2 || (coachLevel(cur.skill)===1 && !!cur.nudgeOpen)))); // true only when a strategy line is actually on screen
@@ -4293,8 +4376,7 @@ function players(){
   const bk=app.querySelector("#back"); if(bk) bk.onclick=home;
   (app.querySelector("[data-name]")||app.querySelector("#add")).focus();
 }
-// v9.20 (review #5): Home shows effort and one specific thing she did, never a percentage, a score, or a streak. The totals and the
-// best run of right answers moved to the grown-ups page (quickGrownupsHTML). Days count any practice: a problem, a check-up, a quick look.
+// Home activity includes problems, check-ups, and quick looks. The recent win is selected separately from checked work.
 function homeEffortHTML(){ try{
   const log=Array.isArray(S.log)?S.log:[]; const now=new Date(); const day0=new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const w0=new Date(now.getFullYear(), now.getMonth(), now.getDate()-((now.getDay()+6)%7)).getTime(); // this school week, from Monday
@@ -4303,11 +4385,8 @@ function homeEffortHTML(){ try{
   const stamps=[...log.filter(e=>e && !e.abandoned).map(e=>+e.t), ...otherWork.map(e=>+e.t), ...(Array.isArray(S.nsChecks)?S.nsChecks.filter(c=>c && Array.isArray(c.items) && c.items.length).map(c=>+c.t):[]), ...((S.quick && Array.isArray(S.quick.history))?S.quick.history.map(h=>h&&+h.t):[])].filter(t=>Number.isFinite(t) && t>=w0 && t<=now.getTime());
   const days=new Set(stamps.map(dk)).size;
   const todayN=Math.max(new Set(log.filter(e=>e && !e.abandoned && +e.t>=day0).map(e=>String(e.q||e.t))).size, (S.today&&S.today.a)||0); // distinct problems today, so a miss and its walkthrough count once
-  let own=""; for(let i=log.length-1;i>=0;i--){ const e=log[i]; if(e && e.q && classifyEntry(e)==="independent"){ own=String(e.q).replace(/\s*=\s*\?\s*$/,"").replace(/\s+/g," ").trim(); break; } }
-  if(own.length>60) own=own.slice(0,58).trim()+"…";
   const parts=[todayN ? `Today you worked on ${todayN} problem${todayN===1?"":"s"}.` : otherWork.some(e=>+e.t>=day0&&+e.t<=now.getTime()) ? "Your homework or lesson practice today is saved." : "No practice problems recorded yet today."];
   if(days) parts.push(`This week you practiced on ${days} day${days===1?"":"s"}.`);
-  if(own) parts.push(`Last one you got on your own: <b>${esc(own)}</b>`);
   if(!log.length) parts.push("The dots fill in as you level up; gold means maxed out.");
   return parts.join(" ");
 }catch(e){ return "The dots fill in as you level up; gold means maxed out."; } }
@@ -4350,6 +4429,7 @@ function home(){
   if(typeof rhReset==="function") rhReset(); // v9.23: nor do the report-card helper's marks (memory only)
   if(cur && phase==="q") leaveProblem(); else resolvePending();
   pendingTransfer=null; // v9.12: a queued "fresh one" belongs to that sitting and skill; it never follows her to another skill or player
+  resetPracticeCelebration();
   mode=null; cur=null; if(typeof lp!=="undefined") lp=null; // v9.33: a lesson session never follows her back to Home
   if(!S){ if(Object.keys(DB.profiles).length) players(); else askName(); return; }
   S=normalize(S); DB.profiles[S.name]=S;
@@ -4393,7 +4473,7 @@ function home(){
   const nextDue = wsum.review.length ? Math.min(...wsum.review.map(w=>w.due)) : 0;
   const focusLine = target ? `Next up: <b>${esc(SKILLS[target.sk].name)}</b>, ${esc(target.kid||target.why)}${/* v9.19 review: no "0 of 2 on your own" and no "N more on the list" on her screen */""}${wsum.review.length?`; ${wsum.review.length} in review`:""}.` : wsum.review.length ? `Nothing to focus on right now: ${wsum.review.length} thing${wsum.review.length===1?"":"s"} in review. Next check-in ${new Date(nextDue).toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})}.` : "";
   const showFocus = !!target; // with nothing open or due, Focus would just be Mix; the note below says when the next check-in is
-  const doneLine = sessionDone ? `${walterNote("rest","You reached a stopping point. Rest now, and come back when you're ready.",true,true)}<p class="muted week-note" style="margin:0 0 10px"><b>Nice stopping point.</b> ${/* v9.20: effort, not "x right of y" */""}You worked on ${S.today.a||"some"} problem${S.today.a===1?"":"s"} today.${S.today.c ? "" : " Hard ones are how brains grow."} Come back tomorrow, or pick something below if you want more.</p>` : "";
+  const doneLine = sessionDone ? walterNote("rest","You reached a stopping point. Rest now, and come back when you're ready.",true,true) : "";
   const homeworkPaused=fractionHomeworkResumeReady();
   const primary=homePrimaryAction();
   const todayHTML=`<div class="card home-today home-lead" id="dailycard" style="margin-top:0"><h2 style="margin-top:0">${primary.title}</h2><p class="muted home-desc">${primary.description}</p>${stale?`<p class="muted week-guess" id="stalepin">A grown-up set the class lesson ${esc(pinDayText())}. If your homework shows a newer lesson, ask a grown-up to update it.</p>`:""}<button class="btn primary mix" id="${primary.kind==='lesson'?'lpresume':'dailygo'}" data-dailygo ${primary.kind==='today'?'data-skill="today"':''}>${primary.label}</button></div>`;
@@ -4404,6 +4484,7 @@ function home(){
     <div class="topbar home-bar"><div class="walter-heading"><img class="walter-home" src="${WALTER_ART.work}" alt="" width="112" height="112"><h1 style="margin:0" tabindex="-1">Hi, ${esc(S.name)}.</h1></div><button class="btn quiet small" id="switch">Not ${esc(S.name)}?</button></div>${warnHTML()}
     <p class="home-intro">One step at a time. You can ask for help or stop whenever you need.</p>
     ${doneLine}${practiceCards}
+    ${homeWinHTML()}
     ${feedbackHTML}
     
     <div class="card hw">
@@ -5636,7 +5717,7 @@ function factsGrownupsHTML(){ if(!S) return "";
     <p class="muted" style="margin:8px 0 0;font-size:13px">How it works: each fact sits in a box from 0 to 3. A miss (on a facts problem, or on a fact step inside a multiplication or division walkthrough) puts it back to practicing; a right answer with no help moves it up one box, and so does one with only the strategy line on screen (no hint taps), but only as far as "getting there"; "known well" needs one more right answer with no help at least 12 hours after the learner last saw it. Practice picks mostly practicing and not-yet-seen facts and facts not seen lately, with about 1 in 4 known facts so the learner stays confident. There is no timer, and speed is not measured. The learner's screen shows only "Facts you know well: N".</p></div>`; }
 Object.assign(SKILLS, {facts:{name:"Multiplication facts", gen:safeGen(genFacts), blurb:"7 × 8 → 56 and 56 ÷ 8 → 7, built from facts you know", std:"3.OA.7", grade:"3", foundation:true, lessons:[]}});
 SKILL_ORDER.push("facts");
-function start(m){ mode=m; if(m==="nscheck"){ nsStart(); return; } if(m==="hw:check"){ pendingHW=null; hwEntry(); return; } if(m==="today"){ todayPlan=buildTodayPlan(); todayIdx=0; todayExtra=0; todaySid=Date.now(); if(quickLookDue()){ quickLookStart(); return; } } next(); }
+function start(m){ resetPracticeCelebration(); mode=m; if(m==="nscheck"){ nsStart(); return; } if(m==="hw:check"){ pendingHW=null; hwEntry(); return; } if(m==="today"){ todayPlan=buildTodayPlan(); todayIdx=0; todayExtra=0; todaySid=Date.now(); if(quickLookDue()){ quickLookStart(); return; } } next(); }
 // "Check my homework": type the problem from the page, then answer it like any other problem; a miss walks through that exact problem.
 // v10: provenance comes from the visible current prompt, never a math spec.
 // Callers must pass the CURRENT rendered question and already accepted work.
@@ -6569,7 +6650,7 @@ function render(){
       const planDone = mode==="today" && todayPlan && todayIdx>=todayPlan.length && (independent || todayExtra>=2); // the planned session tries to end on an independent win; after two extra problems it ends on any right answer, and the summary says so
       const stopHere = (!whyState || whyState.done) && stopOfferedAt!==sessionN && (planDone || (mode!=="today" && ((sessionN>=5 && independent) || sessionN>=7)));
       if(stopHere && mode==="today") body+=todaySummaryHTML();
-      else if(stopHere) body+=`<div class="stop" role="status"><b>Good stopping point.</b>${sessionN} problems this sitting${independent?", and this one you did on your own":""}. ${S.today.c} right today. Stop here, or do one more?${walterNote("rest","You have done enough for this sitting. It's okay to rest.",true)}<div class="actions" style="margin-top:8px"><button class="btn primary" id="stopnow">Done for today</button><button class="btn quiet" id="onemore">One more</button></div></div>`;
+      else if(stopHere) body+=`<div class="stop" role="status"><b>Good stopping point.</b>${practiceCelebrationHTML(practiceRight,practiceWin)}${walterNote("rest","You have done enough for this sitting. It's okay to rest.",true)}<div class="actions" style="margin-top:8px"><button class="btn primary" id="stopnow">Done for today</button><button class="btn quiet" id="onemore">One more</button></div></div>`;
       else if(!whyState || whyState.done) body+=`<div class="actions"><button class="btn primary" id="next">Next</button></div>`;
     }
     if(phase==="reveal"){ // full solution shown; she copies the answer in before Next appears
@@ -6607,7 +6688,7 @@ function render(){
   const idleTip=`<div class="idletip" id="idletip" role="status" aria-live="polite"></div>`; if(phase==="wt") right+=idleTip; else if(phase==="q") body+=idleTip; // v9.13: a quiet "stuck?" line after a long pause
   if(S.scratch) body+=scratchHTML();
   const card = right ? `<div class="card two"><div class="left">${body}</div><div class="right">${right}</div></div>` : `<div class="card">${body}</div>`;
-  app.innerHTML=top+card+`<p class="streak" style="margin-top:12px">${S.today.c ? `${S.today.c} right today` : "Just getting started today"}</p>`; // v9.12: no "0 right today" scoreboard. v9.20: no "· N in a row" streak counter
+  app.innerHTML=top+card;
   bind(); if(S.scratch) bindScratch(); armWalterMotion(); armIdle(); noteScreen();
 }
 // v9.13 long-pause signal: after 75 seconds with no typing, tapping, or new screen, one calm line points at the help that is already there.
@@ -7363,6 +7444,8 @@ function submit(){
     S.correct++; S.today.c++; S.run++; S.best=Math.max(S.best,S.run);
     if(!independent){ if(supported){ S.supportedOk=(S.supportedOk||0)+1; } else { S.guided++; S.persist++; } } // a supported success is its own category, not a guided completion
     okEntry=pushLog(entry); phase="ok";
+    practiceRight++;
+    practiceWin=practiceProgressWin(entry)||practiceWin;
     if(cur.why && cur.why.options && cur.why.options.length>1) whyState={sel:-1, done:false, ok:null};
     // Delayed check-ins: a skill she has shown independently gets one fresh problem after a gap (7 days, then 14), so "ready" can rest on retention, not only on recent accuracy.
     if(independent && !cur.hw){ S.checkins=S.checkins||{};
@@ -8832,10 +8915,10 @@ function lpRepairHTML(it){ const r=it.rspec, rp=it.rep;
     <div class="lpsteps" role="group" aria-label="Worked steps">${r.steps.map((s,i)=>`<button type="button" class="opt lprstep${i===rp.picked?" sel":""}" data-lpr="${i}">${i+1}. ${s}</button>`).join("")}</div>
     <div class="inline-err" id="lpmsg" role="status" aria-live="polite">${rp.msg||""}</div>${lpRepairWalterHTML(it)}</div>`;
   return lpWorkHTML(it); }
-function lpSummaryHTML(){ if(lp.homework)return fractionHomeworkSummaryHTML(); const rs=lp.results, own=rs.filter(e=>e.phase==="independent"||e.phase==="delayed"||e.phase==="mixed"), clean=own.filter(e=>e.firstTry&&e.methodOk).length, o=lp.focus?teacherFocusState(lp.id):lpState(lp.id);
+function lpSummaryHTML(){ if(lp.homework)return fractionHomeworkSummaryHTML(); const rs=lp.results, own=rs.filter(e=>e.phase==="independent"||e.phase==="delayed"||e.phase==="mixed"), right=own.filter(checkedProgressComplete).length, o=lp.focus?teacherFocusState(lp.id):lpState(lp.id);
   const due=+o.due>0?new Date(+o.due).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}):"";
   return `<div class="card lpcard"><h2 style="margin-top:0">${lp.delayed?"Check-in done":lp.focus?"Teacher's focus practice done":"Lesson "+lp.bp.lesson+" practice done"}</h2>
-    <p>${own.length?`You finished ${own.length} practice problem${own.length===1?"":"s"}${clean?`, and ${clean===own.length?"all":clean} of them with no clues and no do-overs`:""}.`:"You worked through the lesson steps."} ${rs.some(e=>e.phase==="repair"&&e.ok)?"You found the slip and fixed it.":""}</p>${walterNote("rest","You finished this lesson. Time for a rest.",true,true)}
+    <p>${right?practiceCelebrationHTML(right,latestCheckedProgressWin(own)):"You worked through the lesson steps."+practiceCelebrationHTML(0,latestCheckedProgressWin(rs))}</p>${walterNote("rest","You finished this lesson. Time for a rest.",true,true)}
     ${due?`<p class="muted">A quick check-in with new numbers will be ready ${esc(due)}. Checking back later is how it sticks.</p>`:""}
     <p class="muted lpgrown"><b>Grown-up:</b> ${lp.bp.talk}</p>
     <div class="actions"><button class="btn primary" id="lphome">Home</button><button class="btn quiet" id="lpagain">${lp.focus?"Practice this focus again":"Practice this lesson again"}</button></div></div>`; }
@@ -10435,12 +10518,10 @@ function fractionHomeworkRecord(it,extra){
 }
 function fractionHomeworkSummaryHTML(){
  const grid=lp.homework.week===DECIMAL_GRID_PACK?weeklyHomeworkItem(lp.homework.itemId):null;
- const result=lp.homework.gridCheck?
-  (lp.results.at(-1)?.gridOutcome==='no-hint'?'You completed a fresh check without hints or math retries.':
-    lp.results.at(-1)?.gridOutcome==='supported'?'You completed a fresh check with Walter’s help.':'You completed a fresh check after a retry.'):'';
+ const win=latestCheckedProgressWin(lp.results);
  const title=grid?.fresh?'Grid problem finished':'Homework problem finished';
  const again=grid?.fresh?'Another '+weekMethodName(grid.method)+' problem':'Another problem from my page';
- return `<div class="card lpcard"><h2 style="margin-top:0">${title}</h2><p>You worked through ${esc(lp.homework.label)} with ${esc(lp.items[0].spec.methodName||'checked fraction steps')}.</p>${walterNote('rest','You did the work. Take a break whenever you need.',true)}${result?`<p>${result}</p>`:''}<p class="muted">This records homework practice. It does not change levels or count as independent lesson evidence.</p><div class="actions"><button class="btn primary" id="lphome">Home</button><button class="btn quiet" id="lpagain">${esc(again)}</button></div></div>`;}
+ return `<div class="card lpcard"><h2 style="margin-top:0">${title}</h2><p>You worked through ${esc(lp.homework.label)} with ${esc(lp.items[0].spec.methodName||'checked fraction steps')}.</p>${walterNote('rest','You did the work. Take a break whenever you need.',true)}${win?`<p class="round-win">${esc(win)}</p>`:''}<p class="muted">This records homework practice. It does not change levels or count as independent lesson evidence.</p><div class="actions"><button class="btn primary" id="lphome">Home</button><button class="btn quiet" id="lpagain">${esc(again)}</button></div></div>`;}
 // Bounded, local story recognition. Match the whole story and its references;
 // never infer an operation just from numbers or unrelated surrounding words.
 function parseWordHomework(text){
