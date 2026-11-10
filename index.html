@@ -1722,7 +1722,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.8.3 · November 8, 2026";
+const BUILD="v10.8.4 · November 9, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -2834,6 +2834,17 @@ function fracSVG(fracs){ // fractions as points on a number line from 0 to at le
   fracs.forEach((f,i)=>{ const v=frValue(f); svg+=`<circle cx="${X(v)}" cy="50" r="7" fill="${i?"#2F9E6B":"#B45309"}"/><text x="${X(v)}" y="${i?24:34}" font-size="13" text-anchor="middle" font-weight="700" fill="${i?"#2F9E6B":"#B45309"}">${mixedText(f.w,f.n,f.d)}</text>`; });
   return `<div class="chart">${svg}</div>`;
 }
+function mixedWalkFormat(role, raw){
+  if(role==='mixed-number'||role==='improper-fraction'){
+    const entry=parseFraction(raw);
+    if(entry?.d>0&&[entry.w,entry.n,entry.d].every(Number.isSafeInteger))return '';
+    return role==='mixed-number'
+      ? 'Type the number of wholes, a space, then top/bottom.'
+      : 'Type the number of pieces, a slash, then the number of pieces in one whole.';
+  }
+  return Number.isInteger(parseAnswer(raw)) ? '' : 'Type a whole number for this count.';
+}
+
 function genFractions(level, focus){
   const f=focus&&focus.tag; let variant = focus&&focus.variant ? focus.variant : pick(level<=2 ? ["simplify","mixed"] : ["simplify","mixed","estimate","compare"]);
   const dens=[2,3,4,5,6,8,10,12];
@@ -2860,6 +2871,8 @@ function genFractions(level, focus){
     const validate = toMixed ? (str=>{ const fr=parseFraction(str); return !!fr && fr.w>0 && fr.n>0 && fr.n<fr.d && frEqual(fr,{w,n,d}); }) : (str=>{ const fr=parseFraction(str); return !!fr && fr.w===0 && fr.n>0 && frEqual(fr,{w:0,n:impN,d}); });
     const p={skill:"fractions", level, prompt, type:"input", text:true, validate, answer:impN/d, display:disp, show:null, meta:{variant, dir:toMixed?"toMixed":"toImproper", w, n, d, impN}};
     p.traps=["wholes","remainder"];
+    // Only the given side goes into the tutoring context.
+    p.mixedWalk=toMixed?{denominator:d,total:impN}:{denominator:d,wholes:w,extra:n};
     p.steps = toMixed ? [
       {t:`${frText(impN,d)} means ${impN} pieces, each <b>1/${d}</b> of a whole. It takes <b>${d}</b> pieces to make one whole. How many wholes fit in ${impN} pieces? Think ${impN} ÷ ${d}.`, check:wc(ci(`How many whole groups of ${d} are in ${impN}?`, w),"wholes"), after:`${w} whole${w===1?"":"s"} use${w===1?"s":""} ${w*d} of the ${impN} pieces.`},
       {t:`The pieces left over are still ${ordName(d)}, so they stay over ${d}.`, check:wc(ci(`How many pieces are left over after ${w} whole${w===1?"":"s"}?`, n),"remainder"), after:`${impN} − ${w*d} = ${n}: the fraction part is ${n}/${d}.`},
@@ -2868,6 +2881,23 @@ function genFractions(level, focus){
       {t:`${mixedText(w,n,d)} is ${w} whole${w===1?"":"s"} and ${n}/${d} more. Each whole is <b>${d}/${d}</b>: ${d} pieces. How many pieces are in ${w} whole${w===1?"":"s"}?`, check:wc(ci(`How many ${ordName(d)} are in ${w} whole${w===1?"":"s"}?`, w*d),"wholes"), cues:[`Each whole is ${d} pieces. Count by ${d}s, once for each whole.`, `${w} group${w===1?"":"s"} of ${d}: ${w} × ${d} = ?`], after:`${w} whole${w===1?" is":"s are"} ${w*d} ${ordName(d)}.`},
       {t:`Now add the extra ${n} piece${n===1?"":"s"} from the fraction part.`, check:wc(ci(`${w*d} + ${n} = ?`, impN),"remainder"), cues:[`The wholes made ${w*d} ${ordName(d)}. The fraction part adds ${n} more.`, `Count on ${n} from ${w*d}.`] /* v9.18.1 review #10: its own adding cues, not the "remainder" take-away cues */, after:`${impN} ${ordName(d)} in all.`},
       {t:`Write the total pieces over ${d}. The denominator stays ${d}: the piece size did not change.${fracSVG([{w,n,d}])}`, cues:[`Total pieces over the denominator.`, `Type it like 7/3: the total pieces you found, then /${d}.`], check:finalText(p), after:`${mixedText(w,n,d)} = ${frText(impN,d)}.`}];
+    const cards=toMixed?[
+      ['whole-groups', 'Count the wholes', `Each whole takes ${d} pieces. How many full groups can you make from ${impN} pieces?`],
+      ['leftover-pieces', 'Find what is left', 'How many pieces are left after you make the full groups?'],
+      ['mixed-number', 'Put it together', 'Write the whole count and the leftover fraction as a mixed number.']
+    ]:[
+      ['pieces-in-wholes', 'Count the pieces in the wholes', `Each whole takes ${d} pieces. How many pieces are in the ${w} wholes?`],
+      ['all-pieces', 'Count all the pieces', `Add the ${n} extra pieces. How many pieces are there altogether?`],
+      ['improper-fraction', 'Put it together', 'Write the total piece count over the original bottom number.']
+    ];
+    p.steps.forEach((step,i)=>{
+      const [role,title,prompt]=cards[i];
+      step.mixedTitle=title;
+      step.mixedRole=role;
+      step.check.q=prompt;
+      step.check.mixedRole=role;
+      step.check.issue=raw=>mixedWalkFormat(role,raw);
+    });
     p.hints = toMixed ? [{t:`How many pieces make one whole? ${d}. So ask: how many groups of ${d} fit into ${impN}, and how many pieces are left?`},{t:`${impN} ÷ ${d}: the whole-number part of the answer is the wholes; the remainder is the numerator; the denominator stays ${d}.`},{t:`Type it as: <b>wholes</b>, a space, then <b>numerator/denominator</b> (for a different problem, ${d===5?"7/3 would be typed 2 1/3":"7/5 would be typed 1 2/5"}).`}]
       : [{t:`Each whole is ${d} pieces of size 1/${d}. Turn the ${w} whole${w===1?"":"s"} into pieces first.`},{t:`${w} whole${w===1?"":"s"} × ${d} pieces each = ${w*d} pieces. Then add the ${n} extra piece${n===1?"":"s"}.`},{t:`Write the total pieces over ${d}. Type it as <b>numerator/denominator</b> (for a different problem, ${d===5?"2 1/3 would be typed 7/3":"1 2/5 would be typed 7/5"}).`}];
     return p;
@@ -3580,9 +3610,10 @@ const fbMixed=(n,d)=>{ const w=Math.floor(n/d), r=n%d; return r ? (w?`${w} ${r}/
 function fbBars(rows, inline){ const W=300, H=34, gap=14, x0=58; let r="", y=6;
   for(const row of rows){ const pw=W/row.d;
     for(let i=0;i<row.d;i++) r+=`<rect x="${(x0+i*pw).toFixed(2)}" y="${y}" width="${pw.toFixed(2)}" height="${H}" style="fill:${i<row.n?"var(--hi,#FFE566)":"transparent"};stroke:var(--ink,#1B2A41)" stroke-width="1.5"/>`;
+    if(row.outline) r+=`<rect x="${x0}" y="${y}" width="${W}" height="${H}" fill="none" stroke="#176687" stroke-width="4"/>`;
     if(row.label) r+=`<text x="${x0-8}" y="${y+H/2+5}" font-size="15" font-weight="700" text-anchor="end" style="fill:var(--ink,#1B2A41)">${row.label}</text>`;
     y+=H+gap; }
-  const vw=x0+W+8, vh=y-gap+6, tag=inline?"span":"div", aria="Fraction bars of the same length: "+rows.map(x=>`one cut into ${x.d} equal parts with ${x.n} shaded`).join(", ");
+  const vw=x0+W+8, vh=y-gap+6, tag=inline?"span":"div", aria="Fraction bars of the same length: "+rows.map(x=>`one cut into ${x.d} equal parts with ${x.n} shaded${x.outline?" and outlined":""}`).join(", ");
   return `<${tag} class="chart" style="display:block"><svg viewBox="0 0 ${vw} ${vh}" width="100%" style="max-width:${vw}px;display:block;margin:8px auto" role="img" aria-label="${aria}">${r}</svg></${tag}>`; }
 const fbBox=`<span class="muted">What number goes in the box?</span>`;
 function genFracBasics(level, focus){ const f=focus||{}; const L=Math.min(MAX_LEVEL, Math.max(1, Math.round(+level)||1));
@@ -6330,6 +6361,130 @@ function walterNextReply({guide,intent='start',move,lastMove,repeats=0,observati
   text=walterClearText(text);
   return {text,move:chosen,signature:walterHelpSignature([context.contextKey||'',intent,chosen,status,safe.label,text].join('|')),choices,resource,concept,work:walterWorkEvidence(safe,chosen)};
 }
+// Mixed-number walkthrough help uses the givens, checked work, and the latest checked entry.
+function mixedWalkActive(){
+  return phase==='wt' && !!cur?.mixedWalk;
+}
+
+function mixedWalkReminder(){
+  const {denominator:d,total,wholes,extra}=cur.mixedWalk;
+  const given=total===undefined?mixedText(wholes,extra,d):frText(total,d);
+  const checked=cur.mixedWalkChecked||{};
+  const parts=[
+    [checked['whole-groups'],'whole','wholes'],
+    [checked['leftover-pieces'],'piece left','pieces left'],
+    [checked['all-pieces']??checked['pieces-in-wholes'],'piece','pieces']
+  ].filter(([value])=>value!==undefined).map(([value,singular,plural])=>`${value} ${value===1?singular:plural}`);
+  return `<p class="muted" style="margin:0 0 8px">Given <b>${given}</b>${parts.length?' · Checked: '+parts.join(', '):''}</p>`;
+}
+
+function mixedWalkCue(role, raw){
+  const {denominator:d,total,wholes,extra}=cur.mixedWalk;
+  const checked=sc.lastCheck?.draft===raw && sc.lastCheck.ok===false;
+  const entry=checked?parseFraction(raw):null;
+  const count=checked?parseAnswer(raw):NaN;
+  const earlier=cur.mixedWalkChecked||{};
+  switch(role){
+    case 'whole-groups':
+      if(count===total)return ['whole','You counted all the pieces. Put '+d+' pieces in each whole, then count the full groups.'];
+      if(count===d)return ['whole',`${d} pieces make one whole. How many groups that size can you make?`];
+      return ['whole',`Start with ${total} pieces. Make groups of ${d} until another full group won’t fit.`];
+    case 'leftover-pieces':
+      return ['leftover',`Set aside ${d} pieces for each of the ${earlier['whole-groups']} wholes you counted. Count what’s left.`];
+    case 'pieces-in-wholes':
+      if(count===wholes)return ['whole',`That’s the number of wholes. Count ${d} pieces inside each of those wholes.`];
+      return ['whole',`Count ${d} pieces for each of the ${wholes} wholes. Save the extra fraction for the next step.`];
+    case 'all-pieces':
+      return ['total',count===earlier['pieces-in-wholes']
+        ? `That counts the pieces in the wholes. Add the ${extra} extra pieces too.`
+        : `Start with the ${earlier['pieces-in-wholes']} pieces you counted. Count on ${extra} more.`];
+    case 'mixed-number':
+      if(entry && frEqual(entry,{w:0,n:total,d}) && (!entry.w || entry.n>=entry.d))
+        return ['form','That’s the right amount. Write the wholes first, then a space, then the leftover fraction.'];
+      if(entry?.w && entry.d!==d)
+        return ['denominator',`Look at the number after the slash. Each whole was split into ${d} equal pieces. Use that same piece size.`];
+      if(entry?.w===earlier['whole-groups'])
+        return ['leftover','Your whole count matches. Use the leftover count you checked for the number before the slash.'];
+      if(entry?.w)return ['whole','Check the number before the space. It should count the full groups you found.'];
+      return ['form','Write your checked whole count, then a space, then the leftover count over the original bottom number.'];
+    case 'improper-fraction':
+      if(entry?.w && frEqual(entry,{w:wholes,n:extra,d}))
+        return ['form','That’s the right amount. Put all the pieces into one fraction using a slash.'];
+      if(entry?.n && entry.d!==d)
+        return ['denominator',`Check the number after the slash. You’re still counting pieces that are each 1/${d} of a whole.`];
+      return ['total','Use your checked total piece count on top. Use the original bottom number for the size of the pieces.'];
+  }
+}
+
+function mixedWalkStripAction(role, focus){
+  if(focus==='denominator')return 'Look inside one outlined strip. Count all its equal spaces. That count goes after the slash.';
+  if(role==='mixed-number'&&focus==='leftover')return 'Count only the shaded spaces in the outlined strip. That count goes before the slash.';
+  if(role==='mixed-number'&&focus==='whole')return 'Count the full strips. That count goes before the space.';
+  return {
+    'whole-groups':'The outline shows one whole. Count all the strips that are filled all the way.',
+    'leftover-pieces':'Find the outlined strip that isn’t full. Count just its shaded pieces.',
+    'pieces-in-wholes':'Count the shaded pieces in the full strips only.',
+    'all-pieces':'Count the shaded pieces in the full strips and in the last strip.',
+    'mixed-number':'Count full strips for the whole number. Use the shaded pieces in the last strip for the leftover fraction.',
+    'improper-fraction':'Count every shaded piece for the number before the slash. Count the spaces in one strip for the number after it.'
+  }[role];
+}
+
+function mixedWalkStrip(role){
+  const {denominator:d,total,wholes,extra}=cur.mixedWalk;
+  const pieces=total??(wholes*d+extra);
+  const focus=sc.mixedFocus;
+  const rows=[];
+  for(let left=pieces;left>0;left-=d){
+    const outline=focus==='leftover'?left<d:(focus==='denominator'||role==='whole-groups')&&left===pieces;
+    rows.push({d,n:Math.min(d,left),outline});
+  }
+  return `<div id="mixedwalkstrip" tabindex="-1" aria-label="Fraction strip"><p><b>Try the fraction strip.</b> ${mixedWalkStripAction(role,focus)}</p>${fbBars(rows,false)}</div>`;
+}
+
+function mixedWalkForm(role){
+  if(!['form','format'].includes(sc.mixedFocus))return '';
+  const mixed=role==='mixed-number';
+  return `<p class="muted">Type it like this: <b>${mixed?'whole &nbsp; pieces/size':'pieces/size'}</b></p>`;
+}
+
+function mixedWalkDeliver(ctx, text, strip=false){
+  const kind=strip?'mixed-strip':'mixed-cue';
+  const evidence=hwWalterSemanticContext(ctx);
+  const work=walterWorkEvidence({...evidence,component:cur.steps[stepIdx].mixedRole},strip?'smaller':'orient');
+  const signature=walterHelpSignature([kind,ctx.key,text].join('|'));
+  sc.helped=true;
+  sc.mixedCueShown=true;
+  cur.studied=true;
+  hwRecordHelp(ctx,kind,'procedure',0,signature,text,work);
+}
+
+function mixedWalkFeedback(ctx, role){
+  const [focus,text]=mixedWalkCue(role,ctx.draft);
+  sc.mixedFocus=focus;
+  sc.msg=esc(text);
+  mixedWalkDeliver(ctx,text);
+}
+
+function mixedWalkHelp(){
+  sc.val=app.querySelector('#cans').value;
+  const ctx=hwWalterContext(), role=cur.steps[stepIdx].mixedRole;
+  const strip=sc.mixedCueShown;
+  if(strip){
+    sc.mixedStrip=true;
+    mixedWalkDeliver(ctx,mixedWalkStripAction(role,sc.mixedFocus),true);
+  }else if(ctx.observation==='format'){
+    const text=role==='mixed-number'?'Put a space after the whole count. Then use / to separate the leftover count from the piece size.'
+      :role==='improper-fraction'?'Use / between the total piece count and the piece size, like the slash in the given fraction.'
+      :mixedWalkCue(role,ctx.draft)[1];
+    sc.msg=esc(text);
+    mixedWalkDeliver(ctx,text);
+  }else mixedWalkFeedback(ctx,role);
+  save();
+  render();
+  const target=app.querySelector(strip?'#mixedwalkstrip':'#cmsg');
+  if(target){target.focus({preventScroll:true});target.scrollIntoView({block:'nearest'});}
+}
 function hwEntry(prefill, err){
   mode="hw:check"; cur=null; pendingHW=null;
   app.innerHTML=`
@@ -6710,7 +6865,7 @@ function render(){
     const head = cur.voluntaryWalkthrough ? "Let's work through this exact problem together. Nothing is scored." : homeworkNoReveal() ? "Let's work through the part that is stuck, then try again." : chain>=2 ? "Still not there. One more walk through, then another try." : (stage==="fresh" && cur.onramp) ? "Not yet, and that is OK. It was a warm-up, so it is not scored. Let's walk through it together." : (stage==="fresh" && cur.stretch) ? "Not yet, and that is OK. That was a stretch, so it is not scored and your level stays. Let's look at it together." : (cur.skippedTo ? "Not yet. What you had right stays; we start at the first spot to fix." : "Not yet. Let's walk through it.");
     // A break is offered during sustained struggle, not only after success: three fresh misses in a row this sitting, or three shown answers inside one walkthrough.
     // v9.13: the offer comes earlier. Two tough ones in a row, two shown answers, or four struggle signals (help taps and wrong step entries) in this walkthrough.
-    const struggling = !wtKeepGoing && ((sessionMissRun>=2 && breakOfferedAt!==sessionMissRun) || revealed>=2 || wtSignals>=4); // one "keep going" answers every condition for this walkthrough
+    const struggling = !mixedWalkActive() && !wtKeepGoing && ((sessionMissRun>=2 && breakOfferedAt!==sessionMissRun) || revealed>=2 || wtSignals>=4); // one "keep going" answers every condition for this walkthrough
     const breakHTML = struggling ? `<div class="stop" role="status"><b>This one is hard today.</b>${sessionMissRun>=2?`${sessionMissRun} tough ones in a row. `:""}That is OK. You can tap <b>Help me</b> on any step, or take a break. Brains often learn more after a rest than after another try.${walterNote("rest","Taking a break is okay. The problem can wait.",true)}<div class="actions" style="margin-top:8px"><button class="btn primary" id="breaknow">Take a break</button><button class="btn quiet" id="keepgoing">Keep going</button></div></div>` : "";
     const walterStepDone=!struggling && sc && sc.state==="ok" && sc.tries>0 ? walterNote("nice",walterStepMessage(step,sc.helped),true) : "";
     const walkStart=cur.skippedTo||0;
@@ -6721,7 +6876,7 @@ function render(){
       <div class="wt" id="wt">${cur.steps.slice(0,stepIdx+1).map((s,i)=>stepHTML(s,i,i<stepIdx,true)).join("")}</div>${walterStepDone}${exampleOpen?exampleHTML():""}
       <div class="actions">${(open || (sc && sc.state==="explain"))?"":(!last?`<button class="btn primary" id="step">Next step</button>`:`<button class="btn primary" id="retry">Try one like it</button>`)}</div>`; /* the reason question must be answered before moving on */
   }
-  if(phase==="q") body+=hwWalterHTML(); else if(phase==="wt") right+=hwWalterHTML();
+  if(phase==="q") body+=hwWalterHTML(); else if(phase==="wt"&&!mixedWalkActive()) right+=hwWalterHTML();
   const idleTip=`<div class="idletip" id="idletip" role="status" aria-live="polite"></div>`; if(phase==="wt") right+=idleTip; else if(phase==="q") body+=idleTip; // v9.13: a quiet "stuck?" line after a long pause
   if(S.scratch) body+=scratchHTML();
   const card = right ? `<div class="card two"><div class="left">${body}</div><div class="right">${right}</div></div>` : `<div class="card">${body}</div>`;
@@ -6731,7 +6886,7 @@ function render(){
 // v9.13 long-pause signal: after 75 seconds with no typing, tapping, or new screen, one calm line points at the help that is already there.
 // It changes nothing in the records. Any touch or key restarts the clock; a new screen clears the line.
 let idleTimer=null; const IDLE_MS=75000;
-function idleText(){ if(phase==="wt" && sc && sc.state==="open") return `Stuck? That is OK. Tap <b>Help me</b> for a clue, or <b>Home</b> to take a break.`; if(phase==="q" && onrampWaiting()) return `Stuck? That is OK. Tap <b>Help me start</b> or <b>Show me one</b>, or <b>Home</b> to take a break.`; if(phase==="q" && walkthroughBtn()) return `Stuck? That is OK. Tap <b>Work through this problem</b> above for one small step at a time.`; if(phase==="q" && withMeOK()) return `Stuck? That is OK. Tap <b>Do it with me, one step at a time</b> to do this one together, or <b>Home</b> to take a break.`; /* v9.20: the same words as the button */ if(phase==="q") return `Stuck? That is OK. Tap <b>${cur&&cur.ws?"Hint for the next box":"Hint"}</b>${cur&&cur.hw&&cur.fixed?"":` or <b>Show me one first</b>`}, or <b>Home</b> to take a break.`; return ""; }
+function idleText(){ if(phase==="wt" && sc && sc.state==="open" && !mixedWalkActive()) return `Stuck? That is OK. Tap <b>Help me</b> for a clue, or <b>Home</b> to take a break.`; if(phase==="q" && onrampWaiting()) return `Stuck? That is OK. Tap <b>Help me start</b> or <b>Show me one</b>, or <b>Home</b> to take a break.`; if(phase==="q" && walkthroughBtn()) return `Stuck? That is OK. Tap <b>Work through this problem</b> above for one small step at a time.`; if(phase==="q" && withMeOK()) return `Stuck? That is OK. Tap <b>Do it with me, one step at a time</b> to do this one together, or <b>Home</b> to take a break.`; /* v9.20: the same words as the button */ if(phase==="q") return `Stuck? That is OK. Tap <b>${cur&&cur.ws?"Hint for the next box":"Hint"}</b>${cur&&cur.hw&&cur.fixed?"":` or <b>Show me one first</b>`}, or <b>Home</b> to take a break.`; return ""; }
 function armIdle(){ if(idleTimer) clearTimeout(idleTimer); idleTimer=null; if(!(phase==="q"||phase==="wt")) return; idleTimer=setTimeout(()=>{ const el=app.querySelector("#idletip"); const t=idleText(); if(el && t){ el.innerHTML=t; el.classList.add("on"); if(cur) cur.idleTips=(cur.idleTips||0)+1; } }, IDLE_MS); }
 ["pointerdown","keydown","input"].forEach(ev=>app.addEventListener(ev,()=>{ if(idleTimer){ armIdle(); } const el=app.querySelector("#idletip.on"); if(el && ev!=="pointerdown"){ el.classList.remove("on"); el.innerHTML=""; } }, true));
 function scratchHTML(){
@@ -6973,6 +7128,7 @@ function hwPrepare(p){
       for(const k of ['sub','rescue','cues','more','vis','charts','chart','tAfter','divDone','divIndex','divLeft','guidedChoice'])delete out[k];
       if(!p.hwPrepared&&s.visAfter)for(const k of ['vis','charts','chart'])if(s[k])out[k]=s[k];
       if(p.skill==='twostep'||p.skill==='multiply')out.after=s.after;
+      if(s.mixedRole){out.t=s.mixedTitle;out.after='';}
       if(p.skill==='addsub'&&/What digit goes/i.test(plain(out.check.q)))out.t='Work in the named column. Use your own carries or exchanges; check their value before entering the digit.';
       return out;
     });
@@ -7255,10 +7411,15 @@ function stepHTML(s,i,dim,withCheck){
     } else if(sc){
       const open=scActive(); const settled = sc.state==="ok" || sc.state==="revealed";
       const explainHTML = sc.state==="explain" && sc.explain ? `<div class="substep why" style="margin-top:8px"><div class="cq">${esc(sc.explain.q)}</div>${optsHTML("xopts", sc.explain.options, sc.xsel, sc.explain.answer, false, "opt copt")}<div class="actions" style="margin-top:10px"><button class="btn primary" id="xcheck">Check reason</button><button class="btn quiet" id="xskip" title="See the reason without picking one">Just tell me why</button></div></div>` : ""; /* v9.13: the reason is an invitation, not a second gate */
-      const helpLbl = stepHelpLabel(s, c); const twoMisses = open && sc.state==="open" && (sc.tries||0)>=2; /* v9.13: help without a wrong answer first; after two misses on one step, an explicit choice */
-      sub=`<div class="substep ${sc.state==="ok"?"ok":sc.state==="revealed"?"bad":sc.state==="confirm"||sc.state==="explain"?"confirm":""}"><div class="cq">${c.q}</div>${typeof readAloudButton==='function'?readAloudButton(c.q,'step-prompt'):''}${checkCtlHTML(c)}
-        <div class="inline-msg" id="cmsg" role="status" aria-live="polite">${sc.msg}</div>${settled && s.after && !sc.xdone?`<div class="res after">${s.after}</div>`:""}${explainHTML}
-        ${open?`<div class="actions" style="margin-top:10px"><button class="btn primary" id="cstep">Check step</button>${sc.state==="open"?`<button class="btn quiet" id="stephelp" title="Get the next clue for this step. You can ask before you try.">${helpLbl}</button>`:""}${twoMisses?`<button class="btn quiet" id="stepbreak">Take a break</button>`:""}</div>`:""}</div>`;
+      const focused=mixedWalkActive()&&s.mixedRole;
+      const helpLbl=focused?(sc.mixedStrip?'Read the strip':sc.mixedCueShown?'Still stuck':'Help me'):stepHelpLabel(s,c);
+      const twoMisses = !focused && open && sc.state==="open" && (sc.tries||0)>=2; /* v9.13: help without a wrong answer first; after two misses on one step, an explicit choice */
+      sub=`<div class="substep ${sc.state==="ok"?"ok":sc.state==="revealed"?"bad":sc.state==="confirm"||sc.state==="explain"?"confirm":""}">${focused&&open?mixedWalkReminder():''}<div class="cq">${c.q}</div>${typeof readAloudButton==='function'?readAloudButton(focused&&sc.msg?[c.q,sc.msg,sc.mixedStrip?mixedWalkStripAction(s.mixedRole,sc.mixedFocus):''].join(' '):c.q,'step-prompt'):''}${checkCtlHTML(c)}
+        <div class="inline-msg" id="cmsg" role="status" aria-live="polite" tabindex="-1">${focused&&open&&sc.mixedCueShown&&sc.msg?'<b>Walter:</b> ':''}${sc.msg}</div>
+        ${focused&&open?mixedWalkForm(s.mixedRole):''}${settled && s.after && !sc.xdone?`<div class="res after">${s.after}</div>`:""}${explainHTML}
+        ${open?`<div class="actions" style="margin-top:10px"><button class="btn primary" id="cstep">${focused?"Check":"Check step"}</button>${sc.state==="open"?`<button class="btn quiet" id="stephelp" title="Get the next clue for this step. You can ask before you try.">${helpLbl}</button>`:""}${twoMisses?`<button class="btn quiet" id="stepbreak">Take a break</button>`:""}</div>`:""}
+        ${focused&&open&&sc.mixedStrip?mixedWalkStrip(s.mixedRole):''}
+        ${focused&&open&&sc.mixedStrip?`<details${exampleOpen?' open':''}><summary>More help</summary><button type="button" class="btn quiet small" id="hwaskexample">See a different worked example</button></details>`:""}</div>`;
     }
   }
   // v9.18: a step's picture (chart, or any HTML in s.vis) can wait until she has answered that step (s.visAfter), so a drawing never hands over the answer it asks for.
@@ -7270,7 +7431,7 @@ function stepHTML(s,i,dim,withCheck){
 function checkCtlHTML(c){ // the entry control for a check, driven by sc. In confirm state it stays enabled with the right answer marked
   const open=scActive();
   if(c.type==="mc") return optsHTML("copts", c.options||[], sc.state==="explain"?c.answer:sc.sel, c.answer, !open, "opt copt", sc.state==="confirm"?c.answer:-1, sc.crossed);
-  return `<label class="vh" for="cans">Your answer for this step</label><input class="ans small${isTextTarget(c)?" text":""}" id="cans" ${ansAttrs(c)} autocomplete="off" placeholder="${isTextTarget(c)?textPH(c):"Your answer"}" ${open?"":"disabled"} value="${esc(open?sc.val:c.display)}">`;
+  return `<label class="vh" for="cans">Your answer for this step</label><input class="ans small${isTextTarget(c)?" text":""}" id="cans" ${ansAttrs(c)} autocomplete="off" placeholder="${c.mixedRole==='mixed-number'?'whole top/bottom':c.mixedRole==='improper-fraction'?'top/bottom':isTextTarget(c)?textPH(c):"Your answer"}" ${open?"":"disabled"} value="${esc(open?sc.val:c.display)}">`;
 }
 function focusFirst(){
   const el = [".ws .cell.sel:not([disabled])","#ans:not([disabled])","#cans:not([disabled])","#check","#cstep","#xcheck","#wopts .opt","#step","#retry","#next"].map(s=>app.querySelector(s)).find(Boolean);
@@ -7672,7 +7833,7 @@ function checkStep(){
   let ok;
   if(c.type==="mc"){ if(sc.sel<0){ const f=app.querySelector("#copts .opt"); if(f) f.focus(); return; } ok = sc.sel===c.answer; }
   else { const inp=app.querySelector("#cans"); const v=inp.value; sc.val=v; if(!v.trim()){ inp.focus(); return; }
-    const issue=issueFor(c,v); if(issue){ hwWalterNextCheck(walterContext,'format');sc.lastFormat={draft:v};sc.msg=esc(issue); save();render(); return; } delete sc.lastFormat;ok = stepAccepts(c,v); }
+    const issue=issueFor(c,v); if(issue){ hwWalterNextCheck(walterContext,'format');sc.lastFormat={draft:v};sc.msg=esc(issue);if(mixedWalkActive())sc.mixedFocus=c.text?'format':'';save();render(); return; } delete sc.lastFormat;ok = stepAccepts(c,v); }
   if(phase==="reveal"){ // copying the shown answer in unlocks Next. Logged as "finished with the answer shown": not a right answer, not a guided completion, never independent
     if(ok){ sc.state="ok"; sc.msg=`<span aria-hidden="true">✓</span> That's it.`;
       if(!cur.shownLogged){ cur.shownLogged=true; S.shown=(S.shown||0)+1;
@@ -7680,7 +7841,8 @@ function checkStep(){
     else { sc.msg = c.type==="mc" ? "Not that one. Pick the answer to continue." : "Not quite. Type the answer to continue."; sc.val=""; sc.sel=-1; }
     save(); render(); return; // saved now, not on the next action: a reload here must not lose the record
   }
-  const code=typeof c.comp==='string'?c.comp:'',tag=!ok&&c.type==='mc'?c.optionTags?.[sc.sel]||'':'';
+  const role=mixedWalkActive()?cur.steps[stepIdx].mixedRole:'';
+  const code=role||(typeof c.comp==='string'?c.comp:''),tag=!ok&&c.type==='mc'?c.optionTags?.[sc.sel]||'':'';
   sc.lastCheck={draft:c.type==='mc'?String(sc.sel):String(sc.val),ok:!!ok,code,tag};
   hwWalterNextCheck(walterContext,ok?(cur.steps[stepIdx].hwStage==='trial'?'trial':'accepted'):'miss',code,tag);
   if(!ok)hwRememberStepMiss(c,c.type==='mc'?String((c.options||[])[sc.sel]):sc.val);
@@ -7692,6 +7854,7 @@ function checkStep(){
   }
   else if(ok){ sc.state="ok"; sc.msg=`<span aria-hidden="true">✓</span> That's it.`; passed++; stepRes[stepIdx]="ok"; noteStepComp(c, sc, true);
     if(cur.steps[stepIdx].hwStage==='trial')sc.msg='Trial recorded. Now test its product.';
+    if(role&&!last)(cur.mixedWalkChecked??={})[role]=parseAnswer(sc.val);
     const accept=cur.steps[stepIdx].onAccept;if(accept)accept(c.type==='mc'?String(sc.sel):sc.val); }
   else { sc.tries++;
     const st=cur.steps[stepIdx];
@@ -7707,8 +7870,9 @@ function checkStep(){
     wtSignals++; // v9.13: a wrong step entry is a struggle signal
     if(sc.tries>=3 && Array.isArray(st.rescue) && st.rescue.length && !st.rescueOpened){ expandRescue(st,"Let's work this out in smaller checked steps."); return; }
     const yoursText=c.type==="mc"?String((c.options||[])[sc.sel]):sc.val;
-    sc.msg=cur.adaptivePrepared?`That check does not agree yet. ${esc(cueFor(st,c,sc.tries,yoursText))}`:sc.tries<=2?`Not quite. ${cueFor(st,c,sc.tries,yoursText)}`:`That is still tricky. Try the calculation on scratch paper, or tap <b>See one like it</b> for a different worked example. You can take a break, too.`;
-    if(!cur.adaptivePrepared){sc.val=""; sc.sel=-1;} }
+    if(role)mixedWalkFeedback(hwWalterContext(),role);
+    else sc.msg=cur.adaptivePrepared?`That check does not agree yet. ${esc(cueFor(st,c,sc.tries,yoursText))}`:sc.tries<=2?`Not quite. ${cueFor(st,c,sc.tries,yoursText)}`:`That is still tricky. Try the calculation on scratch paper, or tap <b>See one like it</b> for a different worked example. You can take a break, too.`;
+    if(!role&&!cur.adaptivePrepared){sc.val=""; sc.sel=-1;} }
   finishStepCheck(c, stepIdx===cur.steps.length-1);
 }
 function revealStepAnswer(st, c){ // the answer and its explanation together; the reason question follows as an invitation (v9.13: it can be skipped)
@@ -7724,7 +7888,8 @@ function expandRescue(st,message){ st.rescueOpened=true; cur.steps.splice(stepId
 function stepHelpLabel(st, c){return sc?.organicHelp?.lastReply?"I'm still stuck":'Help me';}
 function stepHelp(){
   if(!sc || sc.state!=="open" || phase!=="wt")return;
-  hwStepHelp();
+  if(mixedWalkActive())mixedWalkHelp();
+  else hwStepHelp();
 }
 function checkExplain(skip){ skip=skip===true; // the "why" question after a reveal: right, wrong, or skipped, the step closes as revealed; the pick is recorded, never a pass
   if(!sc || sc.state!=="explain" || !sc.explain) return; if(!skip && sc.xsel<0){ const f=app.querySelector("#xopts .opt"); if(f) f.focus(); return; }
