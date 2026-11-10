@@ -193,6 +193,12 @@ pre.stack .cr{color:#B45309;font-weight:600}
 #gupage h1{flex:1 1 160px;min-width:0;overflow-wrap:anywhere}
 #gupage .build{white-space:normal}
 .build{font-size:12px;margin-left:auto;align-self:center;white-space:nowrap}
+.walter-place{width:100%;table-layout:fixed;border-collapse:collapse;text-align:center;font-size:.8rem}
+.walter-place th,.walter-place td{border:1px solid var(--line);padding:5px 2px;overflow-wrap:anywhere}
+.walter-template{display:block;width:100%;max-width:280px;margin:8px auto}
+.walter-empty-strip{max-width:300px;margin:8px auto;border:2px solid var(--ink);padding:6px;text-align:center}
+.walter-work-pair{display:flex;gap:8px;flex-wrap:wrap}.walter-work-pair span{flex:1 1 110px;border:1px solid var(--line);padding:6px}.walter-work-pair b{display:block}
+.walter-more{margin-top:8px}
 .substep.why{border-style:solid;border-color:var(--ink);background:#fff}
 .substep .res.after{margin-top:6px;font-weight:400;color:var(--ink);opacity:.9}
 .opt.crossed{text-decoration:line-through;opacity:.45} /* a wrong pick already tried on this step */ /* what the step meant, shown only after she has answered it */
@@ -1722,7 +1728,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.8.4 · November 9, 2026";
+const BUILD="v10.9.0 · November 9, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -2834,9 +2840,14 @@ function fracSVG(fracs){ // fractions as points on a number line from 0 to at le
   fracs.forEach((f,i)=>{ const v=frValue(f); svg+=`<circle cx="${X(v)}" cy="50" r="7" fill="${i?"#2F9E6B":"#B45309"}"/><text x="${X(v)}" y="${i?24:34}" font-size="13" text-anchor="middle" font-weight="700" fill="${i?"#2F9E6B":"#B45309"}">${mixedText(f.w,f.n,f.d)}</text>`; });
   return `<div class="chart">${svg}</div>`;
 }
+function parseMixedWalkEntry(raw){
+  const glyphs={'¼':'1/4','½':'1/2','¾':'3/4','⅓':'1/3','⅔':'2/3','⅕':'1/5','⅖':'2/5','⅗':'3/5','⅘':'4/5','⅙':'1/6','⅚':'5/6','⅛':'1/8','⅜':'3/8','⅝':'5/8','⅞':'7/8'};
+  const s=String(raw??'').trim().replace(/([¼½¾⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞])$/,(_,glyph)=>' '+glyphs[glyph]);
+  return parseFraction(s);
+}
 function mixedWalkFormat(role, raw){
   if(role==='mixed-number'||role==='improper-fraction'){
-    const entry=parseFraction(raw);
+    const entry=parseMixedWalkEntry(raw);
     if(entry?.d>0&&[entry.w,entry.n,entry.d].every(Number.isSafeInteger))return '';
     return role==='mixed-number'
       ? 'Type the number of wholes, a space, then top/bottom.'
@@ -2860,15 +2871,22 @@ function genFractions(level, focus){
       {t:`Divide the top and the bottom by the <b>same</b> number, ${g}. Start with the top.`, check:wc(ci(`${n} ÷ ${g} = ?`, sn),"fact")},
       {t:`Now the bottom, by the same ${g}.`, check:wc(ci(`${d} ÷ ${g} = ?`, sd),"fact"), after:`Top and bottom were both divided by ${g}: ${n}/${d} becomes ${sn}/${sd}.`}, /* v9.12: she applies the factor to both terms */
       {t:`Write the new fraction: the top and bottom you just found. Check: do they share any factor besides 1?`, check:wc(finalText(p),"not-simplest"), after:`${frText(sn,sd)} names the same amount as ${frText(n,d)}: same point on the number line, fewer, bigger pieces.${fracSVG([{w:0,n,d},{w:0,n:sn,d:sd}])}`}];
+    const a={n,d};
+    p.unit5Given=frText(n,d);p.unit5Answer={a,role:'simplest'};
+    ['factor','reduce-top','reduce-bottom','simplest'].forEach((role,i)=>{p.steps[i].unit5={a,role,...(i?{factor:g}:{})};});
+    p.steps[3].check.q='Write the simplest fraction. Keep reducing if both counts share another factor.';
+    if(g===1)p.steps=[p.steps[3]];
     p.hints=[{t:`Find a number that divides evenly into both the top and the bottom. Try 2, then 3, then 5. (Simplest form: no common factor left but 1.)`},{t:`Both ${n} and ${d} can be divided by ${factors[0]}. Divide both by it. If the new fraction still has a common factor, do it again.`},{t:`Keep dividing top and bottom by the same number until nothing but 1 divides both. The biggest shortcut is dividing both by ${g} at once.`}];
     return p;
   }
   if(variant==="mixed"){
-    let d,w,n; do{ d=pick([2,3,4,5,6,8]); w=ri(1, level<=2?3:6); n=ri(1,d-1); }while(gcd(n,d)!==1); const impN=w*d+n; /* the fractional part is always in simplest form, so there is one conventional mixed number */ const toMixed = focus&&focus.dir ? focus.dir==="toMixed" : Math.random()<0.5;
+    let d,w,n; do{ d=pick([2,3,4,5,6,8]); w=ri(1, level<=2?3:6); n=ri(1,d-1); }while(gcd(n,d)!==1);
+    if(focus?.fixed)({d,w,n}=focus.fixed);
+    const impN=w*d+n; /* the fractional part is always in simplest form, so there is one conventional mixed number */ const toMixed = focus&&focus.dir ? focus.dir==="toMixed" : Math.random()<0.5;
     const prompt = toMixed ? `Write as a <b>mixed number</b>.<br><span class="big-num">${frText(impN,d)}</span>` : `Write as an <b>improper fraction</b>.<br><span class="big-num">${mixedText(w,n,d)}</span>`;
     const disp = toMixed ? mixedText(w,n,d) : frText(impN,d);
     // Any mathematically equivalent answer in the requested form is accepted: a mixed number with the same value (and the wholes separated), or an improper fraction with the same value.
-    const validate = toMixed ? (str=>{ const fr=parseFraction(str); return !!fr && fr.w>0 && fr.n>0 && fr.n<fr.d && frEqual(fr,{w,n,d}); }) : (str=>{ const fr=parseFraction(str); return !!fr && fr.w===0 && fr.n>0 && frEqual(fr,{w:0,n:impN,d}); });
+    const validate = toMixed ? (str=>{ const fr=parseMixedWalkEntry(str); return !!fr && fr.w>0 && fr.n>0 && fr.n<fr.d && frEqual(fr,{w,n,d}); }) : (str=>{ const fr=parseMixedWalkEntry(str); return !!fr && fr.w===0 && fr.n>0 && frEqual(fr,{w:0,n:impN,d}); });
     const p={skill:"fractions", level, prompt, type:"input", text:true, validate, answer:impN/d, display:disp, show:null, meta:{variant, dir:toMixed?"toMixed":"toImproper", w, n, d, impN}};
     p.traps=["wholes","remainder"];
     // Only the given side goes into the tutoring context.
@@ -2913,6 +2931,11 @@ function genFractions(level, focus){
     p.steps=[{t:`<b>Benchmarks.</b> Compare each fraction with 0, 1/2, and 1. ${frText(A.n,A.d)}: is ${A.n} close to 0, to half of ${A.d} (${A.d/2}), or to ${A.d}?`, vis:fracSVG([A]), visAfter:true /* v9.18: the plotted point answers the benchmark question, so it waits */, check:Object.assign(wc(cm(`${frText(A.n,A.d)} is closest to…`, ["0","1/2","1"], [0,0.5,1].indexOf(bench(A))),"benchmark"),{visibleOk:true}), after:`${A.n} out of ${A.d} is close to ${benchName(bench(A))}.`},
       {t:`${frText(B.n,B.d)}: is ${B.n} close to 0, to half of ${B.d} (${B.d/2}), or to ${B.d}?`, vis:fracSVG([B]), visAfter:true, check:Object.assign(wc(cm(`${frText(B.n,B.d)} is closest to…`, ["0","1/2","1"], [0,0.5,1].indexOf(bench(B))),"benchmark"),{visibleOk:true}), after:`${B.n} out of ${B.d} is close to ${benchName(bench(B))}.`},
       {t:`Add the two benchmarks you picked: about ${benchName(bench(A))} + ${benchName(bench(B))}. Pick the choice closest to that.`, cues:[`Add the two benchmarks you chose.`, `0, 1/2, or 1 for each fraction: add those two, then pick the closest choice.`], check:Object.assign(finalCheck(p),{visibleOk:true}), after:`About ${tName(target)}. (The exact sum is ${sum.toFixed(2)}, which agrees.)`}];
+    p.unit5Given=`${frText(A.n,A.d)} + ${frText(B.n,B.d)}`;p.unit5Answer={role:'estimate-total',a:A,b:B};
+    p.steps[0].unit5={role:'benchmark',a:A};
+    p.steps[1].unit5={role:'benchmark',a:B};
+    p.steps[2].unit5={role:'estimate-total',a:A,b:B,checkedBench:[benchName(bench(A)),benchName(bench(B))]};
+    p.steps[2].check.q='Add the two estimates you checked. Which total matches?';
     p.hints=[{t:`You do not need the exact sum. Ask about each fraction: is it near 0, near 1/2, or near 1? Half of the denominator is the "1/2" mark.`},{t:`${frText(A.n,A.d)}: is ${A.n} closer to 0, to ${A.d/2}, or to ${A.d}? Do the same for ${frText(B.n,B.d)} with ${B.d/2} and ${B.d}.`},{t:`${frText(A.n,A.d)} is near ${benchName(bench(A))}; ${frText(B.n,B.d)} is near ${benchName(bench(B))}. Add those two benchmarks and pick the closest choice.`}];
     return p;
   }
@@ -2929,6 +2952,11 @@ function genFractions(level, focus){
     ...[A,B].filter(F=>F.d!==L).map(F=>({t:`Rewrite ${frText(F.n,F.d)} in ${ordW(2,L)}. What do you multiply ${F.d} by to get ${L}? Do the same to the top.`, check:wc(ci(`${frText(F.n,F.d)} = how many ${ordW(2,L)}?`, F.n*L/F.d),"magnitude"),
       cues:[`What times ${F.d} makes ${L}?`, `${F.d} × ${L/F.d} = ${L}. Now ${F.n} × ${L/F.d} = ?`], after:`${frText(F.n,F.d)} = ${frText(F.n*L/F.d, L)}.`})),
     {t:`Same-size pieces now: ${A.n*L/A.d} ${ordW(A.n*L/A.d,L)} against ${B.n*L/B.d} ${ordW(B.n*L/B.d,L)}. Which original fraction is greater?`, vis:fracSVG([A,B]), visAfter:true /* v9.18: the line shows which is farther right, so it waits */, cues:[`Same denominator now: compare the numerators.`, `More pieces of the same size is the greater fraction. Pick that original fraction.`], check:Object.assign(finalCheck(p),{visibleOk:true}), after:`${options[answer]} is greater: on the number line it sits farther right.`}];
+  p.unit5Given=`${frText(A.n,A.d)} and ${frText(B.n,B.d)}`;p.unit5Answer={role:'compare',a:A,b:B};
+  p.steps[0].unit5={role:'common',a:A,b:B};
+  [A,B].filter(F=>F.d!==L).forEach((a,i)=>{p.steps[i+1].unit5={role:'rename',a,D:L};});
+  p.steps.at(-1).unit5=p.unit5Answer;
+  p.steps.at(-1).check.q='Which original fraction is larger?';
   p.hints=[{t:`Bigger denominator means smaller pieces. You cannot compare the tops until the pieces are the same size (or use benchmarks: is each fraction more or less than 1/2?).`},{t:`Find a common denominator: count up by ${Math.max(A.d,B.d)}s until ${Math.min(A.d,B.d)} also divides it. Rewrite both fractions with that denominator.`},{t:`Now compare the numerators: the bigger count of ${ordW(2,L)} is the greater fraction.`}];
   return p;
 }
@@ -3610,6 +3638,7 @@ const fbMixed=(n,d)=>{ const w=Math.floor(n/d), r=n%d; return r ? (w?`${w} ${r}/
 function fbBars(rows, inline){ const W=300, H=34, gap=14, x0=58; let r="", y=6;
   for(const row of rows){ const pw=W/row.d;
     for(let i=0;i<row.d;i++) r+=`<rect x="${(x0+i*pw).toFixed(2)}" y="${y}" width="${pw.toFixed(2)}" height="${H}" style="fill:${i<row.n?"var(--hi,#FFE566)":"transparent"};stroke:var(--ink,#1B2A41)" stroke-width="1.5"/>`;
+    if(row.group)for(let i=row.group;i<row.d;i+=row.group)r+=`<path d="M${x0+i*pw} ${y}v${H}" stroke="#176687" stroke-width="3"/>`;
     if(row.outline) r+=`<rect x="${x0}" y="${y}" width="${W}" height="${H}" fill="none" stroke="#176687" stroke-width="4"/>`;
     if(row.label) r+=`<text x="${x0-8}" y="${y+H/2+5}" font-size="15" font-weight="700" text-anchor="end" style="fill:var(--ink,#1B2A41)">${row.label}</text>`;
     y+=H+gap; }
@@ -6361,6 +6390,69 @@ function walterNextReply({guide,intent='start',move,lastMove,repeats=0,observati
   text=walterClearText(text);
   return {text,move:chosen,signature:walterHelpSignature([context.contextKey||'',intent,chosen,status,safe.label,text].join('|')),choices,resource,concept,work:walterWorkEvidence(safe,chosen)};
 }
+// A second route into the same checked work. These models use visible givens
+// or blank scaffolds. The learner's input, strategy and checked state stay put.
+function walterInlineModel(ctx,reply,id){
+  const resource=ctx.component?.startsWith('column-')?'place-chart':reply?.resource||walterTeachingReply(ctx,'smaller')?.resource;
+  const place='place-chart'===resource;
+  const numberLine=['number-line','fraction-line'].includes(resource);
+  const labels=place?['Hundreds','Tens','Ones','Tenths','Hundredths','Thousandths']:null;
+  let visual='';
+  if(labels){
+    visual=`<table class="walter-place" aria-label="Empty place-value chart"><thead><tr>${labels.map(label=>`<th scope="col">${label}</th>`).join('')}</tr></thead><tbody><tr>${labels.map(()=>'<td>___</td>').join('')}</tr></tbody></table>`;
+  }else if(numberLine){
+    visual='<svg viewBox="0 0 260 35" role="img" aria-label="Blank number line with a center mark" class="walter-template"><path d="M10 17h240M10 9v16m120-16v16m120-16v16" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+  }else if(resource==='fraction-bar'){
+    // Quote only a standalone given expression. Example/choice prose may also
+    // contain a slash, so it is deliberately excluded from this model.
+    const exact=(ctx.visibleText||'').trim().match(/^\s*(\d+)\s*\/\s*(\d+)(?:\s*[+−–-]\s*(\d+)\s*\/\s*(\d+))?\s*$/);
+    const rows=exact?[[+exact[1],+exact[2]],...(exact[3]?[[+exact[3],+exact[4]]]:[])]:[];
+    if(rows.length&&rows.every(([n,d])=>d>0&&d<=40&&n<=d))visual=fbBars(rows.map(([n,d])=>({n,d})),false);
+    else visual='<div class="walter-empty-strip" aria-label="Empty strip for one whole">One whole</div>';
+  }else if(['array','area-grid','groups','fractional-groups','story-bar','factor-chain','factor-tree','expression-marks','shape-model','coordinate-grid','unit-table'].includes(resource)){
+    const cards={
+      array:['One row','How many rows?'],
+      'area-grid':['Side across','Side down'],
+      groups:['Total','Equal groups'],
+      'fractional-groups':['Amount to use','Size of one piece'],
+      'story-bar':['What I know','What I need to find'],
+      'factor-chain':['Repeated factor','How many times?'],
+      'factor-tree':['Number to split','Two factors'],
+      'expression-marks':['Part to do first','What stays as written?'],
+      'shape-model':['One face or edge','What do I know about it?'],
+      'coordinate-grid':['Across','Up or down'],
+      'unit-table':['Starting unit','Unit I need']
+    }[resource];
+    visual=`<div class="walter-work-pair" aria-label="Scratch-paper setup">${cards.map(label=>`<span>${label}<b aria-hidden="true">___</b></span>`).join('')}</div>`;
+  }
+  return `<div class="lpclue" id="${id}" tabindex="-1"><p><b>Try a smaller piece.</b> ${esc(reply?.text||'Check one part of the current step before doing the rest.')}</p>${visual}</div>`;
+}
+function walterNextInlineMove(prior,miss=false){
+  if(!prior)return miss?'smaller':'start';
+  // Switch representations when a clue did not help. Afterward the learner
+  // can ask for a different move in More help or return to the same work.
+  return 'smaller';
+}
+function walterInlineFocus(selector){
+  const target=app.querySelector(selector);
+  if(target){target.focus({preventScroll:true});target.scrollIntoView({block:'nearest'});}
+}
+
+function walterInlineLesson(it){
+  return lpWalterEligible(it)&&!it.step.unit5&&!it.spec.walterReply;
+}
+function walterInlineLessonMiss(it,cue){
+  const st=it.st,ctx=lpWalterSemanticContext(it);
+  const signature=walterHelpSignature(['inline-check',ctx.contextKey,cue].join('|'));
+  st.walterEvents=Array.isArray(st.walterEvents)?st.walterEvents:[];
+  if(st.walterEvents.some(e=>e.signature===signature))return;
+  const work=walterWorkEvidence(ctx,'test');
+  st.walterEvents.push({step:st.k,stepId:it.step.walter?.id||ctx.contextKey,id:'inline-check',type:'checking',
+    move:'test',signature,text:cue,context:ctx.contextKey,contextLabel:lpPlain(it.step.prompt),tries:st.tries||0,t:Date.now(),...(work?{work}:{})});
+  st.helps=(st.helps||0)+1;
+  if(['delayed','mixed'].includes(it.phase)&&!st.walterProbe)st.walterProbe=st.tries?'miss-before-help':'help-before-miss';
+  lpWalterTrimEvents(st);
+}
 // Mixed-number walkthrough help uses the givens, checked work, and the latest checked entry.
 function mixedWalkActive(){
   return phase==='wt' && !!cur?.mixedWalk;
@@ -6378,18 +6470,67 @@ function mixedWalkReminder(){
   return `<p class="muted" style="margin:0 0 8px">Given <b>${given}</b>${parts.length?' · Checked: '+parts.join(', '):''}</p>`;
 }
 
+function mixedToNumberCue(d,total,whole,left,entry,raw){
+  const draft=String(raw??'').trim();
+  if(entry&&!entry.w&&/^0\s+/.test(draft))
+    return ['whole','Zero would mean there are no full rows. Try grouping the original pieces and check whether any row fills up.'];
+  if(entry?.w===whole&&entry?.n===total)
+    return ['leftover','Those are all the original pieces. Set aside the pieces already counted in the full rows. Count only what is left.'];
+  if(entry?.w===whole&&entry?.n===0&&draft.includes('/'))
+    return ['leftover','The whole count matches. Look outside the full row. Are any shaded pieces still left?'];
+  if(entry&&frEqual(entry,{w:0,n:total,d})&&(!entry.w||entry.n>=entry.d))
+    return ['form','That’s the right amount. Write the wholes first, then a space, then the leftover fraction.'];
+  if(entry&&!entry.w&&entry.n===d&&entry.d===total)
+    return ['whole',`Read the original fraction in order. The top counts ${total} pieces. The bottom says ${d} pieces make one whole.`];
+  if(entry&&!entry.w&&left!==undefined&&entry.n*d===left*entry.d)
+    return ['form','That is the leftover part. Put the checked whole count before it, then leave a space.'];
+  if(entry?.w===whole&&entry?.n===0)
+    return ['leftover','That counts the wholes. After a space, write the pieces left as a fraction.'];
+  if(entry?.w&&entry.n&&entry.d!==d)
+    return ['denominator',`Look at the number after the slash. Each whole was split into ${d} equal pieces. Use that same piece size.`];
+  if(entry?.w&&entry.w!==whole)
+    return ['whole','Check the number before the space. It counts only the groups you filled all the way.'];
+  if(entry?.w&&entry.n>=entry.d)
+    return ['leftover','A full group would count as another whole. Use only the pieces left outside the checked wholes.'];
+  if(entry?.w)
+    return ['leftover','Your whole count matches. Use the leftover count you checked for the number before the slash.'];
+  return ['form','Write your checked whole count, then a space, then the leftover count over the original bottom number.'];
+}
+
+function mixedFormatCue(role,raw,given){
+  const {denominator:d,total,wholes,extra}=given,entry=String(raw??'').trim();
+  if(role==='mixed-number'||role==='improper-fraction'){
+    if(/^\d+\.\d+$/.test(entry)&&Number(entry)===(total??(wholes*d+extra))/d)
+      return role==='mixed-number'?'That decimal is the same amount. Write the whole count, a space, then the leftover pieces as a fraction.':'That decimal is the same amount. Use a slash to write it as one fraction.';
+    if(role==='mixed-number'&&/^\d+\s*(?:r|remainder)\s*\d+$/i.test(entry))
+      return 'Keep the whole count. Put the remainder over the original bottom number, with a space between the two parts.';
+    if(role==='mixed-number'&&/^\d+\s*(?:\+|and)\s*\d+\s*\/\s*\d+$/i.test(entry))
+      return 'Write the whole number and leftover fraction with a space between them.';
+    if(role==='mixed-number'&&/^\d+\s+\d+$/.test(entry))
+      return 'The space separates the whole count. Use / to separate the leftover count from the original bottom number.';
+    return role==='mixed-number'?'Type the number of wholes, a space, then top/bottom.':'Type the number of pieces, a slash, then the number of pieces in one whole.';
+  }
+  if(role==='whole-groups'&&entry.includes('/'))return 'The fraction names the amount. This box asks for a count of full groups. Enter a whole number.';
+  if(role==='leftover-pieces'&&entry.includes('/'))return 'This box asks how many pieces are left. Enter just that count, without the slash.';
+  return 'Type a whole number for this count.';
+}
+
 function mixedWalkCue(role, raw){
   const {denominator:d,total,wholes,extra}=cur.mixedWalk;
   const checked=sc.lastCheck?.draft===raw && sc.lastCheck.ok===false;
-  const entry=checked?parseFraction(raw):null;
+  const entry=checked?parseMixedWalkEntry(raw):null;
   const count=checked?parseAnswer(raw):NaN;
   const earlier=cur.mixedWalkChecked||{};
   switch(role){
     case 'whole-groups':
       if(count===total)return ['whole','You counted all the pieces. Put '+d+' pieces in each whole, then count the full groups.'];
       if(count===d)return ['whole',`${d} pieces make one whole. How many groups that size can you make?`];
+      if(count===0)return ['whole',`Try making one group of ${d} from the ${total} pieces. Is there enough to fill it?`];
       return ['whole',`Start with ${total} pieces. Make groups of ${d} until another full group won’t fit.`];
     case 'leftover-pieces':
+      if(count===0)return ['leftover','Look outside the full rows. Count any shaded pieces that do not belong to a full row.'];
+      if(count===total)return ['leftover','That counts all the pieces. Set aside the full groups you checked and count only what remains.'];
+      if(count===d)return ['leftover',`${d} fills one whole. Set aside the full groups and count the pieces that are still out.`];
       return ['leftover',`Set aside ${d} pieces for each of the ${earlier['whole-groups']} wholes you counted. Count what’s left.`];
     case 'pieces-in-wholes':
       if(count===wholes)return ['whole',`That’s the number of wholes. Count ${d} pieces inside each of those wholes.`];
@@ -6399,14 +6540,7 @@ function mixedWalkCue(role, raw){
         ? `That counts the pieces in the wholes. Add the ${extra} extra pieces too.`
         : `Start with the ${earlier['pieces-in-wholes']} pieces you counted. Count on ${extra} more.`];
     case 'mixed-number':
-      if(entry && frEqual(entry,{w:0,n:total,d}) && (!entry.w || entry.n>=entry.d))
-        return ['form','That’s the right amount. Write the wholes first, then a space, then the leftover fraction.'];
-      if(entry?.w && entry.d!==d)
-        return ['denominator',`Look at the number after the slash. Each whole was split into ${d} equal pieces. Use that same piece size.`];
-      if(entry?.w===earlier['whole-groups'])
-        return ['leftover','Your whole count matches. Use the leftover count you checked for the number before the slash.'];
-      if(entry?.w)return ['whole','Check the number before the space. It should count the full groups you found.'];
-      return ['form','Write your checked whole count, then a space, then the leftover count over the original bottom number.'];
+      return mixedToNumberCue(d,total,earlier['whole-groups'],earlier['leftover-pieces'],entry,checked?raw:undefined);
     case 'improper-fraction':
       if(entry?.w && frEqual(entry,{w:wholes,n:extra,d}))
         return ['form','That’s the right amount. Put all the pieces into one fraction using a slash.'];
@@ -6417,6 +6551,8 @@ function mixedWalkCue(role, raw){
 }
 
 function mixedWalkStripAction(role, focus){
+  if(focus==='whole'&&role==='whole-groups')return 'Each row can hold one whole. Mark a whole, then count only rows with every piece shaded.';
+  if(focus==='whole'&&role==='mixed-number')return 'Count only full rows. That count goes before the space.';
   if(focus==='denominator')return 'Look inside one outlined strip. Count all its equal spaces. That count goes after the slash.';
   if(role==='mixed-number'&&focus==='leftover')return 'Count only the shaded spaces in the outlined strip. That count goes before the slash.';
   if(role==='mixed-number'&&focus==='whole')return 'Count the full strips. That count goes before the space.';
@@ -6436,10 +6572,10 @@ function mixedWalkStrip(role){
   const focus=sc.mixedFocus;
   const rows=[];
   for(let left=pieces;left>0;left-=d){
-    const outline=focus==='leftover'?left<d:(focus==='denominator'||role==='whole-groups')&&left===pieces;
+    const outline=focus==='leftover'?left<d:(focus==='denominator'||sc.mixedMarked)&&left===pieces;
     rows.push({d,n:Math.min(d,left),outline});
   }
-  return `<div id="mixedwalkstrip" tabindex="-1" aria-label="Fraction strip"><p><b>Try the fraction strip.</b> ${mixedWalkStripAction(role,focus)}</p>${fbBars(rows,false)}</div>`;
+  return `<div id="mixedwalkstrip" tabindex="-1" aria-label="Fraction strip"><p><b>Try the fraction strip.</b> ${mixedWalkStripAction(role,focus)}</p>${fbBars(rows,false)}${role==='whole-groups'?(sc.mixedMarked?'<p role="status">The outlined row is full. Count only rows that look like that one.</p>':'<button type="button" class="btn quiet small" id="mixedmark">Mark one whole</button>'):''}</div>`;
 }
 
 function mixedWalkForm(role){
@@ -6474,9 +6610,8 @@ function mixedWalkHelp(){
     sc.mixedStrip=true;
     mixedWalkDeliver(ctx,mixedWalkStripAction(role,sc.mixedFocus),true);
   }else if(ctx.observation==='format'){
-    const text=role==='mixed-number'?'Put a space after the whole count. Then use / to separate the leftover count from the piece size.'
-      :role==='improper-fraction'?'Use / between the total piece count and the piece size, like the slash in the given fraction.'
-      :mixedWalkCue(role,ctx.draft)[1];
+    const text=mixedFormatCue(role,ctx.draft,cur.mixedWalk);
+    if(role==='mixed-number'||role==='improper-fraction')sc.mixedFocus='format';
     sc.msg=esc(text);
     mixedWalkDeliver(ctx,text);
   }else mixedWalkFeedback(ctx,role);
@@ -6484,6 +6619,309 @@ function mixedWalkHelp(){
   render();
   const target=app.querySelector(strip?'#mixedwalkstrip':'#cmsg');
   if(target){target.focus({preventScroll:true});target.scrollIntoView({block:'nearest'});}
+}
+
+function mixedWalkMark(){
+  sc.val=app.querySelector('#cans').value;
+  sc.mixedMarked=true;
+  mixedWalkDeliver(hwWalterContext(),'Mark one full row and count full rows only.',true);
+  save();render();app.querySelector('#mixedwalkstrip')?.focus({preventScroll:true});
+}
+// Unit 5 cards carry givens and already-checked work, separate from validators.
+function u5Card(step,role,data){step.unit5={role,...data};return step;}
+
+function u5Fraction(raw){
+  const f=parseFraction(raw);
+  return f?.d>0&&[f.w,f.n,f.d].every(Number.isSafeInteger)?f:null;
+}
+function u5Count(raw){return lpDecRead(raw);}
+function u5Same(f,a){return f&&f.w*f.d*a.d+f.n*a.d===a.n*f.d;}
+const u5Name=a=>cxText(a);
+const u5Half=n=>mixedText(Math.floor(n),n%1?1:0,2);
+const u5Format='Use a slash between the top and bottom numbers, like top/bottom.';
+
+function u5Cue(c,values=[],checked=false,field=-1){
+  const {role,a,b,factor,D,first,second,checkedBench,remaining,from,jump}=c;
+  const raw=checked?(field>=0?values[field]:values[0]):undefined;
+  const f=u5Fraction(raw),n=f?frValue(f):u5Count(raw);
+  switch(role){
+    case 'factor':
+      if(n===1)return 'Dividing by 1 leaves both numbers the same. Try a whole number bigger than 1.';
+      if(n>1&&Number.isInteger(n)){
+        if(a.n%n===0)return `${n} goes evenly into ${a.n}. Now see if ${a.d} ÷ ${n} also has no leftover.`;
+        if(a.d%n===0)return `${n} goes evenly into ${a.d}. Now check whether ${a.n} can also make groups of ${n}.`;
+      }
+      return `Pick one whole number bigger than 1. Can both ${a.n} and ${a.d} make full groups of that size?`;
+    case 'reduce-pair':
+    case 'reduce-top':
+    case 'reduce-bottom': {
+      const index=role==='reduce-bottom'?1:role==='reduce-top'?0:field;
+      if(index<0)return `Use your checked group size of ${factor} for both boxes. Start with the top number.`;
+      const given=index===0?a.n:a.d,position=index===0?'top':'bottom';
+      if(n===given)return `The ${position} still shows the old count. Count groups of ${factor} in ${given}.`;
+      if(n===given*factor)return `You’re making bigger pieces. Divide ${given} by ${factor} to count the new groups.`;
+      return `Check just the ${position} box. How many groups of ${factor} fit in ${given}?`;
+    }
+    case 'simplest':
+      if(u5Same(f,a))return 'That covers the same amount. Can the top and bottom still be divided by the same whole number bigger than 1?';
+      if(f&&f.n===a.n&&f.d!==a.d)return 'Only the bottom changed. Divide the top by the same number you used on the bottom.';
+      if(f&&f.d===a.d&&f.n!==a.n)return 'Only the top changed. Divide the bottom by the same number you used on the top.';
+      return 'Choose one group size that divides both counts evenly. Divide both by it, and check if you can do that again.';
+    case 'benchmark':
+      if(n===a.n/a.d)return `That’s the exact amount. Find the nearest whole or halfway mark to ${u5Name(a)}.`;
+      if(Number.isFinite(n)&&!Number.isInteger(n*2))return 'Choose a whole number or a halfway mark. Use the number line to see which mark is closest.';
+      if(Number.isInteger(n))return `You picked a whole number. Compare the distance from ${u5Name(a)} to that whole and to the halfway mark.`;
+      return `Put ${u5Name(a)} between two whole numbers. Is it closer to a whole or to the halfway mark?`;
+    case 'estimate-total':
+      return checkedBench?.length===2
+        ? `Add the two estimates you checked, ${checkedBench[0]} and ${checkedBench[1]}. Use those numbers for this step.`
+        : 'Use the two estimates you just checked. Add those instead of adding the original fractions.';
+    case 'common': {
+      const both=n>0&&Number.isInteger(n);
+      if(both&&n%a.d===0&&n%b.d!==0)return `${n} works for ${a.d}. Check the other fraction too. Can ${b.d} make ${n} with a whole-number multiplier?`;
+      if(both&&n%b.d===0&&n%a.d!==0)return `${n} works for ${b.d}. Check the other fraction too. Can ${a.d} make ${n} with a whole-number multiplier?`;
+      if(both&&n%a.d===0&&n%b.d===0&&c.least)return 'That piece count works for both. This card asks for the first shared count, so start the two lists at their first multiples.';
+      if(n===a.d+b.d)return 'Adding the bottom numbers makes a different piece size. List multiples of each bottom number and look for one they share.';
+      return `Count by ${a.d}s and by ${b.d}s. Look for ${c.least?'the first count':'a count'} that shows up in both lists.`;
+    }
+    case 'rename':
+      if(n===a.n)return `You kept the old top number. Find how many new pieces fit inside one old piece, then use that for all ${a.n} old pieces.`;
+      if(n===D)return `${D} is the number of pieces in one whole. Count only the pieces that cover ${u5Name(a)}.`;
+      return `Find what you multiply ${a.d} by to get ${D}. Multiply ${a.n} by that same number.`;
+    case 'add-counts':
+      if(n===D)return `${D} names the size of the pieces. Add the checked counts, ${first} and ${second}.`;
+      return `Start at ${first}. Count on ${second} more pieces of the same size.`;
+    case 'jump':
+      if(c.singleJump)return 'Use the full amount left for this card. The next step checks where that one jump lands.';
+      if(f&&remaining&&(f.w*f.d+f.n)*remaining.d>remaining.n*f.d)return `Your jump passes the amount left to add. Choose a jump that fits inside ${u5Name(remaining)}.`;
+      if(f&&D&&D%f.d)return `Use pieces with ${D} equal parts in a whole. Choose a jump you can write with ${D} on the bottom.`;
+      return `Choose a forward jump that fits inside ${u5Name(remaining)}. You can take the remaining amount in more than one jump.`;
+    case 'landing':
+      if(u5Same(f,from))return 'That’s the starting point. Move forward by the jump you checked, then name where you land.';
+      return `Start at ${u5Name(from)} and move right by ${u5Name(jump)}. Enter the landing point.`;
+    case 'sum':
+      if(f&&f.w===0&&f.d===a.d+b.d)return 'Keep the piece size you checked. Only the number of pieces changes when you add.';
+      if(D&&first!==undefined)return `Use the ${first} pieces you checked. Write that count over ${D}, or write an equal fraction.`;
+      if(from)return `Use the last point you reached on the number line. Write that amount as a fraction or mixed number.`;
+      return 'Rename the two fractions using the same piece size. Add the top numbers and keep the common bottom number.';
+    case 'whole-and-left':
+      if(field===1)return `Keep the whole count. Set aside ${a.d} pieces for each whole and count the pieces left over.`;
+      return `Group the ${a.n} pieces in sets of ${a.d}. Count only the full groups for the whole-number box.`;
+    case 'mixed-form':
+      return mixedToNumberCue(a.d,a.n,first,second,checked?parseMixedWalkEntry(raw):null,raw)[1];
+    case 'pieces-from-mixed':
+      return `Count ${a.d} pieces for each whole, then add the leftover pieces. Enter the total number of pieces.`;
+    case 'compare':
+      return 'Use two strips of the same length. Compare how much is shaded, or give both fractions the same bottom number first.';
+  }
+}
+
+function u5ScaleModel(a,D){
+  if(D>120)return fbBars([{d:a.d,n:a.n}],false);
+  const count=Math.ceil(a.n/a.d),width=256;
+  const row=(whole,parts,y)=>{
+    const covered=Math.max(0,Math.min(1,a.n/a.d-whole));
+    return `<rect x="26" y="${y}" width="${width*covered}" height="15" fill="#ffe566"/><rect x="26" y="${y}" width="${width}" height="15" fill="none" stroke="currentColor"/>${Array.from({length:parts-1},(_,i)=>`<path d="M${26+(i+1)*width/parts} ${y}v15" stroke="currentColor" stroke-width=".65"/>`).join('')}`;
+  };
+  return `<svg style="display:block;width:100%;max-width:360px;margin:8px auto" viewBox="0 0 300 ${count*47+10}" role="img" aria-label="Same shaded amount, ${u5Name(a)}. Compare each whole in ${a.d} parts and ${D} parts.">${Array.from({length:count},(_,i)=>row(i,a.d,8+i*47)+row(i,D,25+i*47)).join('')}</svg>`;
+}
+function u5Line(start,end,point,label,division=1){
+  const x=v=>24+252*(v-start)/(end-start);
+  const smallTicks=division>1&&division*(end-start)<=60?Array.from({length:(end-start)*division-1},(_,i)=>`<path d="M${x(start+(i+1)/division)} 41v8" stroke="currentColor" opacity=".6"/>`).join(''):'';
+  const ticks=Array.from({length:end-start+1},(_,i)=>`<path d="M${x(start+i)} 38v14" stroke="currentColor"/><text x="${x(start+i)}" y="72" text-anchor="middle">${start+i}</text>`).join('');
+  const halfway=division===2&&end-start<=4?Array.from({length:end-start},(_,i)=>`<text x="${x(start+i+.5)}" y="72" text-anchor="middle" font-size="11">${u5Half(start+i+.5)}</text>`).join(''):'';
+  return `<svg style="display:block;width:100%;max-width:360px;margin:8px auto" viewBox="0 0 300 82" role="img" aria-label="Number line from ${start} to ${end}, marked at ${esc(label)}${halfway?', with halfway marks':''}"><line x1="24" y1="45" x2="276" y2="45" stroke="currentColor" stroke-width="2"/>${smallTicks}${ticks}${halfway}<circle cx="${x(point)}" cy="45" r="5" fill="#176687"/><text x="${x(point)}" y="23" text-anchor="middle">${esc(label)}</text></svg>`;
+}
+function u5ModelForEntry(card,raw){
+  const f=u5Fraction(raw);
+  if(card.role==='mixed-form'){
+    const entry=parseMixedWalkEntry(raw);
+    const focus=mixedToNumberCue(card.a.d,card.a.n,card.first,card.second,entry,raw)[0];
+    return {...card,focus};
+  }
+  if(card.role==='simplest'&&f&&!f.w&&f.d<=60&&f.n<f.d&&u5Same(f,card.a))return {...card,a:{n:f.n,d:f.d},factor:null,lastChecked:true};
+  return card;
+}
+
+function u5Model(c){
+  const {role,a,b,factor,D,remaining,from,jump}=c;
+  let action,rows=[],visual='';
+  const add=(f,outline=false)=>{if(!f)return;for(let left=f.n;left>0;left-=f.d)rows.push({d:f.d,n:Math.min(f.d,left),outline:outline&&left===f.n});};
+  if(role==='benchmark'){
+    action='Find the dot. Compare how far it is from each whole and the halfway mark.';
+    const point=a.n/a.d,start=Math.floor(point);
+    visual=u5Line(start,start+1,point,u5Name(a),2);
+  }else if(role==='estimate-total'&&c.checkedBench?.length===2){
+    action='Start at the first checked estimate. Count on by the second estimate, using the halfway marks if you need them.';
+    const read=value=>u5Fraction(value)?frValue(u5Fraction(value)):u5Count(value);
+    const point=read(c.checkedBench[0]),other=read(c.checkedBench[1]);
+    visual=u5Line(0,Math.max(1,Math.ceil(point)+Math.ceil(other)),point,u5Half(point),2);
+  }else if(role==='jump'||role==='landing'||role==='sum'&&from){
+    action=role==='jump'?'Start at the dot. Plan a forward move that fits the amount left.':role==='landing'?'Start at the dot. Move right by your checked jump and find where you land.':'Read the point you reached.';
+    const amount=remaining||jump,point=from.n/from.d;
+    const end=Math.ceil(point)+(amount?Math.ceil(amount.n/amount.d):1);
+    visual=u5Line(0,Math.max(1,end),point,u5Name(from),D);
+  }else if(role==='rename'){
+    action=D>120?`Start with the strip shown. Work out how many of the ${D} new spaces fit inside one old space.`:`Both rows cover the same amount. Count the shaded pieces in the row split into ${D} parts per whole.`;
+    visual=u5ScaleModel(a,D);
+  }else{
+    add(a,true);add(b);
+    if(role==='mixed-form'&&c.focus==='leftover'){
+      rows[0].outline=false;
+      rows.at(-1).outline=true;
+    }
+    if(role==='factor'||role.startsWith('reduce')||role==='simplest'){
+      action=factor?`Group the small pieces in sets of ${factor}. Count groups of shaded pieces for the top and groups across the whole strip for the bottom.`:`${c.lastChecked?'This strip shows the last fraction you checked. ':''}Try the same group size on the shaded part and on the whole strip. Both need full groups.`;
+      if(factor>1)rows[0].group=factor;
+    }else if(role==='common'||role==='compare'){
+      action='Look at the two whole strips. Their lengths match, but their marks can be different. Find a number of equal spaces that can line up with both sets of marks.';
+    }else if(role==='whole-and-left'||role==='mixed-form'||role==='pieces-from-mixed'){
+      action=c.focus==='whole'?'Count only filled rows. The whole count goes before the space.':c.focus==='denominator'?'Count all the spaces in the outlined whole. That number goes after the slash.'
+        :c.focus==='leftover'?'Count only shaded pieces in the outlined strip. That count goes before the slash.'
+        :'Each row can hold one whole. Count filled rows, then look at the shaded pieces in the last row.';
+    }else if(role==='estimate-total'){
+      action='Use the two checked estimates. Count on from the first by the second in whole or half steps.';
+    }else{
+      action='The strips show the original amounts. Once their piece sizes match, put the two counts together.';
+    }
+    if(rows.length)visual=fbBars(rows,false);
+  }
+  return {action,visual};
+}
+
+function u5ModelHTML(card,id){
+  const {action,visual}=u5Model(card);
+  return `<div id="${id}" tabindex="-1" class="lpclue"><p><b>Try the model.</b> ${esc(action)}</p>${visual}</div>`;
+}
+
+function u5PracticeCard(){return phase==='wt'?cur?.steps[stepIdx]?.unit5:null;}
+function u5PracticeSetup(p){
+  if(p.unit5Answer?.role==='compare'){
+    const [first]=p.steps,last=p.steps.at(-1);
+    first.check={...first.check,validate:v=>Number.isSafeInteger(v)&&v>0&&v%p.unit5Answer.a.d===0&&v%p.unit5Answer.b.d===0};
+    first.onAccept=raw=>{
+      const D=u5Count(raw),{a,b}=p.unit5Answer;
+      first.checkedDisplay=String(D);
+      const renamed=[a,b].filter(f=>f.d!==D).map(f=>({t:'',unit5:{role:'rename',a:f,D},
+        check:wc(ci(`Rewrite ${u5Name(f)} with ${D} on the bottom. What goes on top?`,f.n*(D/f.d)),'magnitude')}));
+      p.steps=[first,...renamed,last];
+    };
+    return;
+  }
+  if(p.unit5Answer?.role!=='simplest'||p.steps[0]?.unit5?.role!=='factor')return;
+  const a=p.unit5Answer.a;
+  p.steps[0].onAccept=raw=>{
+    const factor=u5Count(raw);
+    p.steps[0].checkedDisplay=String(factor);
+    for(const [i,value,role] of [[1,a.n,'reduce-top'],[2,a.d,'reduce-bottom']]){
+      p.steps[i].unit5={a,factor,role};
+      p.steps[i].check=wc(ci(`Count the groups. ${value} ÷ ${factor} = ?`,value/factor),'fact');
+    }
+    p.steps[3].unit5={a,factor,role:'simplest'};
+  };
+}
+function u5PracticeCue(card,raw){
+  const checked=sc.lastCheck?.draft===(cur.steps[stepIdx].check.type==='mc'?String(sc.sel):String(raw))&&sc.lastCheck.ok===false;
+  return u5Cue(card,[raw],checked);
+}
+function u5PracticeDeliver(ctx,card,cue,model=false){
+  const id=model?'unit5-model':'walkthrough';
+  const semantic=hwWalterSemanticContext(ctx),move=model?'smaller':'orient';
+  const work=walterWorkEvidence({...semantic,component:card.role},move);
+  const signature=walterHelpSignature([id,ctx.key,cue].join('|'));
+  sc.helped=true;sc.unit5Cue=true;cur.studied=true;
+  hwRecordHelp(ctx,id,model?'representation':'procedure',0,signature,cue,work);
+}
+function u5PracticeFeedback(card,raw){
+  const ctx=hwWalterContext(),cue=u5PracticeCue(card,raw);
+  sc.msg=esc(cue);
+  u5PracticeDeliver(ctx,card,cue);
+}
+function u5PracticeHelp(card){
+  const input=app.querySelector('#cans');
+  if(input)sc.val=input.value;
+  const ctx=hwWalterContext();
+  if(sc.unit5Cue){
+    sc.unit5Model=true;
+    u5PracticeDeliver(ctx,card,u5Model(u5ModelForEntry(card,sc.lastCheck?.draft)).action,true);
+  }else{
+    const raw=input?sc.val:cur.steps[stepIdx].check.options[sc.sel];
+    u5PracticeFeedback(card,raw);
+  }
+  save();
+  render();
+  const target=app.querySelector(sc.unit5Model?'#u5practicemodel':'#cmsg');
+  if(target){target.focus({preventScroll:true});target.scrollIntoView({block:'nearest'});}
+}
+function u5TextIssue(card,raw){
+  if(['simplest','sum','jump','landing'].includes(card.role))return u5Fraction(raw)?'':u5Format;
+  if(card.role==='factor')return Number.isInteger(u5Count(raw))?'':'Enter a whole number for the group size.';
+  return '';
+}
+
+function u5LessonDelivery(it,cue,model=false){
+  const st=it.st,ctx=lpWalterSemanticContext(it),stepId=`unit5:${st.k}:${it.step.unit5.role}`,id=model?'unit5-model':'unit5-cue';
+  const move=model?'smaller':'orient';
+  const signature=walterHelpSignature([id,ctx.contextKey,cue].join('|'));
+  st.walterEvents=Array.isArray(st.walterEvents)?st.walterEvents:[];
+  if(!st.walterEvents.some(e=>e.step===st.k&&e.stepId===stepId&&e.signature===signature)){
+    const work=walterWorkEvidence(ctx,move);
+    st.walterEvents.push({step:st.k,stepId,id,move,signature,type:model?'representation':'clue',text:cue,context:ctx.contextKey,
+      contextLabel:lpPlain(it.step.prompt),tries:st.tries||0,t:Date.now(),...(work?{work}:{})});
+    st.helps=(st.helps||0)+1;
+    if(['delayed','mixed'].includes(it.phase)&&!st.walterProbe)st.walterProbe=st.tries?'miss-before-help':'help-before-miss';
+  }
+  lpWalterTrimEvents(st);
+  st.unit5Help={k:st.k,cue:model?st.unit5Help.cue:cue,model:model||!!st.unit5Help?.model};
+}
+function u5LessonFeedback(it,result,submitted){
+  const card=it.step.unit5,values=Array.isArray(submitted)?submitted:[submitted];
+  if(result.fmt){
+    if(card.role==='mixed-form')return mixedFormatCue('mixed-number',values[0],{denominator:card.a.d,total:card.a.n});
+    if(it.step.input.type==='nums')return 'Fill both boxes with counts. You can keep any count you’ve already entered.';
+    if(card.role==='benchmark'||card.role==='estimate-total')return 'Enter a whole number or a half, like 1/2 or 1 1/2.';
+    if(it.step.input.type==='text')return u5Format;
+    return 'Enter a whole number for this count.';
+  }
+  const cue=u5Cue(card,values,true,Number.isInteger(result.badIndex)?result.badIndex:-1);
+  u5LessonDelivery(it,cue);
+  return cue;
+}
+function u5LessonHelp(it){
+  const st=it.st,card=it.step.unit5,ctx=lpHelpContext(it);
+  if(st.unit5Help?.k===st.k){
+    u5LessonDelivery(it,u5Model(u5ModelForEntry(card,st.stepEvents?.at(-1)?.values?.[0])).action,true);
+    return;
+  }
+  const draft=st.draft?.values||[];
+  const cue=u5Cue(card,draft,ctx.status==='miss'||ctx.status==='trial',ctx.field);
+  st.msg=cue;
+  u5LessonDelivery(it,cue);
+}
+
+function u5RepairCue(it){
+  const rule={
+    'fraction-simplify':'A change keeps the amount only if both numbers are divided by the same number.',
+    'fraction-estimate':'An estimate uses nearby whole or half numbers before adding.',
+    'fraction-rename':'A whole contains a full group of pieces. Pieces outside the full groups are the leftovers.',
+    'common-unit':'Renaming a fraction changes both counts together. The shaded amount stays the same.'
+  }[it.rspec.unit5];
+  return (it.rep.tries?'Recheck the change on your selected line. ':'Look at what changes from one line to the next. ')+rule;
+}
+function u5RepairHelp(it,afterMiss=false){
+  const rp=it.rep,model=!afterMiss&&!!rp.unit5Cue;
+  const cue=model?u5Model(it.step.unit5).action:u5RepairCue(it);
+  const id=model?'unit5-repair-model':'unit5-repair-cue';
+  const context=lpWalterContextKey(it),signature=walterHelpSignature([id,context,cue].join('|'));
+  const st=it.st;
+  st.walterEvents=Array.isArray(st.walterEvents)?st.walterEvents:[];
+  if(!st.walterEvents.some(e=>e.signature===signature)){
+    st.walterEvents.push({step:st.k,stepId:'repair-spot',id,type:model?'representation':'clue',move:model?'smaller':'orient',context,signature,text:cue,tries:rp.tries||0,t:Date.now()});
+    st.helps++;
+  }
+  lpWalterTrimEvents(st);
+  if(model)rp.unit5Model=true;
+  else rp.unit5Cue=cue;
 }
 function hwEntry(prefill, err){
   mode="hw:check"; cur=null; pendingHW=null;
@@ -6573,6 +7011,12 @@ function stepAccepts(c,str){
 // Input problems: "" when the entry is worth checking, else a message to show instead of counting an attempt
 function issueFor(target,str){
   if(typeof target.issue==="function")return target.issue(str);
+  if(target.mixedWalk){
+    const role=target.mixedWalk.total===undefined?'improper-fraction':'mixed-number';
+    return mixedWalkFormat(role,str)?mixedFormatCue(role,str,target.mixedWalk):'';
+  }
+  const unit5=target.unit5Answer||(target===cur?.steps[stepIdx]?.check?u5PracticeCard():null);
+  if(unit5&&target.text)return u5TextIssue(unit5,str);
   if(typeof inputIssue==="function"){ try{ const m=inputIssue(target,str); return m?String(m):""; }catch(e){} }
   if(target.text===true||typeof target.validate==="function") return String(str).trim()?"":"Type an answer first.";
   return isNaN(parseAnswer(str)) ? "Type a number, like 72.585" : "";
@@ -6672,6 +7116,15 @@ function wsPaint(){ const sp=wsSpec(cur);
   const hint=app.querySelector("#showhint"), guided=app.querySelector("#hintwork");
   if(hint && cur.hintPlan){ hint.disabled=false; hint.textContent="Help with this box"; if(guided)guided.hidden=false; }
   hwWalterRefresh();
+  const slot=app.querySelector('#walter-main-slot'),hints=app.querySelector('#hints');
+  if(slot&&hints&&phase==='q'){
+    const ctx=hwWalterContext();
+    if(slot.dataset.context!==ctx.key){
+      slot.dataset.context=ctx.key;
+      hints.innerHTML=hwMainHintHTML(ctx);
+      slot.innerHTML=hwMainModelHTML(ctx);
+    }
+  }
 }
 function wsInstruction(active, sp, carryMode){ const last=active===ws.rowKeys[ws.rowKeys.length-1]; const go=last?"Check answer":"Next row";
   if(carryMode) return "Carry box: type one digit. Then the blue box goes back to where you were.";
@@ -6812,9 +7265,12 @@ function render(){
     } else body+=optsHTML("opts", cur.options, selected, cur.answer, phase!=="q", "opt");
     if(phase==="q"){
       const hOff=(coachOn()||nudgeAvailable())?1:0; // hint 1 is the coach line (or the nudge behind its button); the Hint button hands out hint 2 onward
-      const log=cur.hintLog||[];
-      body+=`<div class="hints" id="hints" aria-live="polite">${log.map(h=>`<div class="step">${h.t}</div>`).join("")}</div>
-        <div class="actions"><button class="btn primary" id="check">Check</button>${onrampWaiting()?"":`<button class="btn quiet" id="showhint">${cur.ws?"Help with this box":log.length?"I'm still stuck":"Help me start"}</button>`}${withMeBtn()}${exampleBtn()}</div>${exampleHTML()}`;
+      const compact=!cur.ws,ctx=hwWalterEligible()?hwWalterContext():null;
+      const reply=ctx&&cur.mainHelp?.[ctx.key]?.lastReply;
+      body+=`<div class="hints" id="hints" aria-live="polite">${ctx?hwMainHintHTML(ctx):''}</div>
+        <div class="actions"><button class="btn primary" id="check">Check</button>${onrampWaiting()?"":`<button class="btn quiet" id="showhint">${cur.ws?"Help with this box":reply?.move==='smaller'?"Look at the model":reply?"Still stuck":"Help me"}</button>`}${compact?'':withMeBtn()+exampleBtn()}</div>
+        ${ctx?`<div id="walter-main-slot" data-context="${esc(ctx.key)}">${hwMainModelHTML(ctx)}</div>`:''}
+        ${compact&&reply?withMeBtn():''}${exampleHTML()}`;
 
     }
     if(phase==="ok"){
@@ -6865,7 +7321,7 @@ function render(){
     const head = cur.voluntaryWalkthrough ? "Let's work through this exact problem together. Nothing is scored." : homeworkNoReveal() ? "Let's work through the part that is stuck, then try again." : chain>=2 ? "Still not there. One more walk through, then another try." : (stage==="fresh" && cur.onramp) ? "Not yet, and that is OK. It was a warm-up, so it is not scored. Let's walk through it together." : (stage==="fresh" && cur.stretch) ? "Not yet, and that is OK. That was a stretch, so it is not scored and your level stays. Let's look at it together." : (cur.skippedTo ? "Not yet. What you had right stays; we start at the first spot to fix." : "Not yet. Let's walk through it.");
     // A break is offered during sustained struggle, not only after success: three fresh misses in a row this sitting, or three shown answers inside one walkthrough.
     // v9.13: the offer comes earlier. Two tough ones in a row, two shown answers, or four struggle signals (help taps and wrong step entries) in this walkthrough.
-    const struggling = !mixedWalkActive() && !wtKeepGoing && ((sessionMissRun>=2 && breakOfferedAt!==sessionMissRun) || revealed>=2 || wtSignals>=4); // one "keep going" answers every condition for this walkthrough
+    const struggling = !mixedWalkActive() && !u5PracticeCard() && !wtKeepGoing && ((sessionMissRun>=2 && breakOfferedAt!==sessionMissRun) || revealed>=2 || wtSignals>=4); // one "keep going" answers every condition for this walkthrough
     const breakHTML = struggling ? `<div class="stop" role="status"><b>This one is hard today.</b>${sessionMissRun>=2?`${sessionMissRun} tough ones in a row. `:""}That is OK. You can tap <b>Help me</b> on any step, or take a break. Brains often learn more after a rest than after another try.${walterNote("rest","Taking a break is okay. The problem can wait.",true)}<div class="actions" style="margin-top:8px"><button class="btn primary" id="breaknow">Take a break</button><button class="btn quiet" id="keepgoing">Keep going</button></div></div>` : "";
     const walterStepDone=!struggling && sc && sc.state==="ok" && sc.tries>0 ? walterNote("nice",walterStepMessage(step,sc.helped),true) : "";
     const walkStart=cur.skippedTo||0;
@@ -6876,7 +7332,12 @@ function render(){
       <div class="wt" id="wt">${cur.steps.slice(0,stepIdx+1).map((s,i)=>stepHTML(s,i,i<stepIdx,true)).join("")}</div>${walterStepDone}${exampleOpen?exampleHTML():""}
       <div class="actions">${(open || (sc && sc.state==="explain"))?"":(!last?`<button class="btn primary" id="step">Next step</button>`:`<button class="btn primary" id="retry">Try one like it</button>`)}</div>`; /* the reason question must be answered before moving on */
   }
-  if(phase==="q") body+=hwWalterHTML(); else if(phase==="wt"&&!mixedWalkActive()) right+=hwWalterHTML();
+  if(phase==="q"&&hwWalterEligible()){
+    const ctx=hwWalterContext();
+    body+=`<details class="walter-more"${cur.hwWalter?.open||exampleOpen?' open':''}><summary>More help</summary>${hwWalterHTML()}${cur.ws?'':exampleBtn()+(cur.mainHelp?.[ctx.key]?.lastReply?'':withMeBtn())}</details>`;
+  }else if(phase==="wt"&&!mixedWalkActive()&&!u5PracticeCard()&&hwWalterEligible()){
+    right+=`<details class="walter-more"${cur.hwWalter?.open||exampleOpen?' open':''}><summary>More help</summary>${hwWalterHTML()}${cur.hwWalter?.open?'':'<button type="button" class="btn quiet small" id="hwaskexample">See a different worked example</button>'}${sc.tries>=2?'<button type="button" class="btn quiet small" id="stepbreak">Take a break</button>':''}</details>`;
+  }
   const idleTip=`<div class="idletip" id="idletip" role="status" aria-live="polite"></div>`; if(phase==="wt") right+=idleTip; else if(phase==="q") body+=idleTip; // v9.13: a quiet "stuck?" line after a long pause
   if(S.scratch) body+=scratchHTML();
   const card = right ? `<div class="card two"><div class="left">${body}</div><div class="right">${right}</div></div>` : `<div class="card">${body}</div>`;
@@ -6886,7 +7347,7 @@ function render(){
 // v9.13 long-pause signal: after 75 seconds with no typing, tapping, or new screen, one calm line points at the help that is already there.
 // It changes nothing in the records. Any touch or key restarts the clock; a new screen clears the line.
 let idleTimer=null; const IDLE_MS=75000;
-function idleText(){ if(phase==="wt" && sc && sc.state==="open" && !mixedWalkActive()) return `Stuck? That is OK. Tap <b>Help me</b> for a clue, or <b>Home</b> to take a break.`; if(phase==="q" && onrampWaiting()) return `Stuck? That is OK. Tap <b>Help me start</b> or <b>Show me one</b>, or <b>Home</b> to take a break.`; if(phase==="q" && walkthroughBtn()) return `Stuck? That is OK. Tap <b>Work through this problem</b> above for one small step at a time.`; if(phase==="q" && withMeOK()) return `Stuck? That is OK. Tap <b>Do it with me, one step at a time</b> to do this one together, or <b>Home</b> to take a break.`; /* v9.20: the same words as the button */ if(phase==="q") return `Stuck? That is OK. Tap <b>${cur&&cur.ws?"Hint for the next box":"Hint"}</b>${cur&&cur.hw&&cur.fixed?"":` or <b>Show me one first</b>`}, or <b>Home</b> to take a break.`; return ""; }
+function idleText(){ if(phase==="wt" && sc && sc.state==="open" && !mixedWalkActive() && !u5PracticeCard()) return `Tap <b>${stepHelpLabel(cur.steps[stepIdx],cur.steps[stepIdx]?.check)}</b> for help with this step, or <b>Home</b> to take a break.`; if(phase==="q" && onrampWaiting()) return `Stuck? That is OK. Tap <b>Help me start</b> or <b>Show me one</b>, or <b>Home</b> to take a break.`; if(phase==="q" && walkthroughBtn()) return `Stuck? That is OK. Tap <b>Work through this problem</b> above for one small step at a time.`; if(phase==="q" && withMeOK()) return `Stuck? That is OK. Tap <b>Do it with me, one step at a time</b> to do this one together, or <b>Home</b> to take a break.`; /* v9.20: the same words as the button */ if(phase==="q") return `Tap <b>${cur&&cur.ws?"Help with this box":"Help me"}</b> for a next step, or <b>Home</b> to take a break.`; return ""; }
 function armIdle(){ if(idleTimer) clearTimeout(idleTimer); idleTimer=null; if(!(phase==="q"||phase==="wt")) return; idleTimer=setTimeout(()=>{ const el=app.querySelector("#idletip"); const t=idleText(); if(el && t){ el.innerHTML=t; el.classList.add("on"); if(cur) cur.idleTips=(cur.idleTips||0)+1; } }, IDLE_MS); }
 ["pointerdown","keydown","input"].forEach(ev=>app.addEventListener(ev,()=>{ if(idleTimer){ armIdle(); } const el=app.querySelector("#idletip.on"); if(el && ev!=="pointerdown"){ el.classList.remove("on"); el.innerHTML=""; } }, true));
 function scratchHTML(){
@@ -7129,10 +7590,12 @@ function hwPrepare(p){
       if(!p.hwPrepared&&s.visAfter)for(const k of ['vis','charts','chart'])if(s[k])out[k]=s[k];
       if(p.skill==='twostep'||p.skill==='multiply')out.after=s.after;
       if(s.mixedRole){out.t=s.mixedTitle;out.after='';}
+      if(s.unit5){out.t='';out.after='';}
       if(p.skill==='addsub'&&/What digit goes/i.test(plain(out.check.q)))out.t='Work in the named column. Use your own carries or exchanges; check their value before entering the digit.';
       return out;
     });
   }
+  u5PracticeSetup(p);
   // Coach copy uses the authored library. Runtime help chooses a move from the current request and work.
   const g=hwHelpLadder({q:'',comp:''},p,'q',null);p.hints=g.map(t=>({t:esc(t)}));p.hintTotal=p.hintPlan?1+p.hintPlan.reduce((n,h)=>n+h.hints.length,0):p.hints.length;
   if(!p.steps.length)p.steps=[{t:'Work out the original problem and check your result.',check:finalCheck(p)}];
@@ -7185,27 +7648,40 @@ function hwOrganicReply(ctx,intent,state){
   state.repeats=repeats;state.lastReply={...reply,intent,observation,draft:ctx.draft};
   return reply;
 }
+function hwMainHintHTML(ctx){
+  const last=cur.mainHelp?.[ctx.key]?.lastReply;
+  const line=(cur.hintLog||[]).filter(h=>h.key===ctx.key&&(last?.move!=='smaller'||h.signature!==last.signature)).at(-1);
+  return line?`<div class="step">${line.t}</div>`:'';
+}
+function hwMainModelHTML(ctx){
+  const reply=cur.mainHelp?.[ctx.key]?.lastReply;
+  return reply?.move==='smaller'?walterInlineModel(hwWalterSemanticContext(ctx),reply,'walter-main-model'):'';
+}
 function hwMainHint(){
   const inp=app.querySelector('#ans');if(inp)lastAnswer=inp.value;
   const p=app.querySelector('#preans');if(p)preVal=p.value;
   const ctx=hwWalterContext();cur.mainHelp=cur.mainHelp||{};
   const state=cur.mainHelp[ctx.key]||(cur.mainHelp[ctx.key]={});
-  const reply=hwOrganicReply(ctx,state.lastReply?'stuck':'start',state);
+  const prior=state.lastReply;
+  if(prior?.move==='smaller')return;
+  const reply=hwOrganicReply(ctx,walterNextInlineMove(prior),state);
   cur.hintLog=cur.hintLog||[];
   if(!cur.hintLog.length||cur.hintLog.at(-1).signature!==reply.signature)cur.hintLog.push({t:`<b>Help for this part.</b> ${esc(reply.text)}`,signature:reply.signature,key:ctx.key});
   cur.hintLog=cur.hintLog.slice(-20);hintIdx=Math.max(1,hintIdx);
-  if(reply.move==='stuck'||state.repeats>0)cur.hwWalter={context:ctx.key,open:true,choice:{id:'stuck',depth:0,text:reply.text,move:reply.move,signature:reply.signature},lastReply:state.lastReply};
+
   cur.studied=true;hwRecordHelp(ctx,'hint','clue',0,reply.signature,reply.text,reply.work);save();
 }
 function hwStepHelp(){
   const inp=app.querySelector('#cans');if(inp)sc.val=inp.value;
   const ctx=hwWalterContext();sc.organicHelp=sc.organicHelp||{};
-  const reply=hwOrganicReply(ctx,sc.organicHelp.lastReply?'stuck':'start',sc.organicHelp);
+  if(sc.organicHelp.lastReply?.move==='smaller'){walterInlineFocus('#walter-step-model');return;}
+  const reply=hwOrganicReply(ctx,walterNextInlineMove(sc.organicHelp.lastReply,ctx.observation==='checked-mismatch'),sc.organicHelp);
   cur.helpTaps=(cur.helpTaps||0)+1;cur.studied=true;sc.helped=true;
   if(missEntry){missEntry.helpTaps=cur.helpTaps;missEntry.studied=true;}
-  hwRecordHelp(ctx,'walkthrough','procedure',0,reply.signature,reply.text,reply.work);sc.msg=esc(reply.text);
-  if(reply.move==='stuck'||sc.organicHelp.repeats>0)cur.hwWalter={context:ctx.key,open:true,choice:{id:'stuck',depth:0,text:reply.text,move:reply.move,signature:reply.signature},lastReply:sc.organicHelp.lastReply};
+  hwRecordHelp(ctx,'walkthrough','procedure',0,reply.signature,reply.text,reply.work);if(reply.move!=='smaller')sc.msg=esc(reply.text);
+
   sc.helpDepth=(sc.helpDepth||0)+1;save();render();
+  walterInlineFocus(reply.move==='smaller'?'#walter-step-model':'#cmsg');
 }
 
 function hwWalterGuide(ctx){ return hwHelpLadder(ctx); }
@@ -7407,19 +7883,21 @@ function stepHTML(s,i,dim,withCheck){
     if(i<stepIdx){ // an earlier step: show how its check went
       const r=stepRes[i];
       if(r==="skipped") sub=`<div class="substep ok"><div class="res"><span aria-hidden="true">✓</span> Your grid already had this right, so we skip it.</div></div>`;
-      else sub=`<div class="substep ${r==="ok"?"ok":"bad"}">${c.q}<div class="res"><span aria-hidden="true">${r==="ok"?"✓":"•"}</span> ${r==="ok"?`You got <b>${esc(c.display)}</b>.`:`It's <b>${esc(c.display)}</b>.`}</div>${s.after?`<div class="res after">${s.after}</div>`:""}</div>`;
+      else sub=`<div class="substep ${r==="ok"?"ok":"bad"}">${c.q}<div class="res"><span aria-hidden="true">${r==="ok"?"✓":"•"}</span> ${r==="ok"?`You got <b>${esc(s.checkedDisplay??c.display)}</b>.`:`It's <b>${esc(c.display)}</b>.`}</div>${s.after?`<div class="res after">${s.after}</div>`:""}</div>`;
     } else if(sc){
       const open=scActive(); const settled = sc.state==="ok" || sc.state==="revealed";
       const explainHTML = sc.state==="explain" && sc.explain ? `<div class="substep why" style="margin-top:8px"><div class="cq">${esc(sc.explain.q)}</div>${optsHTML("xopts", sc.explain.options, sc.xsel, sc.explain.answer, false, "opt copt")}<div class="actions" style="margin-top:10px"><button class="btn primary" id="xcheck">Check reason</button><button class="btn quiet" id="xskip" title="See the reason without picking one">Just tell me why</button></div></div>` : ""; /* v9.13: the reason is an invitation, not a second gate */
-      const focused=mixedWalkActive()&&s.mixedRole;
-      const helpLbl=focused?(sc.mixedStrip?'Read the strip':sc.mixedCueShown?'Still stuck':'Help me'):stepHelpLabel(s,c);
-      const twoMisses = !focused && open && sc.state==="open" && (sc.tries||0)>=2; /* v9.13: help without a wrong answer first; after two misses on one step, an explicit choice */
-      sub=`<div class="substep ${sc.state==="ok"?"ok":sc.state==="revealed"?"bad":sc.state==="confirm"||sc.state==="explain"?"confirm":""}">${focused&&open?mixedWalkReminder():''}<div class="cq">${c.q}</div>${typeof readAloudButton==='function'?readAloudButton(focused&&sc.msg?[c.q,sc.msg,sc.mixedStrip?mixedWalkStripAction(s.mixedRole,sc.mixedFocus):''].join(' '):c.q,'step-prompt'):''}${checkCtlHTML(c)}
-        <div class="inline-msg" id="cmsg" role="status" aria-live="polite" tabindex="-1">${focused&&open&&sc.mixedCueShown&&sc.msg?'<b>Walter:</b> ':''}${sc.msg}</div>
-        ${focused&&open?mixedWalkForm(s.mixedRole):''}${settled && s.after && !sc.xdone?`<div class="res after">${s.after}</div>`:""}${explainHTML}
-        ${open?`<div class="actions" style="margin-top:10px"><button class="btn primary" id="cstep">${focused?"Check":"Check step"}</button>${sc.state==="open"?`<button class="btn quiet" id="stephelp" title="Get the next clue for this step. You can ask before you try.">${helpLbl}</button>`:""}${twoMisses?`<button class="btn quiet" id="stepbreak">Take a break</button>`:""}</div>`:""}
-        ${focused&&open&&sc.mixedStrip?mixedWalkStrip(s.mixedRole):''}
-        ${focused&&open&&sc.mixedStrip?`<details${exampleOpen?' open':''}><summary>More help</summary><button type="button" class="btn quiet small" id="hwaskexample">See a different worked example</button></details>`:""}</div>`;
+      const mixed=mixedWalkActive()&&s.mixedRole,focused=mixed||s.unit5;
+      const hasModel=mixed?sc.mixedStrip:sc.unit5Model,hasCue=mixed?sc.mixedCueShown:sc.unit5Cue;
+      const helpLbl=focused?(hasModel?(mixed?'Read the strip':'Look at the model'):hasCue?'Still stuck':'Help me'):stepHelpLabel(s,c);
+      const inlineModel=!focused&&sc.organicHelp?.lastReply?.move==='smaller'?sc.organicHelp.lastReply:null;
+      sub=`<div class="substep ${sc.state==="ok"?"ok":sc.state==="revealed"?"bad":sc.state==="confirm"||sc.state==="explain"?"confirm":""}">${mixed&&open?mixedWalkReminder():s.unit5&&open?`<p class="muted" style="margin:0 0 8px">Given <b>${esc(cur.unit5Given||plain(cur.prompt))}</b></p>`:''}<div class="cq">${c.q}</div>${typeof readAloudButton==='function'?readAloudButton(focused&&sc.msg?[c.q,sc.msg,hasModel?(mixed?mixedWalkStripAction(s.mixedRole,sc.mixedFocus):u5Model(u5ModelForEntry(s.unit5,sc.lastCheck?.draft)).action):''].join(' '):c.q,'step-prompt'):''}${checkCtlHTML(c)}
+        <div class="inline-msg" id="cmsg" role="status" aria-live="polite" tabindex="-1">${focused&&open&&hasCue&&sc.msg?'<b>Walter:</b> ':''}${sc.msg}</div>
+        ${mixed&&open?mixedWalkForm(s.mixedRole):''}${settled && s.after && !sc.xdone?`<div class="res after">${s.after}</div>`:""}${explainHTML}
+        ${open?`<div class="actions" style="margin-top:10px"><button class="btn primary" id="cstep">Check</button>${sc.state==="open"?`<button class="btn quiet" id="stephelp" title="Get the next clue for this step. You can ask before you try.">${helpLbl}</button>`:""}</div>`:""}
+        ${open&&inlineModel?walterInlineModel(hwWalterSemanticContext(hwWalterContext()),inlineModel,'walter-step-model'):''}
+        ${focused&&open&&hasModel?(mixed?mixedWalkStrip(s.mixedRole):u5ModelHTML(u5ModelForEntry(s.unit5,sc.lastCheck?.draft),'u5practicemodel')):''}
+        ${focused&&open&&hasModel?`<details${exampleOpen?' open':''}><summary>More help</summary><button type="button" class="btn quiet small" id="hwaskexample">See a different worked example</button></details>`:""}</div>`;
     }
   }
   // v9.18: a step's picture (chart, or any HTML in s.vis) can wait until she has answered that step (s.visAfter), so a drawing never hands over the answer it asks for.
@@ -7458,7 +7936,7 @@ function bind(){
     const inp=q("ans"); if(inp) inp.addEventListener("input",()=>{ lastAnswer=inp.value; if(S && S.pendingQ && !S.pendingQ.typed && inp.value.trim()){ S.pendingQ.typed=true; S.pendingQ.at=Date.now(); save(); } });
     app.querySelectorAll("#opts .opt").forEach(b=>b.onclick=()=>setSel("opts",+b.dataset.i));
     app.querySelectorAll("#preopts .opt").forEach(b=>b.onclick=()=>setSel("preopts",+b.dataset.i)); const pi=q("preans"); if(pi) pi.addEventListener("input",()=>{ preVal=pi.value; if(S && S.pendingQ && !S.pendingQ.typed && pi.value.trim()){ S.pendingQ.typed=true; save(); } });
-    if(q("showhint")) q("showhint").onclick=()=>{ if(cur.hintPlan && cur.ws && ws)wsNextHint();else hwMainHint();inlineErr="";render();const hs=app.querySelectorAll("#hints .step");if(hs.length)hs[hs.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); };
+    if(q("showhint")) q("showhint").onclick=()=>{ if(cur.hintPlan && cur.ws && ws)wsNextHint();else hwMainHint();inlineErr="";render();if(q("walter-main-model"))walterInlineFocus("#walter-main-model");else{const hs=app.querySelectorAll("#hints .step");if(hs.length)hs[hs.length-1].scrollIntoView({block:"nearest"});} };
 
   }
   if(q("workthrough")) q("workthrough").onclick=beginWalkthrough;
@@ -7472,6 +7950,7 @@ function bind(){
   if(q("xcheck")){ q("xcheck").onclick=()=>checkExplain(false); app.querySelectorAll("#xopts .opt").forEach(b=>b.onclick=()=>setSel("xopts",+b.dataset.i)); }
   if(q("xskip")) q("xskip").onclick=()=>checkExplain(true);
   if(q("stephelp")) q("stephelp").onclick=stepHelp;
+  if(q("mixedmark"))q("mixedmark").onclick=mixedWalkMark;
   if(q("stepbreak")) q("stepbreak").onclick=()=>{ if(missEntry){ missEntry.breakTaken=1; } breakOfferedAt=sessionMissRun; sessionDone=true; save(); home(); };
   if(q("next")) q("next").onclick=next;
   if(q("ortry")) q("ortry").onclick=()=>{ cur.onrampChoice="try"; const inp=q("ans"); if(inp) lastAnswer=inp.value; render(); const f=app.querySelector("#ans:not([disabled])")||app.querySelector(".ws .cell.sel:not([disabled])")||app.querySelector("#opts .opt"); if(f) f.focus({preventScroll:true}); };
@@ -7666,6 +8145,17 @@ function submit(){
   } else {
     S.run=0; if(cur.checkin && S.checkins){ delete S.checkins[cur.checkin]; entry.delayedMiss=1; } // a missed check-in: the weakness machinery takes over from here
     const d=twoPoints ? {tag:"two-points", note:NOTES["two-points"]} : wsGrade ? {tag:COMP_TO_TAG[wsGrade.main]||wsGrade.main, note:NOTES[COMP_TO_TAG[wsGrade.main]]||""} : diag(raw); d.note=(S.walterMistakeNotes!==false&&typeof walterMisconceptionNote==='function'?walterMisconceptionNote(d.tag):'')||'Compare your steps with the operation and units. Check one part again.';
+    if(cur.unit5Answer)d.note=esc(u5Cue(cur.unit5Answer,[yours],true));
+    else if(cur.mixedWalk){
+      const g=cur.mixedWalk,entry=parseMixedWalkEntry(yours);
+      d.note=esc(g.total!==undefined
+        ? (entry&&frEqual(entry,{w:0,n:g.total,d:g.denominator})?'That is the right amount. Let’s count the full groups first.':`Start with ${g.total} pieces. Make one whole from ${g.denominator} of them.`)
+        : `Count ${g.denominator} pieces in each whole before adding the extra pieces.`);
+    }else if(d.tag==='other'){
+      const context={...hwWalterSemanticContext(hwWalterContext()),tag:'',code:'',status:'checked-mismatch'};
+      const cue=walterTeachingReply(context,'orient');
+      if(cue)d.note=esc(cue.text);
+    }
     cur.mistake=d; entry.tag=d.tag;
     // The miss opens (or re-opens) the components it points at: the workspace names them per cell; a single answer box is read from its mistake tag.
     for(const comp of (wsGrade && wsGrade.comps && wsGrade.comps.length) ? wsGrade.comps : compsOfMiss(sk, d.tag)) noteComp(sk, comp, false, {lvl:cur.placement?1:cur.level, ctx:clearableCtx(sk, comp, ctxOf(cur)), harder:!!cur.harder});
@@ -7818,6 +8308,7 @@ function cueForRaw(step, c, tries, yoursText){
   if(!cur)return 'Use the original quantities and a model to test this step.';
   const ctx={...hwWalterContext(),q:plain(c?.q||''),comp:typeof c?.comp==='string'?c.comp:''};
   const closing=hwCheckGuide(ctx);
+  if(cur.skill==='facts')return hwWalterBaseGuide(ctx)[2];
   return walterNextReply({guide:hwHelpLadder(ctx),intent:'check',move:'test',observation:{status:'checked-mismatch',label:ctx.target},context:hwWalterSemanticContext(ctx),profile:[hwSmallerAction(ctx),closing[0],closing[1]]}).text;
 }
 function noteStepComp(c, sc, ok){
@@ -7832,8 +8323,8 @@ function checkStep(){
   const c=cur.steps[stepIdx].check; if(!scActive()) return; const walterContext=hwWalterContext();
   let ok;
   if(c.type==="mc"){ if(sc.sel<0){ const f=app.querySelector("#copts .opt"); if(f) f.focus(); return; } ok = sc.sel===c.answer; }
-  else { const inp=app.querySelector("#cans"); const v=inp.value; sc.val=v; if(!v.trim()){ inp.focus(); return; }
-    const issue=issueFor(c,v); if(issue){ hwWalterNextCheck(walterContext,'format');sc.lastFormat={draft:v};sc.msg=esc(issue);if(mixedWalkActive())sc.mixedFocus=c.text?'format':'';save();render(); return; } delete sc.lastFormat;ok = stepAccepts(c,v); }
+  else { const inp=app.querySelector("#cans"); const v=inp.value; sc.val=v; if(!v.trim()){ if(mixedWalkActive()&&!sc.mixedCueShown)mixedWalkHelp();else inp.focus(); return; }
+    const issue=issueFor(c,v); if(issue){ hwWalterNextCheck(walterContext,'format');sc.lastFormat={draft:v};sc.msg=esc(mixedWalkActive()?mixedFormatCue(cur.steps[stepIdx].mixedRole,v,cur.mixedWalk):issue);if(mixedWalkActive())sc.mixedFocus=c.text?'format':'';save();render(); return; } delete sc.lastFormat;ok = stepAccepts(c,v); }
   if(phase==="reveal"){ // copying the shown answer in unlocks Next. Logged as "finished with the answer shown": not a right answer, not a guided completion, never independent
     if(ok){ sc.state="ok"; sc.msg=`<span aria-hidden="true">✓</span> That's it.`;
       if(!cur.shownLogged){ cur.shownLogged=true; S.shown=(S.shown||0)+1;
@@ -7871,6 +8362,7 @@ function checkStep(){
     if(sc.tries>=3 && Array.isArray(st.rescue) && st.rescue.length && !st.rescueOpened){ expandRescue(st,"Let's work this out in smaller checked steps."); return; }
     const yoursText=c.type==="mc"?String((c.options||[])[sc.sel]):sc.val;
     if(role)mixedWalkFeedback(hwWalterContext(),role);
+    else if(st.unit5)u5PracticeFeedback(st.unit5,yoursText);
     else sc.msg=cur.adaptivePrepared?`That check does not agree yet. ${esc(cueFor(st,c,sc.tries,yoursText))}`:sc.tries<=2?`Not quite. ${cueFor(st,c,sc.tries,yoursText)}`:`That is still tricky. Try the calculation on scratch paper, or tap <b>See one like it</b> for a different worked example. You can take a break, too.`;
     if(!role&&!cur.adaptivePrepared){sc.val=""; sc.sel=-1;} }
   finishStepCheck(c, stepIdx===cur.steps.length-1);
@@ -7885,10 +8377,13 @@ function revealStepAnswer(st, c){ // the answer and its explanation together; th
 function homeworkNoReveal(){ return !!(cur && cur.hw); }
 function expandRescue(st,message){ st.rescueOpened=true; cur.steps.splice(stepIdx,0,...st.rescue.map(x=>({...x}))); expanded++; if(missEntry) missEntry.expanded=expanded;
   initStepCheck(); if(sc) sc.msg=message; save(); render(); const el=app.querySelectorAll("#wt .step"); if(el.length) el[el.length-1].scrollIntoView({behavior:"smooth",block:"nearest"}); }
-function stepHelpLabel(st, c){return sc?.organicHelp?.lastReply?"I'm still stuck":'Help me';}
+function stepHelpLabel(st,c){
+  return sc?.organicHelp?.lastReply?.move==='smaller'?'Look at the model':sc?.organicHelp?.lastReply||sc?.lastCheck&&!sc.lastCheck.ok?'Still stuck':'Help me';
+}
 function stepHelp(){
   if(!sc || sc.state!=="open" || phase!=="wt")return;
   if(mixedWalkActive())mixedWalkHelp();
+  else if(u5PracticeCard())u5PracticeHelp(u5PracticeCard());
   else hwStepHelp();
 }
 function checkExplain(skip){ skip=skip===true; // the "why" question after a reveal: right, wrong, or skipped, the step closes as revealed; the pick is recorded, never a pass
@@ -8785,8 +9280,10 @@ function lpApply(item, v){ const st=item.st, step=item.step; if(!step) return; c
   const helpContext=typeof lpWalterContextKey==='function'?lpWalterContextKey(item):'';
   lpObserve(item,v,r);
   if(item.phase!=='model'&&typeof walterLinkNextCheck==='function')walterLinkNextCheck(st.walterEvents||[],helpContext,{status:r.fmt?'format':r.safe||r.ok&&step.short==='Your trial count'?'trial':r.ok?'ok':'miss',code:r.code||'',draft:walterDraftFingerprint(v),fields:Array.isArray(v)?v.map(value=>walterDraftFingerprint(value)):null,gridDigits:item.spec.walterCheck?.(st,v)});
-  if(r.ok){ if(r.apply) r.apply(); st.k++; st.draft=null; st.badIndex=-1; st.walterOpen=false; st.walterChoice=null; st.exampleNarr="";st.exampleNote=""; st.msg=r.msg||""; st.msgKind="ok"; st.helpShown=[]; item.step=item.spec.next(st); lpPrepareStep(item); if(!item.step){ st.done=true; } return true; }
-  if(item.phase!=="model" && !r.fmt){ if(r.safe){ if(r.code) st.codes.push(r.code); } else { st.tries++; if(r.code) st.codes.push(r.code); } } st.badIndex=Number.isInteger(r.badIndex)?r.badIndex:-1; st.msg=item.phase!=="model"?lpCheckFeedback(item,r):r.msg||"Not yet. Check that step and try again."; st.msgKind=r.safe?"":"no"; return false; }
+  if(r.ok){ if(r.apply) r.apply(); st.k++; st.draft=null; st.badIndex=-1; st.walterOpen=false; st.walterChoice=null; st.inlineWalter=null; st.unit5Help=null; st.exampleNarr="";st.exampleNote=""; st.msg=r.msg||""; st.msgKind="ok"; st.helpShown=[]; item.step=item.spec.next(st); lpPrepareStep(item); if(!item.step){ st.done=true; } return true; }
+  if(item.phase!=="model" && !r.fmt){ if(r.safe){ if(r.code) st.codes.push(r.code); } else { st.tries++; if(r.code) st.codes.push(r.code); } } st.badIndex=Number.isInteger(r.badIndex)?r.badIndex:-1; st.msg=item.phase!=="model"?(step.unit5?u5LessonFeedback(item,r,v):lpCheckFeedback(item,r)):r.msg||"Not yet. Check that step and try again."; st.msgKind=r.safe?"":"no";
+  if(!r.fmt&&walterInlineLesson(item))walterInlineLessonMiss(item,st.msg);
+  return false; }
 
 // ---- input widgets ----
 function lpInputHTML(step, st, locked){ const I=step.input||{type:"num"}, dis=locked?" disabled":"", draft=st.draft&&st.draft.k===st.k?st.draft.values:[];
@@ -9006,7 +9503,7 @@ function lpOpenFictionalExample(it){const ctx=lpWalterSemanticContext(it),model=
 function walterFictionalHTML(model,note,prefix){const valid=model&&typeof model.text==='string'&&Array.isArray(model.options)&&model.options.length>=2&&model.options.length<=3&&model.options.every(x=>typeof x==='string')&&Number.isInteger(model.answer)&&model.answer>=0&&model.answer<model.options.length;return valid?`<section class="lpclue" aria-label="Separate fictional mistake example"><p><b>Different fictional example · modeled help</b></p><p>${esc(model.text)}</p><div class="actions">${model.options.map((text,i)=>`<button type="button" class="btn quiet small" data-${prefix}-fictional="${i}">${esc(text)}</button>`).join('')}</div>${model.picked>=0?`<p role="status">${model.picked===model.answer?esc(model.explanation):'That idea does not explain the slip. Check what the places or piece sizes mean.'}</p>`:''}<p class="muted">Your problem and work stay where you left them.</p></section>`:note?`<p class="muted">${esc(note)}</p>`:'';}
 function walterFictionalEligible(ctx){return /frac|decimal/.test(ctx.family+' '+ctx.kind)||['standard','words','expanded','compare','addsub','decmul','decdiv'].includes(ctx.family);}
 function lpWalterPrimaryButtons(picked,it){return `<div class="actions" aria-label="Choose what you need">${decimalStoryPrimary(it?lpWalterSemanticContext(it):null,LP_WALTER_PRIMARY).map(([id,label])=>`<button type="button" class="btn quiet small" data-walter-question="${id}" aria-pressed="${picked===id}">${esc(label)}</button>`).join('')}</div>`;}
-function lpWalterRatingButtons(signature){return `<div class="actions" aria-label="Optional reply feedback"><button type="button" class="btn quiet small" data-walter-rating="helped" data-signature="${esc(signature||'')}">That helped</button><button type="button" class="btn quiet small" id="lpaskmore" data-walter-rating="stuck" data-signature="${esc(signature||'')}">Still stuck</button><button type="button" class="btn quiet small" data-walter-question="meaning">Why does this work?</button></div>`;}
+function lpWalterRatingButtons(signature,compact=false){if(compact)return `<button type="button" class="btn quiet small" id="lpaskmore" data-walter-rating="stuck" data-signature="${esc(signature||'')}">Still stuck</button><details><summary>About this clue</summary><button type="button" class="btn quiet small" data-walter-rating="helped" data-signature="${esc(signature||'')}">That helped</button><button type="button" class="btn quiet small" data-walter-question="meaning">Why does this work?</button></details>`;return `<div class="actions" aria-label="Optional reply feedback"><button type="button" class="btn quiet small" data-walter-rating="helped" data-signature="${esc(signature||'')}">That helped</button><button type="button" class="btn quiet small" id="lpaskmore" data-walter-rating="stuck" data-signature="${esc(signature||'')}">Still stuck</button><button type="button" class="btn quiet small" data-walter-question="meaning">Why does this work?</button></div>`;}
 function lpWalterRate(it,rating,signature,repair=false){const events=it.st.walterEvents||[];if(typeof walterRecordRating==='function')walterRecordRating(events,signature,rating);if(rating==='stuck'){const selected=repair?it.rep.walterChoice:it.st.walterChoice;(repair?lpRepairWalterRespond:lpWalterRespond)(it,selected.id,'stuck');}lpSaveResume();}
 function lpPrepareStep(it){
   if(!lpWalterEligible(it))return;
@@ -9048,9 +9545,9 @@ function lpWalterInitialMove(q){return q.id==='calculation'?'calculation':q.id==
 function lpWalterDraftKey(it,c){
   const st=it.st;return JSON.stringify([lpWalterContextKey(it),c.status,c.code,st.draft||null,st.grp||[],st.tiles||[]]);
 }
-function lpWalterRespond(it,id,move){if(!lpWalterEligible(it))return;
+function lpWalterRespond(it,id,move,inline=false){if(!lpWalterEligible(it))return;
   const st=it.st,q=lpWalterQuestions(it).find(x=>x.id===id);if(!q)return;
-  const c=lpHelpContext(it),old=st.walterChoice?.step===st.k&&st.walterChoice.id===id?st.walterChoice:null;
+  const c=lpHelpContext(it),current=inline?st.inlineWalter:st.walterChoice,old=current?.step===st.k&&current.id===id?current:null;
   const requested=move||lpWalterInitialMove(q),draftKey=lpWalterDraftKey(it,c),repeats=old?.requestedMove===requested&&old.draftKey===draftKey?(old.repeats||0)+1:0;
   const moveForGrid=it.spec.kind==='decimal-division-grid'&&(requested==='stuck'||repeats>0)
     ? (['smaller','stuck'].includes(old?.move)?'stuck':'smaller') : requested;
@@ -9066,15 +9563,18 @@ function lpWalterRespond(it,id,move){if(!lpWalterEligible(it))return;
     if(['delayed','mixed'].includes(it.phase)&&!st.walterProbe)st.walterProbe=st.tries?'miss-before-help':'help-before-miss';
   }
   lpWalterTrimEvents(st);
-  st.walterChoice={step:st.k,id,text:reply.text,move:reply.move,signature:reply.signature,requestedMove:requested,draftKey,repeats,choices:reply.choices,
-    ...(reply.gridFocus?{gridFocus:true,gridPlace:reply.gridPlace,gridMarks:reply.gridMarks,gridMove:reply.gridMove}:{})};st.walterOpen=true;lpSaveResume();
+  const choice={step:st.k,id,text:reply.text,move:reply.move,resource:reply.resource,signature:reply.signature,requestedMove:requested,draftKey,repeats,choices:reply.choices,
+    ...(reply.gridFocus?{gridFocus:true,gridPlace:reply.gridPlace,gridMarks:reply.gridMarks,gridMove:reply.gridMove}:{})};
+  if(inline)st.inlineWalter=choice;
+  else {st.walterChoice=choice;st.walterOpen=true;}
+  lpSaveResume();
 }
 function lpWalterHTML(it){if(!lpWalterEligible(it))return '';
   const st=it.st,selected=st.walterChoice?.step===st.k?st.walterChoice:null,qs=lpWalterQuestions(it),picked=selected&&qs.find(x=>x.id===selected.id);
   // Older saved replies retain their authored text, without restoring the old sequence.
   const text=picked?(selected.text||picked.texts[Math.max(0,Math.min(picked.texts.length-1,selected.depth||0))]):'';
   return `<div class="lpwalter">${it.spec.walterReply?'':'<button type="button" class="btn quiet" id="lpdirecthelp">Ask Walter</button> '}
-  <button type="button" class="btn quiet" id="lpask" aria-expanded="${!!st.walterOpen}" aria-controls="lpaskpanel">${it.spec.walterReply?'Ask Walter':'Choose help'}</button>${st.walterOpen?`<section id="lpaskpanel" aria-label="Ask Walter help"><p><b>What would help with this step?</b></p><div class="actions">${decimalStoryPrimary(lpWalterSemanticContext(it),LP_WALTER_PRIMARY).map(([id,label])=>`<button type="button" class="btn quiet small" data-walter-question="${id}" aria-pressed="${picked?.id===id}">${esc(label)}</button>`).join('')}</div>${picked?`<div id="lpaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('clue',esc(text),true)}${typeof readAloudButton==='function'?readAloudButton(text,'lp-reply'):''}${picked.id==='carry-model'||selected.move==='smaller'&&it.step.walter?.role==='column'&&!it.step.walter.last?lpCarryModelHTML():''}</div>${lpWalterChoiceButtons(selected.choices,true)}${lpWalterRatingButtons(selected.signature)}${selected.move==='test'&&walterFictionalEligible(lpWalterSemanticContext(it))?`<button type="button" class="btn quiet small" id="lperror">Check a fictional mistake</button>`:''}<button type="button" class="btn quiet small" id="lpaskreturn">Back to my step</button>`:''}<button type="button" class="btn quiet small" id="lpother">See a different worked example</button></section>`:''}</div>`;
+  <button type="button" class="btn quiet" id="lpask" aria-expanded="${!!st.walterOpen}" aria-controls="lpaskpanel">${it.spec.walterReply?'Help me':'Choose help'}</button>${st.walterOpen?`<section id="lpaskpanel" aria-label="Ask Walter help">${it.spec.walterReply&&picked?'<details class="walter-more"><summary>More help</summary>':'<p><b>What would help with this step?</b></p>'}<div class="actions">${decimalStoryPrimary(lpWalterSemanticContext(it),LP_WALTER_PRIMARY).map(([id,label])=>`<button type="button" class="btn quiet small" data-walter-question="${id}" aria-pressed="${picked?.id===id}">${esc(label)}</button>`).join('')}</div>${it.spec.walterReply&&picked?'</details>':''}${picked?`<div id="lpaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('clue',esc(text),true)}${typeof readAloudButton==='function'?readAloudButton(text,'lp-reply'):''}${picked.id==='carry-model'||selected.move==='smaller'&&it.step.walter?.role==='column'&&!it.step.walter.last?lpCarryModelHTML():''}</div>${lpWalterChoiceButtons(selected.choices,true)}${lpWalterRatingButtons(selected.signature,!!it.spec.walterReply)}${selected.move==='test'&&walterFictionalEligible(lpWalterSemanticContext(it))?`<button type="button" class="btn quiet small" id="lperror">Check a fictional mistake</button>`:''}<button type="button" class="btn quiet small" id="lpaskreturn">Back to my step</button>`:''}<button type="button" class="btn quiet small" id="lpother">See a different worked example</button></section>`:''}</div>`;
 }
 function lpWalterDeliver(it,id,depth){ if(!lpWalterEligible(it)) return;
   const st=it.st, q=lpWalterQuestions(it).find(x=>x.id===id); if(!q) return;
@@ -9088,18 +9588,26 @@ function lpWalterDeliver(it,id,depth){ if(!lpWalterEligible(it)) return;
   lpSaveResume();
 }
 function lpWorkHTML(it){ lpPrepareStep(it); const sp=it.spec, st=it.st, ph=it.phase, model=ph==="model", own=ph==="independent"||ph==="delayed"||ph==="mixed";
-  const step=it.step; const visual=sp.visual?sp.visual(st, ph):"";
+  const step=it.step,focused=!model&&!st.done&&step?.unit5,compact=walterInlineLesson(it);
+  const inline=compact&&st.inlineWalter?.step===st.k?st.inlineWalter:null;
+  const inlineModel=inline?.move==='smaller'?inline:null;
+  const hasMiss=compact&&(lpHelpContext(it).status==='miss'||lpHelpContext(it).status==='trial');
+  const unit5=focused&&st.unit5Help?.k===st.k?st.unit5Help:null;
+  const unit5Model=unit5?.model?u5ModelForEntry(focused,st.stepEvents?.at(-1)?.values?.[0]):null;
+  const visual=sp.visual&&!focused?sp.visual(st, ph):"";
   const intro = lp.homework?.gridCheck
     ? `<p class="lpmodel-note"><b>Fresh check.</b> ${st.helps?'You’re working with Walter’s help.':'Try it on your own. Walter is here if you need him.'}</p>`
-    : own&&(st.helps||st.walterProbe) ? `<p class="lpmodel-note"><b>Practice with help.</b> Try the step, then check back with another problem later.</p>` : own&&it.repeated ? `<p class="lpmodel-note"><b>Practice repeat.</b> These numbers have appeared before. Work through the steps again.</p>` : ph==="repair" ? `<p class="lpmodel-note"><b>Fix it.</b> ${esc(lpPlain(it.rspec?it.rspec.story:""))} Clues are there if you want one.</p>` : model ? `<p class="lpmodel-note"><b>Watch one.</b> Each step shows what to do and why. Think about what you would do before you tap.</p>` : own ? `<p class="lpmodel-note"><b>On your own.</b> The steps get checked, but the clues are off unless you ask.</p>` : `<p class="lpmodel-note"><b>Together.</b> Do each step; ask for a clue any time.</p>`;
+    : own&&(st.helps||st.walterProbe) ? `<p class="lpmodel-note"><b>Practice with help.</b> Try the step, then check back with another problem later.</p>` : own&&it.repeated ? `<p class="lpmodel-note"><b>Practice repeat.</b> These numbers have appeared before. Work through the steps again.</p>` : ph==="repair" ? `<p class="lpmodel-note"><b>Fix it.</b> ${esc(lpPlain(it.rspec?it.rspec.story:""))} Clues are there if you want one.</p>` : model ? `<p class="lpmodel-note"><b>Watch one.</b> Each step shows what to do and why. Think about what you would do before you tap.</p>` : own ? `<p class="lpmodel-note"><b>On your own.</b> Try the step. Walter can help if you get stuck.</p>` : `<p class="lpmodel-note"><b>Together.</b> Do each step; ask for a clue any time.</p>`;
   let work="";
   if(st.done){ work=`<div class="lpdone" role="status">${sp.done?sp.done(st):"Done."}</div><div class="actions"><button class="btn primary" id="lpnext">${lp.i+1<lp.items.length-1?"Next":"Finish"}</button></div>`; }
   else if(model){ const hist=(it.narr||[]).map(x=>`<li>${x}</li>`).join(""); work=`<ol class="lpnarr">${hist}</ol><p class="lpstep"><b>Next:</b> ${step.prompt}</p><div class="actions"><button class="btn primary" id="lpshow">Show this step</button></div>`; }
   else { const prompt = own && step.short ? step.short : step.prompt;
     const clues=(st.helpShown||[]).map(t=>`<div class="lpclue">${t}</div>`).join("");
-    work=`<p class="lpstep" id="lpstep-prompt">${prompt}</p>${typeof readAloudButton==='function'?readAloudButton([sp.title||'',prompt].join('. '),'lp-prompt'):''}${sp.controls?.(st)||''}${lpInputHTML(step, st, false)}<div class="inline-err lpmsg${st.msgKind==="ok"?" ok":""}" id="lpmsg" role="status" aria-live="polite">${st.msg||""}</div>${clues}
-      <div class="actions"><button class="btn primary" id="lpcheck">${step.input&&step.input.type==="button"?esc(step.input.label||"Next"):"Check"}</button>${!lpWalterEligible(it)&&(step.help||[]).length>(st.helpShown||[]).length?`<button class="btn quiet" id="lphelp">${own?"I need a clue":"Clue"}</button>`:""}${own&&sp.answer!==undefined&&st.answerOnly===null?`<button class="btn quiet small" id="lpknow">I know the answer</button>`:""}${own&&st.answerOnly===true?`<button class="btn quiet small" id="lpskip">Skip building it</button>`:""}</div>
-      ${lpWalterHTML(it)}${walterFictionalHTML(st.fictional,st.fictionalNote,'lp')}${st.exampleNarr||""}${st.exampleNote?`<p class="muted">${esc(st.exampleNote)}</p>`:""}${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
+    const cue=st.msg||esc(unit5?.cue||(!inlineModel?inline?.text:'')||'');
+    const readText=[sp.title||'',prompt,cue,unit5Model?u5Model(unit5Model).action:inlineModel?.text||''].filter(Boolean).join('. ');
+    work=`<p class="lpstep" id="lpstep-prompt">${prompt}</p>${typeof readAloudButton==='function'?readAloudButton(readText,'lp-prompt'):''}${sp.controls?.(st)||''}${lpInputHTML(step, st, false)}<div class="inline-err lpmsg${st.msgKind==="ok"?" ok":""}" id="lpmsg" tabindex="-1" role="status" aria-live="polite">${(unit5||inline||hasMiss)&&cue?'<b>Walter:</b> ':''}${cue}</div>${clues}
+      <div class="actions"><button class="btn primary" id="lpcheck">${step.input&&step.input.type==="button"?esc(step.input.label||"Next"):"Check"}</button>${focused?`<button class="btn quiet" id="lpunit5help">${unit5?.model?'Look at the model':unit5?'Still stuck':'Help me'}</button>`:''}${compact?`<button class="btn quiet" id="lpinlinehelp">${inlineModel?'Look at the model':inline||hasMiss?'Still stuck':'Help me'}</button>`:''}${!lpWalterEligible(it)&&(step.help||[]).length>(st.helpShown||[]).length?`<button class="btn quiet" id="lphelp">${own?"I need a clue":"Clue"}</button>`:""}${!focused&&!compact&&own&&sp.answer!==undefined&&st.answerOnly===null?`<button class="btn quiet small" id="lpknow">I know the answer</button>`:""}${own&&st.answerOnly===true?`<button class="btn quiet small" id="lpskip">Skip building it</button>`:""}</div>
+      ${unit5Model?u5ModelHTML(unit5Model,'u5lessonmodel'):''}${inlineModel?walterInlineModel(lpWalterSemanticContext(it),inlineModel,'walter-lesson-model'):''}${focused||compact?`<details${st.walterOpen||st.exampleNarr?' open':''}><summary>More help</summary>${lpWalterHTML(it)}${own&&sp.answer!==undefined&&st.answerOnly===null?'<button class="btn quiet small" id="lpknow">I know the answer</button>':''}</details>`:lpWalterHTML(it)}${walterFictionalHTML(st.fictional,st.fictionalNote,'lp')}${st.exampleNarr||""}${st.exampleNote?`<p class="muted">${esc(st.exampleNote)}</p>`:""}${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
   const walterLesson=st.done && ph!=="model" && !st.skipped && (st.tries>0 || st.helps>0) ? walterNote("nice","You worked through the steps and finished this one.",true) : ph==="delayed" ? walterNote("checkin","Here are new numbers. Show what you remember.",true) : ph==="guided" || (st.helpShown||[]).length ? walterNote("work","Let's check one step at a time.",true) : "";
   return `<div class="card lpcard"><h2 style="margin-top:0" class="lptitle">${sp.title}</h2>${intro}<div class="lpboard" id="lpboard">${visual}</div><div id="lpwork" class="lpwork">${work}</div>${walterLesson}${sp.prompt?`<details class="lpcontext"><summary>About this problem</summary><p class="muted lpsub">${sp.prompt}</p></details>`:""}${model||own||lp.homework?"":lpVideoHTML()}</div>`; }
 // Spotting a slip is still pending work. Do not use the hidden slip index,
@@ -9113,7 +9621,7 @@ function lpRepairWalterQuestions(it){
   return [...decimalStoryPrimary(lpWalterSemanticContext(it),LP_WALTER_PRIMARY).map(([id,label])=>({id,label,type:id==='check'||id==='calculation'?'checking':id==='words'?'explanation':id==='smaller'?'representation':'clue',texts})),{id:'meaning',label:'Why does this work?',type:'explanation',texts},{id:'spot-start',label:'How do I find a slip?',type:'clue',texts},
     {id:'spot-check',label:'How can I check a line?',type:'checking',texts:['Choose a line and test what it claims, using the original quantities.',texts[1],texts[2],texts[3],texts[4]]}];
 }
-function lpRepairWalterRespond(it,id,move){const q=lpRepairWalterQuestions(it).find(x=>x.id===id);if(!q)return;
+function lpRepairWalterRespond(it,id,move,inline=false){const q=lpRepairWalterQuestions(it).find(x=>x.id===id);if(!q)return;
   const st=it.st,rp=it.rep,old=rp.walterChoice?.id===id?rp.walterChoice:null,requested=move||lpWalterInitialMove(q),draftKey=JSON.stringify([rp.picked,rp.tries]),repeats=old?.requestedMove===requested&&old.draftKey===draftKey?(old.repeats||0)+1:0;
   // The selected proposed line is learner work. The hidden slip index and correction are excluded.
   const observation={kind:'repair-spot',component:'repair-lines',status:rp.tries?'miss':'draft',misses:rp.tries||0,label:'',picked:Number.isInteger(rp.picked)?rp.picked:-1};
@@ -9122,7 +9630,10 @@ function lpRepairWalterRespond(it,id,move){const q=lpRepairWalterQuestions(it).f
   st.walterEvents=Array.isArray(st.walterEvents)?st.walterEvents:[];
   if(!st.walterEvents.some(e=>e.stepId==='repair-spot'&&e.id===id&&e.signature===reply.signature)){st.walterEvents.push({step:st.k,stepId:'repair-spot',id,type:q.type,move:reply.move,signature:reply.signature,context:lpWalterContextKey(it),text:reply.text.slice(0,500),t:Date.now(),contextLabel:'Repair lines',tries:rp.tries||0});st.helps=(+st.helps||0)+1;}
   lpWalterTrimEvents(st);
-  rp.walterOpen=true;rp.walterChoice={id,text:reply.text,move:reply.move,signature:reply.signature,requestedMove:requested,draftKey,repeats,choices:reply.choices};lpSaveResume();
+  const choice={id,text:reply.text,move:reply.move,signature:reply.signature,requestedMove:requested,draftKey,repeats,choices:reply.choices};
+  if(inline)rp.inlineWalter=choice;
+  else {rp.walterOpen=true;rp.walterChoice=choice;}
+  lpSaveResume();
 }
 function lpRepairWalterHTML(it){const rp=it.rep,qs=lpRepairWalterQuestions(it),picked=qs.find(x=>x.id===rp.walterChoice?.id),selected=rp.walterChoice;
   const text=picked?(selected.text||picked.texts[Math.max(0,Math.min(picked.texts.length-1,selected.depth||0))]):'';
@@ -9136,7 +9647,10 @@ function lpRepairWalterDeliver(it,id,depth){const q=lpRepairWalterQuestions(it).
 function lpRepairHTML(it){ const r=it.rspec, rp=it.rep;
   if(rp.stage==="spot") return `<div class="card lpcard"><h2 style="margin-top:0">Find the slip</h2><p>${r.story}</p>${walterNote("keep","Find the first step that changed the result.",true)}<p class="lpstep"><b>Tap the first step that is not right.</b></p>
     <div class="lpsteps" role="group" aria-label="Worked steps">${r.steps.map((s,i)=>`<button type="button" class="opt lprstep${i===rp.picked?" sel":""}" data-lpr="${i}">${i+1}. ${s}</button>`).join("")}</div>
-    <div class="inline-err" id="lpmsg" role="status" aria-live="polite">${rp.msg||""}</div>${lpRepairWalterHTML(it)}</div>`;
+    <div class="inline-err" id="lpmsg" tabindex="-1" role="status" aria-live="polite">${r.unit5&&rp.unit5Cue?'<b>Walter:</b> '+esc(rp.unit5Cue):rp.msg||''}</div>
+    ${r.unit5?`<div class="actions"><button class="btn quiet" id="u5repairhelp">${rp.unit5Model?'Look at the model':rp.unit5Cue?'Still stuck':'Help me'}</button></div>${rp.unit5Model?u5ModelHTML(it.step.unit5,'u5repairmodel'):''}`:`<div class="actions"><button class="btn quiet" id="lprepairinline">${rp.inlineWalter?.move==='smaller'?'Look at the model':rp.inlineWalter||rp.tries?'Still stuck':'Help me'}</button></div>
+    ${rp.inlineWalter?.move==='smaller'?walterInlineModel({kind:'repair-spot',family:(LP_LESSONS[it.lid||lp.id]||lp.bp).skill},rp.inlineWalter,'walter-repair-model'):''}`}
+    <details class="walter-more"${rp.walterOpen?' open':''}><summary>More help</summary>${lpRepairWalterHTML(it)}</details></div>`;
   return lpWorkHTML(it); }
 function lpSummaryHTML(){ if(lp.homework)return fractionHomeworkSummaryHTML(); const rs=lp.results, own=rs.filter(e=>e.phase==="independent"||e.phase==="delayed"||e.phase==="mixed"), right=own.filter(checkedProgressComplete).length, o=lp.focus?teacherFocusState(lp.id):lpState(lp.id);
   const due=+o.due>0?new Date(+o.due).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}):"";
@@ -9155,7 +9669,19 @@ function lpBind(it){ const q=s=>app.querySelector(s);
   if(it.phase==="repair" && it.rep.stage==="spot"){ app.querySelectorAll("[data-lpr]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.lpr, r=it.rspec, rp=it.rep; rp.picked=i;
       if(typeof walterLinkNextCheck==='function')walterLinkNextCheck(it.st.walterEvents||[],lpWalterContextKey(it),{status:i===r.wrongAt?'accepted':'miss',code:'spot'});
       if(i===r.wrongAt){ rp.stage="fix"; if(rp.tries) it.st.tries+=rp.tries; it.st.msg=`You found the first slip. Rebuild the step and check your own work.`; it.st.msgKind="ok"; lpRender(); }
-      else { rp.tries++; rp.msg = 'That is not the first slip. Check each change from the original question, then test the line you selected.'; it.st.codes.push("spot"); lpRender(); } });
+      else { rp.tries++; rp.msg = i===0?'Compare your selected line with the original question. Check whether it keeps the same amounts and operation.':'Read your selected line with the one above it. Test what changed, then check the earlier lines in order.'; it.st.codes.push("spot"); if(r.unit5)u5RepairHelp(it,true); lpRender(); } });
+    if(q('#u5repairhelp'))q('#u5repairhelp').onclick=()=>{
+      u5RepairHelp(it);lpRender();const target=q(it.rep.unit5Model?'#u5repairmodel':'#lpmsg');
+      if(target){target.focus({preventScroll:true});target.scrollIntoView({block:'nearest'});}
+    };
+    if(q('#lprepairinline'))q('#lprepairinline').onclick=()=>{
+      const rp=it.rep;
+      if(rp.inlineWalter?.move==='smaller'){walterInlineFocus('#walter-repair-model');return;}
+      const move=walterNextInlineMove(rp.inlineWalter,rp.tries>0);
+      lpRepairWalterRespond(it,'start',move==='start'?'orient':move,true);
+      if(rp.inlineWalter?.move!=='smaller')rp.msg=rp.inlineWalter?.text||rp.msg;
+      lpRender();walterInlineFocus(rp.inlineWalter?.move==='smaller'?'#walter-repair-model':'#lpmsg');
+    };
     const ask=q('#lpask');if(ask)ask.onclick=()=>{it.rep.walterOpen=!it.rep.walterOpen;lpRender();};
     const deliver=(id,move)=>{lpRepairWalterRespond(it,id,move);lpRender();q('#lpaskreply')?.focus({preventScroll:true});};
     if(q('#lpdirecthelp'))q('#lpdirecthelp').onclick=()=>deliver('start');
@@ -9188,8 +9714,23 @@ function lpBind(it){ const q=s=>app.querySelector(s);
   };
   const reply=()=>{ lpRender(); q("#lpaskreply")?.focus({preventScroll:true}); };
   if(q('#lpdirecthelp'))q('#lpdirecthelp').onclick=()=>{keepDraft();lpWalterRespond(it,'start');reply();};
+  if(q('#lpunit5help'))q('#lpunit5help').onclick=()=>{
+    keepDraft();u5LessonHelp(it);lpRender();
+    const target=q(it.st.unit5Help?.model?'#u5lessonmodel':'#lpmsg');
+    if(target){target.focus({preventScroll:true});target.scrollIntoView({block:'nearest'});}
+  };
+  if(q('#lpinlinehelp'))q('#lpinlinehelp').onclick=()=>{
+    keepDraft();
+    if(st.inlineWalter?.move==='smaller'){walterInlineFocus('#walter-lesson-model');return;}
+    const context=lpHelpContext(it),move=walterNextInlineMove(st.inlineWalter,['miss','trial'].includes(context.status));
+    const hadMessage=st.msg;
+    lpWalterRespond(it,'start',move==='start'?'orient':move,true);
+    if(st.inlineWalter?.move!=='smaller'){st.msg=st.inlineWalter?.text||hadMessage;st.msgKind='';}
+    lpRender();
+    walterInlineFocus(st.inlineWalter?.move==='smaller'?'#walter-lesson-model':'#lpmsg');
+  };
   const observation=lpHelpContext(it);
-  if(st.walterOpen&&st.walterChoice?.step===st.k&&['miss','format'].includes(observation.status)){
+  if((walterInlineLesson(it)||st.walterOpen&&st.walterChoice?.step===st.k||step.unit5&&st.unit5Help?.k===st.k)&&['miss','format','trial'].includes(observation.status)){
     const target=observation.field>=0?q(`[data-lpi="${observation.field}"]`):q('#lpin');
     if(target){target.classList.add('walter-target');target.addEventListener('input',()=>target.classList.remove('walter-target'),{once:true});}
   }
@@ -9854,11 +10395,55 @@ function cxDecimalDivide(o){const {N,d,method}=o,q=+(N/d).toFixed(4),places=Math
  }else{steps.push(cxFields(`Rename both amounts in ${units}.`,['Dividend count','Divisor count'],[Nc,dc],'decimal-unit'));steps.push(cxNum(`How many groups of ${dc} fit in ${Nc}?`,q,'decimal-share'));}
  steps.push(cxNum('Write the quotient as a number.',q,'decimal-share'));
  return cxSeq({kind:'decimal-'+method,title:`${N} ÷ ${d}`,answer:q,steps,audit:{family:'decdiv',N,d,result:q,method},visual:st=>st.k>0?cxFractionBars(cxF(Nc,scale),'Original dividend')+`<p>Use equal groups. Original total: ${N}; ${method==='dealing'?`number of groups: ${d}`:`size of a group: ${d}`}.</p>`:'',done:()=>`${N} ÷ ${d} = <b>${q}</b>. Check: ${q} × ${d} = ${N}.`});}
-function cxFractionBasics(o){const {a,mode}=o,steps=[];
- if(mode==='simplify'){const g=gcd(a.n,a.d);steps.push(cxNum(`Find the greatest common factor of ${a.n} and ${a.d}.`,g,'fraction-simplify'));steps.push(cxFields(`Divide both counts by ${g}.`,['Numerator','Denominator'],[a.n/g,a.d/g],'fraction-simplify'));steps.push(cxSimple('Write the simplest fraction.',cxF(a.n,a.d)));}
- else {const w=Math.floor(a.n/a.d),r=a.n%a.d;steps.push(cxFields(`Find the whole groups and leftover pieces in ${a.n}/${a.d}.`,['Whole groups','Leftover pieces'],[w,r],'fraction-divide'));steps.push(cxFrac('Write the same value as a mixed number.',a,'fraction-combine'));steps.push(cxNum(`Rename that mixed number in ${a.d}ths. How many pieces?`,a.n,'common-unit'));}
- return cxSeq({kind:'fraction-'+mode,title:`${mode==='simplify'?'Simplify':'Rename'} ${a.n}/${a.d}`,steps,answer:a.n/a.d,answerCheck:v=>cxEq(cxRead(v),a),audit:{family:mode,a},visual:()=>cxFractionBars(a,'Original amount'),done:()=>`The equivalent value is <b>${cxText(cxF(a.n,a.d))}</b>.`});}
-function cxEstimate(o){const {a,b,op}=o,bench=f=>Math.round(f.n/f.d*2)/2,A=bench(a),B=bench(b),val=op==='+'?A+B:A-B,steps=[cxNum(`Choose the nearest whole or half benchmark for ${cxText(a)}. If tied, use the larger benchmark here.`,A,'fraction-estimate'),cxNum(`Choose the nearest whole or half benchmark for ${cxText(b)}. If tied, use the larger benchmark here.`,B,'fraction-estimate'),cxNum('Use those benchmarks in the original operation.',val,'fraction-estimate')];return cxSeq({kind:'fraction-estimate',title:`Estimate ${cxText(a)} ${op} ${cxText(b)}`,steps,answer:val,audit:{family:'estimate',a,b,op,result:val},done:()=>`Benchmark estimate: <b>${val}</b>. This is an estimate, not the exact result.`});}
+function cxFractionBasics(o){
+ const {a,mode}=o,g=gcd(a.n,a.d),steps=[];
+ if(mode==='simplify'){
+  steps.push(u5Card(cxStep({prompt:`Choose a whole number bigger than 1 that divides both ${a.n} and ${a.d} evenly.`,input:{type:'num'},auto:g,
+   check:v=>{const n=u5Count(v);if(!Number.isInteger(n))return {ok:false,fmt:true,msg:'Enter a whole number for the group size.'};
+    return n>1&&a.n%n===0&&a.d%n===0?{ok:true}:{ok:false,code:'fraction-simplify'};}},'fraction-simplify'),'factor',{a}));
+  steps.push(null);
+  steps.push(u5Card(cxSimple('Write the simplest fraction. If both counts can still be divided by the same number, keep going.',cxF(a.n,a.d)),'simplest',{a}));
+ }else{
+  const w=Math.floor(a.n/a.d),r=a.n%a.d;
+  steps.push(u5Card(cxFields(`Group ${a.n} pieces into wholes of ${a.d} pieces each.`,['Full wholes','Pieces left'],[w,r],'fraction-divide'),'whole-and-left',{a}));
+  const mixed=cxFrac('Write the whole count and leftover fraction as a mixed number.',a,'fraction-combine'),check=mixed.check;
+  mixed.check=v=>{const f=parseMixedWalkEntry(v),result=check(f?.d>0?mixedText(f.w,f.n,f.d):v);return result.ok&&!(f?.w>0&&f.n>0&&f.n<f.d)?{ok:false,code:'fraction-combine'}:result;};
+  steps.push(u5Card(mixed,'mixed-form',{a,first:w,second:r}));
+  steps.push(u5Card(cxNum(`Change the mixed number back. How many pieces of size 1/${a.d} are there altogether?`,a.n,'common-unit'),'pieces-from-mixed',{a}));
+ }
+ const sp=cxSeq({kind:'fraction-'+mode,title:`${mode==='simplify'?'Simplify':'Rename'} ${a.n}/${a.d}`,steps,answer:a.n/a.d,answerCheck:v=>cxEq(cxRead(v),a),audit:{family:mode,a},visual:()=>cxFractionBars(a,'Original amount'),done:()=>`The equivalent value is <b>${cxText(cxF(a.n,a.d))}</b>.`});
+ const next=sp.next;
+ sp.next=st=>{
+  if(mode!=='simplify')return next(st);
+  const saved=st.unit5Factor,factor=Number.isInteger(saved)&&saved>1&&a.n%saved===0&&a.d%saved===0?saved:g;
+  if(st.k===0){
+   const step=steps[0],check=step.check;
+   return {...step,check:v=>{const result=check(v);if(result.ok)result.apply=()=>{st.unit5Factor=u5Count(v);};return result;}};
+  }
+  if(st.k===1)return u5Card(cxFields(`Divide both numbers by ${factor}.`,['Top number','Bottom number'],[a.n/factor,a.d/factor],'fraction-simplify'),'reduce-pair',{a,factor});
+  if(st.k===2)return {...steps[2],unit5:{...steps[2].unit5,factor}};
+  return null;
+ };
+ return sp;
+}
+function cxEstimate(o){
+ const {a,b,op,unit5}=o,bench=f=>Math.round(f.n/f.d*2)/2,A=bench(a),B=bench(b),val=op==='+'?A+B:A-B;
+ const benchmark=(f,answer)=>cxNum(unit5?`Choose the nearest whole or half for ${cxText(f)}. If tied, use the larger mark.`:`Choose the nearest whole or half benchmark for ${cxText(f)}. If tied, use the larger benchmark here.`,answer,'fraction-estimate');
+ const steps=[benchmark(a,A),benchmark(b,B),cxNum('Use those estimates in the original operation.',val,'fraction-estimate')];
+ if(unit5){
+  for(const [i,step] of steps.entries()){
+   const check=step.check;
+   step.input={type:'text',ph:'whole or half, like 1/2'};
+   step.check=(raw,st)=>{
+    const f=u5Fraction(raw),n=f?frValue(f):u5Count(raw);
+    if(!Number.isFinite(n))return {ok:false,fmt:true,msg:'Enter a whole number or a half, like 1/2 or 1 1/2.'};
+    return check(n,st);
+   };
+   u5Card(step,i<2?'benchmark':'estimate-total',i<2?{a:[a,b][i]}:{a,b,checkedBench:[u5Half(A),u5Half(B)]});
+  }
+ }
+ return cxSeq({kind:'fraction-estimate',title:`Estimate ${cxText(a)} ${op} ${cxText(b)}`,steps,answer:val,audit:{family:'estimate',a,b,op,result:val},done:()=>`Benchmark estimate: <b>${val}</b>. This is an estimate, not the exact result.`});
+}
 
 function cxSimple(prompt,ans){const c=cxFrac(prompt,ans,'fraction-simplify'),check=c.check;c.check=v=>{const r=check(v);if(!r.ok)return r;const f=parseFraction(String(v));return f&&gcd(f.n,f.d)===1?{ok:true}:{ok:false,code:'fraction-simplify',msg:'The value matches. Test whether a common factor remains.'};};return c;}
 function cxFractionLine(st,op){const fval=f=>f.n/f.d,max=Math.max(2,Math.ceil(fval(st.cur)+fval(st.remaining))),X=f=>35+fval(f)/max*450;return `<svg viewBox="0 0 520 150" role="img" aria-label="Fraction number line with accepted jumps only"><line x1="35" y1="100" x2="485" y2="100" stroke="#1b2a41"/>${Array.from({length:max+1},(_,i)=>`<line x1="${35+i/max*450}" y1="94" x2="${35+i/max*450}" y2="106" stroke="#1b2a41"/><text x="${35+i/max*450}" y="130" text-anchor="middle" font-size="13">${i}</text>`).join('')}${st.jumps.map((j,i)=>`<path d="M${X(j.from)} 100 Q${(X(j.from)+X(j.to))/2} ${20+(i%3)*15} ${X(j.to)} 100" fill="none" stroke="#2f7c9e" stroke-width="2"/><text x="${(X(j.from)+X(j.to))/2}" y="${24+(i%3)*15}" font-size="12" text-anchor="middle">${op}${cxText(j.jump)}</text>`).join('')}<circle cx="${X(st.cur)}" cy="100" r="5" fill="#b45309"/></svg>`;}
@@ -9873,7 +10458,30 @@ function cxFractionCombine(o){const {a,b,op,method,regroup}=o,value=op==='+'?cxA
   if(st.stage==='combine')return cxNum(`Combine the checked piece counts: ${st.an} ${op} ${st.bn}.`,op==='+'?st.an+st.bn:st.an-st.bn,'fraction-combine',()=>{st.combined=op==='+'?st.an+st.bn:st.an-st.bn;st.stage='final';});
   if(st.stage==='final')return cxFrac('Write the result, simplifying the fraction when possible.',value,'fraction-combine',()=>{st.stage='done';});return null;},
   oneShot:st=>method==='line'&&st.jumps.length<=1,
-  visual:st=>method==='area'?cxFractionBars(a,'First original amount',st.D)+cxFractionBars(b,'Second original amount',st.D):method==='line'?cxFractionLine(st,op)+`<p>Current point: ${cxText(st.cur)}. Amount still to ${op==='+'?'add':'subtract'}: ${cxText(st.remaining)}.</p>${st.jumps.map(j=>`<p>Checked: ${cxText(j.from)} → ${cxText(j.to)} (${op}${cxText(j.jump)})</p>`).join('')}`:st.an!==null?`<p>Checked first numerator: ${st.an}, denominator: ${st.D}.${st.bn!==null?` Checked second numerator: ${st.bn}.`:''}</p>`:'',done:()=>`${cxText(a)} ${op} ${cxText(b)} = <b>${cxText(value)}</b>.`};return sp;}
+  visual:st=>method==='area'?cxFractionBars(a,'First original amount',st.D)+cxFractionBars(b,'Second original amount',st.D):method==='line'?cxFractionLine(st,op)+`<p>Current point: ${cxText(st.cur)}. Amount still to ${op==='+'?'add':'subtract'}: ${cxText(st.remaining)}.</p>${st.jumps.map(j=>`<p>Checked: ${cxText(j.from)} → ${cxText(j.to)} (${op}${cxText(j.jump)})</p>`).join('')}`:st.an!==null?`<p>Checked first numerator: ${st.an}, denominator: ${st.D}.${st.bn!==null?` Checked second numerator: ${st.bn}.`:''}</p>`:'',done:()=>`${cxText(a)} ${op} ${cxText(b)} = <b>${cxText(value)}</b>.`};
+ if(o.unit5){
+  const next=sp.next;
+  sp.next=st=>{
+   const step=next(st);
+   if(!step)return null;
+   const stage=st.stage;
+   switch(stage){
+    case 'denominator':step.prompt='Choose a bottom number both fractions can use (up to 120).';return u5Card(step,'common',{a,b});
+    case 'first':
+    case 'second': {
+     const f=stage==='first'?a:b;
+     step.prompt=`Rewrite ${cxText(f)} with ${st.D} on the bottom. What goes on top?`;
+     return u5Card(step,'rename',{a:f,D:st.D});
+    }
+    case 'combine':return u5Card(step,'add-counts',{a,b,D:st.D,first:st.an,second:st.bn});
+    case 'jump':return u5Card(step,'jump',{D:st.D,from:st.cur,remaining:st.remaining});
+    case 'landing':return u5Card(step,'landing',{from:st.cur,jump:st.pending,remaining:st.remaining,D:st.D});
+    case 'final':step.prompt='Write the sum as a fraction or mixed number.';return u5Card(step,'sum',{a,b,D:st.D,first:st.combined??undefined,from:method==='line'?st.cur:null});
+    default:return step;
+   }
+  };
+ }
+ return sp;}
 function cxFractionProduct(o){const {a,b,mode}=o,val=cxMul(a,b),relation=b.n<b.d?0:b.n===b.d?1:2,steps=[];
  if(mode==='division'){steps.push(cxChoice(`A total of ${a.n} is shared equally among ${a.d} ${a.d===1?'group':'groups'}. Which expression gives each share?`,[`${a.n} ÷ ${a.d}`,`${a.n} + ${a.d}`,`${a.n} × ${a.d}`],0,'fraction-divide'));steps.push(cxFrac('Write the share as a fraction.',a,'fraction-divide'));return cxSeq({kind:'fraction-as-division',title:`${a.n} shared among ${a.d}`,answer:a.n/a.d,answerCheck:v=>cxEq(cxRead(v),a),steps,audit:{family:'frac-as-division',a},done:()=>`Each share is <b>${cxText(a)}</b>.`});}
  if(['reason','one','scale'].includes(mode))steps.push(cxChoice(`Before calculating: compared with ${cxText(a)}, the product will be…`,['smaller','equal','larger'],relation,'fraction-scale'));
@@ -9970,7 +10578,7 @@ const CX_SLIPS={
  'measurement':['Read the supplied conversion relationship.','Change the unit label but keep the unit count unchanged.','Compare the available and needed amounts.'],
  'lineplot':['Read the fractional tick size.','Count each occupied tick only once, ignoring repeated observations.','Find the total.']
 };
-function cxRepair(bp,component,load){const fix=bp.make(load||1,'repair',0);return {story:`Review this proposed method for ${lpPlain(fix.title)}. These lines describe a learner's plan.`,steps:CX_SLIPS[component]||CX_SLIPS['common-unit'],wrongAt:1,clue:cxGuide(component)[0],whyWrong:cxGuide(component)[1],fix};}
+function cxRepair(bp,component,load){const fix=bp.make(load||1,'repair',0);return {unit5:bp.unit===5?component:null,story:`Review this proposed method for ${lpPlain(fix.title)}. These lines describe a learner's plan.`,steps:bp.unit===5&&component==='fraction-estimate'?['Find a nearby whole or half for each original amount.','Add the original fractions and report the exact sum as the estimate.','Check that the estimate makes sense.']:CX_SLIPS[component]||CX_SLIPS['common-unit'],wrongAt:1,clue:cxGuide(component)[0],whyWrong:cxGuide(component)[1],fix};}
 function cxChooseFractions(load,subtract,regroup){let da=lpPick(load<=1?[2,3,4]:[3,4,5,6,8]),db=lpPick([2,3,4,5,6,8].filter(d=>d!==da));let a=cxF(lpRnd(1,da-1),da),b=cxF(lpRnd(1,db-1),db);if(a.d===b.d)b=cxF(1,7);
  if(regroup){if(a.n*b.d>=b.n*a.d)[a,b]=[b,a];if(cxEq(a,b)){a=cxF(1,4);b=cxF(2,3);}a=cxAdd(a,cxF(lpRnd(1,load+1)));}
  else if(subtract){if(a.n*b.d<b.n*a.d)[a,b]=[b,a];if(cxEq(a,b)){a=cxF(3,4);b=cxF(1,3);}if(load>=2)a=cxAdd(a,cxF(lpRnd(1,2)));}
@@ -10006,7 +10614,7 @@ for(let n=1;n<=10;n++){
  cxRegister(5,n,n<=4?'fractions':'fracaddsub','fraction',n<=2?'Find a common factor and simplify both counts together.':n===3?'Estimate a fraction sum with nearby whole and half benchmarks.':n===4?'Connect mixed numbers and improper fractions using whole groups and leftover pieces.':`Add unlike fractions with ${mode==='line'?'chosen number-line jumps':mode==='area'?'equal-part area models':'equivalent fractions'}, and check the common units.`,n<=2?'fraction-simplify':n===3?'fraction-estimate':n===4?'fraction-rename':'common-unit',(load)=>{
   if(mode==='simplify'){const d=lpRnd(3,9),k=lpRnd(2,5);return cxFractionBasics({a:{n:lpRnd(1,d-1)*k,d:d*k},mode});}
   if(mode==='mixed'){const d=lpPick([3,4,5,8]);return cxFractionBasics({a:cxF(lpRnd(1,load+2)*d+lpRnd(1,d-1),d),mode});}
-  const o=cxChooseFractions(load,false,false);return mode==='estimate'?cxEstimate({...o,op:'+'}):cxFractionCombine({...o,op:'+',method:mode});
+  const o=cxChooseFractions(load,false,false);return mode==='estimate'?cxEstimate({...o,op:'+',unit5:true}):cxFractionCombine({...o,op:'+',method:mode,unit5:true});
  });
 }
 for(let n=1;n<=11;n++){
@@ -10036,17 +10644,17 @@ for(const n of [1,2,3,4,5,6,8,9,10,11])cxRegister(11,n,'measurement','measure',n
 });
 // Ordinary mixed practice uses static computation/property checks. Exact representations
 // and learner-chosen trials are served by the explicitly labelled lesson routes.
-function cxOrdinary(skill,level,focus){let id=focus?.lessonId;if(!id||!LP_CURRICULUM[id]||LP_CURRICULUM[id].skill!==skill){const all=Object.keys(LP_CURRICULUM).filter(id=>LP_CURRICULUM[id].skill===skill),reached=classCalOn()?all.filter(id=>taughtSk(skill,{lessonId:id})):all;if(!reached.length)throw Error('No reached lesson for '+skill);id=lpPick(reached);}
+function cxOrdinary(skill,level,focus){let id=focus?.lessonId;if(!id||!LP_CURRICULUM[id]||LP_CURRICULUM[id].skill!==skill){const all=Object.keys(LP_CURRICULUM).filter(id=>LP_CURRICULUM[id].skill===skill&&(!focus?.unit5Review||id.startsWith('U5L'))),reached=classCalOn()&&!focus?.unit5Review?all.filter(id=>taughtSk(skill,{lessonId:id})):all;if(!reached.length)throw Error('No reached lesson for '+skill);id=lpPick(reached);}
  const sp=LP_CURRICULUM[id].make(Math.min(3,Math.ceil(level/2)),'mixed',0),st={k:0,...sp.init()},cards=[];let guard=0;
- while(guard++<80){const step=sp.next(st);if(!step)break;const value=step.auto;if(value===undefined)throw Error('No static candidate '+id);if(st.stage==='denominator')step.prompt='Find the least common denominator for the original fractions.';if(st.stage==='jump')step.prompt=`Use one jump for the entire remaining amount ${cxText(st.remaining)}. How large is that jump?`;cards.push(step);const r=step.check(value,st);if(!r.ok)throw Error('Invalid model candidate '+id);if(r.apply)r.apply();st.k++;}
+ while(guard++<80){const step=sp.next(st);if(!step)break;const value=step.auto;if(value===undefined)throw Error('No static candidate '+id);if(st.stage==='denominator'){step.prompt='Find the least common denominator for the original fractions.';if(step.unit5)step.unit5.least=true;}if(st.stage==='jump'){step.prompt=`Use one jump for the entire remaining amount ${cxText(st.remaining)}. How large is that jump?`;if(step.unit5)step.unit5.singleJump=true;}cards.push(step);const r=step.check(value,st);if(!r.ok)throw Error('Invalid model candidate '+id);if(r.apply)r.apply();st.k++;}
  if(guard>=80)throw Error('Static conversion loop');const steps=[];
- for(const c of cards){const comp=c.evidence?.component,base={t:'Use the original quantities and checked work for this card.',curriculumGuide:c.curriculumGuide};
+ for(const c of cards){const comp=c.evidence?.component,base={t:'Use the original quantities and checked work for this card.',curriculumGuide:c.curriculumGuide,unit5:c.unit5};
   if(c.input.type==='nums'){c.input.labels.forEach((label,j)=>steps.push({...base,check:wc(ci(c.prompt+' '+label+'?',+c.auto[j]),comp)}));}
   else if(c.input.type==='mc')steps.push({...base,check:wc(cm(c.prompt,c.input.options,c.auto),comp)});
   else if(c.input.type==='text')steps.push({...base,check:wc({q:c.prompt,type:'input',text:true,display:String(c.auto),answer:cxRead(c.auto)?.n/cxRead(c.auto)?.d,validate:v=>cxEq(cxRead(v),cxRead(c.auto))&&(comp!=='fraction-simplify'||gcd(parseFraction(String(v))?.n||0,parseFraction(String(v))?.d||1)===1)},comp)});
   else steps.push({...base,check:wc(ci(c.prompt,+c.auto),comp)});
  }
- const selected=Number.isInteger(focus?.cardIndex)&&steps[focus.cardIndex]||focus?.tag&&steps.find(x=>x.check.comp===focus.tag)||[...steps].reverse().find(x=>x.check.type!=='mc')||steps.at(-1),last=selected.check,p={skill,level,prompt:`${esc(lpPlain(sp.title))}${sp.prompt?'<p>'+esc(lpPlain(sp.prompt))+'</p>':''}${sp.visual?'<div class="cxvisual">'+sp.visual({k:0,...sp.init()})+'</div>':''}<br>${last.q}`,type:last.type,answer:last.answer,display:last.display??String(last.options?.[last.answer]),text:!!last.text,validate:last.validate,options:last.options,steps,meta:{variant:sp.kind,lessonId:id,cardIndex:steps.indexOf(selected)},mainComp:last.comp,traps:[last.comp],show:null,why:null};return p;}
+ const selected=Number.isInteger(focus?.cardIndex)&&steps[focus.cardIndex]||focus?.tag&&steps.find(x=>x.check.comp===focus.tag)||[...steps].reverse().find(x=>x.check.type!=='mc')||steps.at(-1),last=selected.check,p={skill,level,prompt:`${esc(lpPlain(sp.title))}${sp.prompt?'<p>'+esc(lpPlain(sp.prompt))+'</p>':''}${sp.visual?'<div class="cxvisual">'+sp.visual({k:0,...sp.init()})+'</div>':''}<br>${last.q}`,type:last.type,answer:last.answer,display:last.display??String(last.options?.[last.answer]),text:!!last.text,validate:last.validate,options:last.options,steps,unit5Given:lpPlain(sp.title),unit5Answer:selected.unit5,meta:{variant:sp.kind,lessonId:id,cardIndex:steps.indexOf(selected)},mainComp:last.comp,traps:[last.comp],show:null,why:null};return p;}
 for(const [skill,name,std,blurb] of [
  ['fracaddsub','Add and subtract fractions','5.NF.1 5.NF.2','Equivalent fractions, unlike denominators, and whole-number exchanges'],
  ['fracmultiply','Multiply fractions','5.NF.3 5.NF.4 5.NF.5 5.NF.6','Fractions as division, scaling, product comparisons, and fraction products'],
@@ -10057,6 +10665,7 @@ for(const [skill,name,std,blurb] of [
 ]){SKILLS[skill]={name,std,blurb,gen:safeGen((level,focus)=>cxOrdinary(skill,level,focus)),lessons:LESSONS.filter(l=>l.skills.includes(skill)).map(l=>l.id)};SKILL_ORDER.push(skill);}
 // The previously calendar-only assessment entries now select a review of their unit's skills.
 for(const l of LESSONS){if(l.type==='MT'&&l.unit>=4)l.skills=[...new Set(LESSONS.filter(x=>x.unit===l.unit&&x.type!=='MT').flatMap(x=>x.skills))];}
+lessonById('U5L11').focus={fractions:{variant:'estimate'},fracaddsub:{unit5Review:true}};
 for(const k of SKILL_ORDER)SKILLS[k].lessons=LESSONS.filter(l=>l.skills.includes(k)).map(l=>l.id);
 const _cxCtxOf=ctxOf;ctxOf=function(p){const c=_cxCtxOf(p);if(p&&['fracaddsub','fracmultiply','fracdivide','geometry','graphing','measurement'].includes(p.skill)){c.variant=p.meta?.variant||'';c.lessonId=p.meta?.lessonId||'';}return c;};
 const CX_NEW_SKILLS=['fracaddsub','fracmultiply','fracdivide','geometry','graphing','measurement'];
