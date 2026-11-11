@@ -446,6 +446,19 @@ details.more>div{padding:4px 0 2px;color:var(--graphite)}
 .ddgrid-equation > span:first-child { font-size:1.25rem; font-weight:700; overflow-wrap:anywhere; }
 .ddgrid-equation input { flex:1 1 8rem; width:auto; min-width:0; }
 
+
+/* Keep division work in the same stacked arrangement as a written fraction. */
+.u5-division-work{max-width:360px;margin:16px auto;padding:12px 8px;border:1px solid var(--line,#b9c5d1);border-radius:12px;background:#fff}
+.u5-division-labels{display:grid;grid-template-columns:1fr 1.7fr 1.3fr;gap:4px;text-align:center;font-size:12px;line-height:1.3;margin-bottom:10px}
+.u5-division-equation{display:grid;grid-template-columns:minmax(32px,1fr) 20px minmax(52px,1.35fr) 20px minmax(52px,1.35fr);gap:3px;align-items:center;font-size:24px;text-align:center}
+.u5-fraction,.u5-division-signs{display:grid;grid-template-rows:60px 60px;align-items:stretch;min-width:0}
+.u5-fraction>span,.u5-division-signs>span{display:flex;align-items:center;justify-content:center;min-width:0}
+.u5-fraction>:first-child{border-bottom:3px solid #26364a}
+.u5-fraction .ans{width:100%;min-width:0;max-width:100%;height:54px;margin:3px 0;padding:4px;text-align:center;font-size:24px;box-sizing:border-box}
+.u5-divisors>input:first-child{border-bottom-width:3px}
+.u5-division-note{font-size:14px;margin:10px 0 0;text-align:center}
+.u5-empty{color:#687585}
+
 </style>
 </head>
 <body>
@@ -1728,7 +1741,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.9.1 · November 10, 2026";
+const BUILD="v10.10.0 · November 11, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -6818,6 +6831,7 @@ function u5PracticeSetup(p){
     p.steps[0].checkedDisplay=String(factor);
     for(const [i,value,role] of [[1,a.n,'reduce-top'],[2,a.d,'reduce-bottom']]){
       p.steps[i].unit5={a,factor,role};
+      p.steps[i].onAccept=value=>{p.steps[i].checkedDisplay=String(u5Count(value));};
       p.steps[i].check=wc(ci(`Count the groups. ${value} ÷ ${factor} = ?`,value/factor),'fact');
     }
     p.steps[3].unit5={a,factor,role:'simplest'};
@@ -6926,6 +6940,65 @@ function u5RepairHelp(it,afterMiss=false){
   lpWalterTrimEvents(st);
   if(model)rp.unit5Model=true;
   else rp.unit5Cue=cue;
+}
+
+// A shared division workspace uses only givens, drafts and accepted arithmetic.
+function u5DivisionLayout(card,fields=[],checked=[]){
+  if(!card||!['factor','reduce-pair','reduce-top','reduce-bottom','simplest'].includes(card.role))return '';
+  const {a,factor,role}=card;
+  if(role==='simplest'&&!factor)return '';
+  const blank='<span class="u5-empty" aria-label="Not worked out yet">?</span>';
+  const fixed=v=>v===undefined?blank:`<span class="u5-checked">${esc(v)}</span>`;
+  const choosing=role==='factor',pair=role==='reduce-pair';
+  const divisor=choosing?(fields[0]||blank):fixed(factor);
+  const repeat=choosing?'<span data-u5-divisor aria-label="Same number on the bottom">?</span>':fixed(factor);
+  const top=pair||role==='reduce-top'?fields[0]:fixed(checked[0]);
+  const bottom=pair?fields[1]:role==='reduce-bottom'?fields[0]:fixed(checked[1]);
+  return `<div class="u5-division-work" role="group" aria-label="Divide the top and bottom by the same number">
+    <div class="u5-division-labels" aria-hidden="true"><span>Original</span><span>Divide both by</span><span>New fraction</span></div>
+    <div class="u5-division-equation">
+      <div class="u5-fraction"><span aria-label="Original top ${a.n}">${a.n}</span><span aria-label="Original bottom ${a.d}">${a.d}</span></div>
+      <div class="u5-division-signs" aria-hidden="true"><span>÷</span><span>÷</span></div>
+      <div class="u5-fraction u5-divisors">${divisor}${repeat}</div>
+      <span class="u5-equals" aria-hidden="true">=</span>
+      <div class="u5-fraction u5-results">${top}${bottom}</div>
+    </div>
+    ${choosing?'<p class="muted u5-division-note">Type one number. We use it on the top and bottom.</p>':''}
+  </div>`;
+}
+function u5DivisionInput(card,value,id,label,locked=false){
+  return `<input class="ans small lpans" ${id} inputmode="decimal" autocomplete="off" aria-label="${esc(label)}" placeholder="?" value="${esc(value??'')}"${locked?' disabled':''}>`;
+}
+function u5LessonDivisionInput(step,st,locked){
+  const c=step.unit5;
+  if(!c||!['factor','reduce-pair','simplest'].includes(c.role))return null;
+  const draft=st.draft?.k===st.k?st.draft.values:[];
+  if(c.role==='simplest')return null;
+  const fields=c.role==='factor'
+    ?[u5DivisionInput(c,draft[0],'id="lpin"','Number to divide both by',locked)]
+    :[0,1].map(i=>u5DivisionInput(c,draft[i],`data-lpi="${i}"`,`New ${i?'bottom':'top'} number: ${i?c.a.d:c.a.n} divided by ${c.factor}`,locked));
+  return u5DivisionLayout(c,fields);
+}
+function u5PracticeDivisionInput(c,locked){
+  const card=cur?.steps?.[stepIdx]?.unit5;
+  if(!card||!['factor','reduce-top','reduce-bottom'].includes(card.role))return null;
+  const value=sc.val;
+  const label=card.role==='factor'?'Number to divide both by':`New ${card.role==='reduce-top'?'top':'bottom'} number`;
+  const checked=[1,2].map(i=>stepRes[i]==='ok'?cur.steps[i]?.checkedDisplay:undefined);
+  return u5DivisionLayout(card,[u5DivisionInput(card,value,'id="cans"',label,locked)],checked);
+}
+function u5BindDivision(){
+  const mirror=app.querySelector('[data-u5-divisor]');
+  if(!mirror)return;
+  const input=app.querySelector('.u5-divisors input');
+  if(!input)return;
+  const sync=()=>{mirror.textContent=input.value.trim()||'?';};
+  sync();input.addEventListener('input',sync);
+}
+
+function u5CheckedDivision(st){
+  // Older saved lessons have accepted inputs in the event log, before this layout existed.
+  return st.unit5Reduced||(st.stepEvents||[]).find(e=>e.step===1&&e.outcome==='ok'&&e.values?.length===2)?.values||[];
 }
 function hwEntry(prefill, err){
   mode="hw:check"; cur=null; pendingHW=null;
@@ -7912,8 +7985,11 @@ function stepHTML(s,i,dim,withCheck){
 }
 function checkCtlHTML(c){ // the entry control for a check, driven by sc. In confirm state it stays enabled with the right answer marked
   const open=scActive();
+  const division=u5PracticeDivisionInput(c,!open);if(division!==null)return division;
   if(c.type==="mc") return optsHTML("copts", c.options||[], sc.state==="explain"?c.answer:sc.sel, c.answer, !open, "opt copt", sc.state==="confirm"?c.answer:-1, sc.crossed);
-  return `<label class="vh" for="cans">Your answer for this step</label><input class="ans small${isTextTarget(c)?" text":""}" id="cans" ${ansAttrs(c)} autocomplete="off" placeholder="${c.mixedRole==='mixed-number'?'whole top/bottom':c.mixedRole==='improper-fraction'?'top/bottom':isTextTarget(c)?textPH(c):"Your answer"}" ${open?"":"disabled"} value="${esc(open?sc.val:c.display)}">`;
+  const card=cur?.steps?.[stepIdx]?.unit5;
+  const prefix=card?.role==='simplest'?u5DivisionLayout(card,[],[1,2].map(i=>stepRes[i]==='ok'?cur.steps[i]?.checkedDisplay:undefined)):'';
+  return prefix+`<label class="vh" for="cans">Your answer for this step</label><input class="ans small${isTextTarget(c)?" text":""}" id="cans" ${ansAttrs(c)} autocomplete="off" placeholder="${c.mixedRole==='mixed-number'?'whole top/bottom':c.mixedRole==='improper-fraction'?'top/bottom':isTextTarget(c)?textPH(c):"Your answer"}" ${open?"":"disabled"} value="${esc(open?sc.val:c.display)}">`;
 }
 function focusFirst(){
   const el = [".ws .cell.sel:not([disabled])","#ans:not([disabled])","#cans:not([disabled])","#check","#cstep","#xcheck","#wopts .opt","#step","#retry","#next"].map(s=>app.querySelector(s)).find(Boolean);
@@ -7946,6 +8022,7 @@ function bind(){
   if(q("workthrough")) q("workthrough").onclick=beginWalkthrough;
   if(q("hintwork")) q("hintwork").onclick=beginWalkthrough;
   if(q("withme")) q("withme").onclick=beginWalkthrough; // v9.20: from the hint ladder into the checked walkthrough (studied; never independent)
+  u5BindDivision();
   if(q("cstep")){
     q("cstep").onclick=checkStep;
     const ci=q("cans"); if(ci) ci.addEventListener("input",()=>{ sc.val=ci.value; });
@@ -9291,6 +9368,7 @@ function lpApply(item, v){ const st=item.st, step=item.step; if(!step) return; c
 
 // ---- input widgets ----
 function lpInputHTML(step, st, locked){ const I=step.input||{type:"num"}, dis=locked?" disabled":"", draft=st.draft&&st.draft.k===st.k?st.draft.values:[];
+  const division=u5LessonDivisionInput(step,st,locked);if(division!==null)return division;
   if(I.type==="text"&&I.prefix){
     const focus=st.walterOpen&&st.walterChoice?.step===st.k&&st.walterChoice.gridPlace==='equation';
     const prefix=String(draft?.[0]||'').includes('=')?'':I.prefix;
@@ -9609,7 +9687,7 @@ function lpWorkHTML(it){ lpPrepareStep(it); const sp=it.spec, st=it.st, ph=it.ph
     const clues=(st.helpShown||[]).map(t=>`<div class="lpclue">${t}</div>`).join("");
     const cue=st.msg||esc(unit5?.cue||(!inlineModel?inline?.text:'')||'');
     const readText=[sp.title||'',prompt,cue,unit5Model?u5Model(unit5Model).action:inlineModel?.text||''].filter(Boolean).join('. ');
-    work=`<p class="lpstep" id="lpstep-prompt">${prompt}</p>${typeof readAloudButton==='function'?readAloudButton(readText,'lp-prompt'):''}${sp.controls?.(st)||''}${lpInputHTML(step, st, false)}<div class="inline-err lpmsg${st.msgKind==="ok"?" ok":""}" id="lpmsg" tabindex="-1" role="status" aria-live="polite">${(unit5||inline||hasMiss)&&cue?'<b>Walter:</b> ':''}${cue}</div>${clues}
+    work=`<p class="lpstep" id="lpstep-prompt">${prompt}</p>${typeof readAloudButton==='function'?readAloudButton(readText,'lp-prompt'):''}${sp.controls?.(st)||''}${step.unit5?.role==='simplest'?u5DivisionLayout(step.unit5,[],u5CheckedDivision(st)):''}${lpInputHTML(step, st, false)}<div class="inline-err lpmsg${st.msgKind==="ok"?" ok":""}" id="lpmsg" tabindex="-1" role="status" aria-live="polite">${(unit5||inline||hasMiss)&&cue?'<b>Walter:</b> ':''}${cue}</div>${clues}
       <div class="actions"><button class="btn primary" id="lpcheck">${step.input&&step.input.type==="button"?esc(step.input.label||"Next"):"Check"}</button>${focused?`<button class="btn quiet" id="lpunit5help">${unit5?.model?'Look at the model':unit5?'Still stuck':'Help me'}</button>`:''}${compact?`<button class="btn quiet" id="lpinlinehelp">${inlineModel?'Look at the model':inline||hasMiss?'Still stuck':'Help me'}</button>`:''}${!lpWalterEligible(it)&&(step.help||[]).length>(st.helpShown||[]).length?`<button class="btn quiet" id="lphelp">${own?"I need a clue":"Clue"}</button>`:""}${!focused&&!compact&&own&&sp.answer!==undefined&&st.answerOnly===null?`<button class="btn quiet small" id="lpknow">I know the answer</button>`:""}${own&&st.answerOnly===true?`<button class="btn quiet small" id="lpskip">Skip building it</button>`:""}</div>
       ${unit5Model?u5ModelHTML(unit5Model,'u5lessonmodel'):''}${inlineModel?walterInlineModel(lpWalterSemanticContext(it),inlineModel,'walter-lesson-model'):''}${focused||compact?`<details${st.walterOpen||st.exampleNarr?' open':''}><summary>More help</summary>${lpWalterHTML(it)}${own&&sp.answer!==undefined&&st.answerOnly===null?'<button class="btn quiet small" id="lpknow">I know the answer</button>':''}</details>`:lpWalterHTML(it)}${walterFictionalHTML(st.fictional,st.fictionalNote,'lp')}${st.exampleNarr||""}${st.exampleNote?`<p class="muted">${esc(st.exampleNote)}</p>`:""}${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
   const walterLesson=st.done && ph!=="model" && !st.skipped && (st.tries>0 || st.helps>0) ? walterNote("nice","You worked through the steps and finished this one.",true) : ph==="delayed" ? walterNote("checkin","Here are new numbers. Show what you remember.",true) : ph==="guided" || (st.helpShown||[]).length ? walterNote("work","Let's check one step at a time.",true) : "";
@@ -9666,6 +9744,7 @@ function lpSummaryHTML(){ if(lp.homework)return fractionHomeworkSummaryHTML(); c
 
 // ---- binding ----
 function lpBind(it){ const q=s=>app.querySelector(s);
+  u5BindDivision();
   app.querySelectorAll(".lpvideo .video-link").forEach(vid=>vid.addEventListener("click", ()=>{ lpRecord({phase:"video"}, {kind:"video-link-tap", video:1, videoType:vid.dataset.videoType, ok:0, methodOk:0, firstTry:0}); }));
   if(it.phase==="intro"){ q("#lpgo").onclick=lpNext; q("#lpgo").focus({preventScroll:true}); return; }
   if(it.phase==="explain"){ q("#lpexpsave").onclick=()=>{ const t=String(q("#lpexp").value||"").trim().slice(0,280); if(!t){ q("#lpexpmsg").textContent="Type a thought, choose ‘I said it aloud,’ or skip."; return; } lpRecord(it, {kind:"explain", ok:1, text:t, mode:"typed", skipped:0}); lpNext(); }; q("#lpexpsaid").onclick=()=>{ lpRecord(it, {kind:"explain", ok:0, mode:"spoken", selfReported:1, skipped:0}); lpNext(); }; q("#lpexpskip").onclick=()=>{ lpRecord(it, {kind:"explain", ok:0, mode:"skipped", skipped:1}); lpNext(); }; return; }
@@ -10415,7 +10494,7 @@ function cxFractionBasics(o){
   steps.push(u5Card(mixed,'mixed-form',{a,first:w,second:r}));
   steps.push(u5Card(cxNum(`Change the mixed number back. How many pieces of size 1/${a.d} are there altogether?`,a.n,'common-unit'),'pieces-from-mixed',{a}));
  }
- const sp=cxSeq({kind:'fraction-'+mode,title:`${mode==='simplify'?'Simplify':'Rename'} ${a.n}/${a.d}`,steps,answer:a.n/a.d,answerCheck:v=>cxEq(cxRead(v),a),audit:{family:mode,a},visual:()=>cxFractionBars(a,'Original amount'),done:()=>`The equivalent value is <b>${cxText(cxF(a.n,a.d))}</b>.`});
+ const sp=cxSeq({kind:'fraction-'+mode,title:`${mode==='simplify'?'Simplify':'Rename'} ${a.n}/${a.d}`,steps,answer:a.n/a.d,answerCheck:v=>cxEq(cxRead(v),a),audit:{family:mode,a},visual:st=>mode==='simplify'?u5DivisionLayout({a,role:st.k===0?'factor':'simplest',factor:st.unit5Factor},[],u5CheckedDivision(st)):cxFractionBars(a,'Original amount'),done:()=>`The equivalent value is <b>${cxText(cxF(a.n,a.d))}</b>.`});
  const next=sp.next;
  sp.next=st=>{
   if(mode!=='simplify')return next(st);
@@ -10424,7 +10503,10 @@ function cxFractionBasics(o){
    const step=steps[0],check=step.check;
    return {...step,check:v=>{const result=check(v);if(result.ok)result.apply=()=>{st.unit5Factor=u5Count(v);};return result;}};
   }
-  if(st.k===1)return u5Card(cxFields(`Divide both numbers by ${factor}.`,['Top number','Bottom number'],[a.n/factor,a.d/factor],'fraction-simplify'),'reduce-pair',{a,factor});
+  if(st.k===1){
+   const step=u5Card(cxFields(`Divide both numbers by ${factor}.`,['Top number','Bottom number'],[a.n/factor,a.d/factor],'fraction-simplify'),'reduce-pair',{a,factor}),check=step.check;
+   return {...step,check:v=>{const r=check(v);if(r.ok)r.apply=()=>{st.unit5Reduced=v.map(u5Count);};return r;}};
+  }
   if(st.k===2)return {...steps[2],unit5:{...steps[2].unit5,factor}};
   return null;
  };
