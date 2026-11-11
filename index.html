@@ -485,6 +485,7 @@ button.u5-block:focus-visible{outline:3px solid #111;outline-offset:-3px;z-index
 
 .u5-block-target{outline:3px solid #a65d00;outline-offset:5px;border-radius:3px}
 .lpmsg.block-review,.inline-msg.block-review{color:#785000}
+.diagram-tree{text-align:center}.diagram-cells{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.diagram-cells>div{border:1px solid #9aaab9;text-align:center;overflow-wrap:anywhere}.diagram-draft{margin:12px 0;padding:12px;border:1px solid #9aaab9;border-radius:12px}.diagram-block-row{padding:8px 0;border-top:1px solid #d8dfe6}.diagram-block-row .lpdecunits{display:flex;flex-wrap:wrap;gap:3px;max-width:100%;overflow:hidden}.diagram-block-row .actions{margin-top:6px}
 </style>
 </head>
 <body>
@@ -1767,7 +1768,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.12.0 · November 11, 2026";
+const BUILD="v10.13.0 · November 11, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -7249,6 +7250,111 @@ function u5BlockHistory(owner){
 function u5BlockFormatBase(card,raw,base){
   return card?.role==='rename'&&u5Fraction(raw)?'This box asks for the new top number. Count your shaded blocks and enter only that count.':base;
 }
+// Structured learner work only. Read-only illustrations and freehand ink are not inferred answers.
+function diagramMethodState(it){let st=it.st;for(let i=0;i<4;i++){const inner=st.baseState||st.methodState;if(!inner)break;st=inner;}return st;}
+function diagramValues(it){return it.st.draft?.k===it.st.k?it.st.draft.values||[]:[];}
+function diagramNumbers(v){return v.map(x=>String(x??'').trim()===''?null:lpDecRead(x));}
+function diagramCanPlot(it){return it.step?.input?.type==='nums'&&it.step.input.labels?.length===2&&/^(coordinate-|data-)/.test((it.step.strategyKind||it.spec.kind))&&!it.step.input.labels.includes('Horizontal interval');}
+function diagramObservation(it,submitted){
+ if(!it?.step||it.phase==='model'||it.step.unit5)return null;
+ const st=diagramMethodState(it),I=it.step.input||{},kind=it.step.strategyKind||it.spec.kind,raw=submitted===undefined?diagramValues(it):Array.isArray(submitted)?submitted:[submitted],v=diagramNumbers(raw),component=it.step.evidence?.component;
+ let type,work;
+ if(['decimal-blocks','decimal-chart'].includes(kind)&&I.type==='nums'){
+  if(!raw.some(x=>String(x??'').trim()!==''))return null;
+  type='place-blocks';work={places:I.labels.map(lpPlain),counts:v.map(x=>Number.isFinite(x)?x:null),stage:st.stage};
+ }else if(kind==='decimal-line'&&st.stage==='land'&&Number.isFinite(v[0])){type='number-line';work={from:st.cur/100,landing:v[0],jump:st.pending/100};
+ }else if(kind==='decimal-division-grid'&&['shade','measure','deal'].includes(st.stage)&&raw.length&&String(raw[0]).trim()!==''){
+  type='hundredths-grid';work={stage:st.stage,marks:Number.isFinite(v[0])?v[0]:null,checkedShaded:st.shaded,checkedMarked:st.marked};
+ }else if(diagramCanPlot(it)&&v.some(Number.isFinite)){type='coordinate-point';work={point:v.map(x=>Number.isFinite(x)?x:null),labels:I.labels.map(lpPlain)};
+ }else if(kind==='compat'&&st.combine&&st.stage==='split'){
+  if(!st.diagramEdited&&!st.sel?.length)return null;type='division-parts';work={parts:st.chips.slice(0,20),selected:(st.sel||[]).slice(0,2)};
+ }else if(I.type==='tiles'){
+  const expression=String(st.draft?.expression??(raw[0]||st.tiles?.join(' ')||'')).slice(0,160);if(!expression&&!st.diagramEdited)return null;
+  type='expression-tiles';work={expression};
+ }else if(I.type==='group'){
+  const selected=(st.grp||[]).slice(0,2);if(!selected.length&&!st.diagramEdited)return null;type='grouping';work={selected,tokens:I.tokens.slice(0,20)};
+ }else if(kind==='areadiv'&&['q','p'].includes(st.stage)&&Number.isFinite(v[0])){type='area-band';work={stage:st.stage,value:v[0],groups:st.pend??null,remaining:st.rem};
+ }else if(['areamul','distmul'].includes(kind)&&I.type==='nums'&&I.labels.every(x=>x.includes('×'))&&v.some(Number.isFinite)){type='area-cells';work={labels:I.labels.map(lpPlain),values:v.map(x=>Number.isFinite(x)?x:null)};
+ }else if(I.type==='tree'&&v.some(Number.isFinite)){type='factor-tree';work={number:I.v,factors:v.map(x=>Number.isFinite(x)?x:null)};
+ }else return null;
+ return {type,component,work,key:JSON.stringify([st.k,type,work])};
+}
+function diagramRecord(it,obs,outcome){
+ if(!obs)return;const st=it.st,key=JSON.stringify([obs.key,outcome]);
+ const entries=Array.isArray(st.diagramObservations)?st.diagramObservations:[];
+ if(!entries.some(x=>x.key===key))entries.push({key,step:st.k,type:obs.type,work:obs.work,outcome,t:Date.now()});
+ st.diagramObservations=entries.slice(-24);
+}
+function diagramHistory(st){return (st.diagramObservations||[]).slice(-12).map(({key,...entry})=>entry);}
+function diagramReply(it,context,move='orient'){
+ if(!['orient','test','smaller','stuck','plan'].includes(move))return null;
+ const obs=diagramObservation(it);if(!obs)return null;
+ const st=diagramMethodState(it),w=obs.work,small=['smaller','stuck','plan'].includes(move);let text='';
+ if(obs.type==='place-blocks'){
+  const invalid=w.counts.findIndex(x=>x===null||!Number.isInteger(x)||x<0);
+  if(invalid>=0)text=`Your ${w.places[invalid]} row is not built yet. Use its + button or enter a whole-number count. Use 0 for an empty place.`;
+  else if(st.stage==='build'){
+   const given=lpDecCounts(st.rows.length===0?st.A:st.B),bad=w.places.findIndex((p,i)=>w.counts[i]!==given[LP_DEC_PLACES.indexOf(p)]);
+   text=bad<0?'Your blocks match the given decimal. Press Check to keep this row.':`Your ${w.places[bad]} row has ${w.counts[bad]} blocks. ${small?'Touch that place in the given decimal, then count only blocks of that size.':'Match that row to the same place in the given decimal. Keep the other rows for now.'}`;
+  }else if(obs.component==='decimal-exchange'){
+   const before=w.places.map(p=>st.counts[LP_DEC_PLACES.indexOf(p)]),unchanged=w.counts.findIndex((n,i)=>n===before[i]);
+   text=unchanged>=0?`Your ${w.places[unchanged]} row stayed the same. An exchange changes both named places. ${small?'Remove a block from the place you are trading, then add equal value in the other place.':'Move equal value out of one place and into the other.'}`:'Compare your two new rows with the checked rows above. One larger block trades for ten of the next smaller block. The total value must stay the same.';
+  }else text='Your draft shows the combined counts below. Compare one column with the two checked rows above. Count only blocks with that same place name.';
+ }else if(obs.type==='number-line'){
+  const direction=/\bjump back\b/i.test(lpPlain(it.step.prompt))?-1:1,delta=w.landing-w.from;
+  text=delta*direction<0?`Your proposed point moves ${delta<0?'backward':'forward'} from ${w.from}. This step asks you to move ${direction<0?'backward':'forward'}. Start at the checked point and follow that direction.`:delta===0?`Your proposed point is still at ${w.from}. Start there and move by the jump you chose.`:`Your proposed point is ${w.landing}. Compare the distance from ${w.from} with your chosen jump of ${w.jump}. ${small?'Split your chosen jump into whole and decimal parts, then follow one part at a time.':'Keep the earlier checked jumps.'}`;
+ }else if(obs.type==='hundredths-grid'){
+  if(w.marks===null||!Number.isInteger(w.marks)||w.marks<0)text='Use a whole-number count of small squares. Each square is one hundredth.';
+  else if(w.stage==='shade'){
+   const given=it.spec.diagramGiven.total,places=decimalGridPlaces(w.marks),target=decimalGridPlaces(given),j=places.findIndex((n,i)=>n!==target[i]);
+   text=j<0?'Your shaded grids match the starting amount. Press Check to keep them.':`Your marks show ${places[j]} ${GRID_PLACES[j]}. ${small?['Count the completely shaded grids.','Count full columns on the partial grid. Each column is one tenth.','Count the extra small squares after the full columns. Each is one hundredth.'][j]:'Compare that place with the starting amount above. Change only that part first.'}`;
+  }else if(w.stage==='measure')text=`Your draft outline contains ${w.marks} hundredth squares. ${small?'Match full columns to the tenths of one group, then add its extra hundredths.':'Compare this one outline with the size of one group in the story. Keep the checked groups.'}`;
+  else text=`You have dealt ${w.marks} squares in your draft. ${small?'Finish one round so each recipient gets one square, then look for shaded squares that still have no recipient.':'Look for shaded squares without recipient labels. Continue the rounds until all the shaded amount is shared.'}`;
+ }else if(obs.type==='coordinate-point'){
+  const a=it.spec.audit||{},point=w.point,field=context.status==='miss'?context.field:-1;
+  const missing=point.findIndex(x=>x===null);
+  if(missing>=0)text=`Your point needs its ${missing?'vertical':'horizontal'} position. Fill ${w.labels[missing]}, or tap the grid to place both coordinates.`;
+  else if(a.family==='coordinate'&&['plot','read'].includes(a.mode)&&point[0]===a.y&&point[1]===a.x&&a.x!==a.y)text=`Your point uses ${point[0]} across and ${point[1]} up. The ordered pair goes across first, then up. Trace those two moves from the origin.`;
+  else text=`Your proposed point is (${point.join(', ')}). ${field>=0?`Keep ${w.labels[1-field]} and recheck ${w.labels[field]}. `:''}${a.family==='data'?'The horizontal axis counts days; the vertical axis measures liters. Compare the point with that day in the table.':small?'Start at the origin. Follow the horizontal labels first, then the vertical labels. Count the values on the axes, not just the grid lines.':'Compare both axis labels and their interval sizes with the point you intended.'}`;
+ }else if(obs.type==='division-parts'){
+  text=w.selected.length===1?`You selected ${w.parts[w.selected[0]]}. Tap one more part to combine with it, then check whether the joined part divides evenly.`:`Your current parts are ${w.parts.join(' + ')}. Keep the parts marked ✓. Choose a part without a check mark and pair it with another part.`;
+ }else if(obs.type==='expression-tiles'){
+  const expression=w.expression,tokens=lpTok(expression);
+  text=!expression?'Your tile row is empty after clearing. Tap one number from the story to start.':!tokens||!lpAst(expression)?`Your tile row is not a complete expression yet. ${small?'Check the last tile: a number needs an operation before the next number. Close any open parenthesis.':'Check for two numbers together, a missing operation, or an unclosed parenthesis.'}`:`Your tiles read “${lpShow(expression)}”. Read that as a story. ${small?'Point to the operation that joins the first two amounts. Does it describe what happens to them?':'Check which part happens first and what each operation means.'}`;
+ }else if(obs.type==='grouping')text=w.selected.length===1?'You marked one end of the group. Tap the last number that belongs inside the parentheses.':!w.selected.length?'Your group is cleared. Tap the first number of the part you want to do together, then its last number.':'Read only the part between your selected ends. Does that whole part need to happen together? Keep the numbers outside it in their original order.';
+ else if(obs.type==='area-band')text=w.stage==='q'?`Your trial side is ${w.value} groups. The band must fit the ${w.remaining} still left. Multiply the top by your trial side, then compare its area with what remains.`:`Your proposed inside value is ${w.value}; the side counts ${w.groups} groups. Multiply the top by that side. Keep group count and area in their own places.`;
+ else if(obs.type==='area-cells'){const missing=w.values.findIndex(x=>x===null),i=missing>=0?missing:context.status==='miss'&&context.field>=0?context.field:0;text=`Look at your ${w.labels[i]} cell${w.values[i]===null?', which is still blank':`, where you wrote ${w.values[i]}`}. Multiply that column label by that row label. Keep the other cells while you check this one.`;}
+ else if(obs.type==='factor-tree')text=w.factors.some(x=>x===null)?'Your branch needs two factors. Keep the factor you entered and fill the other branch.':`Your branches show ${w.factors.join(' and ')}. Multiply those two factors to check whether they rebuild ${w.number}. ${small?'A branch must make a smaller factor; 1 paired with the original number does not split it.':'Keep splitting only branches that are not prime.'}`;
+ if(obs.type==='expression-tiles'&&context.status==='miss'&&context.code==='order-from')text=`Your tiles read “${lpShow(w.expression)}”. Check the order of the two amounts: in “take away from,” the amount after “from” is the starting amount. Keep the other parts while you check that operation.`;
+ if(obs.type==='factor-tree'&&context.code==='composite-leaf')text=`You asked to circle ${w.number} as prime. Test a pair of factors greater than 1. If they rebuild this number, split the node instead of circling it.`;
+ if(context.status==='revised')text='Your change has not been checked yet. '+text;
+ diagramRecord(it,obs,'help');return {text,diagram:true};
+}
+function diagramDraftHTML(it){
+ const I=it.step?.input,st=diagramMethodState(it);
+ if(I?.type==='tree'||(['areamul','distmul'].includes(it.step?.strategyKind||it.spec.kind)&&I?.type==='nums'&&I.labels.every(x=>x.includes('×'))))return '<section class="diagram-draft" aria-label="Your diagram draft"><p><b>Your draft — not checked yet</b></p><div id="diagram-fields">'+diagramFieldsHTML(it)+'</div></section>';
+ if((it.step?.strategyKind||it.spec.kind)==='decimal-line'&&st.stage==='land'&&it.phase!=='model')return '<section class="diagram-draft" aria-label="Your number-line draft"><p><b>Your proposed landing — not checked yet</b></p><div id="diagram-line">'+diagramLineHTML(it)+'</div></section>';
+ if(!I||!['decimal-blocks','decimal-chart'].includes(it.step.strategyKind||it.spec.kind)||I.type!=='nums'||it.phase==='model')return '';
+ return `<section class="diagram-draft" aria-label="Your block draft"><p><b>Your blocks — not checked yet</b></p><p>Use + or − to build each row, or type its count above.</p><div id="diagram-block-rows">${diagramBlockRows(it)}</div></section>`;
+}
+function diagramBlockRows(it){const values=diagramNumbers(diagramValues(it));return it.step.input.labels.map((label,i)=>{
+ const n=values[i],valid=Number.isInteger(n)&&n>=0,cls=['ten','whole','tenth','hundredth'][LP_DEC_PLACES.indexOf(label)],shown=valid?Math.min(n,40):0;
+ return `<div class="diagram-block-row"><b>${esc(label)}: ${valid?n:'not built'}</b><div class="lpdecunits" aria-label="Draft ${esc(label)}: ${valid?n:'not built'}">${Array.from({length:shown},()=>`<span class="lpdecunit ${cls}" aria-hidden="true"></span>`).join('')}${valid&&n>40?'<span>…</span>':''}</div><div class="actions"><button type="button" class="btn quiet small" data-diagram-place="${i}" data-diagram-delta="-1" aria-label="Remove one ${esc(label)} block">−</button><button type="button" class="btn quiet small" data-diagram-place="${i}" data-diagram-delta="1" aria-label="Add one ${esc(label)} block">+</button></div></div>`;
+ }).join('');}
+function diagramRefreshPoint(it){
+ app.querySelector('.diagram-point')?.remove();const plane=app.querySelector('.cxplane');if(plane){plane.dataset.diagramLabel=plane.dataset.diagramLabel||plane.getAttribute('aria-label');plane.setAttribute('aria-label',plane.dataset.diagramLabel);}if(!diagramCanPlot(it))return;
+ const a=it.spec.audit||{},sx=a.family==='data'?1:a.sx,sy=a.family==='data'?.5:a.sy,v=diagramNumbers(diagramValues(it));
+ if(v.length!==2||v.some(x=>!Number.isFinite(x))||!sx||!sy||v[0]<0||v[0]>10*sx||v[1]<0||v[1]>10*sy)return;
+ const svg=plane;if(!svg)return;svg.setAttribute('aria-label',svg.dataset.diagramLabel+`; your point (${v.join(', ')}), not checked`);const node=document.createElementNS('http://www.w3.org/2000/svg','g');node.setAttribute('class','diagram-point');node.setAttribute('aria-label',`Your point (${v.join(', ')}), not checked`);node.setAttribute('pointer-events','none');
+ node.innerHTML=`<circle cx="${40+v[0]/sx*28}" cy="${320-v[1]/sy*28}" r="9" fill="none" stroke="#996000" stroke-width="3"/><text x="48" y="18" font-size="12">Your point: (${v.join(', ')}) — not checked</text>`;svg.append(node);
+}
+function diagramFieldsHTML(it){const v=diagramValues(it),I=it.step.input;if(I.type==='tree')return `<div class="diagram-tree"><b>${I.v}</b><div>↙　↘</div><div>${[0,1].map(i=>`<span>${esc(String(v[i]??'').trim()||'?')}</span>`).join('　×　')}</div></div>`;return `<div class="diagram-cells">${I.labels.map((label,i)=>`<div><b>${esc(lpPlain(label))}</b><p>${esc(String(v[i]??'').trim()||'?')}</p></div>`).join('')}</div>`;}
+function diagramLineHTML(it){const st=diagramMethodState(it),n=diagramNumbers(diagramValues(it))[0];return Number.isFinite(n)&&Math.abs(n)<1e5?nlSVG(st.cur*10,[{dv:Math.round((n*100-st.cur)*10),label:'Your move'}]):'<p>Enter a landing to show your jump.</p>'; }
+function diagramBind(it){
+ const refresh=()=>{const fields=app.querySelector('#diagram-fields');if(fields)fields.innerHTML=diagramFieldsHTML(it);const line=app.querySelector('#diagram-line');if(line)line.innerHTML=diagramLineHTML(it);const rows=app.querySelector('#diagram-block-rows');if(rows){rows.innerHTML=diagramBlockRows(it);bindButtons();}diagramRefreshPoint(it);};
+ const bindButtons=()=>app.querySelectorAll('[data-diagram-place]').forEach(b=>b.onclick=()=>{const field=app.querySelector(`[data-lpi="${b.dataset.diagramPlace}"]`);if(!field)return;const n=lpNum(field.value);field.value=String(Math.max(0,Math.min(100,(Number.isFinite(n)?n:0)+Number(b.dataset.diagramDelta))));field.dispatchEvent(new Event('input',{bubbles:true}));app.querySelector(`[data-diagram-place="${b.dataset.diagramPlace}"][data-diagram-delta="${b.dataset.diagramDelta}"]`)?.focus({preventScroll:true});});
+ app.querySelectorAll('#lpwork .lpans').forEach(f=>f.addEventListener('input',refresh));bindButtons();diagramRefreshPoint(it);
+}
 function hwEntry(prefill, err){
   mode="hw:check"; cur=null; pendingHW=null;
   app.innerHTML=`
@@ -7680,7 +7786,7 @@ function scratchHTML(){
   return `<div class="scratch" id="scratch">
     <div class="scratch-bar"><span class="muted">Scratch paper</span>
       <div class="row"><button class="btn quiet small" id="sp-pen" aria-pressed="${scratchTool==="pen"}">Pencil</button><button class="btn quiet small" id="sp-eraser" aria-pressed="${scratchTool==="eraser"}">Eraser</button><button class="btn quiet small" id="sp-undo">Undo</button><button class="btn quiet small" id="sp-clear">Clear</button></div></div>
-    <div class="spwrap"><canvas id="spc" aria-label="Scratch paper. Write here with the pencil; nothing here is checked." role="img"></canvas><div class="spstrip" aria-hidden="true" title="Drag here to scroll"></div></div>
+    <p class="muted">Walter cannot read freehand marks. Use the diagram controls or answer boxes for feedback.</p><div class="spwrap"><canvas id="spc" aria-label="Scratch paper. Write here with the pencil; nothing here is checked." role="img"></canvas><div class="spstrip" aria-hidden="true" title="Drag here to scroll"></div></div>
   </div>`;
 }
 let scratchTool="pen";
@@ -9577,9 +9683,9 @@ function lpAdaptiveGuide(it,base,intent='start'){
   return g;
 }
 function lpCheckFeedback(it,r){
-  if(r.fmt)return r.msg||'Check the entry format before testing the calculation.';
+  if(r.fmt)return diagramReply(it,lpHelpContext(it),'test')?.text||r.msg||'Check the entry format before testing the calculation.';
   const c=lpHelpContext(it),target=c.label?`Check ${c.label}. `:'';
-  const targeted=it.spec.walterReply?.(it.st,c,'test');
+  const targeted=it.spec.walterReply?.(it.st,c,'test')||diagramReply(it,c,'test');
   if(targeted)return targeted.text;
   if(r.safe)return 'That trial does not fit. '+walterNextReply({guide:it.step.help||[],move:'smaller',observation:c,context:typeof lpWalterSemanticContext==='function'?lpWalterSemanticContext(it):{},profile:lpHelpProfile(c)}).text;
   return typeof walterNextReply==='function'?walterNextReply({guide:lpAdaptiveGuide(it,it.step.help||[]),intent:'check',move:'test',observation:c,context:typeof lpWalterSemanticContext==='function'?lpWalterSemanticContext(it):{},profile:lpHelpProfile(c)}).text:target+lpHelpProfile(c)[1]+' Revise your entry and check again.';
@@ -9614,11 +9720,12 @@ function lpItemStart(item){ const sp=item.spec; item.st=Object.assign({model:ite
 function lpApply(item, v){ const st=item.st, step=item.step; if(!step) return; const r=u5BlockLessonResult(item,v,step.check(v, st)||{ok:false});
   if(item.spec.walterStory?.checkedRoute&&!r.ok&&!r.fmt&&!r.safe&&!['decimal-story-meaning','word-story-meaning','strategy-choice'].includes(step.evidence?.component))st.storyArithmeticMisses=(Math.max(0,+st.storyArithmeticMisses||0))+1;
   const helpContext=typeof lpWalterContextKey==='function'?lpWalterContextKey(item):'';
+  diagramRecord(item,diagramObservation(item,v),r.fmt?'format':r.safe?'trial':r.ok?'ok':'miss');
   lpObserve(item,v,r);
   if(item.phase!=='model'&&typeof walterLinkNextCheck==='function')walterLinkNextCheck(st.walterEvents||[],helpContext,{status:r.fmt?'format':r.safe||r.ok&&step.short==='Your trial count'?'trial':r.ok?'ok':'miss',code:r.code||'',draft:walterDraftFingerprint(v),fields:Array.isArray(v)?v.map(value=>walterDraftFingerprint(value)):null,gridDigits:item.spec.walterCheck?.(st,v)});
   if(r.ok){ if(r.apply) r.apply(); st.k++; st.draft=null; st.badIndex=-1; st.walterOpen=false; st.walterChoice=null; st.inlineWalter=null; st.unit5Help=null; st.exampleNarr="";st.exampleNote=""; st.msg=r.msg||""; st.msgKind="ok"; st.helpShown=[]; item.step=item.spec.next(st); lpPrepareStep(item); if(!item.step){ st.done=true; } return true; }
   if(item.phase!=="model" && !r.fmt){ if(r.safe){ if(r.code) st.codes.push(r.code); } else { st.tries++; if(r.code) st.codes.push(r.code); } } st.badIndex=Number.isInteger(r.badIndex)?r.badIndex:-1; st.msg=item.phase!=="model"?(step.unit5?u5LessonFeedback(item,r,v):lpCheckFeedback(item,r)):r.msg||"Not yet. Check that step and try again."; st.msgKind=r.safe?"":"no";
-  if(!r.fmt&&walterInlineLesson(item))walterInlineLessonMiss(item,st.msg);
+  if(!r.fmt&&walterInlineLesson(item)||diagramObservation(item))walterInlineLessonMiss(item,st.msg);
   return false; }
 
 // ---- input widgets ----
@@ -9738,6 +9845,7 @@ function lpRecord(it, extra){ if(lp.homework)return fractionHomeworkRecord(it,ex
     evidenceVersion:2,load:+it.load||+lp.load||1,fingerprint,repeated:repeated?1:0,features:sp.features||null,stepEvents:lpTrimEvents(st.stepEvents),eventsTrimmed:+st.eventsTrimmed||0,
     ok:st.done?1:0, methodOk:method, methodEvidence:sp.methodEvidence||sp.kind||it.phase, teacherFocus:!!lp.focus, answerOnly:oneShot?1:(st.answerOnly===null||st.answerOnly===undefined?null:(st.answerOnly?1:0)), answerPreviewed:st.answerPreviewed?1:0,
     helps:+st.helps||0, tries:+st.tries||0, firstTry:method&&!st.tries&&!st.helps&&!st.answerPreviewed&&!repeated?1:0,
+    ...(st.diagramObservations?.length?{diagramObservations:diagramHistory(st)}:{}),
     ...(st.unit5BlockObservations?.length?{blockObservations:u5BlockHistory(st)}:{}),
     codes:[...new Set(st.codes||[])], video:st.videoOpened?1:0, steps:+st.k||0,
     ...(Array.isArray(st.walterEvents)&&st.walterEvents.length?{walterHelp:st.walterEvents.map(x=>({...x})),walterEventsTrimmed:+st.walterEventsTrimmed||0,probeStatus:st.walterProbe||null}:{}),
@@ -9893,8 +10001,8 @@ function lpWalterRespond(it,id,move,inline=false){if(!lpWalterEligible(it))retur
   const requested=move||lpWalterInitialMove(q),draftKey=lpWalterDraftKey(it,c),repeats=old?.requestedMove===requested&&old.draftKey===draftKey?(old.repeats||0)+1:0;
   const moveForGrid=it.spec.kind==='decimal-division-grid'&&(requested==='stuck'||repeats>0)
     ? (['smaller','stuck'].includes(old?.move)?'stuck':'smaller') : requested;
-  const targeted=it.spec.walterReply?.(st,c,moveForGrid);
-  const reply=targeted?{...targeted,move:moveForGrid,signature:walterHelpSignature([lpWalterContextKey(it),targeted.text,targeted.gridPlace].join('|')),choices:[]}:
+  const targeted=it.spec.walterReply?.(st,c,moveForGrid)||diagramReply(it,c,repeats>0?'smaller':moveForGrid);
+  const reply=targeted?{...targeted,move:moveForGrid,signature:walterHelpSignature([lpWalterContextKey(it),targeted.text,targeted.gridPlace].join('|')),choices:targeted.diagram?['words','units','plan','calculation','test']:[]}:
     walterNextReply({guide:q.texts,intent:id,move:moveForGrid,lastMove:old?.move,repeats,observation:c,context:lpWalterSemanticContext(it),profile:lpHelpProfile(c)});
   const stepId=it.step.walter?.id||`${it.spec.kind}:${st.k}:${st.stage||''}`;
   st.walterEvents=Array.isArray(st.walterEvents)?st.walterEvents:[];
@@ -9905,7 +10013,7 @@ function lpWalterRespond(it,id,move,inline=false){if(!lpWalterEligible(it))retur
     if(['delayed','mixed'].includes(it.phase)&&!st.walterProbe)st.walterProbe=st.tries?'miss-before-help':'help-before-miss';
   }
   lpWalterTrimEvents(st);
-  const choice={step:st.k,id,text:reply.text,move:reply.move,resource:reply.resource,signature:reply.signature,requestedMove:requested,draftKey,repeats,choices:reply.choices,
+  const choice={step:st.k,id,text:reply.text,diagram:!!reply.diagram,move:reply.move,resource:reply.resource,signature:reply.signature,requestedMove:requested,draftKey,repeats,choices:reply.choices,
     ...(reply.gridFocus?{gridFocus:true,gridPlace:reply.gridPlace,gridMarks:reply.gridMarks,gridMove:reply.gridMove}:{})};
   if(inline)st.inlineWalter=choice;
   else {st.walterChoice=choice;st.walterOpen=true;}
@@ -9932,7 +10040,7 @@ function lpWalterDeliver(it,id,depth){ if(!lpWalterEligible(it)) return;
 function lpWorkHTML(it){ lpPrepareStep(it); const sp=it.spec, st=it.st, ph=it.phase, model=ph==="model", own=ph==="independent"||ph==="delayed"||ph==="mixed";
   const step=it.step,focused=!model&&!st.done&&step?.unit5,compact=walterInlineLesson(it);
   const inline=compact&&st.inlineWalter?.step===st.k?st.inlineWalter:null;
-  const inlineModel=inline?.move==='smaller'?inline:null;
+  const inlineModel=inline?.move==='smaller'&&!inline.diagram?inline:null;
   const hasMiss=compact&&(lpHelpContext(it).status==='miss'||lpHelpContext(it).status==='trial');
   const unit5=focused&&st.unit5Help?.k===st.k?st.unit5Help:null;
   const unit5Model=unit5?.model?u5ModelForEntry(focused,st.stepEvents?.at(-1)?.values?.[0]):null;
@@ -9947,7 +10055,7 @@ function lpWorkHTML(it){ lpPrepareStep(it); const sp=it.spec, st=it.st, ph=it.ph
     const clues=(st.helpShown||[]).map(t=>`<div class="lpclue">${t}</div>`).join("");
     const cue=st.msg||esc(unit5?.cue||(!inlineModel?inline?.text:'')||'');
     const readText=[sp.title||'',prompt,cue,unit5Model?u5Model(unit5Model).action:inlineModel?.text||''].filter(Boolean).join('. ');
-    work=`<p class="lpstep" id="lpstep-prompt">${prompt}</p>${typeof readAloudButton==='function'?readAloudButton(readText,'lp-prompt'):''}${sp.controls?.(st)||''}${step.unit5?.role==='simplest'?u5DivisionLayout(step.unit5,[],u5CheckedDivision(st)):''}${lpInputHTML(step, st, false)}<div class="inline-err lpmsg${st.msgKind==="ok"?" ok":""}${st.unit5BlockReview?.k===st.k?" block-review":""}" id="lpmsg" tabindex="-1" role="status" aria-live="polite">${(unit5||inline||hasMiss)&&cue?'<b>Walter:</b> ':''}${cue}</div>${clues}
+    work=`<p class="lpstep" id="lpstep-prompt">${prompt}</p>${typeof readAloudButton==='function'?readAloudButton(readText,'lp-prompt'):''}${sp.controls?.(st)||''}${step.unit5?.role==='simplest'?u5DivisionLayout(step.unit5,[],u5CheckedDivision(st)):''}${lpInputHTML(step, st, false)}${diagramDraftHTML(it)}<div class="inline-err lpmsg${st.msgKind==="ok"?" ok":""}${st.unit5BlockReview?.k===st.k?" block-review":""}" id="lpmsg" tabindex="-1" role="status" aria-live="polite">${(unit5||inline||hasMiss)&&cue?'<b>Walter:</b> ':''}${cue}</div>${clues}
       <div class="actions"><button class="btn primary" id="lpcheck">${step.input&&step.input.type==="button"?esc(step.input.label||"Next"):"Check"}</button>${focused?`<button class="btn quiet" id="lpunit5help">${unit5?.model?'Look at the model':unit5?'Still stuck':'Help me'}</button>`:''}${focused&&st.unit5BlockReview?.k===st.k?'<button class="btn quiet" id="lpkeepblockanswer">Keep my checked answer</button>':''}${compact?`<button class="btn quiet" id="lpinlinehelp">${inlineModel?'Look at the model':inline||hasMiss?'Still stuck':'Help me'}</button>`:''}${!lpWalterEligible(it)&&(step.help||[]).length>(st.helpShown||[]).length?`<button class="btn quiet" id="lphelp">${own?"I need a clue":"Clue"}</button>`:""}${!focused&&!compact&&own&&sp.answer!==undefined&&st.answerOnly===null?`<button class="btn quiet small" id="lpknow">I know the answer</button>`:""}${own&&st.answerOnly===true?`<button class="btn quiet small" id="lpskip">Skip building it</button>`:""}</div>
       ${focused?u5BlocksHTML(focused,st):''}${unit5Model?u5ModelHTML(unit5Model,'u5lessonmodel'):''}${inlineModel?walterInlineModel(lpWalterSemanticContext(it),inlineModel,'walter-lesson-model'):''}${focused||compact?`<details${st.walterOpen||st.exampleNarr?' open':''}><summary>More help</summary>${lpWalterHTML(it)}${own&&sp.answer!==undefined&&st.answerOnly===null?'<button class="btn quiet small" id="lpknow">I know the answer</button>':''}</details>`:lpWalterHTML(it)}${walterFictionalHTML(st.fictional,st.fictionalNote,'lp')}${st.exampleNarr||""}${st.exampleNote?`<p class="muted">${esc(st.exampleNote)}</p>`:""}${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
   const walterLesson=st.done && ph!=="model" && !st.skipped && (st.tries>0 || st.helps>0) ? walterNote("nice","You worked through the steps and finished this one.",true) : ph==="delayed" ? walterNote("checkin","Here are new numbers. Show what you remember.",true) : ph==="guided" || (st.helpShown||[]).length ? walterNote("work","Let's check one step at a time.",true) : "";
@@ -10045,9 +10153,9 @@ function lpBind(it){ const q=s=>app.querySelector(s);
   app.querySelectorAll("#lpwork .lpans").forEach(el=>el.addEventListener("input", keepDraft));
   app.querySelectorAll(".lpopt").forEach(b=>{ b.addEventListener("keydown",e=>{ if(e.altKey||e.ctrlKey||e.metaKey)return; const buttons=[...app.querySelectorAll(".lpopt:not(:disabled)")],i=buttons.indexOf(b); let target;if(["ArrowRight","ArrowDown"].includes(e.key))target=buttons[(i+1)%buttons.length];else if(["ArrowLeft","ArrowUp"].includes(e.key))target=buttons[(i-1+buttons.length)%buttons.length];else if(/^[a-z]$/i.test(e.key))target=buttons.find(x=>+x.dataset.lpo===e.key.toLowerCase().charCodeAt(0)-97);if(target){e.preventDefault();target.click();target.focus({preventScroll:true});} }); b.onclick=()=>{ app.querySelectorAll(".lpopt").forEach(x=>{ x.setAttribute("aria-checked", String(x===b)); x.classList.toggle("sel", x===b); }); keepDraft(); }; });
   app.querySelectorAll(".lpchip").forEach(b=>b.onclick=()=>{ const on=b.getAttribute("aria-pressed")!=="true"; b.setAttribute("aria-pressed", String(on)); b.classList.toggle("on", on); keepDraft(); });
-  app.querySelectorAll(".lptok").forEach(b=>b.onclick=()=>{ st.grp=st.grp||[]; const i=+b.dataset.lpt; if(st.grp.length>=2) st.grp=[]; if(st.grp[0]===i) st.grp=[]; else st.grp.push(i); st.grp.sort((a,b2)=>a-b2);
+  app.querySelectorAll(".lptok").forEach(b=>b.onclick=()=>{ st.diagramEdited=true; st.grp=st.grp||[]; const i=+b.dataset.lpt; if(st.grp.length>=2) st.grp=[]; if(st.grp[0]===i) st.grp=[]; else st.grp.push(i); st.grp.sort((a,b2)=>a-b2);
     app.querySelectorAll(".lptok").forEach(x=>{ const on=st.grp.includes(+x.dataset.lpt); x.setAttribute("aria-pressed", String(on)); x.classList.toggle("on", on); }); keepDraft(); });
-  app.querySelectorAll(".lptile").forEach(b=>b.onclick=()=>{ st.tiles=st.tiles||[]; const t=b.dataset.lptile; if(t==="⌫") st.tiles.pop(); else if(t==="clear") st.tiles=[]; else st.tiles.push(t);
+  app.querySelectorAll(".lptile").forEach(b=>b.onclick=()=>{ st.diagramEdited=true; st.tiles=st.tiles||[]; const t=b.dataset.lptile; if(t==="⌫") st.tiles.pop(); else if(t==="clear") st.tiles=[]; else st.tiles.push(t);
     const typed=q("#lptype"); if(typed && typed.value)typed.value=""; // choosing a tile switches away from the typed alternative
     const sh=q("#lptshow"); if(sh) sh.innerHTML=st.tiles.length?esc(lpShow(st.tiles.join(" "))):"<span class='muted'>Tap tiles to build it</span>"; keepDraft(); });
   const ask=q("#lpask"); if(ask) ask.onclick=()=>{
@@ -10065,13 +10173,13 @@ function lpBind(it){ const q=s=>app.querySelector(s);
   };
   if(q('#lpinlinehelp'))q('#lpinlinehelp').onclick=()=>{
     keepDraft();
-    if(st.inlineWalter?.move==='smaller'){walterInlineFocus('#walter-lesson-model');return;}
+    if(st.inlineWalter?.move==='smaller'&&!st.inlineWalter.diagram&&st.inlineWalter.draftKey===lpWalterDraftKey(it,lpHelpContext(it))){walterInlineFocus('#walter-lesson-model');return;}
     const context=lpHelpContext(it),move=walterNextInlineMove(st.inlineWalter,['miss','trial'].includes(context.status));
     const hadMessage=st.msg;
     lpWalterRespond(it,'start',move==='start'?'orient':move,true);
-    if(st.inlineWalter?.move!=='smaller'){st.msg=st.inlineWalter?.text||hadMessage;st.msgKind='';}
+    if(st.inlineWalter?.move!=='smaller'||st.inlineWalter?.diagram){st.msg=st.inlineWalter?.text||hadMessage;st.msgKind='';}
     lpRender();
-    walterInlineFocus(st.inlineWalter?.move==='smaller'?'#walter-lesson-model':'#lpmsg');
+    walterInlineFocus(st.inlineWalter?.move==='smaller'&&!st.inlineWalter.diagram?'#walter-lesson-model':'#lpmsg');
   };
   const observation=lpHelpContext(it);
   if((walterInlineLesson(it)||st.walterOpen&&st.walterChoice?.step===st.k||step.unit5&&st.unit5Help?.k===st.k)&&['miss','format','trial'].includes(observation.status)){
@@ -10093,6 +10201,7 @@ function lpBind(it){ const q=s=>app.querySelector(s);
   const kg=q("#lpknowgo"); if(kg) kg.onclick=()=>{ keepDraft(); const raw=q("#lpknowin").value,v=it.spec.answerCheck?cxRead(raw):lpNum(raw); if(v===null||typeof v==="number"&&isNaN(v)){ q("#lpmsg").textContent="Type a number."; return; } const right=it.spec.answerCheck?it.spec.answerCheck(raw):Math.abs(v-it.spec.answer)<1e-9; st.answerOnly=right; if(right) st.answerPreviewed=true; if(!right){ st.tries++; st.codes.push("answer-only"); }
     st.msg = right ? `That is the answer. This lesson is about the ${it.spec.methodName||"model"}, so build it too; or skip building it (that counts as the answer only).` : "Not that one. Build it step by step and you'll find it."; st.msgKind=right?"ok":"no"; lpRender(); };
   const sk=q("#lpskip"); if(sk) sk.onclick=()=>{ st.skipped=true; st.done=!!st.answerOnly; if(!st.done){ lpRender(); return; } lpRecord(it); if(lp.i+1>=lp.items.length-1) lpFinish(); lpNext(); };
+  diagramBind(it);
   const f=q("#lpin")||q("[data-lpi]"); if(f) f.focus({preventScroll:true}); }
 // ---- step builders ----
 function lpNumStep(o){ // o: {prompt, short, ans, apply, ok, no, diag(n)->{code,msg}|null, help, why, ph}
@@ -10170,7 +10279,7 @@ function lpCompat(o){ const d=o.d, N=o.N, Q=N/d;
       const sw=st.stage==="split"&&!st.parts.length ? (st.combine?(o.requireCombine?"":`<button type="button" class="btn quiet small" id="lpfree">Choose my own parts instead</button>`):`<button type="button" class="btn quiet small" id="lpcombine">Start from expanded form</button>`) : "";
       return `<div class="lpcompat">${parts}${divs}${sum}</div>${sw}`; },
     bind:(it, rer)=>{ const st=it.st;
-      app.querySelectorAll("[data-lpp]").forEach(b=>b.onclick=()=>{ st.sel=st.sel||[]; const i=+b.dataset.lpp; if(st.sel.includes(i)) st.sel=st.sel.filter(x=>x!==i); else st.sel.push(i);
+      app.querySelectorAll("[data-lpp]").forEach(b=>b.onclick=()=>{ st.diagramEdited=true; st.sel=st.sel||[]; const i=+b.dataset.lpp; if(st.sel.includes(i)) st.sel=st.sel.filter(x=>x!==i); else st.sel.push(i);
         if(st.sel.length===2){ const [x,y]=st.sel.sort((a,c)=>a-c); const merged=st.chips[x]+st.chips[y]; st.chips=st.chips.filter((_,j)=>j!==x&&j!==y); st.chips.splice(x,0,merged); st.sel=[]; st.msg=`Put together: ${lpN(merged)}.`; st.msgKind="ok"; } rer(); });
       const fr=app.querySelector("#lpfree"); if(fr) fr.onclick=()=>{ st.combine=false; st.chips=null; it.step=it.spec.next(st); rer(); };
       const cb=app.querySelector("#lpcombine"); if(cb) cb.onclick=()=>{ st.combine=true; st.chips=lpPlaceParts(N); it.step=it.spec.next(st); rer(); }; },
@@ -10878,7 +10987,7 @@ function cxGrid(points,sx=1,sy=1,interactive=false,labels){let svg='',targets=''
  if(points.length>1&&labels==='data')svg+=`<polyline points="${points.map(p=>`${40+p[0]/sx*28},${320-p[1]/sy*28}`).join(' ')}" fill="none" stroke="#2f7c9e" stroke-width="2"/>`;
  if(points.length>1&&labels==='shape')svg+=`<polygon points="${points.map(p=>`${40+p[0]/sx*28},${320-p[1]/sy*28}`).join(' ')}" fill="#d7e9f4" stroke="#2f7c9e"/>`;
  svg+=points.map((p,i)=>`<circle cx="${40+p[0]/sx*28}" cy="${320-p[1]/sy*28}" r="5" fill="#b45309"/><text x="${45+p[0]/sx*28}" y="${314-p[1]/sy*28}" font-size="12">${String.fromCharCode(65+i)}</text>`).join('');svg+=targets;return `<svg class="cxplane" viewBox="0 0 370 370" role="img" aria-label="Coordinate plane: horizontal interval ${sx}, vertical interval ${sy}; ${points.length} points shown"><path d="M40 40V320H320" fill="none" stroke="#1b2a41" stroke-width="2"/>${svg}<text x="348" y="320" font-size="16">x</text><text x="36" y="25" font-size="16">y</text></svg>`;}
-function cxBindGrid(it){app.querySelectorAll('[data-cxpoint]').forEach(p=>p.addEventListener('click',()=>{const fields=[...app.querySelectorAll('[data-lpi]')],v=p.dataset.cxpoint.split(',');if(fields.length===2){fields.forEach((x,i)=>{x.value=v[i];x.dispatchEvent(new Event('input',{bubbles:true}));});}}));}
+function cxBindGrid(it){if(!diagramCanPlot(it))return;app.querySelectorAll('[data-cxpoint]').forEach(p=>p.addEventListener('click',()=>{const fields=[...app.querySelectorAll('[data-lpi]')],v=p.dataset.cxpoint.split(',');if(fields.length===2){fields.forEach((x,i)=>{x.value=v[i];x.dispatchEvent(new Event('input',{bubbles:true}));});}}));}
 function cxCoordinate(o){const {x,y,sx,sy,mode,dx,dy}=o,steps=[],shapeName=o.shapeName||'rectangle',points=mode==='shape'?(shapeName==='square'?[[x,y],[x+2,y+1],[x+1,y+3],[x-1,y+2]]:shapeName==='parallelogram'?[[x,y],[x+3,y],[x+4,y+2],[x+1,y+2]]:[[x,y],[x+3,y],[x+3,y+2],[x,y+2]]):[[x,y]],target=mode==='directions'?[x+dx,y+dy]:[x,y];
  if(mode==='shape'){for(let i=0;i<points.length;i++)steps.push(cxFields(`Plot vertex ${String.fromCharCode(65+i)} at (${points[i].join(', ')}). Enter its coordinates or tap the grid.`,['x-coordinate','y-coordinate'],points[i],'coordinate'));steps.push(cxChoice('Connect the checked vertices in order. Which shape?', ['rectangle','square','parallelogram'],['rectangle','square','parallelogram'].indexOf(shapeName),'polygon-properties'));steps.push(cxNum('How many vertices?',4,'polygon-properties'));}
  else if(mode==='directions'){steps.push(cxChoice(`On this map, north is up. ${dx>=0?'East':'West'} changes which coordinate?`,['x-coordinate','y-coordinate'],0,'coordinate'));steps.push(cxFields(`Start at (${x}, ${y}); go ${Math.abs(dx)} ${dx>=0?'east':'west'} and ${Math.abs(dy)} ${dy>=0?'north':'south'}. Ending point?`,['x-coordinate','y-coordinate'],target,'coordinate'));}
@@ -11728,7 +11837,7 @@ function fractionHomeworkSave(){
 }
 function fractionHomeworkRecord(it,extra){
   if(it.recorded)return null;it.recorded=true;const st=it.st||{};
-  const e={t:Date.now(),q:lp.homework.label,...(lp.homework.weekly?{week:lp.homework.week,itemId:lp.homework.itemId}:{}),method:it.spec.methodName||it.spec.kind,ok:st.done?1:0,methodOk:st.done&&!st.skipped?1:0,helps:+st.helps||0,tries:+st.tries||0,firstTry:0,hw:1,phase:'homework',stepEvents:lpTrimEvents(st.stepEvents),walterHelp:(st.walterEvents||[]).slice(-60),...extra};
+  const e={t:Date.now(),q:lp.homework.label,...(lp.homework.weekly?{week:lp.homework.week,itemId:lp.homework.itemId}:{}),method:it.spec.methodName||it.spec.kind,ok:st.done?1:0,methodOk:st.done&&!st.skipped?1:0,helps:+st.helps||0,tries:+st.tries||0,firstTry:0,hw:1,phase:'homework',stepEvents:lpTrimEvents(st.stepEvents),walterHelp:(st.walterEvents||[]).slice(-60),...(st.diagramObservations?.length?{diagramObservations:diagramHistory(st)}:{}),...extra};
   if(lp.homework.week===DECIMAL_GRID_PACK){
     e.gridOutcome=st.helps?'supported':st.tries?'retried':'no-hint';
     if(lp.homework.gridCheck)e.gridCheck=true;
@@ -12131,7 +12240,7 @@ function decimalDivisionGridSpec(item){
    return n===expected?{ok:true,apply}:{ok:false,code:st.stage==='shade'?decimalGridShadeMiss(n,total):component};
   }
  },component);
- return {kind:'decimal-division-grid',title:name+' · '+esc(item.title),problemKey:expression,recordQuestion:story,methodName:name+' on hundredths grids',
+ return {kind:'decimal-division-grid',diagramGiven:{total,size,method},title:name+' · '+esc(item.title),problemKey:expression,recordQuestion:story,methodName:name+' on hundredths grids',
   methodEvidence:'hundredths-grid-'+method,answer,script:[],
   walterReply:(st,observation,move)=>decimalGridReply(st,observation,move,item),
   walterCheck:(st,value)=>{
