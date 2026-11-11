@@ -1728,7 +1728,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.9.0 · November 9, 2026";
+const BUILD="v10.9.1 · November 10, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -6500,6 +6500,7 @@ function mixedToNumberCue(d,total,whole,left,entry,raw){
 function mixedFormatCue(role,raw,given){
   const {denominator:d,total,wholes,extra}=given,entry=String(raw??'').trim();
   if(role==='mixed-number'||role==='improper-fraction'){
+    if(parseFraction(entry)?.d===0)return u5PositiveBottom;
     if(/^\d+\.\d+$/.test(entry)&&Number(entry)===(total??(wholes*d+extra))/d)
       return role==='mixed-number'?'That decimal is the same amount. Write the whole count, a space, then the leftover pieces as a fraction.':'That decimal is the same amount. Use a slash to write it as one fraction.';
     if(role==='mixed-number'&&/^\d+\s*(?:r|remainder)\s*\d+$/i.test(entry))
@@ -6639,6 +6640,8 @@ function u5Same(f,a){return f&&f.w*f.d*a.d+f.n*a.d===a.n*f.d;}
 const u5Name=a=>cxText(a);
 const u5Half=n=>mixedText(Math.floor(n),n%1?1:0,2);
 const u5Format='Use a slash between the top and bottom numbers, like top/bottom.';
+const u5BenchmarkFormat='Enter a whole number or a number halfway between two whole numbers.';
+const u5PositiveBottom='The bottom number tells how many equal pieces make a whole. Use a bottom number greater than zero.';
 
 function u5Cue(c,values=[],checked=false,field=-1){
   const {role,a,b,factor,D,first,second,checkedBench,remaining,from,jump}=c;
@@ -6719,11 +6722,11 @@ function u5Cue(c,values=[],checked=false,field=-1){
 function u5ScaleModel(a,D){
   if(D>120)return fbBars([{d:a.d,n:a.n}],false);
   const count=Math.ceil(a.n/a.d),width=256;
-  const row=(whole,parts,y)=>{
-    const covered=Math.max(0,Math.min(1,a.n/a.d-whole));
-    return `<rect x="26" y="${y}" width="${width*covered}" height="15" fill="#ffe566"/><rect x="26" y="${y}" width="${width}" height="15" fill="none" stroke="currentColor"/>${Array.from({length:parts-1},(_,i)=>`<path d="M${26+(i+1)*width/parts} ${y}v15" stroke="currentColor" stroke-width=".65"/>`).join('')}`;
+  const row=(whole,parts,y,shaded=false)=>{
+    const cover=shaded?`<rect x="26" y="${y}" width="${width*Math.max(0,Math.min(1,a.n/a.d-whole))}" height="15" fill="#ffe566"/>`:'';
+    return `${cover}<rect x="26" y="${y}" width="${width}" height="15" fill="none" stroke="currentColor"/>${Array.from({length:parts-1},(_,i)=>`<path d="M${26+(i+1)*width/parts} ${y}v15" stroke="currentColor" stroke-width=".65"/>`).join('')}`;
   };
-  return `<svg style="display:block;width:100%;max-width:360px;margin:8px auto" viewBox="0 0 300 ${count*47+10}" role="img" aria-label="Same shaded amount, ${u5Name(a)}. Compare each whole in ${a.d} parts and ${D} parts.">${Array.from({length:count},(_,i)=>row(i,a.d,8+i*47)+row(i,D,25+i*47)).join('')}</svg>`;
+  return `<svg style="display:block;width:100%;max-width:360px;margin:8px auto" viewBox="0 0 300 ${count*47+10}" role="img" aria-label="The first strip shows ${u5Name(a)} in ${a.d} parts. Use the blank strip with ${D} parts to find the matching amount.">${Array.from({length:count},(_,i)=>row(i,a.d,8+i*47,true)+row(i,D,25+i*47)).join('')}</svg>`;
 }
 function u5Line(start,end,point,label,division=1){
   const x=v=>24+252*(v-start)/(end-start);
@@ -6762,7 +6765,7 @@ function u5Model(c){
     const end=Math.ceil(point)+(amount?Math.ceil(amount.n/amount.d):1);
     visual=u5Line(0,Math.max(1,end),point,u5Name(from),D);
   }else if(role==='rename'){
-    action=D>120?`Start with the strip shown. Work out how many of the ${D} new spaces fit inside one old space.`:`Both rows cover the same amount. Count the shaded pieces in the row split into ${D} parts per whole.`;
+    action=D>120?`Start with the strip shown. Work out how many of the ${D} new spaces fit inside one old space.`:`Line up the end of the shaded amount with the blank row. Count that far on the row with ${D} parts per whole.`;
     visual=u5ScaleModel(a,D);
   }else{
     add(a,true);add(b);
@@ -6854,7 +6857,7 @@ function u5PracticeHelp(card){
   if(target){target.focus({preventScroll:true});target.scrollIntoView({block:'nearest'});}
 }
 function u5TextIssue(card,raw){
-  if(['simplest','sum','jump','landing'].includes(card.role))return u5Fraction(raw)?'':u5Format;
+  if(['simplest','sum','jump','landing'].includes(card.role))return u5Fraction(raw)?'':parseFraction(raw)?.d===0?u5PositiveBottom:u5Format;
   if(card.role==='factor')return Number.isInteger(u5Count(raw))?'':'Enter a whole number for the group size.';
   return '';
 }
@@ -6877,9 +6880,10 @@ function u5LessonDelivery(it,cue,model=false){
 function u5LessonFeedback(it,result,submitted){
   const card=it.step.unit5,values=Array.isArray(submitted)?submitted:[submitted];
   if(result.fmt){
+    if(parseFraction(values[0])?.d===0)return u5PositiveBottom;
     if(card.role==='mixed-form')return mixedFormatCue('mixed-number',values[0],{denominator:card.a.d,total:card.a.n});
     if(it.step.input.type==='nums')return 'Fill both boxes with counts. You can keep any count you’ve already entered.';
-    if(card.role==='benchmark'||card.role==='estimate-total')return 'Enter a whole number or a half, like 1/2 or 1 1/2.';
+    if(card.role==='benchmark'||card.role==='estimate-total')return u5BenchmarkFormat;
     if(it.step.input.type==='text')return u5Format;
     return 'Enter a whole number for this count.';
   }
@@ -10433,10 +10437,10 @@ function cxEstimate(o){
  if(unit5){
   for(const [i,step] of steps.entries()){
    const check=step.check;
-   step.input={type:'text',ph:'whole or half, like 1/2'};
+   step.input={type:'text',ph:'whole number or half'};
    step.check=(raw,st)=>{
     const f=u5Fraction(raw),n=f?frValue(f):u5Count(raw);
-    if(!Number.isFinite(n))return {ok:false,fmt:true,msg:'Enter a whole number or a half, like 1/2 or 1 1/2.'};
+    if(!Number.isFinite(n))return {ok:false,fmt:true,msg:u5BenchmarkFormat};
     return check(n,st);
    };
    u5Card(step,i<2?'benchmark':'estimate-total',i<2?{a:[a,b][i]}:{a,b,checkedBench:[u5Half(A),u5Half(B)]});
