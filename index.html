@@ -483,6 +483,8 @@ button.u5-block:focus-visible{outline:3px solid #111;outline-offset:-3px;z-index
 .u5-block-row-label{display:block;font-size:13px;margin-top:8px}
 @media(min-width:680px){.u5-beside{max-width:540px;margin-left:auto;margin-right:auto}}
 
+.u5-block-target{outline:3px solid #a65d00;outline-offset:5px;border-radius:3px}
+.lpmsg.block-review,.inline-msg.block-review{color:#785000}
 </style>
 </head>
 <body>
@@ -1765,7 +1767,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.11.0 · November 11, 2026";
+const BUILD="v10.12.0 · November 11, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -6635,6 +6637,7 @@ function mixedWalkDeliver(ctx, text, strip=false){
 
 function mixedWalkFeedback(ctx, role){
   const [focus,text]=mixedWalkCue(role,ctx.draft);
+  if(u5BlockPracticeReply(text)){sc.mixedFocus=focus;return;}
   sc.mixedFocus=focus;
   sc.msg=esc(text);
   mixedWalkDeliver(ctx,text);
@@ -6643,6 +6646,7 @@ function mixedWalkFeedback(ctx, role){
 function mixedWalkHelp(){
   sc.val=app.querySelector('#cans').value;
   const ctx=hwWalterContext(), role=cur.steps[stepIdx].mixedRole;
+  if(u5BlockPracticeReply(mixedWalkCue(role,sc.val)[1],'help',!!sc.unit5BlockReview)){save();render();return;}
   const strip=sc.mixedCueShown;
   if(strip){
     sc.mixedStrip=true;
@@ -6875,6 +6879,7 @@ function u5PracticeDeliver(ctx,card,cue,model=false){
 }
 function u5PracticeFeedback(card,raw){
   const ctx=hwWalterContext(),cue=u5PracticeCue(card,raw);
+  if(u5BlockPracticeReply(cue))return;
   sc.msg=esc(cue);
   u5PracticeDeliver(ctx,card,cue);
 }
@@ -6882,6 +6887,7 @@ function u5PracticeHelp(card){
   const input=app.querySelector('#cans');
   if(input)sc.val=input.value;
   const ctx=hwWalterContext();
+  if(u5BlockPracticeReply(u5PracticeCue(card,sc.val),'help',!!sc.unit5BlockReview)){save();render();return;}
   if(sc.unit5Cue){
     sc.unit5Model=true;
     u5PracticeDeliver(ctx,card,u5Model(u5ModelForEntry(card,sc.lastCheck?.draft)).action,true);
@@ -6917,7 +6923,9 @@ function u5LessonDelivery(it,cue,model=false){
 }
 function u5LessonFeedback(it,result,submitted){
   const card=it.step.unit5,values=Array.isArray(submitted)?submitted:[submitted];
+  if(result.blockReview){u5LessonDelivery(it,result.msg);return result.msg;}
   if(result.fmt){
+    const drawn=u5BlockLessonFeedback(it,result,submitted,'Put your counts in the answer boxes above, then press Check.');if(drawn)return drawn;
     if(parseFraction(values[0])?.d===0)return u5PositiveBottom;
     if(card.role==='mixed-form')return mixedFormatCue('mixed-number',values[0],{denominator:card.a.d,total:card.a.n});
     if(it.step.input.type==='nums')return 'Fill both boxes with counts. You can keep any count you’ve already entered.';
@@ -6925,11 +6933,14 @@ function u5LessonFeedback(it,result,submitted){
     if(it.step.input.type==='text')return u5Format;
     return 'Enter a whole number for this count.';
   }
-  const cue=u5Cue(card,values,true,Number.isInteger(result.badIndex)?result.badIndex:-1);
+  const base=u5Cue(card,values,true,Number.isInteger(result.badIndex)?result.badIndex:-1);
+  const drawn=u5BlockLessonFeedback(it,result,submitted,base);if(drawn)return drawn;
+  const cue=base;
   u5LessonDelivery(it,cue);
   return cue;
 }
 function u5LessonHelp(it){
+  if(u5BlockLessonHelp(it))return;
   const st=it.st,card=it.step.unit5,ctx=lpHelpContext(it);
   if(st.unit5Help?.k===st.k){
     u5LessonDelivery(it,u5Model(u5ModelForEntry(card,st.stepEvents?.at(-1)?.values?.[0])).action,true);
@@ -7095,10 +7106,10 @@ function u5BlocksHTML(c,owner){
     const selected=Array.isArray(draft[key])?draft[key].filter(x=>Number.isInteger(x)&&x>=0&&x<wholes*d):[];
     const original=Array.from({length:wholes},(_,w)=>whole(f.d,Math.max(0,Math.min(f.d,total-w*f.d)),false,key,w)).join('');
     const mine=Array.from({length:wholes},(_,w)=>`<span class="u5-block-row-label">One whole · ${d} equal blocks</span>${whole(d,selected,true,key,w)}`).join('');
-    return `<div class="u5-block-amount"><p class="u5-original-label">${plans.length>1?(i?'Second':'First')+' original amount':'Original amount'}: ${esc(u5GivenText(f))}</p><div class="u5-reference" role="img" aria-label="Original shaded amount ${esc(u5GivenText(f))}">${original}</div><p><b>Your blocks</b> — shade the same amount.</p>${mine}</div>`;
+    return `<div class="u5-block-amount${owner?.unit5BlockFocus===key?' u5-block-target':''}"><p class="u5-original-label">${plans.length>1?(i?'Second':'First')+' original amount':'Original amount'}: ${esc(u5GivenText(f))}</p><div class="u5-reference" role="img" aria-label="Original shaded amount ${esc(u5GivenText(f))}">${original}</div><p><b>Your blocks</b> — ${c.role==='pieces-in-wholes'?'shade only the full wholes for this step.':'shade the same amount.'}</p>${mine}</div>`;
   }).join('');
   const line=['benchmark','estimate-total','jump','landing'].includes(c.role)?u5Model(c).visual:'';
-  return `<section class="u5-blocks" aria-label="Fraction blocks workspace"><h3>Work with blocks</h3><p>Tap to shade or erase. These blocks are your scratch work. Check uses your answer boxes.</p>${line}${body}</section>`;
+  return `<section class="u5-blocks" aria-label="Fraction blocks workspace"><h3>Work with blocks</h3><p>Tap to shade or erase. Walter looks at your blocks and answer when you press Check or Help me.</p>${line}${body}</section>`;
 }
 function u5BindBlocks(owner,persist){
   app.querySelectorAll('[data-u5-block]').forEach(button=>button.addEventListener('click',()=>{
@@ -7111,8 +7122,132 @@ function u5BindBlocks(owner,persist){
     // Keep only this problem's most recent board configurations.
     owner.unit5BlockWork=Object.fromEntries(Object.entries(work).slice(-12));
     button.setAttribute('aria-pressed',String(selected.has(piece)));
+    u5BlocksChanged(owner);
     persist();
   }));
+}
+// Observe submitted/asked-about drawings. An untouched board is not an attempted answer.
+function u5InspectBlocks(card,owner){
+  const work=owner?.unit5BlockWork;
+  if(!work||typeof work!=='object')return null;
+  const drawings=u5BlockPlan(card).filter(p=>Object.prototype.hasOwnProperty.call(work,p.key)).map(p=>{
+    const selected=[...new Set((Array.isArray(work[p.key])?work[p.key]:[]).filter(n=>Number.isInteger(n)&&n>=0&&n<p.wholes*p.d))];
+    const rows=Array.from({length:p.wholes},(_,i)=>selected.filter(n=>Math.floor(n/p.d)===i).length);
+    const target=card.role==='pieces-in-wholes'?(p.f.w||0)*p.f.d:p.total;
+    const matches=selected.length*p.f.d===target*p.d;
+    const pattern=matches?'same-amount':!selected.length?'erased':p.d!==p.f.d&&selected.length===p.total?'old-piece-count':p.total>p.f.d&&selected.length*p.f.d===(p.total%p.f.d)*p.d?'leftover-only':p.total%p.f.d&&selected.length%p.d===0?'whole-only':'different-amount';
+    return {key:p.key,d:p.d,given:p.f,count:selected.length,rows,matches,pattern};
+  });
+  if(!drawings.length)return null;
+  const mismatch=drawings.find(x=>!x.matches);
+  return {drawings,mismatch,status:mismatch?'mismatch':'match',signature:JSON.stringify(drawings.map(x=>[x.key,x.rows,x.matches]))};
+}
+function u5BlockCue(card,obs,base='',typedOk=false,small=false){
+  const bad=obs.mismatch;
+  if(card.role==='pieces-in-wholes')return (typedOk?'Your typed answer checks out. Fix the blocks, or keep your answer with the drawing unfinished. ':'')+(bad?(small?'Match all the blocks in one full whole. Repeat for each full whole in the original.':'For this step, shade only the full wholes shown in the original. Save the extra fraction for the next step.'):'Your blocks match the full wholes for this step. ')+(bad?'':base||'Count the shaded pieces in those wholes.');
+  if(!bad)return 'Your shaded amount matches the original. '+(base||'Use your drawing to work out the answer box above.');
+  const location=obs.drawings.length>1?(obs.drawings.indexOf(bad)===0?'first':'second')+' drawing':'drawing';
+  const preserve=obs.drawings.some(x=>x.matches)?'Keep the drawing that already matches. ':'';
+  let cue;
+  if(small){
+    cue=bad.pattern==='old-piece-count'?'Look at one shaded part in the original. Find the smaller blocks that cover that part in your new whole. Repeat for the other shaded parts.'
+      :bad.pattern==='leftover-only'?'Find a completely shaded whole in the original. Fill a matching whole in your drawing, then include the fraction part.'
+      :bad.pattern==='whole-only'?'Look at the partly shaded whole in the original. Compare that part with the last whole in your drawing.'
+      :'Compare one original whole with one whole in your drawing. Match the shaded amount, then move to the next whole.';
+  }else{
+    cue=bad.pattern==='erased'?`Your ${location} is blank after erasing. Shade the original amount when you are ready to check the drawing.`
+      :bad.pattern==='old-piece-count'?`In your ${location}, you kept the old number of shaded pieces. The new pieces are smaller. Match the original shaded amount before counting the new pieces.`
+      :bad.pattern==='leftover-only'?`Your ${location} shows just the leftover fraction. Include the full wholes from the original too.`
+      :bad.pattern==='whole-only'?`Your ${location} shows only full wholes. Compare it with the partly shaded whole in the original too.`
+      :`Your ${location} covers a different amount from the original. Compare the shaded areas, one whole at a time.`;
+  }
+  return (typedOk?'Your typed answer checks out. Fix the blocks, or keep your answer with the drawing unfinished. ':'')+preserve+cue+(!typedOk&&!small&&base?' '+base:'');
+}
+function u5BlockRecord(owner,card,obs,submitted,context,outcome){
+  const signature=JSON.stringify([context,card.role,obs.signature,(Array.isArray(submitted)?submitted:[submitted]).slice(0,4).map(x=>String(x??'').slice(0,64)),outcome]);
+  const entries=Array.isArray(owner.unit5BlockObservations)?owner.unit5BlockObservations:[];
+  if(!entries.some(x=>x.signature===signature))entries.push({context,role:card.role,status:obs.status,outcome,signature,
+    drawings:obs.drawings.map(x=>({key:x.key,denominator:x.d,shaded:x.count,rows:x.rows,matches:x.matches,pattern:x.pattern})),t:Date.now()});
+  owner.unit5BlockObservations=entries.slice(-24);
+  owner.unit5BlockFocus=obs.mismatch?.key||null;
+  owner.unit5BlockLast=JSON.stringify([context,card.role,obs.signature]);
+}
+const u5BlockDraftKey=v=>walterHelpSignature(JSON.stringify((Array.isArray(v)?v:[v]).map(x=>String(x??''))));
+function u5BlockLessonResult(it,submitted,result){
+  const st=it.st,bypass=st.unit5UseTyped===true;delete st.unit5UseTyped;delete st.unit5BlockReview;
+  if(it.phase==='model'||!it.step?.unit5)return result;
+  const obs=u5InspectBlocks(it.step.unit5,st);if(!obs)return result;
+  const acknowledged=st.unit5BlockAcknowledged===obs.signature;
+  if(result.ok&&bypass)st.unit5BlockAcknowledged=obs.signature;
+  u5BlockRecord(st,it.step.unit5,obs,submitted,String(st.k),result.ok?(bypass?'kept-typed-answer':acknowledged&&obs.mismatch?'continued-with-unfinished-drawing':'typed-correct'):result.fmt?'format':'typed-miss');
+  if(result.ok&&obs.mismatch&&!bypass&&!acknowledged){
+    st.unit5BlockReview={k:st.k,draft:u5BlockDraftKey(submitted)};
+    return {ok:false,safe:true,blockReview:true,typedOk:true,code:'block-model',msg:u5BlockCue(it.step.unit5,obs,'',true)};
+  }
+  return result;
+}
+function u5BlockLessonFeedback(it,result,submitted,base){
+  const obs=u5InspectBlocks(it.step.unit5,it.st);if(!obs)return null;
+  const values=Array.isArray(submitted)?submitted:[submitted];
+  if(result.fmt&&values.some(v=>String(v??'').trim())){
+    if(it.step.unit5.role==='rename'&&u5Fraction(values[0]))base=u5BlockFormatBase(it.step.unit5,values[0],base);else return null;
+  }
+  const cue=u5BlockCue(it.step.unit5,obs,base,!!result.typedOk);
+  u5LessonDelivery(it,cue);return cue;
+}
+function u5BlockLessonHelp(it){
+  const st=it.st,card=it.step.unit5,obs=u5InspectBlocks(card,st);if(!obs)return false;
+  const small=st.unit5BlockLast===JSON.stringify([String(st.k),card.role,obs.signature]),context=lpHelpContext(it),draft=st.draft?.values||[];
+  const base=u5Cue(card,draft,context.status==='miss'||context.status==='trial',context.field);
+  const cue=u5BlockCue(card,obs,base,st.unit5BlockReview?.draft===u5BlockDraftKey(draft),small);
+  u5BlockRecord(st,card,obs,draft,String(st.k),'asked-for-help');
+  st.msg=cue;u5LessonDelivery(it,cue);if(small)st.unit5Help.model=true;
+  return true;
+}
+function u5BlockPracticeReply(base='',trigger='miss',typedOk=false){
+  const card=u5PracticeWorkspaceCard(),obs=u5InspectBlocks(card,cur);if(!obs)return false;
+  const small=trigger==='help'&&cur.unit5BlockLast===JSON.stringify([String(stepIdx),card.role,obs.signature]);
+  const cue=u5BlockCue(card,obs,base,typedOk&&sc.unit5BlockReview?.draft===u5BlockDraftKey(sc.val),small);
+  u5BlockRecord(cur,card,obs,sc.val,String(stepIdx),trigger);
+  sc.msg=esc(cue);
+  if(mixedWalkActive()){mixedWalkDeliver(hwWalterContext(),cue);if(small)sc.mixedStrip=true;}
+  else {u5PracticeDeliver(hwWalterContext(),card,cue);if(small)sc.unit5Model=true;}
+  return true;
+}
+function u5BlockPracticeReview(ok,bypass){
+  delete sc.unit5BlockReview;
+  if(phase!=='wt'||sc.state!=='open'||!u5PracticeWorkspaceCard())return false;
+  const card=u5PracticeWorkspaceCard(),obs=u5InspectBlocks(card,cur);if(!obs)return false;
+  const acknowledged=cur.unit5BlockAcknowledged===obs.signature;
+  if(ok&&bypass)cur.unit5BlockAcknowledged=obs.signature;
+  u5BlockRecord(cur,card,obs,sc.val,String(stepIdx),ok?(bypass?'kept-typed-answer':acknowledged&&obs.mismatch?'continued-with-unfinished-drawing':'typed-correct'):'typed-miss');
+  if(ok&&obs.mismatch&&!bypass&&!acknowledged){
+    sc.unit5BlockReview={draft:u5BlockDraftKey(sc.val)};
+    u5BlockPracticeReply('','review',true);
+    hwWalterNextCheck(hwWalterContext(),'trial','block-model');
+    save();render();const target=app.querySelector('#cmsg');if(target){target.focus({preventScroll:true});target.scrollIntoView({block:'nearest'});}return true;
+  }
+  return false;
+}
+function u5BlocksChanged(owner){
+  delete owner.unit5BlockAcknowledged;
+  if(!owner.unit5BlockLast)return;
+  owner.unit5BlockFocus=null;
+  app.querySelectorAll('.u5-block-target').forEach(x=>x.classList.remove('u5-block-target'));
+  const message='Blocks changed. Press Check to compare them again.';
+  if(owner===cur&&phase==='wt'){sc.msg=message;const el=app.querySelector('#cmsg');if(el)el.textContent=message;}
+  else if(lp?.items?.[lp.i]?.st===owner){owner.msg=message;if(owner.unit5Help)owner.unit5Help.cue=message;const el=app.querySelector('#lpmsg');if(el)el.textContent=message;}
+}
+
+function u5BlockHistory(owner){
+  return (Array.isArray(owner?.unit5BlockObservations)?owner.unit5BlockObservations:[]).slice(-12).map(x=>({
+    context:x.context,role:x.role,status:x.status,outcome:x.outcome,
+    drawings:x.drawings.map(d=>({...d,rows:d.rows.slice()})),t:x.t
+  }));
+}
+
+function u5BlockFormatBase(card,raw,base){
+  return card?.role==='rename'&&u5Fraction(raw)?'This box asks for the new top number. Count your shaded blocks and enter only that count.':base;
 }
 function hwEntry(prefill, err){
   mode="hw:check"; cur=null; pendingHW=null;
@@ -7497,7 +7632,7 @@ function render(){
       right=`<div class="banner no" style="margin-top:0" role="status" aria-live="polite"><span class="mark" aria-hidden="true">✕</span><div>Let's look at the whole thing once more. Then the next one is fresh.<small>The answer is <b>${esc(cur.display)}</b>.</small>${noteHTML}${downHTML}</div></div>
         <div class="wt">${cur.steps.map((s,i)=>stepHTML(s,i,false,false)).join("")}</div>
         ${c?`<div class="substep ${done?"ok":"confirm"}"><div class="cq">${c.type==="mc"?"Pick the answer to continue.":"Type the answer to continue."}</div>${checkCtlHTML(c)}
-          <div class="inline-msg" id="cmsg" role="status" aria-live="polite">${sc.msg}</div>
+          <div class="inline-msg${sc.unit5BlockReview?' block-review':''}" id="cmsg" role="status" aria-live="polite">${sc.msg}</div>
           ${done?"":`<div class="actions" style="margin-top:10px"><button class="btn primary" id="cstep">Check</button></div>`}</div>`:""}
         <div class="actions">${done?`<button class="btn primary" id="next">Next</button>`:""}</div>`;
     }
@@ -8083,9 +8218,9 @@ function stepHTML(s,i,dim,withCheck){
       const helpLbl=focused?(hasModel?(mixed?'Read the strip':'Look at the model'):hasCue?'Still stuck':'Help me'):stepHelpLabel(s,c);
       const inlineModel=!focused&&sc.organicHelp?.lastReply?.move==='smaller'?sc.organicHelp.lastReply:null;
       sub=`<div class="substep ${sc.state==="ok"?"ok":sc.state==="revealed"?"bad":sc.state==="confirm"||sc.state==="explain"?"confirm":""}">${mixed&&open?mixedWalkReminder():s.unit5&&open?`<p class="muted" style="margin:0 0 8px">Given <b>${esc(cur.unit5Given||plain(cur.prompt))}</b></p>`:''}<div class="cq">${c.q}</div>${typeof readAloudButton==='function'?readAloudButton(focused&&sc.msg?[c.q,sc.msg,hasModel?(mixed?mixedWalkStripAction(s.mixedRole,sc.mixedFocus):u5Model(u5ModelForEntry(s.unit5,sc.lastCheck?.draft)).action):''].join(' '):c.q,'step-prompt'):''}${checkCtlHTML(c)}
-        <div class="inline-msg" id="cmsg" role="status" aria-live="polite" tabindex="-1">${focused&&open&&hasCue&&sc.msg?'<b>Walter:</b> ':''}${sc.msg}</div>
+        <div class="inline-msg${sc.unit5BlockReview?' block-review':''}" id="cmsg" role="status" aria-live="polite" tabindex="-1">${focused&&open&&hasCue&&sc.msg?'<b>Walter:</b> ':''}${sc.msg}</div>
         ${mixed&&open?mixedWalkForm(s.mixedRole):''}${settled && s.after && !sc.xdone?`<div class="res after">${s.after}</div>`:""}${explainHTML}
-        ${open?`<div class="actions" style="margin-top:10px"><button class="btn primary" id="cstep">Check</button>${sc.state==="open"?`<button class="btn quiet" id="stephelp" title="Get the next clue for this step. You can ask before you try.">${helpLbl}</button>`:""}</div>`:""}
+        ${open?`<div class="actions" style="margin-top:10px"><button class="btn primary" id="cstep">Check</button>${sc.state==="open"?`<button class="btn quiet" id="stephelp" title="Get the next clue for this step. You can ask before you try.">${helpLbl}</button>`:""}${sc.unit5BlockReview?'<button type="button" class="btn quiet" id="keepblockanswer">Keep my checked answer</button>':''}</div>`:""}
         ${open&&inlineModel?walterInlineModel(hwWalterSemanticContext(hwWalterContext()),inlineModel,'walter-step-model'):''}
         ${focused&&open?u5BlocksHTML(u5PracticeWorkspaceCard(),cur):''}${focused&&open&&hasModel?(mixed?mixedWalkStrip(s.mixedRole):u5ModelHTML(u5ModelForEntry(s.unit5,sc.lastCheck?.draft),'u5practicemodel')):''}
         ${focused&&open&&hasModel?`<details${exampleOpen?' open':''}><summary>More help</summary><button type="button" class="btn quiet small" id="hwaskexample">See a different worked example</button></details>`:""}</div>`;
@@ -8139,6 +8274,7 @@ function bind(){
   if(q("withme")) q("withme").onclick=beginWalkthrough; // v9.20: from the hint ladder into the checked walkthrough (studied; never independent)
   u5BindDivision();
   if(cur)u5BindBlocks(cur,()=>save());
+  if(q("keepblockanswer"))q("keepblockanswer").onclick=()=>{sc.unit5UseTyped=true;checkStep();};
   if(q("cstep")){
     q("cstep").onclick=checkStep;
     const ci=q("cans"); if(ci) ci.addEventListener("input",()=>{ sc.val=ci.value; });
@@ -8245,6 +8381,7 @@ app.addEventListener("keydown", e=>{ // keyboard for the practice screen: Enter 
 });
 
 function pushLog(e){
+  if(cur?.unit5BlockObservations?.length)e.blockObservations=u5BlockHistory(cur);
   if(cur?.stepMisses?.length)e.stepMisses=cur.stepMisses.slice(-20).map(x=>({...x,value:x.value.slice(0,6)}));
   S.log.push(e);
   while(S.log.length>LOG_CAP){ S.log.shift(); S.logTrimmed=(S.logTrimmed||0)+1; }
@@ -8518,10 +8655,11 @@ function noteStepComp(c, sc, ok){
 }
 function checkStep(){
   const c=cur.steps[stepIdx].check; if(!scActive()) return; const walterContext=hwWalterContext();
+  const useTyped=sc.unit5UseTyped===true;delete sc.unit5UseTyped;
   let ok;
-  if(c.type==="mc"){ if(sc.sel<0){ const f=app.querySelector("#copts .opt"); if(f) f.focus(); return; } ok = sc.sel===c.answer; }
-  else { const inp=app.querySelector("#cans"); const v=inp.value; sc.val=v; if(!v.trim()){ if(mixedWalkActive()&&!sc.mixedCueShown)mixedWalkHelp();else inp.focus(); return; }
-    const issue=issueFor(c,v); if(issue){ hwWalterNextCheck(walterContext,'format');sc.lastFormat={draft:v};sc.msg=esc(mixedWalkActive()?mixedFormatCue(cur.steps[stepIdx].mixedRole,v,cur.mixedWalk):issue);if(mixedWalkActive())sc.mixedFocus=c.text?'format':'';save();render(); return; } delete sc.lastFormat;ok = stepAccepts(c,v); }
+  if(c.type==="mc"){ if(sc.sel<0){ if(u5BlockPracticeReply('Choose an answer above, then press Check.','blank')){save();render();return;} const f=app.querySelector("#copts .opt"); if(f) f.focus(); return; } ok = sc.sel===c.answer; }
+  else { const inp=app.querySelector("#cans"); const v=inp.value; sc.val=v; if(!v.trim()){ if(u5BlockPracticeReply('Put your count in the answer box above, then press Check.','blank')){save();render();return;} if(mixedWalkActive()&&!sc.mixedCueShown)mixedWalkHelp();else inp.focus(); return; }
+    const issue=issueFor(c,v); if(issue){ hwWalterNextCheck(walterContext,'format');sc.lastFormat={draft:v};const formatCue=mixedWalkActive()?mixedFormatCue(cur.steps[stepIdx].mixedRole,v,cur.mixedWalk):issue;if(!u5BlockPracticeReply(u5BlockFormatBase(u5PracticeWorkspaceCard(),v,formatCue),'format'))sc.msg=esc(formatCue);if(mixedWalkActive())sc.mixedFocus=c.text?'format':'';save();render(); return; } delete sc.lastFormat;ok = stepAccepts(c,v); }
   if(phase==="reveal"){ // copying the shown answer in unlocks Next. Logged as "finished with the answer shown": not a right answer, not a guided completion, never independent
     if(ok){ sc.state="ok"; sc.msg=`<span aria-hidden="true">✓</span> That's it.`;
       if(!cur.shownLogged){ cur.shownLogged=true; S.shown=(S.shown||0)+1;
@@ -8529,6 +8667,7 @@ function checkStep(){
     else { sc.msg = c.type==="mc" ? "Not that one. Pick the answer to continue." : "Not quite. Type the answer to continue."; sc.val=""; sc.sel=-1; }
     save(); render(); return; // saved now, not on the next action: a reload here must not lose the record
   }
+  if(u5BlockPracticeReview(ok,useTyped))return;
   const role=mixedWalkActive()?cur.steps[stepIdx].mixedRole:'';
   const code=role||(typeof c.comp==='string'?c.comp:''),tag=!ok&&c.type==='mc'?c.optionTags?.[sc.sel]||'':'';
   sc.lastCheck={draft:c.type==='mc'?String(sc.sel):String(sc.val),ok:!!ok,code,tag};
@@ -9472,7 +9611,7 @@ const lpShow=s=>String(s).replace(/\s*([+−×÷])\s*/g," $1 ").replace(/\(\s*/g
 // answer (final number, for the answer-only field), method (what "using the model" means, for the report)}.
 // A step: {id, prompt, short, input:{type, ...}, check(v, st)->{ok, msg, code, apply()}, help:[clues], why (model narration)}.
 function lpItemStart(item){ const sp=item.spec; item.st=Object.assign({model:item.phase==="model", k:0, helps:0, tries:0, codes:[], helpShown:[], stepEvents:[], eventsTrimmed:0, focusSupport:lp?.focusSupport||null, msg:"", msgKind:"", done:false, answerOnly:null, answerPreviewed:false, skipped:false, videoOpened:false, draft:null, badIndex:-1}, sp.init?sp.init():{}); item.step=sp.next(item.st); lpPrepareStep(item); item.shown=0; }
-function lpApply(item, v){ const st=item.st, step=item.step; if(!step) return; const r=step.check(v, st)||{ok:false};
+function lpApply(item, v){ const st=item.st, step=item.step; if(!step) return; const r=u5BlockLessonResult(item,v,step.check(v, st)||{ok:false});
   if(item.spec.walterStory?.checkedRoute&&!r.ok&&!r.fmt&&!r.safe&&!['decimal-story-meaning','word-story-meaning','strategy-choice'].includes(step.evidence?.component))st.storyArithmeticMisses=(Math.max(0,+st.storyArithmeticMisses||0))+1;
   const helpContext=typeof lpWalterContextKey==='function'?lpWalterContextKey(item):'';
   lpObserve(item,v,r);
@@ -9599,6 +9738,7 @@ function lpRecord(it, extra){ if(lp.homework)return fractionHomeworkRecord(it,ex
     evidenceVersion:2,load:+it.load||+lp.load||1,fingerprint,repeated:repeated?1:0,features:sp.features||null,stepEvents:lpTrimEvents(st.stepEvents),eventsTrimmed:+st.eventsTrimmed||0,
     ok:st.done?1:0, methodOk:method, methodEvidence:sp.methodEvidence||sp.kind||it.phase, teacherFocus:!!lp.focus, answerOnly:oneShot?1:(st.answerOnly===null||st.answerOnly===undefined?null:(st.answerOnly?1:0)), answerPreviewed:st.answerPreviewed?1:0,
     helps:+st.helps||0, tries:+st.tries||0, firstTry:method&&!st.tries&&!st.helps&&!st.answerPreviewed&&!repeated?1:0,
+    ...(st.unit5BlockObservations?.length?{blockObservations:u5BlockHistory(st)}:{}),
     codes:[...new Set(st.codes||[])], video:st.videoOpened?1:0, steps:+st.k||0,
     ...(Array.isArray(st.walterEvents)&&st.walterEvents.length?{walterHelp:st.walterEvents.map(x=>({...x})),walterEventsTrimmed:+st.walterEventsTrimmed||0,probeStatus:st.walterProbe||null}:{}),
     supportClass:model?"model":!method?"incomplete-method":st.answerPreviewed?"answer-confirmed":st.helps?"supported":st.tries?"retried":repeated?"repeated":"clean-checked",
@@ -9807,8 +9947,8 @@ function lpWorkHTML(it){ lpPrepareStep(it); const sp=it.spec, st=it.st, ph=it.ph
     const clues=(st.helpShown||[]).map(t=>`<div class="lpclue">${t}</div>`).join("");
     const cue=st.msg||esc(unit5?.cue||(!inlineModel?inline?.text:'')||'');
     const readText=[sp.title||'',prompt,cue,unit5Model?u5Model(unit5Model).action:inlineModel?.text||''].filter(Boolean).join('. ');
-    work=`<p class="lpstep" id="lpstep-prompt">${prompt}</p>${typeof readAloudButton==='function'?readAloudButton(readText,'lp-prompt'):''}${sp.controls?.(st)||''}${step.unit5?.role==='simplest'?u5DivisionLayout(step.unit5,[],u5CheckedDivision(st)):''}${lpInputHTML(step, st, false)}<div class="inline-err lpmsg${st.msgKind==="ok"?" ok":""}" id="lpmsg" tabindex="-1" role="status" aria-live="polite">${(unit5||inline||hasMiss)&&cue?'<b>Walter:</b> ':''}${cue}</div>${clues}
-      <div class="actions"><button class="btn primary" id="lpcheck">${step.input&&step.input.type==="button"?esc(step.input.label||"Next"):"Check"}</button>${focused?`<button class="btn quiet" id="lpunit5help">${unit5?.model?'Look at the model':unit5?'Still stuck':'Help me'}</button>`:''}${compact?`<button class="btn quiet" id="lpinlinehelp">${inlineModel?'Look at the model':inline||hasMiss?'Still stuck':'Help me'}</button>`:''}${!lpWalterEligible(it)&&(step.help||[]).length>(st.helpShown||[]).length?`<button class="btn quiet" id="lphelp">${own?"I need a clue":"Clue"}</button>`:""}${!focused&&!compact&&own&&sp.answer!==undefined&&st.answerOnly===null?`<button class="btn quiet small" id="lpknow">I know the answer</button>`:""}${own&&st.answerOnly===true?`<button class="btn quiet small" id="lpskip">Skip building it</button>`:""}</div>
+    work=`<p class="lpstep" id="lpstep-prompt">${prompt}</p>${typeof readAloudButton==='function'?readAloudButton(readText,'lp-prompt'):''}${sp.controls?.(st)||''}${step.unit5?.role==='simplest'?u5DivisionLayout(step.unit5,[],u5CheckedDivision(st)):''}${lpInputHTML(step, st, false)}<div class="inline-err lpmsg${st.msgKind==="ok"?" ok":""}${st.unit5BlockReview?.k===st.k?" block-review":""}" id="lpmsg" tabindex="-1" role="status" aria-live="polite">${(unit5||inline||hasMiss)&&cue?'<b>Walter:</b> ':''}${cue}</div>${clues}
+      <div class="actions"><button class="btn primary" id="lpcheck">${step.input&&step.input.type==="button"?esc(step.input.label||"Next"):"Check"}</button>${focused?`<button class="btn quiet" id="lpunit5help">${unit5?.model?'Look at the model':unit5?'Still stuck':'Help me'}</button>`:''}${focused&&st.unit5BlockReview?.k===st.k?'<button class="btn quiet" id="lpkeepblockanswer">Keep my checked answer</button>':''}${compact?`<button class="btn quiet" id="lpinlinehelp">${inlineModel?'Look at the model':inline||hasMiss?'Still stuck':'Help me'}</button>`:''}${!lpWalterEligible(it)&&(step.help||[]).length>(st.helpShown||[]).length?`<button class="btn quiet" id="lphelp">${own?"I need a clue":"Clue"}</button>`:""}${!focused&&!compact&&own&&sp.answer!==undefined&&st.answerOnly===null?`<button class="btn quiet small" id="lpknow">I know the answer</button>`:""}${own&&st.answerOnly===true?`<button class="btn quiet small" id="lpskip">Skip building it</button>`:""}</div>
       ${focused?u5BlocksHTML(focused,st):''}${unit5Model?u5ModelHTML(unit5Model,'u5lessonmodel'):''}${inlineModel?walterInlineModel(lpWalterSemanticContext(it),inlineModel,'walter-lesson-model'):''}${focused||compact?`<details${st.walterOpen||st.exampleNarr?' open':''}><summary>More help</summary>${lpWalterHTML(it)}${own&&sp.answer!==undefined&&st.answerOnly===null?'<button class="btn quiet small" id="lpknow">I know the answer</button>':''}</details>`:lpWalterHTML(it)}${walterFictionalHTML(st.fictional,st.fictionalNote,'lp')}${st.exampleNarr||""}${st.exampleNote?`<p class="muted">${esc(st.exampleNote)}</p>`:""}${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
   const walterLesson=st.done && ph!=="model" && !st.skipped && (st.tries>0 || st.helps>0) ? walterNote("nice","You worked through the steps and finished this one.",true) : ph==="delayed" ? walterNote("checkin","Here are new numbers. Show what you remember.",true) : ph==="guided" || (st.helpShown||[]).length ? walterNote("work","Let's check one step at a time.",true) : "";
   return `<div class="card lpcard"><h2 style="margin-top:0" class="lptitle">${sp.title}</h2>${intro}<div class="lpboard" id="lpboard">${visual}</div><div id="lpwork" class="lpwork">${work}</div>${walterLesson}${sp.prompt?`<details class="lpcontext"><summary>About this problem</summary><p class="muted lpsub">${sp.prompt}</p></details>`:""}${model||own||lp.homework?"":lpVideoHTML()}</div>`; }
@@ -9944,8 +10084,8 @@ function lpBind(it){ const q=s=>app.querySelector(s);
   const error=q('#lperror');if(error)error.onclick=()=>{keepDraft();lpOpenFictionalExample(it);lpRender();};app.querySelectorAll('[data-lp-fictional]').forEach(b=>b.onclick=()=>{keepDraft();st.fictional.picked=+b.dataset.lpFictional;lpSaveResume();lpRender();});
   const other=q("#lpother");if(other)other.onclick=()=>{keepDraft();lpDifferentExample(it);lpSaveResume();lpRender();};
   const ret=q("#lpaskreturn"); if(ret) ret.onclick=()=>{ keepDraft(); st.walterOpen=false; lpRender(); (q("#lpin")||q("[data-lpi]")||q(".lpopt")||q("#lpcheck"))?.focus({preventScroll:true}); };
-  const go=()=>{ keepDraft(); const typedTile=I.type==="tiles"&&!!q("#lptype")?.value.trim(); const v=lpReadInput(step, st); const ok=lpApply(it, v); if(ok && I.type==="tiles") st.tiles=[]; if(ok) st.grp=[]; lpRender(); const f=(!ok&&st.badIndex>=0?q(`[data-lpi="${st.badIndex}"]`):null)||(!ok&&typedTile?q("#lptype"):null)||q("#lpin")||q("[data-lpi]")||q(".lpopt")||q(".lpchip")||q(".lptok")||q(".lptile")||q("#lpnext"); if(f) f.focus({preventScroll:true}); };
-  q("#lpcheck").onclick=go; const pb=q("#lpprime"); if(pb) pb.onclick=()=>{ const ok=lpApply(it, {prime:true}); lpRender(); const f=q("[data-lpi]")||q("#lpnext")||q("#lpcheck"); if(f) f.focus({preventScroll:true}); };
+  const go=()=>{ keepDraft(); const typedTile=I.type==="tiles"&&!!q("#lptype")?.value.trim(); const v=lpReadInput(step, st); const ok=lpApply(it, v); if(ok && I.type==="tiles") st.tiles=[]; if(ok) st.grp=[]; lpRender(); const f=(st.unit5BlockReview?.k===st.k?q("#lpmsg"):null)||(!ok&&st.badIndex>=0?q(`[data-lpi="${st.badIndex}"]`):null)||(!ok&&typedTile?q("#lptype"):null)||q("#lpin")||q("[data-lpi]")||q(".lpopt")||q(".lpchip")||q(".lptok")||q(".lptile")||q("#lpnext"); if(f){f.focus({preventScroll:true});if(st.unit5BlockReview?.k===st.k)f.scrollIntoView({block:"nearest"});} };
+  q("#lpcheck").onclick=go; if(q("#lpkeepblockanswer"))q("#lpkeepblockanswer").onclick=()=>{st.unit5UseTyped=true;go();}; const pb=q("#lpprime"); if(pb) pb.onclick=()=>{ const ok=lpApply(it, {prime:true}); lpRender(); const f=q("[data-lpi]")||q("#lpnext")||q("#lpcheck"); if(f) f.focus({preventScroll:true}); };
   app.querySelectorAll("#lpwork input.ans:not(#lpknowin)").forEach(el=>el.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); if(!e.repeat) go(); } }));
   const ki=q("#lpknowin"); if(ki) ki.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); if(!e.repeat){ const g2=q("#lpknowgo"); if(g2) g2.click(); } } });
   const hb=q("#lphelp"); if(hb) hb.onclick=()=>{ keepDraft(); st.helpShown=st.helpShown||[]; const h=(step.help||[])[st.helpShown.length]; if(h){ st.helpShown.push(h); st.helps++; } lpRender(); };
