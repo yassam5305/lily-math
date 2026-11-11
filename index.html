@@ -459,6 +459,30 @@ details.more>div{padding:4px 0 2px;color:var(--graphite)}
 .u5-division-note{font-size:14px;margin:10px 0 0;text-align:center}
 .u5-empty{color:#687585}
 
+
+.u5-beside{margin:14px 0;padding:12px 8px;border:1px solid #b9c5d1;border-radius:12px;background:white}
+.u5-equation{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;font-size:23px;line-height:1.25}
+.u5-stack{display:inline-grid;grid-template-rows:auto auto;text-align:center;vertical-align:middle;min-width:35px;max-width:100%}
+.u5-stack>span{padding:6px 5px;min-width:0}
+.u5-stack>span:first-child{border-bottom:2px solid #26364a}
+.u5-mixed{display:inline-flex;align-items:center;gap:6px}
+.u5-entry{display:inline-flex;flex-direction:column;align-items:center;min-width:0;max-width:100%}
+.u5-entry .ans{width:100%;min-width:0;max-width:210px;margin:0;font-size:22px;box-sizing:border-box}
+.u5-entry .lpnums{display:flex;flex-wrap:wrap}
+.u5-equation .u5-stack .ans{max-width:76px;min-width:48px}
+.u5-work-note{font-size:14px;margin:8px 0 0;text-align:center}
+.u5-blocks{max-width:360px;margin:16px auto;padding:10px;border:1px solid #b9c5d1;border-radius:12px;background:#f8fbfe}
+.u5-blocks h3{font-size:16px;margin:0 0 6px}
+.u5-blocks p{font-size:14px;line-height:1.4;margin:6px 0}
+.u5-block-whole{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));grid-auto-rows:minmax(0,1fr);height:120px;margin:6px 0 12px;border:2px solid #276482;gap:0;overflow:hidden}
+.u5-block{display:block;min-width:0;min-height:0;margin:0;padding:0;border:1px solid #7793a4;border-radius:0;background:#fff;box-shadow:none;touch-action:manipulation}
+button.u5-block[aria-pressed="true"],.u5-block.given{background:#ffe566}
+button.u5-block:focus-visible{outline:3px solid #111;outline-offset:-3px;z-index:1}
+.u5-blocks .u5-reference{margin-bottom:8px}
+.u5-blocks .u5-original-label{font-weight:600}
+.u5-block-row-label{display:block;font-size:13px;margin-top:8px}
+@media(min-width:680px){.u5-beside{max-width:540px;margin-left:auto;margin-right:auto}}
+
 </style>
 </head>
 <body>
@@ -1741,7 +1765,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.10.0 · November 11, 2026";
+const BUILD="v10.11.0 · November 11, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -2946,7 +2970,7 @@ function genFractions(level, focus){
       {t:`Add the two benchmarks you picked: about ${benchName(bench(A))} + ${benchName(bench(B))}. Pick the choice closest to that.`, cues:[`Add the two benchmarks you chose.`, `0, 1/2, or 1 for each fraction: add those two, then pick the closest choice.`], check:Object.assign(finalCheck(p),{visibleOk:true}), after:`About ${tName(target)}. (The exact sum is ${sum.toFixed(2)}, which agrees.)`}];
     p.unit5Given=`${frText(A.n,A.d)} + ${frText(B.n,B.d)}`;p.unit5Answer={role:'estimate-total',a:A,b:B};
     p.steps[0].unit5={role:'benchmark',a:A};
-    p.steps[1].unit5={role:'benchmark',a:B};
+    p.steps[1].unit5={role:'benchmark',a:B,sourceIndex:1};
     p.steps[2].unit5={role:'estimate-total',a:A,b:B,checkedBench:[benchName(bench(A)),benchName(bench(B))]};
     p.steps[2].check.q='Add the two estimates you checked. Which total matches?';
     p.hints=[{t:`You do not need the exact sum. Ask about each fraction: is it near 0, near 1/2, or near 1? Half of the denominator is the "1/2" mark.`},{t:`${frText(A.n,A.d)}: is ${A.n} closer to 0, to ${A.d/2}, or to ${A.d}? Do the same for ${frText(B.n,B.d)} with ${B.d/2} and ${B.d}.`},{t:`${frText(A.n,A.d)} is near ${benchName(bench(A))}; ${frText(B.n,B.d)} is near ${benchName(bench(B))}. Add those two benchmarks and pick the closest choice.`}];
@@ -2967,7 +2991,7 @@ function genFractions(level, focus){
     {t:`Same-size pieces now: ${A.n*L/A.d} ${ordW(A.n*L/A.d,L)} against ${B.n*L/B.d} ${ordW(B.n*L/B.d,L)}. Which original fraction is greater?`, vis:fracSVG([A,B]), visAfter:true /* v9.18: the line shows which is farther right, so it waits */, cues:[`Same denominator now: compare the numerators.`, `More pieces of the same size is the greater fraction. Pick that original fraction.`], check:Object.assign(finalCheck(p),{visibleOk:true}), after:`${options[answer]} is greater: on the number line it sits farther right.`}];
   p.unit5Given=`${frText(A.n,A.d)} and ${frText(B.n,B.d)}`;p.unit5Answer={role:'compare',a:A,b:B};
   p.steps[0].unit5={role:'common',a:A,b:B};
-  [A,B].filter(F=>F.d!==L).forEach((a,i)=>{p.steps[i+1].unit5={role:'rename',a,D:L};});
+  [A,B].filter(F=>F.d!==L).forEach((a,i)=>{p.steps[i+1].unit5={role:'rename',a,D:L,sourceIndex:a===A?0:1};});
   p.steps.at(-1).unit5=p.unit5Answer;
   p.steps.at(-1).check.q='Which original fraction is larger?';
   p.hints=[{t:`Bigger denominator means smaller pieces. You cannot compare the tops until the pieces are the same size (or use benchmarks: is each fraction more or less than 1/2?).`},{t:`Find a common denominator: count up by ${Math.max(A.d,B.d)}s until ${Math.min(A.d,B.d)} also divides it. Rewrite both fractions with that denominator.`},{t:`Now compare the numerators: the bigger count of ${ordW(2,L)} is the greater fraction.`}];
@@ -6818,7 +6842,7 @@ function u5PracticeSetup(p){
     first.onAccept=raw=>{
       const D=u5Count(raw),{a,b}=p.unit5Answer;
       first.checkedDisplay=String(D);
-      const renamed=[a,b].filter(f=>f.d!==D).map(f=>({t:'',unit5:{role:'rename',a:f,D},
+      const renamed=[a,b].filter(f=>f.d!==D).map(f=>({t:'',unit5:{role:'rename',a:f,D,sourceIndex:f===a?0:1},
         check:wc(ci(`Rewrite ${u5Name(f)} with ${D} on the bottom. What goes on top?`,f.n*(D/f.d)),'magnitude')}));
       p.steps=[first,...renamed,last];
     };
@@ -6999,6 +7023,96 @@ function u5BindDivision(){
 function u5CheckedDivision(st){
   // Older saved lessons have accepted inputs in the event log, before this layout existed.
   return st.unit5Reduced||(st.stepEvents||[]).find(e=>e.step===1&&e.outcome==='ok'&&e.values?.length===2)?.values||[];
+}
+// The work surface reads givens and accepted steps only. Drawing is learner-owned scratch work.
+function u5FractionFace(f){
+  if(!f)return '';
+  const part=`<span class="u5-stack" aria-label="${esc(f.n)} over ${esc(f.d)}"><span>${esc(f.n)}</span><span>${esc(f.d)}</span></span>`;
+  return f.w?`<span class="u5-mixed"><span>${esc(f.w)}</span>${part}</span>`:part;
+}
+function u5PracticeWorkspaceCard(){
+  const step=cur?.steps?.[stepIdx];
+  if(step?.unit5)return step.unit5;
+  if(!mixedWalkActive()||!step?.mixedRole)return null;
+  const g=cur.mixedWalk,prior=cur.mixedWalkChecked||{};
+  return {role:step.mixedRole,a:g.total===undefined?{w:g.wholes,n:g.extra,d:g.denominator}:{n:g.total,d:g.denominator},
+    first:prior['whole-groups'],second:prior['leftover-pieces'],pieces:prior['pieces-in-wholes'],total:prior['all-pieces']};
+}
+function u5WorkBeside(c,base,ctx={}){
+  if(!c||['factor','reduce-pair','reduce-top','reduce-bottom','simplest'].includes(c.role))return base;
+  const {role,a,b,D,first,second,from,jump,remaining}=c;
+  const f=u5FractionFace,entry=`<span class="u5-entry">${base}</span>`,count=(v)=>v===undefined?'?':esc(v);
+  const over=(top,d)=>`<span class="u5-stack"><span>${top}</span><span>${count(d)}</span></span>`;
+  let equation='',note='';
+  switch(role){
+    case 'whole-and-left':{
+      if(!ctx.step){equation=`${f(a)} → ${entry}`;break;}
+      const draft=ctx.st?.draft?.k===ctx.st?.k?ctx.st.draft.values:[];
+      const boxes=[0,1].map(i=>u5DivisionInput(c,draft[i],`data-lpi="${i}"`,i?'Pieces left':'Full wholes',ctx.locked));
+      equation=`${f(a)} = <span class="u5-entry">${boxes[0]}</span> + ${over(boxes[1],a.d)}`;
+      note='Full wholes go before +. Pieces left go on top of the fraction.';break;
+    }
+    case 'whole-groups':equation=`${f(a)} → ${entry} <span>full wholes</span>`;break;
+    case 'leftover-pieces':equation=`${f(a)} = ${count(first)} + ${over(entry,a.d)}`;break;
+    case 'mixed-form':case 'mixed-number':
+      equation=`${f(a)} = ${entry}`;
+      note=`Checked: ${count(first)} full ${first===1?'whole':'wholes'} and ${count(second)} ${second===1?'piece':'pieces'} left. Write whole top/bottom.`;break;
+    case 'pieces-in-wholes':equation=`${count(a.w)} × ${count(a.d)} = ${entry}`;note='Count pieces in the wholes. Save the extra fraction for the next step.';break;
+    case 'all-pieces':equation=`${count(c.pieces)} + ${count(a.n)} = ${entry}`;break;
+    case 'improper-fraction':equation=`${f(a)} = ${entry}`;note='Use your checked total on top. Keep the original bottom number.';break;
+    case 'pieces-from-mixed':equation=`${f({w:first,n:second,d:a.d})} → ${entry} <span>pieces</span>`;break;
+    case 'common':equation=`${f(a)} <span>and</span> ${f(b)}`;note='Choose one bottom number both fractions can use.';break;
+    case 'rename':equation=`${f(a)} = ${over(entry,D)}`;note='Keep the same amount. Write the new top number.';break;
+    case 'add-counts':equation=`${over(count(first),D)} + ${over(count(second),D)} = ${over(entry,D)}`;break;
+    case 'sum':equation=`${f(a)} + ${f(b)} = ${entry}`;break;
+    case 'benchmark':equation=`${f(a)} ≈ ${entry}`;note='≈ means about the same amount.';break;
+    case 'estimate-total':equation=`${(c.checkedBench||[]).map(x=>{const n=u5Fraction(x);return n?f(n):esc(x);}).join(' + ')} ≈ ${entry}`;break;
+    case 'jump':equation=`${f(from)} + ${entry}`;note=`Choose a jump from the ${u5Name(remaining)} still left to add.`;break;
+    case 'landing':equation=`${f(from)} + ${f(jump)} = ${entry}`;break;
+    case 'compare':equation=`${f(a)} <span>or</span> ${f(b)}`;break;
+    default:return base;
+  }
+  return `<div class="u5-beside" aria-label="Work beside the original problem"><div class="u5-equation">${equation}</div>${['common','compare'].includes(role)?base:''}${note?`<p class="u5-work-note">${note}</p>`:''}</div>`;
+}
+function u5BlockColumns(d){
+  const divisors=Array.from({length:d},(_,i)=>i+1).filter(i=>d%i===0);
+  return divisors.reduce((best,n)=>Math.abs(n-Math.sqrt(2*d))<Math.abs(best-Math.sqrt(2*d))?n:best,1);
+}
+function u5BlockPlan(c){
+  if(!c)return [];
+  const fractions=[c.a||c.from,c.b||c.remaining||c.jump].filter(Boolean);
+  return fractions.map((f,i)=>{
+    const d=c.D||f.d,total=(f.w||0)*f.d+f.n,wholes=Math.max(1,Math.ceil(total/f.d));
+    return {f,d,total,wholes,key:[c.sourceIndex??i,f.w||0,f.n,f.d,d].join('-')};
+  }).filter(x=>Number.isInteger(x.d)&&x.d>0&&x.d<=120&&x.wholes*x.d<=480);
+}
+const u5GivenText=f=>(f.w?String(f.w)+' ':'')+f.n+'/'+f.d;
+function u5BlocksHTML(c,owner){
+  const plans=u5BlockPlan(c);if(!plans.length)return '';
+  const draft=owner?.unit5BlockWork||{};
+  const whole=(parts,shades,editable,key,w)=>`<div class="u5-block-whole" style="--cols:${u5BlockColumns(parts)}" role="group" aria-label="One whole split into ${parts} equal blocks">${Array.from({length:parts},(_,i)=>editable?`<button type="button" class="u5-block" data-u5-block="${key}" data-u5-piece="${w*parts+i}" aria-label="Whole ${w+1}, block ${i+1} of ${parts}" aria-pressed="${shades.includes(w*parts+i)}"></button>`:`<span class="u5-block${i<shades?' given':''}" aria-hidden="true"></span>`).join('')}</div>`;
+  const body=plans.map(({f,d,total,wholes,key},i)=>{
+    const selected=Array.isArray(draft[key])?draft[key].filter(x=>Number.isInteger(x)&&x>=0&&x<wholes*d):[];
+    const original=Array.from({length:wholes},(_,w)=>whole(f.d,Math.max(0,Math.min(f.d,total-w*f.d)),false,key,w)).join('');
+    const mine=Array.from({length:wholes},(_,w)=>`<span class="u5-block-row-label">One whole · ${d} equal blocks</span>${whole(d,selected,true,key,w)}`).join('');
+    return `<div class="u5-block-amount"><p class="u5-original-label">${plans.length>1?(i?'Second':'First')+' original amount':'Original amount'}: ${esc(u5GivenText(f))}</p><div class="u5-reference" role="img" aria-label="Original shaded amount ${esc(u5GivenText(f))}">${original}</div><p><b>Your blocks</b> — shade the same amount.</p>${mine}</div>`;
+  }).join('');
+  const line=['benchmark','estimate-total','jump','landing'].includes(c.role)?u5Model(c).visual:'';
+  return `<section class="u5-blocks" aria-label="Fraction blocks workspace"><h3>Work with blocks</h3><p>Tap to shade or erase. These blocks are your scratch work. Check uses your answer boxes.</p>${line}${body}</section>`;
+}
+function u5BindBlocks(owner,persist){
+  app.querySelectorAll('[data-u5-block]').forEach(button=>button.addEventListener('click',()=>{
+    const key=button.dataset.u5Block,piece=Number(button.dataset.u5Piece);
+    if(!owner||!Number.isInteger(piece)||piece<0||piece>=480)return;
+    const work=owner.unit5BlockWork&&typeof owner.unit5BlockWork==='object'&&!Array.isArray(owner.unit5BlockWork)?owner.unit5BlockWork:{};
+    const selected=new Set(Array.isArray(work[key])?work[key].filter(n=>Number.isInteger(n)&&n>=0&&n<480):[]);
+    if(selected.has(piece))selected.delete(piece);else selected.add(piece);
+    work[key]=[...selected];
+    // Keep only this problem's most recent board configurations.
+    owner.unit5BlockWork=Object.fromEntries(Object.entries(work).slice(-12));
+    button.setAttribute('aria-pressed',String(selected.has(piece)));
+    persist();
+  }));
 }
 function hwEntry(prefill, err){
   mode="hw:check"; cur=null; pendingHW=null;
@@ -7973,7 +8087,7 @@ function stepHTML(s,i,dim,withCheck){
         ${mixed&&open?mixedWalkForm(s.mixedRole):''}${settled && s.after && !sc.xdone?`<div class="res after">${s.after}</div>`:""}${explainHTML}
         ${open?`<div class="actions" style="margin-top:10px"><button class="btn primary" id="cstep">Check</button>${sc.state==="open"?`<button class="btn quiet" id="stephelp" title="Get the next clue for this step. You can ask before you try.">${helpLbl}</button>`:""}</div>`:""}
         ${open&&inlineModel?walterInlineModel(hwWalterSemanticContext(hwWalterContext()),inlineModel,'walter-step-model'):''}
-        ${focused&&open&&hasModel?(mixed?mixedWalkStrip(s.mixedRole):u5ModelHTML(u5ModelForEntry(s.unit5,sc.lastCheck?.draft),'u5practicemodel')):''}
+        ${focused&&open?u5BlocksHTML(u5PracticeWorkspaceCard(),cur):''}${focused&&open&&hasModel?(mixed?mixedWalkStrip(s.mixedRole):u5ModelHTML(u5ModelForEntry(s.unit5,sc.lastCheck?.draft),'u5practicemodel')):''}
         ${focused&&open&&hasModel?`<details${exampleOpen?' open':''}><summary>More help</summary><button type="button" class="btn quiet small" id="hwaskexample">See a different worked example</button></details>`:""}</div>`;
     }
   }
@@ -7983,7 +8097,8 @@ function stepHTML(s,i,dim,withCheck){
   if(phase==="reveal" && !withCheck && s.after && !sub) sub=`<div class="res after">${s.after}</div>`; // v9.18: the full solution includes each step's explanation (several pictures now live there)
   return `<div class="step ${dim?"dim":""}"><span class="n">${i+1}.</span>${s.t}${s.more&&!dim?moreHTML(s.more):""}${visual}${sub}</div>`;
 }
-function checkCtlHTML(c){ // the entry control for a check, driven by sc. In confirm state it stays enabled with the right answer marked
+function checkCtlHTML(c){return u5WorkBeside(u5PracticeWorkspaceCard(),baseCheckCtlHTML(c));}
+function baseCheckCtlHTML(c){ // the entry control for a check, driven by sc. In confirm state it stays enabled with the right answer marked
   const open=scActive();
   const division=u5PracticeDivisionInput(c,!open);if(division!==null)return division;
   if(c.type==="mc") return optsHTML("copts", c.options||[], sc.state==="explain"?c.answer:sc.sel, c.answer, !open, "opt copt", sc.state==="confirm"?c.answer:-1, sc.crossed);
@@ -8023,6 +8138,7 @@ function bind(){
   if(q("hintwork")) q("hintwork").onclick=beginWalkthrough;
   if(q("withme")) q("withme").onclick=beginWalkthrough; // v9.20: from the hint ladder into the checked walkthrough (studied; never independent)
   u5BindDivision();
+  if(cur)u5BindBlocks(cur,()=>save());
   if(q("cstep")){
     q("cstep").onclick=checkStep;
     const ci=q("cans"); if(ci) ci.addEventListener("input",()=>{ sc.val=ci.value; });
@@ -9367,7 +9483,11 @@ function lpApply(item, v){ const st=item.st, step=item.step; if(!step) return; c
   return false; }
 
 // ---- input widgets ----
-function lpInputHTML(step, st, locked){ const I=step.input||{type:"num"}, dis=locked?" disabled":"", draft=st.draft&&st.draft.k===st.k?st.draft.values:[];
+function lpInputHTML(step,st,locked){
+  const base=lpBaseInputHTML(step,st,locked);
+  return u5WorkBeside(step.unit5,base,{step,st,locked});
+}
+function lpBaseInputHTML(step, st, locked){ const I=step.input||{type:"num"}, dis=locked?" disabled":"", draft=st.draft&&st.draft.k===st.k?st.draft.values:[];
   const division=u5LessonDivisionInput(step,st,locked);if(division!==null)return division;
   if(I.type==="text"&&I.prefix){
     const focus=st.walterOpen&&st.walterChoice?.step===st.k&&st.walterChoice.gridPlace==='equation';
@@ -9676,7 +9796,7 @@ function lpWorkHTML(it){ lpPrepareStep(it); const sp=it.spec, st=it.st, ph=it.ph
   const hasMiss=compact&&(lpHelpContext(it).status==='miss'||lpHelpContext(it).status==='trial');
   const unit5=focused&&st.unit5Help?.k===st.k?st.unit5Help:null;
   const unit5Model=unit5?.model?u5ModelForEntry(focused,st.stepEvents?.at(-1)?.values?.[0]):null;
-  const visual=sp.visual&&!focused?sp.visual(st, ph):"";
+  const visual=focused?'':sp.visual?sp.visual(st,ph):'';
   const intro = lp.homework?.gridCheck
     ? `<p class="lpmodel-note"><b>Fresh check.</b> ${st.helps?'You’re working with Walter’s help.':'Try it on your own. Walter is here if you need him.'}</p>`
     : own&&(st.helps||st.walterProbe) ? `<p class="lpmodel-note"><b>Practice with help.</b> Try the step, then check back with another problem later.</p>` : own&&it.repeated ? `<p class="lpmodel-note"><b>Practice repeat.</b> These numbers have appeared before. Work through the steps again.</p>` : ph==="repair" ? `<p class="lpmodel-note"><b>Fix it.</b> ${esc(lpPlain(it.rspec?it.rspec.story:""))} Clues are there if you want one.</p>` : model ? `<p class="lpmodel-note"><b>Watch one.</b> Each step shows what to do and why. Think about what you would do before you tap.</p>` : own ? `<p class="lpmodel-note"><b>On your own.</b> Try the step. Walter can help if you get stuck.</p>` : `<p class="lpmodel-note"><b>Together.</b> Do each step; ask for a clue any time.</p>`;
@@ -9689,7 +9809,7 @@ function lpWorkHTML(it){ lpPrepareStep(it); const sp=it.spec, st=it.st, ph=it.ph
     const readText=[sp.title||'',prompt,cue,unit5Model?u5Model(unit5Model).action:inlineModel?.text||''].filter(Boolean).join('. ');
     work=`<p class="lpstep" id="lpstep-prompt">${prompt}</p>${typeof readAloudButton==='function'?readAloudButton(readText,'lp-prompt'):''}${sp.controls?.(st)||''}${step.unit5?.role==='simplest'?u5DivisionLayout(step.unit5,[],u5CheckedDivision(st)):''}${lpInputHTML(step, st, false)}<div class="inline-err lpmsg${st.msgKind==="ok"?" ok":""}" id="lpmsg" tabindex="-1" role="status" aria-live="polite">${(unit5||inline||hasMiss)&&cue?'<b>Walter:</b> ':''}${cue}</div>${clues}
       <div class="actions"><button class="btn primary" id="lpcheck">${step.input&&step.input.type==="button"?esc(step.input.label||"Next"):"Check"}</button>${focused?`<button class="btn quiet" id="lpunit5help">${unit5?.model?'Look at the model':unit5?'Still stuck':'Help me'}</button>`:''}${compact?`<button class="btn quiet" id="lpinlinehelp">${inlineModel?'Look at the model':inline||hasMiss?'Still stuck':'Help me'}</button>`:''}${!lpWalterEligible(it)&&(step.help||[]).length>(st.helpShown||[]).length?`<button class="btn quiet" id="lphelp">${own?"I need a clue":"Clue"}</button>`:""}${!focused&&!compact&&own&&sp.answer!==undefined&&st.answerOnly===null?`<button class="btn quiet small" id="lpknow">I know the answer</button>`:""}${own&&st.answerOnly===true?`<button class="btn quiet small" id="lpskip">Skip building it</button>`:""}</div>
-      ${unit5Model?u5ModelHTML(unit5Model,'u5lessonmodel'):''}${inlineModel?walterInlineModel(lpWalterSemanticContext(it),inlineModel,'walter-lesson-model'):''}${focused||compact?`<details${st.walterOpen||st.exampleNarr?' open':''}><summary>More help</summary>${lpWalterHTML(it)}${own&&sp.answer!==undefined&&st.answerOnly===null?'<button class="btn quiet small" id="lpknow">I know the answer</button>':''}</details>`:lpWalterHTML(it)}${walterFictionalHTML(st.fictional,st.fictionalNote,'lp')}${st.exampleNarr||""}${st.exampleNote?`<p class="muted">${esc(st.exampleNote)}</p>`:""}${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
+      ${focused?u5BlocksHTML(focused,st):''}${unit5Model?u5ModelHTML(unit5Model,'u5lessonmodel'):''}${inlineModel?walterInlineModel(lpWalterSemanticContext(it),inlineModel,'walter-lesson-model'):''}${focused||compact?`<details${st.walterOpen||st.exampleNarr?' open':''}><summary>More help</summary>${lpWalterHTML(it)}${own&&sp.answer!==undefined&&st.answerOnly===null?'<button class="btn quiet small" id="lpknow">I know the answer</button>':''}</details>`:lpWalterHTML(it)}${walterFictionalHTML(st.fictional,st.fictionalNote,'lp')}${st.exampleNarr||""}${st.exampleNote?`<p class="muted">${esc(st.exampleNote)}</p>`:""}${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
   const walterLesson=st.done && ph!=="model" && !st.skipped && (st.tries>0 || st.helps>0) ? walterNote("nice","You worked through the steps and finished this one.",true) : ph==="delayed" ? walterNote("checkin","Here are new numbers. Show what you remember.",true) : ph==="guided" || (st.helpShown||[]).length ? walterNote("work","Let's check one step at a time.",true) : "";
   return `<div class="card lpcard"><h2 style="margin-top:0" class="lptitle">${sp.title}</h2>${intro}<div class="lpboard" id="lpboard">${visual}</div><div id="lpwork" class="lpwork">${work}</div>${walterLesson}${sp.prompt?`<details class="lpcontext"><summary>About this problem</summary><p class="muted lpsub">${sp.prompt}</p></details>`:""}${model||own||lp.homework?"":lpVideoHTML()}</div>`; }
 // Spotting a slip is still pending work. Do not use the hidden slip index,
@@ -9745,6 +9865,7 @@ function lpSummaryHTML(){ if(lp.homework)return fractionHomeworkSummaryHTML(); c
 // ---- binding ----
 function lpBind(it){ const q=s=>app.querySelector(s);
   u5BindDivision();
+  u5BindBlocks(it.st,()=>lpSaveResume());
   app.querySelectorAll(".lpvideo .video-link").forEach(vid=>vid.addEventListener("click", ()=>{ lpRecord({phase:"video"}, {kind:"video-link-tap", video:1, videoType:vid.dataset.videoType, ok:0, methodOk:0, firstTry:0}); }));
   if(it.phase==="intro"){ q("#lpgo").onclick=lpNext; q("#lpgo").focus({preventScroll:true}); return; }
   if(it.phase==="explain"){ q("#lpexpsave").onclick=()=>{ const t=String(q("#lpexp").value||"").trim().slice(0,280); if(!t){ q("#lpexpmsg").textContent="Type a thought, choose ‘I said it aloud,’ or skip."; return; } lpRecord(it, {kind:"explain", ok:1, text:t, mode:"typed", skipped:0}); lpNext(); }; q("#lpexpsaid").onclick=()=>{ lpRecord(it, {kind:"explain", ok:0, mode:"spoken", selfReported:1, skipped:0}); lpNext(); }; q("#lpexpskip").onclick=()=>{ lpRecord(it, {kind:"explain", ok:0, mode:"skipped", skipped:1}); lpNext(); }; return; }
@@ -10494,7 +10615,7 @@ function cxFractionBasics(o){
   steps.push(u5Card(mixed,'mixed-form',{a,first:w,second:r}));
   steps.push(u5Card(cxNum(`Change the mixed number back. How many pieces of size 1/${a.d} are there altogether?`,a.n,'common-unit'),'pieces-from-mixed',{a}));
  }
- const sp=cxSeq({kind:'fraction-'+mode,title:`${mode==='simplify'?'Simplify':'Rename'} ${a.n}/${a.d}`,steps,answer:a.n/a.d,answerCheck:v=>cxEq(cxRead(v),a),audit:{family:mode,a},visual:st=>mode==='simplify'?u5DivisionLayout({a,role:st.k===0?'factor':'simplest',factor:st.unit5Factor},[],u5CheckedDivision(st)):cxFractionBars(a,'Original amount'),done:()=>`The equivalent value is <b>${cxText(cxF(a.n,a.d))}</b>.`});
+ const sp=cxSeq({kind:'fraction-'+mode,title:`${mode==='simplify'?'Simplify':'Rename'} ${a.n}/${a.d}`,steps,answer:a.n/a.d,answerCheck:v=>cxEq(cxRead(v),a),audit:{family:mode,a},visual:st=>mode==='simplify'?cxFractionBars(a,'Original amount')+u5DivisionLayout({a,role:st.k===0?'factor':'simplest',factor:st.unit5Factor},[],u5CheckedDivision(st)):cxFractionBars(a,'Original amount'),done:()=>`The equivalent value is <b>${cxText(cxF(a.n,a.d))}</b>.`});
  const next=sp.next;
  sp.next=st=>{
   if(mode!=='simplify')return next(st);
@@ -10525,7 +10646,7 @@ function cxEstimate(o){
     if(!Number.isFinite(n))return {ok:false,fmt:true,msg:u5BenchmarkFormat};
     return check(n,st);
    };
-   u5Card(step,i<2?'benchmark':'estimate-total',i<2?{a:[a,b][i]}:{a,b,checkedBench:[u5Half(A),u5Half(B)]});
+   u5Card(step,i<2?'benchmark':'estimate-total',i<2?{a:[a,b][i],sourceIndex:i}:{a,b,checkedBench:[u5Half(A),u5Half(B)]});
   }
  }
  return cxSeq({kind:'fraction-estimate',title:`Estimate ${cxText(a)} ${op} ${cxText(b)}`,steps,answer:val,audit:{family:'estimate',a,b,op,result:val},done:()=>`Benchmark estimate: <b>${val}</b>. This is an estimate, not the exact result.`});
@@ -10557,7 +10678,7 @@ function cxFractionCombine(o){const {a,b,op,method,regroup}=o,value=op==='+'?cxA
     case 'second': {
      const f=stage==='first'?a:b;
      step.prompt=`Rewrite ${cxText(f)} with ${st.D} on the bottom. What goes on top?`;
-     return u5Card(step,'rename',{a:f,D:st.D});
+     return u5Card(step,'rename',{a:f,D:st.D,sourceIndex:stage==='first'?0:1});
     }
     case 'combine':return u5Card(step,'add-counts',{a,b,D:st.D,first:st.an,second:st.bn});
     case 'jump':return u5Card(step,'jump',{D:st.D,from:st.cur,remaining:st.remaining});
