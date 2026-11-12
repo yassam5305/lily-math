@@ -96,6 +96,10 @@ h2{font-size:20px;margin:18px 0 6px}
 .home-saved-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 12px;margin-top:8px;overflow-wrap:anywhere}
 .home-saved-row+.home-saved-row{border-top:1px solid var(--line);padding-top:8px}
 .home-saved-row p{margin:2px 0;font-size:15px}
+.home-unit5-shortcut{margin:0 0 12px}
+.home-unit5-shortcut .btn{min-height:44px;max-width:100%;white-space:normal;text-align:left}
+#walter-unit5-home{scroll-margin-top:14px}
+#walter-unit5-home h2:focus-visible{outline:3px solid var(--ink);outline-offset:4px;border-radius:3px}
 .home-saved details summary{padding-top:10px}
 .home-kicker{font-size:14px;font-weight:700;color:var(--graphite);margin:0 0 2px}
 .home-help{background:#eef5fc}
@@ -506,6 +510,31 @@ button.u5-block:focus-visible{outline:3px solid #111;outline-offset:-3px;z-index
 .pilot-workbench>.pilot-task>.card{margin:0}
 .pilot-workbench>.pilot-task{min-width:0}
 .unit5-walter-model-choice{margin:12px 0}
+/* The same problem, controls, and two persistent working modes. */
+.walter-unified-bench{display:block}
+.walter-unified-work{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+.walter-unified-work>.pilot-paper{margin:0;padding:14px;min-width:0;background:#f8fbff}
+.walter-task-pane,.walter-work-footer{min-width:0}
+.walter-work-tabs{display:flex;gap:8px;margin-bottom:12px}
+.walter-work-tabs .btn{flex:1;white-space:normal;padding:10px;min-height:44px;font-size:15px}
+.walter-work-tabs [aria-selected="true"]{background:var(--ink);color:white;border-color:var(--ink)}
+.walter-unified-work [role="tabpanel"][hidden],.walter-practice-work [role="tabpanel"][hidden]{display:none}
+.walter-practice-work{border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:12px}
+.walter-practice-work .u5-blocks{margin:0}
+.walter-unified-work .u5-blocks{margin:0;padding:10px}
+.walter-work-dock{position:sticky;top:0;z-index:5;background:#f8fbff;border-bottom:1px solid var(--line);padding:8px 0;margin:-4px 0 12px;box-shadow:0 5px 5px -5px #52647b}
+.walter-work-dock>b{font-size:15px;overflow-wrap:anywhere}
+.walter-work-dock .actions{gap:5px;margin-top:5px;flex-wrap:nowrap}
+.walter-work-dock .btn{min-height:44px;padding:6px;font-size:12px;flex:1;min-width:0;white-space:normal}
+@media(min-width:760px){
+ .walter-unified-bench{display:block}
+ .walter-unified-work{grid-template-columns:minmax(0,1fr) minmax(0,1.05fr)}
+ .walter-task-pane{position:sticky;top:12px}
+ .walter-unified-work>.pilot-paper{grid-area:auto}
+ .walter-work-footer{grid-column:1/-1}
+ .walter-work-dock{display:none}
+}
+
 
 .spboard{position:relative;flex:1;min-width:0}
 .spboard canvas{width:100%}
@@ -516,6 +545,31 @@ button.u5-block:focus-visible{outline:3px solid #111;outline-offset:-3px;z-index
 #sp-fill-grid button[aria-pressed=true]{background:#97c8e8;border:1px solid #e6e9ee}
 #sp-fill-grid button:focus-visible{outline:3px solid #1b2733;outline-offset:-3px;z-index:1}
 .unit5-walter-model-choice{margin:12px 0}
+/* The same problem, controls, and two persistent working modes. */
+.walter-unified-bench{display:block}
+.walter-unified-work{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+.walter-unified-work>.pilot-paper{margin:0;padding:14px;min-width:0;background:#f8fbff}
+.walter-task-pane,.walter-work-footer{min-width:0}
+.walter-work-tabs{display:flex;gap:8px;margin-bottom:12px}
+.walter-work-tabs .btn{flex:1;white-space:normal;padding:10px;min-height:44px;font-size:15px}
+.walter-work-tabs [aria-selected="true"]{background:var(--ink);color:white;border-color:var(--ink)}
+.walter-unified-work [role="tabpanel"][hidden],.walter-practice-work [role="tabpanel"][hidden]{display:none}
+.walter-practice-work{border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:12px}
+.walter-practice-work .u5-blocks{margin:0}
+.walter-unified-work .u5-blocks{margin:0;padding:10px}
+.walter-work-dock{position:sticky;top:0;z-index:5;background:#f8fbff;border-bottom:1px solid var(--line);padding:8px 0;margin:-4px 0 12px;box-shadow:0 5px 5px -5px #52647b}
+.walter-work-dock>b{font-size:15px;overflow-wrap:anywhere}
+.walter-work-dock .actions{gap:5px;margin-top:5px;flex-wrap:nowrap}
+.walter-work-dock .btn{min-height:44px;padding:6px;font-size:12px;flex:1;min-width:0;white-space:normal}
+@media(min-width:760px){
+ .walter-unified-bench{display:block}
+ .walter-unified-work{grid-template-columns:minmax(0,1fr) minmax(0,1.05fr)}
+ .walter-task-pane{position:sticky;top:12px}
+ .walter-unified-work>.pilot-paper{grid-area:auto}
+ .walter-work-footer{grid-column:1/-1}
+ .walter-work-dock{display:none}
+}
+
 </style>
 </head>
 <body>
@@ -1798,7 +1852,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.14.0 · November 11, 2026";
+const BUILD="v10.16.0 · November 11, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -4464,7 +4518,7 @@ function exampleHTML(){ if(!exampleOpen) return ""; const ex=buildExample(); if(
   if(exAll) body=ex.steps.map((st,i)=>exStepHTML(st,i,true)).join("");
   else { if(k>=2) body+=`<div class="step exdone muted"><span aria-hidden="true">✓</span> Step${k-1>1?`s 1–${k-1}`:" 1"} done.</div>`; if(k>=1) body+=exStepHTML(ex.steps[k-1],k-1,true);
     if(k<n){ const st=ex.steps[k]; body+=exStepHTML(st,k,false)+`<div class="actions" style="margin-top:6px"><button class="btn primary" id="exnext">${st.ans!==null?"Show this step":"Next"}</button>${st.ans!==null?`<span class="muted" style="align-self:center">Think first: what would you write?</span>`:""}</div>`; } }
-  const foot = done ? `<div class="step"><span class="n">Answer.</span><b>${esc(ex.display)}</b>. Now yours: same steps, your numbers.<div class="actions" style="margin-top:8px"><button class="btn primary" id="extry">Try mine</button>${exAll?"":`<button class="btn quiet small" id="exall">See all steps</button>`}</div></div>` : `<div class="actions" style="margin-top:6px"><button class="btn quiet small" id="exall">See all steps</button></div>`;
+  const foot = done ? `<div class="step"><span class="n">Answer.</span><b>${esc(ex.display)}</b>. ${esc(walterExampleBridge(cur.skill))}<div class="actions" style="margin-top:8px"><button class="btn primary" id="extry">Try mine</button>${exAll?"":`<button class="btn quiet small" id="exall">See all steps</button>`}</div></div>` : `<div class="actions" style="margin-top:6px"><button class="btn quiet small" id="exall">See all steps</button></div>`;
   return `<div class="hints" id="example" aria-live="polite">${head}${body}${foot}</div>`; }
 const moreHTML=t=>`<details class="more"><summary>Why?</summary><div>${t}</div></details>`; // v9.13: extra explanation waits behind one tap
 // v9.13 on-ramp card for a brand-new skill: a plain choice, never a gate. The answer box works whether or not she picks one.
@@ -4653,13 +4707,15 @@ function home(){
   const weekWork=weeklyHomeworkHomeHTML();
   app.innerHTML=`
     <div class="topbar home-bar"><div class="walter-heading"><img class="walter-home" data-walter-cue="home-greeting" src="${WALTER_ART.work}" alt="" width="112" height="112"><div class="walter-greeting"><h1 style="margin:0" tabindex="-1">Hi, ${esc(S.name)}.</h1><p>Walter’s here if you get stuck.</p></div></div><button class="btn quiet small" id="grown">Parents</button></div>${warnHTML()}
+    <div class="home-unit5-shortcut"><button type="button" class="btn quiet" id="homeunit5jump" aria-controls="walter-unit5-home">Unit 5 · Fractions with Walter</button></div>
     ${resumeHTML}
     ${saved.length?homeworkHTML+practiceHTML:practiceHTML+homeworkHTML}
+    ${walterUnit5HomeHTML()}
     ${doneLine}
     ${homeWinHTML()}
     ${weekWork}
     ${feedbackHTML}
-    <details class="card home-fold" id="homealternatives"${foldAttr("alternatives")}><summary>Browse all math</summary><div class="home-more-body">${nextUp.kind!=='today'?`<div class="actions"><button class="btn quiet" data-skill="today">Start new daily practice</button></div>`:""}${weekHTML.replace(/btn primary/g,'btn quiet')}${walterUnit5HomeHTML()}${unit3FocusHomeHTML()}${nsHomeTile()}${foundationsHomeHTML()}
+    <details class="card home-fold" id="homealternatives"${foldAttr("alternatives")}><summary>Browse all math</summary><div class="home-more-body">${nextUp.kind!=='today'?`<div class="actions"><button class="btn quiet" data-skill="today">Start new daily practice</button></div>`:""}${weekHTML.replace(/btn primary/g,'btn quiet')}${walterDecimalStoryHomeHTML()}${unit3FocusHomeHTML()}${nsHomeTile()}${foundationsHomeHTML()}
     <details class="card home-fold home-topics"${foldAttr("topics")}><summary>Choose a math topic</summary><div class="home-more-body">
       <p class="muted home-desc">Pick one thing you want to work on.</p>
       <div class="skills">${SKILL_ORDER.filter(k=>!SKILLS[k].foundation)/* v9.21: foundation skills live only in "Build your foundations" */.map(k=>`<button class="skill" data-skill="${k}"><div style="flex:1"><div class="name">${SKILLS[k].name}</div><div class="blurb">${esc(SKILLS[k].blurb)}</div>${tagsHTML(k)}</div>${dots(S.levels[k])}</button>`).join("")}</div>
@@ -4683,6 +4739,10 @@ function home(){
   });
   const recommended=app.querySelector(saved.length?'#homepractice':'#dailygo');
   if(nextUp.kind==='assigned'||nextUp.kind==='check')recommended.onclick=()=>startHomeLesson(nextUp.id,nextUp.kind==='check',!!nextUp.focus);
+  app.querySelector('#homeunit5jump').onclick=()=>{
+    const heading=app.querySelector('#walter-unit5-home h2');
+    if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});heading.scrollIntoView({block:'start',behavior:'smooth'});}
+  };
   walterUnit5BindHome(); bindWeeklyHomework(); bindDecimalStoryHome(); bindFolds(); armWalterMotion();
   app.querySelector(".topbar h1").focus({preventScroll:true});
   try{window.scrollTo(0,0);}catch(e){}
@@ -6405,26 +6465,29 @@ function walterWorkEvidence(ctx,move){
   if(!ctx.work||!['miss','checked-mismatch'].includes(ctx.status)||!code||!ctx.component||!ctx.family)return null;
   return {family:ctx.family,component:ctx.component,code,move,draft:ctx.work.draft||'',field:Number.isInteger(ctx.work.field)?ctx.work.field:-1};
 }
-function walterPreferredMove(work){
-  if(!work?.draft||typeof S==='undefined'||!S)return '';
-  let preferred='';
-  const seen=new Set();
-  // Each row needs its own problem wording or stable arithmetic fingerprint.
-  // A successful later check is an observation about the reply, not a diagnosis.
-  const rows=[...(S.lessonLog||[]).slice(-40),...(S.homeworkLog||[]).slice(-40),...(S.log||[]).slice(-40)]
-    .sort((a,b)=>(b?.t||0)-(a?.t||0));
+// Prefer only repeated, comparable observations. Neither ratings nor corrections
+// establish a diagnosis or causal learning effect.
+function walterMoveMemory(work,player=typeof S==='undefined'?null:S){
+  const successes={},failures={},seen=new Set();
+  if(!work?.draft||!player)return {preferred:'',avoid:[]};
+  const rows=[...(player.lessonLog||[]).slice(-40),...(player.homeworkLog||[]).slice(-40),...(player.log||[]).slice(-40)].sort((a,b)=>(b?.t||0)-(a?.t||0));
   for(const row of rows){
-    const key=row?.fingerprint||row?.itemId||row?.q;if(!key||key===work.problem||seen.has(key)||!Array.isArray(row.walterHelp))continue;
-    const match=row.walterHelp.filter(e=>e?.work?.family===work.family&&e.work.component===work.component&&e.work.code===work.code);
-    if(!match.length)continue;
-    seen.add(key);
-    const useful=match.slice().reverse().find(e=>e.nextOutcome==='ok'&&e.nextDraftChanged===true&&e.nextHelpBetween===0&&e.rating!=='stuck'&&['smaller','plan','units'].includes(e.work.move));
-    if(useful&&!preferred)preferred=useful.work.move;
-    if(seen.size>=2&&preferred)return preferred;
+    const key=row?.fingerprint||row?.itemId||row?.q;
+    if(!key||key===work.problem||seen.has(key)||!Array.isArray(row.walterHelp))continue;
+    const events=row.walterHelp.filter(e=>e?.work?.family===work.family&&e.work.component===work.component&&e.work.code===work.code);
+    if(!events.length)continue;seen.add(key);
+    for(const move of ['smaller','plan','units','meaning','test']){
+      const last=events.filter(e=>e.work.move===move).at(-1);if(!last)continue;
+      if(last.rating==='stuck')failures[move]=(failures[move]||0)+1;
+      else if(last.nextOutcome==='ok'&&last.nextDraftChanged===true&&last.nextHelpBetween===0)successes[move]=(successes[move]||0)+1;
+    }
   }
-  return '';
+  const avoid=Object.keys(failures).filter(m=>failures[m]>=2);
+  const preferred=Object.keys(successes).filter(m=>successes[m]>=2&&!avoid.includes(m)).sort((a,b)=>successes[b]-successes[a])[0]||'';
+  return {preferred,avoid};
 }
-function walterNextReply({guide,intent='start',move,lastMove,repeats=0,observation={},profile,context={}}={}){
+function walterPreferredMove(work){return walterMoveMemory(work).preferred;}
+function walterNextReply({guide,intent='start',move,lastMove,repeats=0,observation={},profile,context={},automatic=false}={}){
   const get=(name,index,fallback)=>walterPlainHelp(Array.isArray(guide)?guide[index]:guide?.[name])||fallback;
   const content={orient:get('orient',0,'Name what you need to find.'),meaning:get('meaning',1,'Label what each amount means.'),plan:get('plan',2,'Draw your next step before calculating.'),test:get('test',3,'Use a different method to check your step.'),smaller:walterPlainHelp(Array.isArray(profile)?profile[0]:guide?.smaller),compare:walterPlainHelp(Array.isArray(profile)?profile[1]:guide?.compare)};
   let chosen=WALTER_MOVES.includes(move)?move:move==='continue'?'stuck':intent==='meaning'?'meaning':intent==='check'?'test':'orient';
@@ -6432,11 +6495,18 @@ function walterNextReply({guide,intent='start',move,lastMove,repeats=0,observati
   const safe={family:context.family||observation.kind||'',kind:context.kind||observation.kind||'',component:context.component||observation.component||'',stage:context.stage||observation.stage||'',role:context.role||observation.role||'',last:context.last===true||observation.last===true,relationship:context.relationship||'',unknown:context.unknown||'',storyStage:context.storyStage||'',storyPlanChecked:context.storyPlanChecked===true,question:walterRenderedText(context.question||''),visibleText:walterRenderedText(context.visibleText||''),acceptedText:walterRenderedText(context.acceptedText||''),label:walterPlainHelp(context.label||observation.label||''),code:context.code||observation.code||'',tag:context.tag||'',status,work:context.work||null};
   safe.visibleNumbers=typeof walterVisibleNumbers==='function'?walterVisibleNumbers({text:safe.visibleText,acceptedText:safe.acceptedText}):[];
   if(repeats>0&&lastMove===chosen&&['orient','meaning','plan','test','smaller','rephrase'].includes(chosen))chosen='stuck';
-  const previous=chosen==='orient'&&safe.work?walterPreferredMove({...walterWorkEvidence(safe,chosen),problem:safe.work.problem}):'';
-  if(previous)chosen=previous;
+  const memory=safe.work?walterMoveMemory({...walterWorkEvidence(safe,chosen),problem:safe.work.problem}):{preferred:'',avoid:[]};
+  // An opening clue leaves the teaching move to Walter. Named learner choices
+  // stay available, even if that move was unhelpful on another problem.
+  if(automatic||chosen==='orient'){
+    if(chosen==='orient'&&memory.preferred)chosen=memory.preferred;
+    if(memory.avoid.includes(chosen)||(chosen==='orient'&&memory.avoid.length)){
+      chosen=['units','plan','meaning','test','smaller'].find(candidate=>!memory.avoid.includes(candidate))||'stuck';
+    }
+  }
   let choices=[],resource='',concept='',text='';
   if(chosen==='stuck'){
-    const smaller=safe.work&&lastMove!=='smaller'&&typeof walterTeachingReply==='function'?walterTeachingReply(safe,'smaller')?.text:'';
+    const smaller=safe.work&&!memory.avoid.includes('smaller')&&lastMove!=='smaller'&&typeof walterTeachingReply==='function'?walterTeachingReply(safe,'smaller')?.text:'';
     text=smaller?walterClearText(smaller)+' Which part is getting in your way?':'Which part is getting in your way? Choose the words, the amounts, a plan, the calculation, or checking.';
     choices=['words','units','plan','calculation','test'];}
   else{
@@ -6459,6 +6529,66 @@ function walterNextReply({guide,intent='start',move,lastMove,repeats=0,observati
   }
   text=walterClearText(text);
   return {text,move:chosen,signature:walterHelpSignature([context.contextKey||'',intent,chosen,status,safe.label,text].join('|')),choices,resource,concept,work:walterWorkEvidence(safe,chosen)};
+}
+
+// Clarification is a learner report, never a checked mathematical answer.
+function walterClarificationSpec(kind=''){
+  const drawing=/block|rename|grid|diagram|shade/.test(kind);
+  const story=/story|expression|word|tiles/.test(kind);
+  if(drawing&&!story)return {prompt:'Are you showing the whole amount, or working on one part?',options:[
+    {id:'whole',label:'The whole amount',text:'Compare one original whole with one whole in your model. Mark where their shaded amounts match before counting pieces.',move:'units'},
+    {id:'part',label:'Just one part so far',text:'Keep that part. Point to what it represents in the original, then choose the next part you want to add. Check the whole drawing when you are ready.',move:'plan'},
+    {id:'unsure',label:'I am not sure what to show',text:'Point to what counts as one whole in the problem. Use that same-sized whole in your model. You can choose a different worked example in More help.',move:'meaning'}]};
+  if(story)return {prompt:'What is getting in the way of your next step?',options:[
+    {id:'words',label:'What the question wants',text:'Read only the last question. Name what the answer will count or measure, then point to the story words that tell you.',move:'words'},
+    {id:'plan',label:'How the amounts connect',text:'Label each given amount with what it means. Draw what happens to those amounts before choosing an operation.',move:'plan'},
+    {id:'calculation',label:'Working out my plan',text:'Keep the setup you chose. Work on one calculation in it, then compare that calculation with a drawing or reverse operation.',move:'calculation'}]};
+  return {prompt:'Which part should we work on together?',options:[
+    {id:'meaning',label:'What this step means',text:'Point to the amount or place named in this step. Say what it counts or measures before changing your entry.',move:'units'},
+    {id:'action',label:'What to do next',text:'Choose one unfinished part. Draw or write what you would try there; keep the earlier checked work. Then check just that part.',move:'plan'},
+    {id:'example',label:'I need to see an example',text:'Open More help and choose a different worked example. Look for the decision that matches your unfinished step, then return to your own problem.',move:'connection'}]};
+}
+function walterAdaptReply(owner,key,reply,request={}){
+  if(!owner||!reply?.text)return reply;
+  const token=String(key||'').slice(0,240),signature=walterHelpSignature(reply.text);
+  let memory=owner.walterApproaches;
+  if(!memory||memory.key!==token)memory=owner.walterApproaches={key:token,seen:[],declined:[],kind:String(request.kind||'').slice(0,100)};
+  if(!Array.isArray(memory.seen))memory.seen=[];
+  if(!Array.isArray(memory.declined))memory.declined=[];
+  if(request.stuck&&memory.last&&!memory.declined.includes(memory.last))memory.declined.push(memory.last);
+  const repeat=memory.seen.includes(signature);
+  if(repeat||(request.stuck&&/Which part is getting in your way/.test(reply.text))){
+    const spec=walterClarificationSpec(request.kind||memory.kind);
+    owner.walterClarification={key:token,kind:memory.kind,prompt:spec.prompt,selected:'',pending:true};
+    const text='Let’s try a different approach. '+spec.prompt;
+    memory.declined=memory.declined.slice(-8);
+    return {...reply,text,move:'clarify',work:reply.work?{...reply.work,move:'clarify'}:null,choices:reply.choices?.length?reply.choices:['words','units','plan','calculation','test'],clarification:true,signature:walterHelpSignature(token+'|clarify|'+text)};
+  }
+  memory.seen=[...memory.seen,signature].slice(-12);memory.last=signature;
+  if(owner.walterClarification?.key!==token)delete owner.walterClarification;
+  return reply;
+}
+function walterClarificationHTML(owner,key){
+  const c=owner?.walterClarification;if(!c?.pending||c.key!==String(key||'').slice(0,240))return '';
+  const spec=walterClarificationSpec(c.kind);
+  return `<section class="lpclue walter-clarification" aria-label="Tell Walter what you are working on"><p>${esc(spec.prompt)}</p><div class="actions">${spec.options.map(o=>`<button type="button" class="btn quiet small" data-walter-clarify="${o.id}">${esc(o.label)}</button>`).join('')}</div><p class="muted">This tells Walter what you mean. It does not check your answer.</p></section>`;
+}
+function walterChooseClarification(owner,key,id){
+  const c=owner?.walterClarification;if(!c?.pending||c.key!==String(key||'').slice(0,240))return null;
+  const option=walterClarificationSpec(c.kind).options.find(x=>x.id===id);if(!option)return null;
+  c.pending=false;c.selected=id;c.selfReported=true;
+  const reply={text:option.text,move:option.move,choices:[],signature:walterHelpSignature(c.key+'|clarification|'+id),clarificationReport:id};
+  if(owner.walterApproaches){owner.walterApproaches.last=walterHelpSignature(option.text);owner.walterApproaches.seen=[...(owner.walterApproaches.seen||[]),owner.walterApproaches.last].slice(-12);}
+  return reply;
+}
+function walterBindClarification(owner,key,onReply){
+  app.querySelectorAll('[data-walter-clarify]').forEach(button=>button.onclick=()=>{
+    const reply=walterChooseClarification(owner,key,button.dataset.walterClarify);if(reply)onReply(reply);
+  });
+}
+
+function walterClarificationClear(owner){
+  if(owner)delete owner.walterClarification;
 }
 // A second route into the same checked work. These models use visible givens
 // or blank scaffolds. The learner's input, strategy and checked state stay put.
@@ -6501,7 +6631,7 @@ function walterNextInlineMove(prior,miss=false){
   if(!prior)return miss?'smaller':'start';
   // Switch representations when a clue did not help. Afterward the learner
   // can ask for a different move in More help or return to the same work.
-  return 'smaller';
+  return prior.move==='smaller'||prior.move==='stuck'||prior.move==='clarify'?'stuck':'smaller';
 }
 function walterInlineFocus(selector){
   const target=app.querySelector(selector);
@@ -6921,7 +7051,10 @@ function u5PracticeHelp(card){
   if(u5BlockPracticeReply(u5PracticeCue(card,sc.val),'help',!!sc.unit5BlockReview)){save();render();return;}
   if(sc.unit5Cue){
     sc.unit5Model=true;
-    u5PracticeDeliver(ctx,card,u5Model(u5ModelForEntry(card,sc.lastCheck?.draft)).action,true);
+    const model=u5Model(u5ModelForEntry(card,sc.lastCheck?.draft)).action;
+    const reply=walterAdaptReply(cur,'u5-entry:'+stepIdx+':'+walterDraftFingerprint(sc.val),{text:model,move:'smaller'},{kind:card.role==='rename'?'fraction-rename':card.role});
+    if(reply.clarification)sc.msg=esc(reply.text);
+    u5PracticeDeliver(ctx,card,reply.text,!reply.clarification);
   }else{
     const raw=input?sc.val:cur.steps[stepIdx].check.options[sc.sel];
     u5PracticeFeedback(card,raw);
@@ -6974,7 +7107,10 @@ function u5LessonHelp(it){
   if(u5BlockLessonHelp(it))return;
   const st=it.st,card=it.step.unit5,ctx=lpHelpContext(it);
   if(st.unit5Help?.k===st.k){
-    u5LessonDelivery(it,u5Model(u5ModelForEntry(card,st.stepEvents?.at(-1)?.values?.[0])).action,true);
+    const model=u5Model(u5ModelForEntry(card,st.stepEvents?.at(-1)?.values?.[0])).action;
+    const reply=walterAdaptReply(st,'u5-entry:'+st.k+':'+walterDraftFingerprint(st.draft?.values||[]),{text:model,move:'smaller'},{kind:card.role==='rename'?'fraction-rename':card.role});
+    if(reply.clarification)st.msg=reply.text;
+    u5LessonDelivery(it,reply.text,!reply.clarification);
     return;
   }
   const draft=st.draft?.values||[];
@@ -6994,7 +7130,8 @@ function u5RepairCue(it){
 }
 function u5RepairHelp(it,afterMiss=false){
   const rp=it.rep,model=!afterMiss&&!!rp.unit5Cue;
-  const cue=model?u5Model(it.step.unit5).action:u5RepairCue(it);
+  const initial=model?u5Model(it.step.unit5).action:u5RepairCue(it);
+  const cue=afterMiss?initial:walterAdaptReply(it.st,'u5-repair:'+it.st.k+':'+it.rep.picked,{text:initial,move:model?'smaller':'orient'},{kind:'repair'}).text;
   const id=model?'unit5-repair-model':'unit5-repair-cue';
   const context=lpWalterContextKey(it),signature=walterHelpSignature([id,context,cue].join('|'));
   const st=it.st;
@@ -7230,7 +7367,8 @@ function u5BlockLessonHelp(it){
   const st=it.st,card=it.step.unit5,obs=u5InspectBlocks(card,st);if(!obs)return false;
   const small=st.unit5BlockLast===JSON.stringify([String(st.k),card.role,obs.signature]),context=lpHelpContext(it),draft=st.draft?.values||[];
   const base=u5Cue(card,draft,context.status==='miss'||context.status==='trial',context.field);
-  const cue=u5BlockCue(card,obs,base,st.unit5BlockReview?.draft===u5BlockDraftKey(draft),small);
+  const initial=u5BlockCue(card,obs,base,st.unit5BlockReview?.draft===u5BlockDraftKey(draft),small);
+  const cue=walterAdaptReply(st,'u5:'+st.k+':'+walterHelpSignature(obs.signature+JSON.stringify(draft)),{text:initial},{kind:'fraction-blocks',stuck:small&&st.walterApproaches?.seen?.includes(walterHelpSignature(initial))}).text;
   u5BlockRecord(st,card,obs,draft,String(st.k),'asked-for-help');
   st.msg=cue;u5LessonDelivery(it,cue);if(small)st.unit5Help.model=true;
   return true;
@@ -7238,7 +7376,8 @@ function u5BlockLessonHelp(it){
 function u5BlockPracticeReply(base='',trigger='miss',typedOk=false){
   const card=u5PracticeWorkspaceCard(),obs=u5InspectBlocks(card,cur);if(!obs)return false;
   const small=trigger==='help'&&cur.unit5BlockLast===JSON.stringify([String(stepIdx),card.role,obs.signature]);
-  const cue=u5BlockCue(card,obs,base,typedOk&&sc.unit5BlockReview?.draft===u5BlockDraftKey(sc.val),small);
+  const initial=u5BlockCue(card,obs,base,typedOk&&sc.unit5BlockReview?.draft===u5BlockDraftKey(sc.val),small);
+  const cue=trigger==='help'?walterAdaptReply(cur,'u5:'+stepIdx+':'+walterHelpSignature(obs.signature+JSON.stringify(sc.val)),{text:initial},{kind:'fraction-blocks',stuck:small&&cur.walterApproaches?.seen?.includes(walterHelpSignature(initial))}).text:initial;
   u5BlockRecord(cur,card,obs,sc.val,String(stepIdx),trigger);
   sc.msg=esc(cue);
   if(mixedWalkActive()){mixedWalkDeliver(hwWalterContext(),cue);if(small)sc.mixedStrip=true;}
@@ -7261,6 +7400,7 @@ function u5BlockPracticeReview(ok,bypass){
   return false;
 }
 function u5BlocksChanged(owner){
+  walterClarificationClear(owner);app.querySelector('.walter-clarification')?.remove();
   delete owner.unit5BlockAcknowledged;
   if(!owner.unit5BlockLast)return;
   owner.unit5BlockFocus=null;
@@ -7804,7 +7944,7 @@ function render(){
   if(S.scratch) body+=scratchHTML();
   const card = right ? `<div class="card two"><div class="left">${body}</div><div class="right">${right}</div></div>` : `<div class="card">${body}</div>`;
   app.innerHTML=top+card;
-  bind(); if(S.scratch) bindScratch(); armWalterMotion(); armIdle(); noteScreen();
+  bind(); hwDialogueBind(); if(typeof walterPracticeWorkspace==='function')walterPracticeWorkspace(); if(S.scratch) bindScratch(); armWalterMotion(); armIdle(); noteScreen();
 }
 // v9.13 long-pause signal: after 75 seconds with no typing, tapping, or new screen, one calm line points at the help that is already there.
 // It changes nothing in the records. Any touch or key restarts the clock; a new screen clears the line.
@@ -8162,13 +8302,14 @@ function hwSmallerAction(ctx){
   };
   return small[cur.skill]||'Copy just one given quantity or relationship. Label what it means and draw it before doing a calculation.';
 }
-function hwOrganicReply(ctx,intent,state){
+function hwOrganicReply(ctx,intent,state,automatic=false){
   const guide=hwHelpLadder(ctx),observation=ctx.observation;
   const closing=hwCheckGuide(ctx);
   const moves={start:'orient',meaning:'meaning',check:'test',smaller:'smaller',stuck:'stuck',units:'units',representation:'connection',calculation:'calculation',words:'words',plan:'plan'};
   const prior=state.lastReply;
   const repeats=prior&&prior.intent===intent&&prior.observation===observation&&prior.draft===ctx.draft?(state.repeats||0)+1:0;
-  const reply=walterNextReply({guide,intent,move:moves[intent]||intent,lastMove:prior?.move,repeats,observation:{status:observation,kind:cur.skill,component:ctx.comp,label:ctx.target},context:hwWalterSemanticContext(ctx),profile:[hwSmallerAction(ctx),closing[0],closing[1]]});
+  let reply=walterNextReply({automatic,guide,intent,move:moves[intent]||intent,lastMove:prior?.move,repeats,observation:{status:observation,kind:cur.skill,component:ctx.comp,label:ctx.target},context:hwWalterSemanticContext(ctx),profile:[hwSmallerAction(ctx),closing[0],closing[1]]});
+  reply=walterAdaptReply(cur,ctx.key+'|'+String(ctx.draft||''),reply,{stuck:intent==='stuck',kind:cur.skill+' '+ctx.comp});
   state.repeats=repeats;state.lastReply={...reply,intent,observation,draft:ctx.draft};
   return reply;
 }
@@ -8187,8 +8328,7 @@ function hwMainHint(){
   const ctx=hwWalterContext();cur.mainHelp=cur.mainHelp||{};
   const state=cur.mainHelp[ctx.key]||(cur.mainHelp[ctx.key]={});
   const prior=state.lastReply;
-  if(prior?.move==='smaller')return;
-  const reply=hwOrganicReply(ctx,walterNextInlineMove(prior),state);
+  const reply=hwOrganicReply(ctx,walterNextInlineMove(prior),state,true);
   cur.hintLog=cur.hintLog||[];
   if(!cur.hintLog.length||cur.hintLog.at(-1).signature!==reply.signature)cur.hintLog.push({t:`<b>Help for this part.</b> ${esc(reply.text)}`,signature:reply.signature,key:ctx.key});
   cur.hintLog=cur.hintLog.slice(-20);hintIdx=Math.max(1,hintIdx);
@@ -8198,8 +8338,7 @@ function hwMainHint(){
 function hwStepHelp(){
   const inp=app.querySelector('#cans');if(inp)sc.val=inp.value;
   const ctx=hwWalterContext();sc.organicHelp=sc.organicHelp||{};
-  if(sc.organicHelp.lastReply?.move==='smaller'){walterInlineFocus('#walter-step-model');return;}
-  const reply=hwOrganicReply(ctx,walterNextInlineMove(sc.organicHelp.lastReply,ctx.observation==='checked-mismatch'),sc.organicHelp);
+  const reply=hwOrganicReply(ctx,walterNextInlineMove(sc.organicHelp.lastReply,ctx.observation==='checked-mismatch'),sc.organicHelp,true);
   cur.helpTaps=(cur.helpTaps||0)+1;cur.studied=true;sc.helped=true;
   if(missEntry){missEntry.helpTaps=cur.helpTaps;missEntry.studied=true;}
   hwRecordHelp(ctx,'walkthrough','procedure',0,reply.signature,reply.text,reply.work);if(reply.move!=='smaller')sc.msg=esc(reply.text);
@@ -8964,11 +9103,11 @@ function walterWorkspaceInk(value) {
   return strokes;
 }
 function walterWorkspaceState(value) {
-  return {notes:walterWorkspaceNotes(value?.notes), ink:walterWorkspaceInk(value?.ink)};
+  return {notes:walterWorkspaceNotes(value?.notes), ink:walterWorkspaceInk(value?.ink), mode:value?.mode==='scratch'?'scratch':'model'};
 }
 function walterWorkspaceHTML(work, notesOpen) {
   return `<section class="card pilot-paper" aria-labelledby="pilot-paper-title">
-      <h2 id="pilot-paper-title">Work it out</h2>
+      <h2 id="pilot-paper-title">My scratch paper</h2>
       <p class="muted">Tap Fill squares, then tap or drag to shade. Tap a shaded square to clear it. You can also use Pencil or type your steps.</p>
       ${scratchHTML(true)}
       <p id="pilot-ink-message" role="status"></p>
@@ -8985,11 +9124,13 @@ function walterWorkspaceBind(work, saveWork, rememberOpen) {
     const next = {...work, ...patch};
     if (saveWork(next) === false) {
       status.textContent = 'Your work could not be saved. Try again before leaving.';
-      return;
+      return false;
     }
     Object.assign(work, patch);
     status.textContent = '';
+    return true;
   };
+  walterWorkspaceCompose(work, savePatch);
   notes.oninput = () => savePatch({notes:walterWorkspaceNotes(notes.value)});
   if (rememberOpen) app.querySelector('#pilot-notes-panel').ontoggle = event => rememberOpen(event.currentTarget.open);
   bindScratch({
@@ -9042,11 +9183,75 @@ function walterWorkspaceBindCells(grid,strokes,replace,paper,getTool){
   };
   sync();return sync;
 }
+
+// Reuse the actual bound controls and models: changing work modes never checks,
+// changes a mathematical draft, or delivers tutoring. Both surfaces stay mounted.
+function walterWorkspaceCompose(work,savePatch){
+  const paper=app.querySelector('.pilot-paper'),task=app.querySelector('.pilot-task'),area=task?.querySelector('#lpwork');
+  if(!paper||!area||area.classList.contains('walter-unified-work'))return;
+  const actions=area.querySelector('#lpcheck')?.closest('.actions');
+  if(!actions)return;
+  const blocks=area.querySelector('.u5-blocks');
+  const scratch=document.createElement('div');scratch.id='walter-scratch-panel';
+  const heading=paper.querySelector('h2');
+  for(const child of [...paper.children])if(child!==heading)scratch.append(child);
+  heading.textContent='Work it out';
+  const scratchNotice=scratch.querySelector('#scratch > .muted');
+  if(scratchNotice)scratchNotice.textContent='Your notes, pencil marks, and shaded squares are saved for you. Walter checks the Math model and answer fields.';
+  const tabs=document.createElement('div');tabs.className='walter-work-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Choose your working tool');
+  const math=document.createElement('div');math.id='walter-math-panel';math.setAttribute('role','tabpanel');math.setAttribute('aria-labelledby','walter-math-tab');
+  scratch.setAttribute('role','tabpanel');scratch.setAttribute('aria-labelledby','walter-scratch-tab');
+  if(blocks){math.append(blocks);blocks.querySelector('h3').textContent='Math model';}
+  else math.innerHTML='<p>Your math tools and answer fields are in the current step. Use them when you want Walter to check your work.</p><button type="button" class="btn quiet" data-work-return>Back to my step</button>';
+  tabs.innerHTML='<button type="button" class="btn quiet" role="tab" id="walter-math-tab" aria-controls="walter-math-panel">Math model</button><button type="button" class="btn quiet" role="tab" id="walter-scratch-tab" aria-controls="walter-scratch-panel">My scratch paper</button>';
+  paper.append(tabs,math,scratch);
+  const pane=document.createElement('div');pane.className='walter-task-pane';
+  for(const child of [...area.childNodes]){pane.append(child);if(child===actions)break;}
+  const footer=document.createElement('div');footer.className='walter-work-footer';
+  for(const child of [...area.childNodes])footer.append(child);
+  area.append(pane,paper,footer);area.classList.add('walter-unified-work');
+  app.querySelector('.pilot-workbench')?.classList.add('walter-unified-bench');
+  const dock=document.createElement('div');dock.className='walter-work-dock';
+  const title=task.querySelector('.lptitle')?.textContent||'Your current problem';
+  const label=document.createElement('b');label.textContent=title;dock.append(label);
+  const buttons=document.createElement('div');buttons.className='actions';
+  const check=area.querySelector('#lpcheck'),help=area.querySelector('#lpunit5help,#lpinlinehelp,#lphelp');
+  const proxy=(text,target)=>{const b=document.createElement('button');b.type='button';b.className='btn quiet small';b.textContent=text;b.onclick=()=>{target.click();};buttons.append(b);};
+  proxy('Check',check);if(help)proxy('Help me',help);
+  const back=document.createElement('button');back.type='button';back.className='btn quiet small';back.textContent='My answer';back.setAttribute('data-work-return','');buttons.append(back);
+  dock.append(buttons);paper.insertBefore(dock,heading);
+  const returnToWork=()=>{const target=pane.querySelector('.lpans,input,button');target?.focus({preventScroll:true});pane.scrollIntoView({block:'start',behavior:'smooth'});};
+  paper.querySelectorAll('[data-work-return]').forEach(b=>b.onclick=returnToWork);
+  const tabButtons=[...tabs.querySelectorAll('[role=tab]')];
+  const show=mode=>{const isScratch=mode==='scratch';math.hidden=isScratch;scratch.hidden=!isScratch;tabButtons.forEach((b,i)=>{const selected=i===(isScratch?1:0);b.setAttribute('aria-selected',String(selected));b.tabIndex=selected?0:-1;});};
+  const select=(mode,focus=false)=>{if(savePatch({mode})===false)return;show(mode);if(focus)tabButtons[mode==='scratch'?1:0].focus({preventScroll:true});window.dispatchEvent(new Event('resize'));};
+  tabButtons.forEach((b,i)=>{b.onclick=()=>select(i?'scratch':'model');b.onkeydown=e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();select(e.key==='Home'?'model':e.key==='End'?'scratch':i?'model':'scratch',true);}};});
+  show(work.mode==='scratch'?'scratch':'model');
+}
+
+// The same distinction applies when ordinary fraction walkthroughs have scratch
+// paper open. Their existing current-visit scratch lifetime stays unchanged.
+function walterPracticeWorkspace(){
+ const blocks=app.querySelector('.u5-blocks'),scratch=app.querySelector('#scratch');
+ if(!blocks||!scratch||app.querySelector('.pilot-paper,.walter-practice-work')||!cur)return;
+ const wrapper=document.createElement('section');wrapper.className='walter-practice-work';wrapper.setAttribute('aria-label','Working tools');
+ const tabs=document.createElement('div');tabs.className='walter-work-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Choose your working tool');
+ tabs.innerHTML='<button type="button" class="btn quiet" role="tab" id="practice-math-tab" aria-controls="practice-math-panel">Math model</button><button type="button" class="btn quiet" role="tab" id="practice-scratch-tab" aria-controls="practice-scratch-panel">My scratch paper</button>';
+ const math=document.createElement('div');math.id='practice-math-panel';math.setAttribute('role','tabpanel');math.setAttribute('aria-labelledby','practice-math-tab');
+ const paper=document.createElement('div');paper.id='practice-scratch-panel';paper.setAttribute('role','tabpanel');paper.setAttribute('aria-labelledby','practice-scratch-tab');
+ blocks.replaceWith(wrapper);math.append(blocks);paper.append(scratch);wrapper.append(tabs,math,paper);
+ const buttons=[...tabs.children];
+ const show=mode=>{const s=mode==='scratch';math.hidden=s;paper.hidden=!s;buttons.forEach((b,i)=>{b.setAttribute('aria-selected',String(i===(s?1:0)));b.tabIndex=i===(s?1:0)?0:-1;});};
+ const select=(mode,focus=false)=>{cur.workToolMode=mode;show(mode);if(focus)buttons[mode==='scratch'?1:0].focus({preventScroll:true});window.dispatchEvent(new Event('resize'));};
+ buttons.forEach((b,i)=>{b.onclick=()=>select(i?'scratch':'model');b.onkeydown=e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();select(e.key==='Home'?'model':e.key==='End'?'scratch':i?'model':'scratch',true);}};});
+ show(cur.workToolMode==='scratch'?'scratch':'model');
+}
 const WALTER_UNIT5_LESSONS = Array.from({length:10}, (_, i) => 'U5L' + (i + 1));
+const walterNextDayLesson = id => id==='U4L9'||WALTER_UNIT5_LESSONS.includes(id);
 const walterUnit5Lesson = id => WALTER_UNIT5_LESSONS.includes(id);
 
 function walterUnit5Work(item) {
-  if (!lp.homework && walterUnit5Lesson(item.lid || lp.id) && item.st &&
+  if (!lp.homework && walterNextDayLesson(item.lid || lp.id) && item.st &&
       ['guided','repair','independent','delayed','mixed'].includes(item.phase)) {
     return item.st.workspace || {};
   }
@@ -9080,15 +9285,16 @@ function walterUnit5HomeHTML() {
     }).join('') + '</section>';
 }
 function walterUnit5BindHome() {
-  app.querySelectorAll('[data-walter-unit5]').forEach(button => {
+  app.querySelectorAll('[data-walter-unit5],[data-walter-decimal-story]').forEach(button => {
     button.onclick = () => {
-      const id = button.dataset.walterUnit5, action = walterUnit5HomeAction(id);
+      const id = button.dataset.walterUnit5||button.dataset.walterDecimalStory, action = walterUnit5HomeAction(id);
       if (action === 'resume') lpResume();
       else startHomeLesson(id, action === 'check');
     };
   });
 }
 function walterUnit5RefreshHome() {
+  const storyTile=app.querySelector('#walter-decimal-story-home');if(storyTile&&S&&storyTile.querySelector('button')?.dataset.action!==walterUnit5HomeAction('U4L9')){storyTile.outerHTML=walterDecimalStoryHomeHTML();walterUnit5BindHome();}
   const tile = app.querySelector('#walter-unit5-home');
   if (!tile || !S || ![...tile.querySelectorAll('[data-walter-unit5]')].some(button =>
     button.dataset.action !== walterUnit5HomeAction(button.dataset.walterUnit5))) return;
@@ -9109,6 +9315,8 @@ function walterUnit5DueLoad(id,focus){
   const row=(S.lessonLog||[]).filter(e=>e.id===id&&!!e.teacherFocus===!!focus&&['independent','delayed'].includes(e.phase)&&e.t<=+state?.last&&[1,2,3].includes(e.load)).at(-1);
   return row?.load||0;
 }
+
+function walterDecimalStoryHomeHTML(){const id='U4L9',action=walterUnit5HomeAction(id);return `<section class="card" id="walter-decimal-story-home"><h2>Decimal division stories</h2><p>Decide how many containers you can fill, or how many you need. Try your own count and check what is left.</p><button class="btn quiet" data-walter-decimal-story="${id}" data-action="${action}">${action==='resume'?'Resume my story':action==='check'?'Start a fresh check-in':'Try a story with Walter'}</button></section>`;}
 // ===== v9.19 "Show what you know" check-up (Agent A) =====
 // A short, low-stakes check of the Unit 1 place-value ideas (5.NBT.1–4; since the v9.19 review also expanded form and exponents, see NS_ORDER) plus number-sense items (a number line, estimating, breaking a
 // number apart, does-it-make-sense). Kid-facing words never label her: she sees what she showed and what comes next. Self-contained: it does
@@ -9604,6 +9812,7 @@ function tiersHTML(log){
         ${row("Studied first", studied?`${studied} right after looking at a worked example`:"none")}
         ${row("Explanation", whyAll?`recognized the correct reason on ${whyOk} of ${whyAll} "say why" questions`:"not asked yet")}
         ${row("Delayed check", delayed||delayedMiss?`${delayed} fresh problem${delayed===1?"":"s"} right after a gap of a week or more${delayedMiss?`; ${delayedMiss} missed`:""}`:(dueSoon?`not yet: ${dueSoon} check-in${dueSoon===1?"":"s"} scheduled`:"not checked yet"))}
+        ${typeof transferReportText==='function'&&transferReportText(S)?row("Fresh whole-problem checks",esc(transferReportText(S))):''}
         ${(()=>{ const t=log.filter(e=>e.transfer); const ok=t.filter(e=>e.ok).length, solo=t.filter(e=>e.ok&&!e.helped).length, forms=t.filter(e=>e.ok&&e.changedForm).length; return row("Transfer to paper", t.length?`${ok} of ${t.length} worksheet problem${t.length===1?"":"s"} right (${solo} without adult help, ${forms} in a different form), scored by a grown-up: ${t.slice(-3).map(e=>`${esc(str(e.q||"paper"))} ${e.ok?"✓":"✗"}`).join(", ")}`:"not checked yet: record a paper problem below"); })()}
       </table></div><p class="muted" style="font-size:13px;margin:8px 0 14px">Recognizing a reason on a multiple-choice question is a weaker signal than explaining it in their own words; a delayed check is stronger than recent accuracy. Item counts and gaps (two wins, then 3 and 7 days) are the app's working defaults, not proven thresholds.</p>`; })()}
     <div class="card" style="margin-top:0">
@@ -10022,6 +10231,207 @@ function lpReadInput(step, st){ const I=step.input||{type:"num"}, box=app.queryS
   if(I.type==="button") return true;
   return ""; }
 
+// Optional different examples keep their own reveal position and never advance the original.
+function walterExampleBridge(kind='') {
+  if(/frac|mixed|rename|simpl/.test(kind))return 'What stayed the same amount in the example? Return to your problem and choose your own next step.';
+  if(/decimal|place|column/.test(kind))return 'Which places or units stayed equal in the example? Return to your numbers and check the place you are working on.';
+  if(/story|word/.test(kind))return 'What did each amount mean in the example? Name the amounts in your own story before choosing your next step.';
+  return 'Which idea from the example could you use? Return to your unfinished step and choose what to do next.';
+}
+function lpExampleHTML(it) {
+  const st=it.st, example=st.exampleLesson;
+  if(!example)return st.exampleNarr||'';
+  if(!example.open)return '<button class="btn quiet small" id="lp-example-reopen">See the different example again</button>';
+  const lines=Array.isArray(example.lines)?example.lines.slice(0,160):[];
+  const shown=Math.max(1,Math.min(lines.length,Number(example.shown)||1));
+  return `<section class="lpclue" id="lp-example-panel" tabindex="-1" aria-label="Different worked example"><h3>Different worked example: ${esc(example.title)}</h3><p>Your problem and checked work stay where you left them.</p>${example.question?`<p>${esc(example.question)}</p>`:''}<p>Decision ${shown} of ${lines.length}</p><ol>${lines.slice(0,shown).map(t=>`<li>${t}</li>`).join('')}</ol><div class="actions">${shown<lines.length?'<button class="btn" id="lp-example-next">Show the next decision</button><button class="btn quiet" id="lp-example-all">See the whole example</button>':''}<button class="btn quiet" id="lp-example-return">Back to my step</button></div><p>${esc(walterExampleBridge(it.spec.kind))}</p></section>`;
+}
+function lpExampleBind(it,keep) {
+  const st=it.st, example=st.exampleLesson;if(!example)return;
+  const act=(id,fn)=>{const b=app.querySelector('#'+id);if(b)b.onclick=()=>{keep();fn();lpSaveResume();lpRender();const target=example.open?app.querySelector('#lp-example-panel'):app.querySelector('#lpin, [data-lpi], .lpopt, #lpcheck');target?.focus({preventScroll:true});target?.scrollIntoView({block:'nearest'});};};
+  act('lp-example-next',()=>example.shown=Math.min(example.lines.length,example.shown+1));
+  act('lp-example-all',()=>example.shown=example.lines.length);
+  act('lp-example-return',()=>example.open=false);
+  act('lp-example-reopen',()=>example.open=true);
+}
+// Optional whole-problem checks keep answer evidence separate from checked methods.
+// An offer is made only after a clean delayed method check at this difficulty.
+function transferCapability(it){
+  const c=it.spec.openProblem;
+  return c&&c.v===1&&typeof c.question==='string'&&c.question.trim()&&c.question.length<=1800&&['number','fraction'].includes(c.answerFormat)?c:null;
+}
+function transferQuestion(it){const c=transferCapability(it);return lpPlain(c?c.question:it.spec.recordQuestion||it.spec.title||'').slice(0,1800);}
+function transferTaskSupported(it){
+  const q=transferQuestion(it);
+  if(transferCapability(it))return true;
+  return /^Simplify \d+\/\d+$/.test(q)||/^[\d.,/\s]+[+−–×÷-][\d.,/\s]+$/.test(q);
+}
+function transferHasChecker(it){return 'answer' in it.spec||typeof it.spec.answerCheck==='function'||typeof it.spec.openProblemCheck==='function';}
+function transferOpenCandidate(session=lp){
+  if(!session||session.homework||session.delayed)return -1;
+  const eligible=it=>it.phase==='independent'&&!it.repeated&&it.spec&&transferTaskSupported(it)&&transferHasChecker(it);
+  const contextual=session.items.findIndex(it=>eligible(it)&&transferCapability(it));
+  return contextual>=0?contextual:session.items.findIndex(eligible);
+}
+function transferOpenIntroHTML(){return transferOpenCandidate()>=0?'<div class="actions"><button type="button" class="btn quiet" id="lpopenproblem">Try a whole problem my way</button></div><p class="muted">Start with your own approach, and ask Walter for help when you want it. The answer and any checked method are recorded separately.</p>':'';}
+function transferStartOpen(){const index=transferOpenCandidate();if(index<0)return false;lp.openProblem=true;lp.i=index;lpEnter();return true;}
+function transferEligible(it,session=lp,player=S){
+  if(!session||session.homework||session.transferEnabled!==true||it.phase!=='delayed'||it.repeated||!it.st||it.st.k!==0)return false;
+  const state=(session.focus?player.teacherFocus:player.lessons)?.[it.lid||session.id];
+  const latest=(player.lessonLog||[]).filter(e=>e.id===(it.lid||session.id)&&!!e.teacherFocus===!!session.focus&&e.phase==='delayed').at(-1);
+  if(latest?.kind==='whole-problem-check')return false;
+  if(state?.checkClean!==1||state.checkedLoad!==session.load||!(state.retentionStage>=1))return false;
+  // Existence of a final checker is a capability, never a read of its solution.
+  return transferTaskSupported(it)&&transferHasChecker(it);
+}
+function transferState(it){
+  const t=it.st?.transferCheck;
+  if(!t||t.v!==1||!['offer','working','steps','complete'].includes(t.mode))return null;
+  t.draft=typeof t.draft==='string'?t.draft.slice(0,100):'';
+  t.tries=Math.max(0,Math.min(1000,Math.floor(+t.tries||0)));t.formats=Math.max(0,Math.min(1000,Math.floor(+t.formats||0)));
+  if(!Object.hasOwn(TRANSFER_PLANS,t.plan))t.plan='';
+  t.source=t.source==='open-practice'?'open-practice':'delayed';
+  t.delivered=Array.isArray(t.delivered)?t.delivered.filter(x=>x&&typeof x.id==='string'&&typeof x.text==='string').slice(-12).map(x=>({id:x.id.slice(0,40),text:x.text.slice(0,700)})):[];
+  t.helpText=typeof t.helpText==='string'?t.helpText.slice(0,700):'';
+  if(t.mode==='complete'&&!transferAnswerMatches(it,t.draft)){t.mode='working';t.message='Check your saved answer again, or open the checked steps.';}
+  return t;
+}
+function transferAnswerMatches(it,raw){
+  if(!String(raw||'').trim())return false;
+  if(/^Simplify /.test(transferQuestion(it))){
+    const f=parseFraction(String(raw));if(!f||f.d<=0)return false;
+    let a=f.n,b=f.d;while(b){const r=a%b;a=b;b=r;}if(a!==1)return false;
+  }
+  if(typeof it.spec.openProblemCheck==='function'){const r=it.spec.openProblemCheck(raw);return typeof r==='object'?r?.ok===true:r===true;}
+  if(typeof it.spec.answerCheck==='function')return !!it.spec.answerCheck(raw);
+  const n=lpNum(raw);return Number.isFinite(n)&&Number.isFinite(it.spec.answer)&&Math.abs(n-it.spec.answer)<1e-9;
+}
+function transferPrepare(it){
+  const open=lp?.openProblem===true&&!lp.homework&&it.phase==='independent'&&!it.repeated&&it.st?.k===0&&transferTaskSupported(it)&&transferHasChecker(it);
+  if(!transferState(it)&&(open||transferEligible(it)))it.st.transferCheck={v:1,mode:'offer',source:open?'open-practice':'delayed',plan:'',draft:'',tries:0,formats:0,promptsSeen:false,delivered:[]};
+  return transferState(it);
+}
+const TRANSFER_PLANS={model:'Draw a model',equation:'Write an equation',mental:'Work it out mentally',other:'Use another approach'};
+function transferHTML(it){
+  const t=transferPrepare(it);if(!t||t.mode==='steps')return '';
+  const question=esc(transferQuestion(it)),supported=t.delivered.length>0;
+  if(t.mode==='complete')return `<section class="card lpcard"><h2>A fresh problem checked</h2><p>${question}</p><p role="status">${supported?'You checked this problem with Walter’s help.':t.tries?'You revised your answer and checked this problem without step prompts.':'You checked this problem without step prompts.'} This checks your answer; it does not check the method you used.</p><button class="btn primary" id="transfer-next">${t.source==='open-practice'?'Finish this problem':'Finish check-in'}</button></section>`;
+  return `<section class="card lpcard" aria-labelledby="transfer-title"><h2 id="transfer-title" tabindex="-1">${t.source==='open-practice'?'Work out this problem your way':'Try a fresh problem your way'}</h2><p>${question}</p><p>Choose how to start. You can open the checked steps whenever you want.</p>${t.mode==='offer'?`<div class="actions">${Object.entries(TRANSFER_PLANS).map(([key,label])=>`<button type="button" class="btn quiet" data-transfer-plan="${key}">${label}</button>`).join('')}</div>`:`<p>Your starting idea: ${esc(TRANSFER_PLANS[t.plan]||'Your own approach')}. This choice is not graded.</p><label for="transfer-answer">Your answer${transferCapability(it)?.unit?' ('+esc(transferCapability(it).unit)+')':''}</label><input class="ans" id="transfer-answer" autocomplete="off" value="${esc(t.draft||'')}" maxlength="100"><p class="lpmsg" id="transfer-message" role="status">${esc(t.message||'')}</p><div class="actions"><button class="btn primary" id="transfer-check">Check my answer</button><button class="btn quiet" id="transfer-change-plan">Choose another approach</button></div>`}${t.mode==='working'?transferHelpHTML(it):''}<div class="actions"><button class="btn quiet" id="transfer-steps">Help me with the checked steps</button></div><p class="muted">This is a fresh answer check. Your method and explanation are not automatically assessed.</p></section>`;
+}
+function transferHelpHTML(it){const t=transferState(it);return `<section aria-label="Walter help for this problem"><p>What would help?</p><div class="actions"><button type="button" class="btn quiet" data-transfer-help="words">Understand the question</button><button type="button" class="btn quiet" data-transfer-help="model">Help me draw it</button><button type="button" class="btn quiet" data-transfer-help="check">Check my approach</button></div>${t.helpText?`<p role="status"><b>Walter:</b> ${esc(t.helpText)}</p>`:''}</section>`;}
+function transferDeliverHelp(it,intent){
+  const t=transferState(it);if(!t||t.mode!=='working'||!['words','model','check'].includes(intent))return false;
+  const defaults={words:'Point to what the question asks you to find. Label what each given amount means before choosing your calculation.',model:'Draw the given amounts and label what each part means. Leave the amount you need to find blank.',check:'Compare your calculation or drawing with the given question. Does it show the same amounts and the same relationship?'};
+  const authored=transferCapability(it)?.help?.[intent],text=typeof authored==='string'&&authored.trim()?lpPlain(authored).slice(0,700):defaults[intent];
+  if(!t.delivered.some(e=>e.id===intent&&e.text===text)){t.delivered.push({id:intent,text});t.delivered=t.delivered.slice(-12);it.st.helps=(+it.st.helps||0)+1;}
+  t.helpText=text;return true;
+}
+function transferEvidence(it){const t=transferState(it);return t?{transferCheck:{v:1,mode:t.mode,source:t.source,helpDeliveries:t.delivered.length,plan:Object.hasOwn(TRANSFER_PLANS,t.plan)?t.plan:'',tries:Math.max(0,+t.tries||0),formats:Math.max(0,+t.formats||0),promptsSeen:!!t.promptsSeen,outcome:t.mode==='complete'?(t.delivered.length?'supported-without-step-prompts':t.tries?'revised-without-step-prompts':'answer-without-step-prompts'):'opened-checked-steps'}}:{};}
+function transferCheckAnswer(it,raw){
+  const t=transferState(it);if(!t||t.mode!=='working')return false;
+  t.draft=String(raw??'').slice(0,100).trim();
+  const fraction=transferCapability(it)?transferCapability(it).answerFormat==='fraction':typeof it.spec.answerCheck==='function';
+  const value=fraction?cxRead(t.draft):lpNum(t.draft);
+  if(!t.draft||value===null||typeof value==='number'&&!Number.isFinite(value)){t.formats++;t.message='Check the entry format. Your mathematics has not been checked yet.';return false;}
+  const ok=transferAnswerMatches(it,t.draft);
+  if(ok){t.mode='complete';t.message='';}
+  else{t.tries++;t.message='That answer does not check yet. Keep your work and revise it, or open the checked steps with Walter.';}
+  return !!ok;
+}
+function transferScheduleOpenMethod(id){
+  const state=lp.focus?teacherFocusState(id):lpState(id),now=Date.now();
+  const next=typeof walterUnit5NextDay==='function'?walterUnit5NextDay(now):new Date(new Date(now).getFullYear(),new Date(now).getMonth(),new Date(now).getDate()+1).getTime();
+  if(!(state.due>now)||state.due>next){state.due=next;state.dueLoad=lp.load;}
+}
+function transferFinishOpenMethod(it){
+  if(!lp?.openProblem||lp.homework||!it.st?.done)return false;
+  transferScheduleOpenMethod(it.lid||lp.id);delete S.lessonResume;save();
+  lp.i=lp.items.findIndex(item=>item.phase==='summary');lpEnter();return true;
+}
+function transferComplete(it){
+  const t=transferState(it);if(!t||t.mode!=='complete'||it.recorded)return;
+  const id=it.lid||lp.id,e={t:Date.now(),id,lesson:(LP_LESSONS[id]||lp.bp).lesson,phase:it.phase,kind:'whole-problem-check',q:transferQuestion(it),load:it.load||lp.load,
+    fingerprint:lpFingerprint(it.spec),teacherFocus:!!lp.focus,ok:1,methodOk:0,firstTry:0,answerOnly:1,answerPreviewed:0,helps:t.delivered.length,tries:t.tries,steps:0,stepEvents:[],codes:[],supportClass:t.delivered.length?'supported-answer-only':'answer-only',...transferEvidence(it)};
+  it.recorded=true;S.lessonLog=Array.isArray(S.lessonLog)?S.lessonLog:[];S.lessonLog.push(e);while(S.lessonLog.length>LP_LOG_CAP)S.lessonLog.shift();lp.results.push(e);
+  // Answer-only evidence neither changes practice load nor clears method readiness.
+  if(t.source==='open-practice')transferScheduleOpenMethod(id);
+  else{const state=lp.focus?teacherFocusState(id):lpState(id);
+    const nextDay=typeof walterNextDayLesson==='function'?walterNextDayLesson(id):typeof walterUnit5Lesson==='function'&&walterUnit5Lesson(id);
+    state.due=nextDay?walterUnit5NextDay(Date.now()):Date.now()+3*864e5;state.dueLoad=lp.load;}
+  delete S.lessonResume;save();
+  // A queued mixed item belongs to the method session, not this answer check.
+  // End here without calling lpFinish or recording that unattempted item.
+  lp.i=lp.items.findIndex(item=>item.phase==='summary');lpEnter();
+}
+function transferBind(it){
+  const t=transferState(it);if(!t||t.mode==='steps')return false;
+  const redraw=()=>{lpSaveResume();lpRender();(app.querySelector('#transfer-answer')||app.querySelector('#transfer-title')||app.querySelector('#transfer-next'))?.focus({preventScroll:true});};
+  app.querySelectorAll('[data-transfer-plan]').forEach(b=>b.onclick=()=>{t.plan=b.dataset.transferPlan;t.mode='working';redraw();});
+  app.querySelectorAll('[data-transfer-help]').forEach(b=>b.onclick=()=>{transferDeliverHelp(it,b.dataset.transferHelp);redraw();});
+  const input=app.querySelector('#transfer-answer');if(input){input.oninput=()=>{t.draft=input.value.slice(0,100);lpSaveResume();};input.onkeydown=e=>{if(e.key==='Enter'&&!e.repeat){e.preventDefault();app.querySelector('#transfer-check').click();}};}
+  const check=app.querySelector('#transfer-check');if(check)check.onclick=()=>{transferCheckAnswer(it,input.value);redraw();};
+  const change=app.querySelector('#transfer-change-plan');if(change)change.onclick=()=>{t.mode='offer';redraw();};
+  const steps=app.querySelector('#transfer-steps');if(steps)steps.onclick=()=>{t.mode='steps';t.promptsSeen=true;if(t.tries){it.st.tries=(+it.st.tries||0)+t.tries;it.st.codes=it.st.codes||[];it.st.codes.push('whole-problem-answer');}redraw();};
+  const next=app.querySelector('#transfer-next');if(next)next.onclick=()=>transferComplete(it);
+  return true;
+}
+function transferSessionSummary(){
+  const rows=(lp?.results||[]).filter(e=>e.transferCheck?.mode==='complete');
+  return rows.length?'<p class="lpmodel-note">You checked a whole-problem answer. Help and retries are recorded separately. Your method was not checked. A later check-in will revisit the method.</p>':'';
+}
+function transferReportText(player,from=0,to=Infinity){
+  const rows=(player?.lessonLog||[]).filter(e=>e.t>=from&&e.t<=to&&e.transferCheck?.v===1);
+  if(!rows.length)return '';
+  const supported=rows.filter(e=>e.transferCheck.outcome==='supported-without-step-prompts');
+  const clean=rows.filter(e=>e.transferCheck.outcome==='answer-without-step-prompts'&&!e.repeated&&!e.helps),retry=rows.filter(e=>e.transferCheck.outcome==='revised-without-step-prompts'),steps=rows.filter(e=>e.transferCheck.promptsSeen);
+  return `Whole-problem practice and checks: ${clean.length} answers checked without step prompts or retries; ${retry.length} after an answer revision; ${supported.length} with Walter’s help; ${steps.length} opened checked steps. These are separate from independently completed prompted methods. A chosen approach is self-reported; neither the approach nor a written/spoken explanation is automatically graded. These records do not establish paper mastery.`;
+}
+// Shared visible clarification routing. Selecting a report delivers guidance, not a math check.
+function walterMountClarification(owner,callback){
+  const html=walterClarificationHTML(owner,owner?.walterApproaches?.key);if(!html)return;
+  const visible=el=>el&&!el.closest('[hidden]')&&!Array.from(el.parentElement?.closest('details')?[el.parentElement.closest('details')]:[]).some(d=>!d.open);
+  const anchor=['#lpmsg','#cmsg','#hints','#lpaskreply','#hwaskreply','#lpwork','.prompt'].map(s=>app.querySelector(s)).find(visible);
+  if(anchor)anchor.insertAdjacentHTML('afterend',html);else app.insertAdjacentHTML('beforeend',html);
+  walterBindClarification(owner,owner.walterApproaches.key,callback);
+}
+function lpDialogueBind(it){
+  if(!it.st||it.st.done)return;
+  const st=it.st,key=lpWalterContextKey(it);if(st.dialogueContext&&st.dialogueContext!==key)walterClarificationClear(st);st.dialogueContext=key;
+  walterMountClarification(st,reply=>{
+    st.walterEvents=Array.isArray(st.walterEvents)?st.walterEvents:[];
+    if(!st.walterEvents.some(e=>e.signature===reply.signature&&e.context===lpWalterContextKey(it))){
+      st.walterEvents.push({step:st.k,stepId:'clarification',id:'clarification',type:'clue',move:reply.move,signature:reply.signature,context:lpWalterContextKey(it),text:reply.text,t:Date.now(),tries:st.tries||0,work:walterWorkEvidence(lpWalterSemanticContext(it),reply.move),selfReported:reply.clarificationReport});st.helps=(st.helps||0)+1;
+    }
+    st.msg=reply.text;st.msgKind='';if(it.rep){it.rep.msg=reply.text;if(it.rspec?.unit5)it.rep.unit5Cue=reply.text;}
+    if(st.unit5Help)st.unit5Help.cue=reply.text;if(st.inlineWalter)st.inlineWalter={...st.inlineWalter,...reply};if(it.rep?.inlineWalter)it.rep.inlineWalter={...it.rep.inlineWalter,...reply};
+    if(st.walterChoice)st.walterChoice={...st.walterChoice,...reply};
+    if(it.rep?.walterChoice)it.rep.walterChoice={...it.rep.walterChoice,...reply};
+    lpWalterTrimEvents(st);lpSaveResume();lpRender();walterInlineFocus('#lpaskreply, #lpmsg');
+  });
+  walterBindDraftChoices(st,'.lpopt, .lpchip, .lptok, .lptile, [data-lpr], [data-diagram-place]');
+  app.querySelectorAll('#lpwork input, #lpwork textarea').forEach(f=>f.addEventListener('input',()=>{walterClarificationClear(st);app.querySelector('.walter-clarification')?.remove();lpSaveResume();}));
+}
+function hwDialogueBind(){
+  if(!cur||!hwWalterEligible())return;
+  const activeKey=hwWalterContext().key;if(cur.dialogueContext&&cur.dialogueContext!==activeKey)walterClarificationClear(cur);cur.dialogueContext=activeKey;
+  walterMountClarification(cur,reply=>{
+    const ctx=hwWalterContext();hwRecordHelp(ctx,'clarification','clue',0,reply.signature,reply.text,walterWorkEvidence(hwWalterSemanticContext(ctx),reply.move));cur.studied=true;
+    if(phase==='wt'){sc.helped=true;sc.msg=esc(reply.text);}else{
+      cur.hintLog=cur.hintLog||[];cur.hintLog.push({t:esc(reply.text),signature:reply.signature,key:ctx.key});cur.hintLog=cur.hintLog.slice(-20);hintIdx=Math.max(1,hintIdx);
+    }
+    if(cur.mainHelp?.[ctx.key]?.lastReply)cur.mainHelp[ctx.key].lastReply={...cur.mainHelp[ctx.key].lastReply,...reply};if(phase==='wt'&&sc.organicHelp?.lastReply)sc.organicHelp.lastReply={...sc.organicHelp.lastReply,...reply};
+    if(cur.hwWalter?.choice)cur.hwWalter.choice={...cur.hwWalter.choice,...reply};
+    save();render();walterInlineFocus('#hwaskreply, #cmsg, #hwwalter');
+  });
+  walterBindDraftChoices(cur,'#opts .opt, #copts .opt, #preopts .opt, .ws .cell[data-k]');
+  app.querySelectorAll('#ans, #cans, #preans').forEach(f=>f.addEventListener('input',()=>{walterClarificationClear(cur);app.querySelector('.walter-clarification')?.remove();}));
+}
+
+function walterBindDraftChoices(owner,selector){
+  app.querySelectorAll(selector).forEach(button=>button.addEventListener('click',()=>{
+    walterClarificationClear(owner);app.querySelectorAll('.walter-clarification').forEach(el=>el.remove());
+  },{capture:true}));
+}
 // ---- session ----
 function lpBlueprint(id){ return LP_LESSONS[id]||null; }
 // A teacher-requested route through the existing checked-step engine. Its load and
@@ -10072,24 +10482,25 @@ function lpState(id){ S.lessons=S.lessons&&typeof S.lessons==="object"?S.lessons
 function lpDue(){ const now=Date.now(); return lpReached().filter(id=>{ const o=(S.lessons||{})[id]; return o && +o.due>0 && +o.due<=now; }); }
 function lpLoadFor(id){ const o=lpState(id); return Math.max(1, Math.min(3, Math.round(+o.load)||1)); }
 function lpSeeded(seed, work){ const old=Math.random; let state=seed>>>0; Math.random=()=>{ state=(Math.imul(1664525,state)+1013904223)>>>0; return state/4294967296; }; try{ return work(); } finally { Math.random=old; } }
-function lpSaveResume(){ if(!S||!lp||lp.items[lp.i].phase==="summary") return; if(lp.homework){fractionHomeworkSave();return;} const it=lp.items[lp.i], st=it.st||null;
-  S.lessonResume={v:lp.generationVersion||1,blocked:lp.blocked||[],mixedChoices:lp.mixedChoices||[],focusSupport:lp.focusSupport||null,id:lp.id,delayed:lp.delayed,focus:!!lp.focus,seed:lp.seed,load:lp.load,i:lp.i,phase:it.phase,lid:it.lid||null,t:Date.now(),
+function lpSaveResume(){ if(!S||!lp||lp.items[lp.i].phase==="summary") return; if(lp.homework){return fractionHomeworkSave();} const it=lp.items[lp.i], st=it.st||null;
+  S.lessonResume={openProblem:lp.openProblem===true,transferEnabled:lp.transferEnabled===true,v:lp.generationVersion||1,blocked:lp.blocked||[],mixedChoices:lp.mixedChoices||[],focusSupport:lp.focusSupport||null,id:lp.id,delayed:lp.delayed,focus:!!lp.focus,seed:lp.seed,load:lp.load,i:lp.i,phase:it.phase,lid:it.lid||null,t:Date.now(),
     st,...(it.spec?.recordQuestion?{question:it.spec.recordQuestion}:{}),rep:it.rep||null,recorded:!!it.recorded,results:lp.results}; return save(); }
-function lpResumeReady(){ const r=S&&S.lessonResume; return !!(r&&[1,2,3,4,5].includes(r.v)&&LP_LESSONS[r.id]&&Number.isInteger(r.i)&&r.i>=0&&r.i<9&&Number.isInteger(r.seed)&&Number.isInteger(r.load)&&r.load>=1&&r.load<=3&&Number.isFinite(+r.t)&&Date.now()-r.t<30*864e5); }
+function lpResumeReady(){ const r=S&&S.lessonResume; return !!(r&&[1,2,3,4,5,6].includes(r.v)&&LP_LESSONS[r.id]&&Number.isInteger(r.i)&&r.i>=0&&r.i<9&&Number.isInteger(r.seed)&&Number.isInteger(r.load)&&r.load>=1&&r.load<=3&&Number.isFinite(+r.t)&&Date.now()-r.t<30*864e5); }
 function lpResume(){ if(!lpResumeReady()) return; const id=S.lessonResume.id, delayed=!!S.lessonResume.delayed, focus=!!S.lessonResume.focus; try{ lpStart(id,delayed,S.lessonResume,focus); }catch(e){ delete S.lessonResume; lp=null; save(); lpStart(id,delayed,null,focus); } }
 function lpStart(id, delayed, resume, focus){ focus=!!(focus || (resume&&resume.focus)); const bp=focus?teacherFocusBlueprint(id):lpBlueprint(id); if(!bp || !S) return; lpSanitize(); if(typeof home==="function" && cur && phase==="q") leaveProblem(); cur=null; mode="lesson:"+id;
-  const scheduled=delayed&&walterUnit5Lesson(id)?walterUnit5DueLoad(id,focus):0;
-  const load=resume?resume.load:([1,2,3].includes(scheduled)?scheduled:(focus?teacherFocusState(id).load:lpLoadFor(id))), seed=resume?resume.seed:Math.floor(Math.random()*4294967296), items=[], generationVersion=resume?([2,3,4,5].includes(resume.v)?resume.v:1):5;
+  const scheduled=delayed?walterUnit5DueLoad(id,focus):0;
+  const load=resume?resume.load:([1,2,3].includes(scheduled)?scheduled:(focus?teacherFocusState(id).load:lpLoadFor(id))), seed=resume?resume.seed:Math.floor(Math.random()*4294967296), items=[], generationVersion=resume?([2,3,4,5,6].includes(resume.v)?resume.v:1):6;
+  if(generationVersion>=6&&bp.openStoryMake)bp.goal="Use the story question to decide what to count. Test your own container count, check the amount used and the remainder, then decide the final count.";
   const blocked=generationVersion===1?[]:resume?(Array.isArray(resume.blocked)?resume.blocked.filter(x=>typeof x==="string").slice(-80):[]):(S.lessonLog||[]).slice(-80).map(lpRecordFingerprint).filter(Boolean);
   const used=new Set(blocked), focusSupport=resume?resume.focusSupport||null:lpRecurringSupport(id,focus); lpUsed=new Set();
   const mixedChoices=generationVersion>=2&&resume? (Array.isArray(resume.mixedChoices)?resume.mixedChoices.filter(x=>x&&LP_LESSONS[x.id]&&x.id!==id&&Number.isInteger(x.load)&&x.load>=1&&x.load<=3):[]) : focus||delayed&&walterUnit5Lesson(id)?[]:lpReached().filter(x=>x!==id&&(S.lessons||{})[x]&&+S.lessons[x].sessions>0).map(x=>({id:x,load:lpLoadFor(x)}));
-  const versioned=blue=>generationVersion>=4&&blue.storyMake?{...blue,make:(load,phase,index,preferred)=>blue.storyMake(load,phase,index,preferred,generationVersion===4)}:generationVersion<3&&blue.legacyMake?{...blue,make:blue.legacyMake,model:blue.legacyModel,repair:blue.legacyRepair}:blue;
+  const versioned=blue=>generationVersion>=6&&blue.openStoryMake?{...blue,make:blue.openStoryMake}:generationVersion>=4&&blue.storyMake?{...blue,make:(load,phase,index,preferred)=>blue.storyMake(load,phase,index,preferred,generationVersion===4)}:generationVersion<3&&blue.legacyMake?{...blue,make:blue.legacyMake,model:blue.legacyModel,repair:blue.legacyRepair}:blue;
   const make=(original,L,ph,i)=>{const blue=versioned(original);return generationVersion===1?{phase:ph,spec:blue.make(L,ph,i),load:L}:lpFreshSpec(blue,L,ph,i,used);};
   lpSeeded(seed,()=>{ if(delayed){ items.push(make(bp,load,"delayed",0));
       if(mixedChoices.length){ const o=lpPick(mixedChoices); items.push({...make(LP_LESSONS[o.id],o.load,"mixed",1),lid:o.id}); } }
     else { items.push({phase:"intro"}); const model=versioned(bp).model(); used.add(lpFingerprint(model)); items.push({phase:"model",spec:model}); items.push(make(bp,load,"guided",0)); items.push(make(bp,load,"guided",1));
       items.push({phase:"explain"}); const repair=versioned(bp).repair(load); used.add(lpFingerprint(repair.fix)); items.push({phase:"repair",rspec:repair}); items.push(make(bp,load,"independent",0)); items.push(make(bp,load,"independent",1)); } });
-  items.push({phase:"summary"}); lp={id,bp,items,i:0,delayed:!!delayed,focus,seed,load,generationVersion,blocked,mixedChoices,focusSupport,t0:Date.now(),results:[]};
+  items.push({phase:"summary"}); lp={openProblem:resume?.openProblem===true,transferEnabled:resume?resume.transferEnabled===true:true,id,bp,items,i:0,delayed:!!delayed,focus,seed,load,generationVersion,blocked,mixedChoices,focusSupport,t0:Date.now(),results:[]};
   if(resume){ const it=items[resume.i]; if(!it||it.phase!==resume.phase||it.lid!==(resume.lid||undefined)){ delete S.lessonResume; lp=null; lpStart(id,delayed,null,focus); return; }
     lp.i=resume.i; lp.results=Array.isArray(resume.results)?resume.results:[]; if(it.phase==="repair"){ it.spec=it.rspec.fix; it.rep=resume.rep&&typeof resume.rep==="object"?resume.rep:{stage:"spot",picked:-1,tries:0}; }
     if(it.spec){ if(it.phase==="model"){ lpItemStart(it); } else if(resume.st&&typeof resume.st==="object"&&!Array.isArray(resume.st)&&Number.isInteger(resume.st.k)&&resume.st.k>=0){
@@ -10105,7 +10516,7 @@ function lpRecord(it, extra){ if(lp.homework)return fractionHomeworkRecord(it,ex
   const fingerprint=lpFingerprint(sp), repeated=!!it.repeated||!!(fingerprint&&!model&&(S.lessonLog||[]).slice(-80).some(e=>lpRecordFingerprint(e)===fingerprint));
   const e=Object.assign({t:Date.now(), id:lid, lesson:(LP_LESSONS[lid]||lp.bp).lesson, phase:it.phase, kind:sp.kind||it.phase, q:it.spec?lpPlain(sp.recordQuestion||sp.title||""):"",
     ...(sp.walterStory?.checkedRoute?{problemForm:"word-problem",storyArithmeticMisses:Math.max(0,+st.storyArithmeticMisses||0)}:{}),
-    evidenceVersion:2,load:+it.load||+lp.load||1,fingerprint,repeated:repeated?1:0,features:sp.features||null,stepEvents:lpTrimEvents(st.stepEvents),eventsTrimmed:+st.eventsTrimmed||0,
+    ...transferEvidence(it),fractionRevisionCount:+st.fractionRevisionCount||0,fractionRevisions:st.fractionRevisions||[],evidenceVersion:2,load:+it.load||+lp.load||1,fingerprint,repeated:repeated?1:0,features:sp.features||null,stepEvents:lpTrimEvents(st.stepEvents),eventsTrimmed:+st.eventsTrimmed||0,
     ok:st.done?1:0, methodOk:method, methodEvidence:sp.methodEvidence||sp.kind||it.phase, teacherFocus:!!lp.focus, answerOnly:oneShot?1:(st.answerOnly===null||st.answerOnly===undefined?null:(st.answerOnly?1:0)), answerPreviewed:st.answerPreviewed?1:0,
     helps:+st.helps||0, tries:+st.tries||0, firstTry:method&&!st.tries&&!st.helps&&!st.answerPreviewed&&!repeated?1:0,
     ...(st.diagramObservations?.length?{diagramObservations:diagramHistory(st)}:{}),
@@ -10117,14 +10528,14 @@ function lpRecord(it, extra){ if(lp.homework)return fractionHomeworkRecord(it,ex
   S.lessonLog=Array.isArray(S.lessonLog)?S.lessonLog:[]; S.lessonLog.push(e); while(S.lessonLog.length>LP_LOG_CAP) S.lessonLog.shift(); lp.results.push(e); lpSaveResume(); return e; }
 function lpFinish(){ if(lp.homework){removeHomeworkDraft(lp.homework);save();return;} const o=lp.focus?teacherFocusState(lp.id):lpState(lp.id), own=lp.results.filter(e=>(e.phase==="independent"||e.phase==="delayed") && e.id===lp.id);
   o.sessions=(+o.sessions||0)+(lp.delayed?0:1); o.last=Date.now();
-  if(own.length){ const keys=own.map(lpRecordFingerprint), distinct=keys.every(Boolean)&&new Set(keys).size===own.length, clean=distinct&&own.every(e=>e.firstTry&&e.methodOk&&!e.repeated);
+  if(own.length){ o.dueLoad=lp.load; const keys=own.map(lpRecordFingerprint), distinct=keys.every(Boolean)&&new Set(keys).size===own.length, clean=distinct&&own.every(e=>e.firstTry&&e.methodOk&&!e.repeated);
     o.adjustment="held";
     if(!lp.delayed&&own.length>=2&&clean&&o.load<3){ o.load=(+o.load||1)+1; o.adjustment="raised"; }
     else if(!clean&&o.load>1){ const recent=(S.lessonLog||[]).filter(e=>e.id===lp.id&&!!e.teacherFocus===!!lp.focus&&e.load===lp.load&&["independent","delayed"].includes(e.phase)&&e.t>=Date.now()-14*864e5).slice(-2);
       if(recent.length===2&&recent.every(e=>(Number.isInteger(e.storyArithmeticMisses)?e.storyArithmeticMisses:e.tries)>=3&&!e.repeated&&lpRecordFingerprint(e))&&lpRecordFingerprint(recent[0])!==lpRecordFingerprint(recent[1])){ o.load--; o.adjustment="smaller-practice"; } }
     if(lp.delayed){ const sameLoad=o.checkedLoad===lp.load; o.checked=Date.now(); o.checkedLoad=lp.load; o.checkClean=clean?1:0; o.retentionStage=clean?Math.min(2,(sameLoad?+o.retentionStage||0:0)+1):0; o.due=Date.now()+(clean?(o.retentionStage===1?7:14):3)*864e5; }
     else { o.retentionStage=0; o.due=Date.now()+LP_DELAY_MS; }
-    if(walterUnit5Lesson(lp.id)){o.dueLoad=lp.load;if(!lp.delayed||!clean)o.due=walterUnit5NextDay(o.last);}
+    if(walterNextDayLesson(lp.id)){o.dueLoad=lp.load;if(!lp.delayed||!clean)o.due=walterUnit5NextDay(o.last);}
   }
   if(lp.bp.strategyChoices&&own.length){
     const now=Date.now(),methods=o.methodChecks=lpMethodChecks(o.methodChecks);
@@ -10142,7 +10553,7 @@ function lpFinish(){ if(lp.homework){removeHomeworkDraft(lp.homework);save();ret
 // ---- rendering ----
 function lpRender(){ const it=lp.items[lp.i], bp=lp.bp, n=lp.items.length;
   const head=`<div class="topbar"><button class="btn quiet" id="back">${it.phase==="summary"?"Home":"Pause & Home"}</button><div class="row"><span class="pill week">${lp.homework?(weeklyHomeworkItem(lp.homework.itemId)?.fresh?"Grid practice":"From your page"):lp.focus?"Teacher's focus":lpLessonLabel(it.lid||lp.id)}</span></div></div>${warnHTML()}
-    <div class="lpprog" aria-label="${lp.homework?'Homework progress':'Lesson steps'}">${lp.items.map((x,j)=>`<span class="lpdot${j<lp.i?" done":j===lp.i?" now":""}" title="${esc(LP_PHASE_NAME[x.phase])}"></span>`).join("")}<span class="muted lpprogtxt">${esc(LP_PHASE_NAME[it.phase])}${lp.delayed?"":` · ${lp.i+1} of ${n}`}</span></div>`;
+    <div class="lpprog" aria-label="${lp.homework?'Homework progress':'Lesson steps'}">${(lp.openProblem?[it]:lp.items).map((x,j)=>`<span class="lpdot${j<lp.i?" done":j===lp.i?" now":""}" title="${esc(LP_PHASE_NAME[x.phase])}"></span>`).join("")}<span class="muted lpprogtxt">${lp.openProblem?"Your problem":esc(LP_PHASE_NAME[it.phase])}${lp.delayed||lp.openProblem?"":` · ${lp.i+1} of ${n}`}</span></div>`;
   let body="";
   if(it.phase==="intro") body=lpIntroHTML();
   else if(it.phase==="explain") body=lpExplainHTML();
@@ -10152,7 +10563,7 @@ function lpRender(){ const it=lp.items[lp.i], bp=lp.bp, n=lp.items.length;
   const workspace=walterUnit5Work(it);
   if(workspace)body=`<div class="pilot-workbench"><div class="pilot-task">${body}</div>${walterWorkspaceHTML(workspace,it.workspaceOpen)}</div>`;
   app.innerHTML=head+body; app.querySelector("#back").onclick=()=>{ lpSaveResume(); lp=null; home(); };
-  lpBind(it); if(workspace)walterWorkspaceBind(workspace,next=>walterUnit5SaveWork(it,next),open=>{it.workspaceOpen=open;});
+  lpBind(it); fractionReconsiderBind(it); lpDialogueBind(it); if(workspace)walterWorkspaceBind(workspace,next=>walterUnit5SaveWork(it,next),open=>{it.workspaceOpen=open;});
   if(typeof bindReadAloud==='function')bindReadAloud(app); armWalterMotion(); lpSaveResume(); if(typeof noteScreen==="function") noteScreen(); }
 function lpVideoHTML(){ const n=lp.bp.lesson, u=lpUnit(lp.id);
   if(lp.id==='U3L1') return `<div class="lpvideo video-choices"><a class="video-link" id="lpvideoLesson" data-video-type="lesson" href="https://videoplayer.swunmath.com/?videoType=lesson&amp;videoCode=G5_U3_L1" target="_blank" rel="noopener noreferrer">Watch the full lesson: Unit 3 Lesson 1</a><a class="video-link" id="lpvideo" data-video-type="strategy" href="https://videoplayer.swunmath.com/?videoType=strategy&amp;videoCode=G5_U3_L1" target="_blank" rel="noopener noreferrer">Watch the strategy: Unit 3 Lesson 1</a><p>Opens SWUN’s site in a new tab.</p></div>`;
@@ -10160,7 +10571,7 @@ function lpVideoHTML(){ const n=lp.bp.lesson, u=lpUnit(lp.id);
 function lpIntroHTML(){ const bp=lp.bp; return `<div class="card lpcard"><h2 style="margin-top:0">${lp.focus?"Teacher's focus: ":`Lesson ${bp.lesson}: `}${esc(bp.name)}</h2><p class="lpgoal"><b>Today's goal:</b> ${bp.goal}</p>${walterNote("work","I can look at the first example with you.",true)}
   <div class="lpvocab"><b>Words we use</b><ul>${bp.vocab.map(([w,d])=>`<li><b>${esc(w)}</b>: ${d}</li>`).join("")}</ul></div>
   <p class="muted" style="font-size:14px">First watch one worked out, then try two together, then two on your own. Your choices get checked one step at a time.</p>${lpVideoHTML()}
-  <div class="actions"><button class="btn primary" id="lpgo">Start</button></div></div>`; }
+  <div class="actions"><button class="btn primary" id="lpgo">Start</button>${transferOpenIntroHTML()}</div></div>`; }
 function lpExplainHTML(){ const bp=lp.bp; return `<div class="card lpcard"><h2 style="margin-top:0">Explain it (optional)</h2><p>${bp.explain[0]}</p>
   <p class="muted" style="font-size:14px">Say it out loud to a grown-up, or type it. A sentence start: <i>${esc(bp.explain[1])}</i></p>
   <label class="vh" for="lpexp">Your explanation</label><textarea id="lpexp" class="lpexp" maxlength="280" rows="3" placeholder="${esc(bp.explain[1])}"></textarea>
@@ -10202,11 +10613,11 @@ function lpWalterLegacyQuestions(it){
 const LP_WALTER_PRIMARY=[['words',"I don't get the words"],['start',"I don't know how to start"],['check',"I think I'm wrong"],['smaller','Show me a smaller piece']];
 function lpWalterQuestions(it){const qs=lpWalterLegacyQuestions(it),g=qs[0]?.texts||lpStrategyGuide(it);
   for(const [id,label]of [...decimalStoryPrimary(lpWalterSemanticContext(it),LP_WALTER_PRIMARY),['meaning','Why does this work?']]){const existing=qs.find(q=>q.id===id);if(existing)existing.label=label;else qs.push({id,label,type:id==='check'||id==='calculation'?'checking':id==='words'||id==='meaning'?'explanation':id==='smaller'?'representation':'clue',texts:g});}return qs;}
-function lpWalterContextKey(it){return `${it.lid||lp?.id||'homework'}:${it.phase}:${it.rep?.stage==='spot'?'repair-spot':it.step?.walter?.id||`${it.spec?.kind}:${it.st.k}:${it.st.stage||''}`}`;}
+function lpWalterContextKey(it){return `${it.lid||lp?.id||'homework'}:${it.phase}:${it.rep?.stage==='spot'?'repair-spot':it.step?.walter?.id||`${it.spec?.kind}:${it.st.k}:${it.st.stage||''}`}:revision-${+it.st?.fractionRevisionCount||0}`;}
 function lpWalterSemanticContext(it){const c=lpHelpContext(it),st=it.st,question=walterRenderedText((['independent','delayed','mixed'].includes(it.phase)&&it.step.short)||it.step.prompt||'');
   // Titles and active prompt are rendered givens. Do not use sp.prompt (collapsed context),
   // future script entries, hidden checker values, or unchecked drafts as number provenance.
-  return {contextKey:lpWalterContextKey(it),mistakeNotes:S?.walterMistakeNotes!==false,storyCheckedRoute:it.spec.walterStory?.checkedRoute===true,storyPlanChecked:it.spec.walterStory?.checkedRoute===true&&it.st.storyPlanChecked===true,family:it.spec.walterStory?.checkedRoute===true&&it.spec.storyTask?.storyType==='lesson-story'?'lesson-story':(it.spec.walterStory&&(it.spec.walterStory.checkedRoute===true||decimalStorySupportEnabled()))||it.step.evidence?.component?.startsWith('decimal-story-')?'decimal-story':LP_LESSONS[it.lid||lp?.id]?.skill||(lp?.homework?lp.bp.skill:''),kind:c.kind,component:c.component,stage:c.stage,role:c.role,last:c.last,relationship:it.step.walter?.relationship||it.spec.walterStory?.relationship||'',unknown:it.step.walter?.unknown||it.spec.walterStory?.unknown||'',storyStage:it.step.walter?.stage||'',question,visibleText:[walterRenderedText(it.spec.title||''),it.spec.walterStory&&(it.spec.walterStory.checkedRoute===true||decimalStorySupportEnabled())?walterRenderedText(it.spec.walterStory.story):'',question].join(' '),acceptedText:'',work:{
+  return {contextKey:lpWalterContextKey(it),mistakeNotes:S?.walterMistakeNotes!==false,storyCheckedRoute:it.spec.walterStory?.checkedRoute===true,storyPlanChecked:it.spec.walterStory?.checkedRoute===true&&it.st.storyPlanChecked===true,family:it.spec.kind==='decimal-container-story'?'decimal-containers':it.spec.walterStory?.checkedRoute===true&&it.spec.storyTask?.storyType==='lesson-story'?'lesson-story':(it.spec.walterStory&&(it.spec.walterStory.checkedRoute===true||decimalStorySupportEnabled()))||it.step.evidence?.component?.startsWith('decimal-story-')?'decimal-story':LP_LESSONS[it.lid||lp?.id]?.skill||(lp?.homework?lp.bp.skill:''),kind:c.kind,component:c.component,stage:c.stage,role:c.role,last:c.last,relationship:it.step.walter?.relationship||it.spec.walterStory?.relationship||'',unknown:it.step.walter?.unknown||it.spec.walterStory?.unknown||'',storyStage:it.step.walter?.stage||'',question,visibleText:[walterRenderedText(it.spec.title||''),it.spec.walterStory&&(it.spec.walterStory.checkedRoute===true||decimalStorySupportEnabled())?walterRenderedText(it.spec.walterStory.story):'',question].join(' '),acceptedText:'',work:{
     earlier:(st.stepEvents||[]).filter(e=>e.step<st.k&&e.outcome==='ok'&&e.support!=='answer-confirmed').length,
     field:c.field,
     draft:walterDraftFingerprint(st.draft?.k===st.k?
@@ -10230,9 +10641,10 @@ function lpPrepareStep(it){
 }
 function lpDifferentExample(it){
   const bp=lp.homework?lp.bp:LP_LESSONS[it.lid||lp.id];if(!bp)return;
-  const storyExample=it.spec.walterStory?.checkedRoute===true&&typeof bp.storyMake==='function';let sp=storyExample?bp.storyMake(it.load||lp.load,'model',1,it.st.baseState?.strategyIndex):bp.modelByStrategy&&Number.isInteger(it.st.strategyIndex)?bp.modelByStrategy(it.st.strategyIndex):bp.model();
+  const containerExample=it.spec.kind==='decimal-container-story',exampleBlueprint=containerExample?{...bp,storyMake:(load)=>decimalContainerMake(load)}:bp;
+  const storyExample=it.spec.walterStory?.checkedRoute===true&&typeof exampleBlueprint.storyMake==='function';let sp=storyExample?exampleBlueprint.storyMake(it.load||lp.load,'model',1,it.st.baseState?.strategyIndex):bp.modelByStrategy&&Number.isInteger(it.st.strategyIndex)?bp.modelByStrategy(it.st.strategyIndex):bp.model();
   const different=s=>lpFingerprint(s)!==lpFingerprint(it.spec)&&(s.answer===undefined||it.spec.answer===undefined||s.answer!==it.spec.answer)&&!(s.audit?.family==='polygon'&&it.spec.audit?.family==='polygon'&&s.audit.name===it.spec.audit.name);
-  for(let n=0;n<8&&!different(sp);n++)sp=storyExample?bp.storyMake(it.load||lp.load,'model',1,it.st.baseState?.strategyIndex):bp.make(it.load||lp.load,'model',n%2);
+  for(let n=0;n<8&&!different(sp);n++)sp=storyExample?exampleBlueprint.storyMake(it.load||lp.load,'model',1,it.st.baseState?.strategyIndex):bp.make(it.load||lp.load,'model',n%2);
   if(!different(sp)){it.st.exampleNote='A different example is not available here. Keep testing your plan, or pause.';return;}
   const demo={phase:'model',spec:sp};lpItemStart(demo);const lines=[];let n=0;
   while(demo.step&&n<160){const step=demo.step,script=sp.script?.[n++],v=script==='@'||script===undefined?step.auto:script;
@@ -10247,6 +10659,7 @@ function lpDifferentExample(it){
   }
   lpWalterTrimEvents(st);
   st.exampleNote='';
+  st.exampleLesson={title:lpPlain(sp.title),question:sp.recordQuestion||'',lines,shown:1,open:true};
   it.st.exampleNarr=`<section class="lpclue" aria-label="Different worked example"><h3>Different worked example: ${esc(lpPlain(sp.title))}</h3><p>This is help. Keep your own problem and draft above.</p>${sp.recordQuestion?`<p>${esc(sp.recordQuestion)}</p>`:''}<ol>${lines.map(t=>`<li>${t}</li>`).join('')}</ol></section>`;
 }
 function lpCarryModelHTML(){ return `<div class="lp-carry-model" role="group" aria-label="Place-value support with empty places"><div><b>One place left</b><span>Full tens</span><span class="lp-empty-place" aria-label="Empty full-tens place">□</span></div><div><b>Current column</b><span>Leftover ones</span><span class="lp-empty-place" aria-label="Empty leftover-ones place">□</span></div></div>`; }
@@ -10270,8 +10683,9 @@ function lpWalterRespond(it,id,move,inline=false){if(!lpWalterEligible(it))retur
   const moveForGrid=it.spec.kind==='decimal-division-grid'&&(requested==='stuck'||repeats>0)
     ? (['smaller','stuck'].includes(old?.move)?'stuck':'smaller') : requested;
   const targeted=it.spec.walterReply?.(st,c,moveForGrid)||diagramReply(it,c,repeats>0?'smaller':moveForGrid);
-  const reply=targeted?{...targeted,move:moveForGrid,signature:walterHelpSignature([lpWalterContextKey(it),targeted.text,targeted.gridPlace].join('|')),choices:targeted.diagram?['words','units','plan','calculation','test']:[]}:
-    walterNextReply({guide:q.texts,intent:id,move:moveForGrid,lastMove:old?.move,repeats,observation:c,context:lpWalterSemanticContext(it),profile:lpHelpProfile(c)});
+  let reply=targeted?{...targeted,move:moveForGrid,signature:walterHelpSignature([lpWalterContextKey(it),targeted.text,targeted.gridPlace].join('|')),choices:targeted.diagram?['words','units','plan','calculation','test']:[]}:
+    walterNextReply({automatic:inline,guide:q.texts,intent:id,move:moveForGrid,lastMove:old?.move,repeats,observation:c,context:lpWalterSemanticContext(it),profile:lpHelpProfile(c)});
+  reply=walterAdaptReply(st,lpWalterContextKey(it)+'|'+walterHelpSignature(draftKey),reply,{stuck:requested==='stuck',kind:(it.st.stage==='expression'?'story-expression ':'' )+lpWalterSemanticContext(it).family+' '+it.spec.kind+' '+(it.st.stage||'')});
   const stepId=it.step.walter?.id||`${it.spec.kind}:${st.k}:${st.stage||''}`;
   st.walterEvents=Array.isArray(st.walterEvents)?st.walterEvents:[];
   if(!st.walterEvents.some(e=>e.step===st.k&&e.stepId===stepId&&(targeted||e.id===id)&&e.signature===reply.signature)){
@@ -10305,7 +10719,7 @@ function lpWalterDeliver(it,id,depth){ if(!lpWalterEligible(it)) return;
   st.walterChoice={step:st.k,id,depth}; st.walterOpen=true;
   lpSaveResume();
 }
-function lpWorkHTML(it){ lpPrepareStep(it); const sp=it.spec, st=it.st, ph=it.phase, model=ph==="model", own=ph==="independent"||ph==="delayed"||ph==="mixed";
+function lpWorkHTML(it){ const transfer=transferHTML(it);if(transfer)return transfer; lpPrepareStep(it); const sp=it.spec, st=it.st, ph=it.phase, model=ph==="model", own=ph==="independent"||ph==="delayed"||ph==="mixed";
   const step=it.step,focused=!model&&!st.done&&step?.unit5,compact=walterInlineLesson(it);
   const inline=compact&&st.inlineWalter?.step===st.k?st.inlineWalter:null;
   const inlineModel=inline?.move==='smaller'&&!inline.diagram?inline:null;
@@ -10323,9 +10737,9 @@ function lpWorkHTML(it){ lpPrepareStep(it); const sp=it.spec, st=it.st, ph=it.ph
     const clues=(st.helpShown||[]).map(t=>`<div class="lpclue">${t}</div>`).join("");
     const cue=st.msg||esc(unit5?.cue||(!inlineModel?inline?.text:'')||'');
     const readText=[sp.title||'',prompt,cue,unit5Model?u5Model(unit5Model).action:inlineModel?.text||''].filter(Boolean).join('. ');
-    work=`<p class="lpstep" id="lpstep-prompt">${prompt}</p>${typeof readAloudButton==='function'?readAloudButton(readText,'lp-prompt'):''}${sp.controls?.(st)||''}${step.unit5?.role==='simplest'?u5DivisionLayout(step.unit5,[],u5CheckedDivision(st)):''}${lpInputHTML(step, st, false)}${diagramDraftHTML(it)}<div class="inline-err lpmsg${st.msgKind==="ok"?" ok":""}${st.unit5BlockReview?.k===st.k?" block-review":""}" id="lpmsg" tabindex="-1" role="status" aria-live="polite">${(unit5||inline||hasMiss)&&cue?'<b>Walter:</b> ':''}${cue}</div>${clues}
+    work=`<p class="lpstep" id="lpstep-prompt">${prompt}</p>${typeof readAloudButton==='function'?readAloudButton(readText,'lp-prompt'):''}${sp.controls?.(st)||''}${fractionReconsiderHTML(it)}${step.unit5?.role==='simplest'?u5DivisionLayout(step.unit5,[],u5CheckedDivision(st)):''}${lpInputHTML(step, st, false)}${diagramDraftHTML(it)}<div class="inline-err lpmsg${st.msgKind==="ok"?" ok":""}${st.unit5BlockReview?.k===st.k?" block-review":""}" id="lpmsg" tabindex="-1" role="status" aria-live="polite">${(unit5||inline||hasMiss)&&cue?'<b>Walter:</b> ':''}${cue}</div>${clues}
       <div class="actions"><button class="btn primary" id="lpcheck">${step.input&&step.input.type==="button"?esc(step.input.label||"Next"):"Check"}</button>${focused?`<button class="btn quiet" id="lpunit5help">${unit5?.model?'Look at the model':unit5?'Still stuck':'Help me'}</button>`:''}${focused&&st.unit5BlockReview?.k===st.k?'<button class="btn quiet" id="lpkeepblockanswer">Keep my checked answer</button>':''}${compact?`<button class="btn quiet" id="lpinlinehelp">${inlineModel?'Look at the model':inline||hasMiss?'Still stuck':'Help me'}</button>`:''}${!lpWalterEligible(it)&&(step.help||[]).length>(st.helpShown||[]).length?`<button class="btn quiet" id="lphelp">${own?"I need a clue":"Clue"}</button>`:""}${!focused&&!compact&&own&&sp.answer!==undefined&&st.answerOnly===null?`<button class="btn quiet small" id="lpknow">I know the answer</button>`:""}${own&&st.answerOnly===true?`<button class="btn quiet small" id="lpskip">Skip building it</button>`:""}</div>
-      ${focused?u5BlocksHTML(focused,st):''}${unit5Model?u5ModelHTML(unit5Model,'u5lessonmodel'):''}${inlineModel?walterInlineModel(lpWalterSemanticContext(it),inlineModel,'walter-lesson-model'):''}${focused||compact?`<details${st.walterOpen||st.exampleNarr?' open':''}><summary>More help</summary>${focused&&walterUnit5Work(it)?walterUnit5ModelChoice():''}${lpWalterHTML(it)}${own&&sp.answer!==undefined&&st.answerOnly===null?'<button class="btn quiet small" id="lpknow">I know the answer</button>':''}</details>`:lpWalterHTML(it)}${walterFictionalHTML(st.fictional,st.fictionalNote,'lp')}${st.exampleNarr||""}${st.exampleNote?`<p class="muted">${esc(st.exampleNote)}</p>`:""}${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
+      ${focused?u5BlocksHTML(focused,st):''}${unit5Model?u5ModelHTML(unit5Model,'u5lessonmodel'):''}${inlineModel?walterInlineModel(lpWalterSemanticContext(it),inlineModel,'walter-lesson-model'):''}${focused||compact?`<details${st.walterOpen||st.exampleNarr?' open':''}><summary>More help</summary>${focused&&walterUnit5Work(it)?walterUnit5ModelChoice():''}${lpWalterHTML(it)}${own&&sp.answer!==undefined&&st.answerOnly===null?'<button class="btn quiet small" id="lpknow">I know the answer</button>':''}</details>`:lpWalterHTML(it)}${walterFictionalHTML(st.fictional,st.fictionalNote,'lp')}${lpExampleHTML(it)}${st.exampleNote?`<p class="muted">${esc(st.exampleNote)}</p>`:""}${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
   const walterLesson=st.done && ph!=="model" && !st.skipped && (st.tries>0 || st.helps>0) ? walterNote("nice","You worked through the steps and finished this one.",true) : ph==="delayed" ? walterNote("checkin","Here are new numbers. Show what you remember.",true) : ph==="guided" || (st.helpShown||[]).length ? walterNote("work","Let's check one step at a time.",true) : "";
   return `<div class="card lpcard"><h2 style="margin-top:0" class="lptitle">${sp.title}</h2>${intro}<div class="lpboard" id="lpboard">${visual}</div><div id="lpwork" class="lpwork">${work}</div>${walterLesson}${sp.prompt?`<details class="lpcontext"><summary>About this problem</summary><p class="muted lpsub">${sp.prompt}</p></details>`:""}${model||own||lp.homework?"":lpVideoHTML()}</div>`; }
 // Spotting a slip is still pending work. Do not use the hidden slip index,
@@ -10344,7 +10758,8 @@ function lpRepairWalterRespond(it,id,move,inline=false){const q=lpRepairWalterQu
   // The selected proposed line is learner work. The hidden slip index and correction are excluded.
   const observation={kind:'repair-spot',component:'repair-lines',status:rp.tries?'miss':'draft',misses:rp.tries||0,label:'',picked:Number.isInteger(rp.picked)?rp.picked:-1};
   const profile=[rp.picked===0?'Compare the first line with the question. Check whether it keeps the given amounts and relationship.':'Copy just the transition between two proposed lines. Mark what changed and what stayed the same.','Test that transition using the original quantities, signs, and units. Can you explain why it preserves the problem?','Which change can you justify? Keep checking from the beginning, and stop at the first change you cannot justify.'];
-  const reply=walterNextReply({guide:q.texts,intent:id,move:requested,lastMove:old?.move,repeats,observation,context:{contextKey:lpWalterContextKey(it),mistakeNotes:S?.walterMistakeNotes!==false,family:(LP_LESSONS[it.lid||lp?.id]||lp.bp).skill,kind:'repair-spot',component:'repair-lines',stage:'spot',question:walterRenderedText(it.rspec.story||''),visibleText:walterRenderedText(it.rspec.story||''),acceptedText:'',status:observation.status,label:'',code:'',tag:''},profile});
+  let reply=walterNextReply({automatic:inline,guide:q.texts,intent:id,move:requested,lastMove:old?.move,repeats,observation,context:{contextKey:lpWalterContextKey(it),mistakeNotes:S?.walterMistakeNotes!==false,family:(LP_LESSONS[it.lid||lp?.id]||lp.bp).skill,kind:'repair-spot',component:'repair-lines',stage:'spot',question:walterRenderedText(it.rspec.story||''),visibleText:walterRenderedText(it.rspec.story||''),acceptedText:'',status:observation.status,label:'',code:'',tag:''},profile});
+  reply=walterAdaptReply(st,lpWalterContextKey(it)+'|'+draftKey,reply,{stuck:requested==='stuck',kind:'repair'});
   st.walterEvents=Array.isArray(st.walterEvents)?st.walterEvents:[];
   if(!st.walterEvents.some(e=>e.stepId==='repair-spot'&&e.id===id&&e.signature===reply.signature)){st.walterEvents.push({step:st.k,stepId:'repair-spot',id,type:q.type,move:reply.move,signature:reply.signature,context:lpWalterContextKey(it),text:reply.text.slice(0,500),t:Date.now(),contextLabel:'Repair lines',tries:rp.tries||0});st.helps=(+st.helps||0)+1;}
   lpWalterTrimEvents(st);
@@ -10372,10 +10787,10 @@ function lpRepairHTML(it){ const r=it.rspec, rp=it.rep;
   return lpWorkHTML(it); }
 function lpSummaryHTML(){ if(lp.homework)return fractionHomeworkSummaryHTML(); const rs=lp.results, own=rs.filter(e=>e.phase==="independent"||e.phase==="delayed"||e.phase==="mixed"), right=own.filter(checkedProgressComplete).length, o=lp.focus?teacherFocusState(lp.id):lpState(lp.id);
   const due=+o.due>0?new Date(+o.due).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}):"";
-  return `<div class="card lpcard"><h2 style="margin-top:0">${lp.delayed?"Check-in done":lp.focus?"Teacher's focus practice done":"Lesson "+lp.bp.lesson+" practice done"}</h2>
-    <p>${right?practiceCelebrationHTML(right,latestCheckedProgressWin(own)):"You worked through the lesson steps."+practiceCelebrationHTML(0,latestCheckedProgressWin(rs))}</p>${walterNote("rest","You finished this lesson. Time for a rest.",true)}
+  return `<div class="card lpcard"><h2 style="margin-top:0">${lp.openProblem?"Problem practice done":lp.delayed?"Check-in done":lp.focus?"Teacher's focus practice done":"Lesson "+lp.bp.lesson+" practice done"}</h2>
+    <p>${right?practiceCelebrationHTML(right,latestCheckedProgressWin(own)):(lp.openProblem?"You finished this problem.":"You worked through the lesson steps.")+practiceCelebrationHTML(0,latestCheckedProgressWin(rs))}</p>${walterNote("rest",lp.openProblem?"You finished this problem. Time for a rest.":"You finished this lesson. Time for a rest.",true)}
     ${due?`<p class="muted">A quick check-in with new numbers will be ready ${esc(due)}. Checking back later is how it sticks.</p>`:""}
-    <p class="muted lpgrown"><b>Grown-up:</b> ${lp.bp.talk}</p>
+    ${transferSessionSummary()}<p class="muted lpgrown"><b>Grown-up:</b> ${lp.bp.talk}</p>
     <div class="actions"><button class="btn primary" id="lphome">Home</button><button class="btn quiet" id="lpagain">${lp.focus?"Practice this focus again":"Practice this lesson again"}</button></div></div>`; }
 
 // ---- binding ----
@@ -10383,7 +10798,7 @@ function lpBind(it){ const q=s=>app.querySelector(s);
   u5BindDivision();
   u5BindBlocks(it.st,()=>lpSaveResume());
   app.querySelectorAll(".lpvideo .video-link").forEach(vid=>vid.addEventListener("click", ()=>{ lpRecord({phase:"video"}, {kind:"video-link-tap", video:1, videoType:vid.dataset.videoType, ok:0, methodOk:0, firstTry:0}); }));
-  if(it.phase==="intro"){ q("#lpgo").onclick=lpNext; q("#lpgo").focus({preventScroll:true}); return; }
+  if(it.phase==="intro"){ q("#lpopenproblem")?.addEventListener("click",transferStartOpen); q("#lpgo").onclick=lpNext; q("#lpgo").focus({preventScroll:true}); return; }
   if(it.phase==="explain"){ q("#lpexpsave").onclick=()=>{ const t=String(q("#lpexp").value||"").trim().slice(0,280); if(!t){ q("#lpexpmsg").textContent="Type a thought, choose ‘I said it aloud,’ or skip."; return; } lpRecord(it, {kind:"explain", ok:1, text:t, mode:"typed", skipped:0}); lpNext(); }; q("#lpexpsaid").onclick=()=>{ lpRecord(it, {kind:"explain", ok:0, mode:"spoken", selfReported:1, skipped:0}); lpNext(); }; q("#lpexpskip").onclick=()=>{ lpRecord(it, {kind:"explain", ok:0, mode:"skipped", skipped:1}); lpNext(); }; return; }
   if(it.phase==="summary"){ q("#lphome").onclick=()=>{ lp=null; home(); }; q("#lpagain").onclick=()=>{if(lp.homework?.weekly){const item=weeklyHomeworkItem(lp.homework.itemId);if(item?.fresh)decimalDivisionGridStart(item.method);else weeklyHomeworkHub(item?.grid?'grid':'all');}else if(lp.homework)hwEntry();else lpStart(lp.id, false, null, lp.focus);}; return; }
   if(it.phase==="repair" && it.rep.stage==="spot"){ app.querySelectorAll("[data-lpr]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.lpr, r=it.rspec, rp=it.rep; rp.picked=i;
@@ -10396,7 +10811,6 @@ function lpBind(it){ const q=s=>app.querySelector(s);
     };
     if(q('#lprepairinline'))q('#lprepairinline').onclick=()=>{
       const rp=it.rep;
-      if(rp.inlineWalter?.move==='smaller'){walterInlineFocus('#walter-repair-model');return;}
       const move=walterNextInlineMove(rp.inlineWalter,rp.tries>0);
       lpRepairWalterRespond(it,'start',move==='start'?'orient':move,true);
       if(rp.inlineWalter?.move!=='smaller')rp.msg=rp.inlineWalter?.text||rp.msg;
@@ -10411,7 +10825,8 @@ function lpBind(it){ const q=s=>app.querySelector(s);
     if(q('#lpaskreturn'))q('#lpaskreturn').onclick=()=>{it.rep.walterOpen=false;lpRender();q('[data-lpr]')?.focus({preventScroll:true});};
     return; }
   const st=it.st, step=it.step;
-  if(st.done){ q("#lpnext").onclick=()=>{ lpRecord(it); if(lp.i+1>=lp.items.length-1) lpFinish(); lpNext(); }; q("#lpnext").focus({preventScroll:true}); return; }
+  if(transferBind(it))return;
+  if(st.done){ q("#lpnext").onclick=()=>{ lpRecord(it); if(transferFinishOpenMethod(it))return; if(lp.i+1>=lp.items.length-1) lpFinish(); lpNext(); }; q("#lpnext").focus({preventScroll:true}); return; }
   if(it.spec.bind) it.spec.bind(it, ()=>lpRender());
   if(it.phase==="model"){ q("#lpshow").onclick=()=>{ it.mi=it.mi||0; const stp=it.step; let v=it.spec.script[it.mi++]; if(v==="@"||v===undefined) v=stp.auto; const ok=lpApply(it, v); it.narr=it.narr||[];
       const shown=esc(stp.showVal?stp.showVal(v):Array.isArray(v)?v.join(", "):(v&&v.prime)?"prime: circle it":String(v));
@@ -10441,7 +10856,6 @@ function lpBind(it){ const q=s=>app.querySelector(s);
   };
   if(q('#lpinlinehelp'))q('#lpinlinehelp').onclick=()=>{
     keepDraft();
-    if(st.inlineWalter?.move==='smaller'&&!st.inlineWalter.diagram&&st.inlineWalter.draftKey===lpWalterDraftKey(it,lpHelpContext(it))){walterInlineFocus('#walter-lesson-model');return;}
     const context=lpHelpContext(it),move=walterNextInlineMove(st.inlineWalter,['miss','trial'].includes(context.status));
     const hadMessage=st.msg;
     lpWalterRespond(it,'start',move==='start'?'orient':move,true);
@@ -10458,6 +10872,7 @@ function lpBind(it){ const q=s=>app.querySelector(s);
   app.querySelectorAll("[data-walter-move]").forEach(b=>b.onclick=()=>{keepDraft();lpWalterRespond(it,st.walterChoice.id,b.dataset.walterMove);reply();});
   app.querySelectorAll('[data-walter-rating]').forEach(b=>b.onclick=()=>{keepDraft();lpWalterRate(it,b.dataset.walterRating,b.dataset.signature);reply();});
   const error=q('#lperror');if(error)error.onclick=()=>{keepDraft();lpOpenFictionalExample(it);lpRender();};app.querySelectorAll('[data-lp-fictional]').forEach(b=>b.onclick=()=>{keepDraft();st.fictional.picked=+b.dataset.lpFictional;lpSaveResume();lpRender();});
+  lpExampleBind(it,keepDraft);
   const other=q("#lpother");if(other)other.onclick=()=>{keepDraft();lpDifferentExample(it);lpSaveResume();lpRender();};
   const ret=q("#lpaskreturn"); if(ret) ret.onclick=()=>{ keepDraft(); st.walterOpen=false; lpRender(); (q("#lpin")||q("[data-lpi]")||q(".lpopt")||q("#lpcheck"))?.focus({preventScroll:true}); };
   const go=()=>{ keepDraft(); const typedTile=I.type==="tiles"&&!!q("#lptype")?.value.trim(); const v=lpReadInput(step, st); const ok=lpApply(it, v); if(ok && I.type==="tiles") st.tiles=[]; if(ok) st.grp=[]; lpRender(); const f=(st.unit5BlockReview?.k===st.k?q("#lpmsg"):null)||(!ok&&st.badIndex>=0?q(`[data-lpi="${st.badIndex}"]`):null)||(!ok&&typedTile?q("#lptype"):null)||q("#lpin")||q("[data-lpi]")||q(".lpopt")||q(".lpchip")||q(".lptok")||q(".lptile")||q("#lpnext"); if(f){f.focus({preventScroll:true});if(st.unit5BlockReview?.k===st.k)f.scrollIntoView({block:"nearest"});} };
@@ -10469,7 +10884,7 @@ function lpBind(it){ const q=s=>app.querySelector(s);
   const kb=q("#lpknow"); if(kb) kb.onclick=()=>{ q("#lpknowbox").hidden=false; q("#lpknowin").focus(); };
   const kg=q("#lpknowgo"); if(kg) kg.onclick=()=>{ keepDraft(); const raw=q("#lpknowin").value,v=it.spec.answerCheck?cxRead(raw):lpNum(raw); if(v===null||typeof v==="number"&&isNaN(v)){ q("#lpmsg").textContent="Type a number."; return; } const right=it.spec.answerCheck?it.spec.answerCheck(raw):Math.abs(v-it.spec.answer)<1e-9; st.answerOnly=right; if(right) st.answerPreviewed=true; if(!right){ st.tries++; st.codes.push("answer-only"); }
     st.msg = right ? `That is the answer. This lesson is about the ${it.spec.methodName||"model"}, so build it too; or skip building it (that counts as the answer only).` : "Not that one. Build it step by step and you'll find it."; st.msgKind=right?"ok":"no"; lpRender(); };
-  const sk=q("#lpskip"); if(sk) sk.onclick=()=>{ st.skipped=true; st.done=!!st.answerOnly; if(!st.done){ lpRender(); return; } lpRecord(it); if(lp.i+1>=lp.items.length-1) lpFinish(); lpNext(); };
+  const sk=q("#lpskip"); if(sk) sk.onclick=()=>{ st.skipped=true; st.done=!!st.answerOnly; if(!st.done){ lpRender(); return; } lpRecord(it); if(transferFinishOpenMethod(it))return; if(lp.i+1>=lp.items.length-1) lpFinish(); lpNext(); };
   diagramBind(it);
   const f=q("#lpin")||q("[data-lpi]"); if(f) f.focus({preventScroll:true}); }
 // ---- step builders ----
@@ -11206,6 +11621,13 @@ function cxFractionCombine(o){const {a,b,op,method,regroup}=o,value=op==='+'?cxA
    }
   };
  }
+ // Reconsidering a common unit is an explicit learner action. The descriptor
+ // exposes original denominator constraints and accepted state, never a suggested answer.
+ const fractionNext=sp.next;
+ sp.next=st=>{const step=fractionNext(st);if(!step)return null;
+   step.fractionReconsider={state:st,denominators:[a.d,b.d],method,
+     reset:D=>{st.D=D;st.an=null;st.bn=null;st.combined=null;st.stage='first';st.jumps=[];st.cur=a;st.remaining=b;delete st.pending;}};
+   return step;};
  return sp;}
 function cxFractionProduct(o){const {a,b,mode}=o,val=cxMul(a,b),relation=b.n<b.d?0:b.n===b.d?1:2,steps=[];
  if(mode==='division'){steps.push(cxChoice(`A total of ${a.n} is shared equally among ${a.d} ${a.d===1?'group':'groups'}. Which expression gives each share?`,[`${a.n} ÷ ${a.d}`,`${a.n} + ${a.d}`,`${a.n} × ${a.d}`],0,'fraction-divide'));steps.push(cxFrac('Write the share as a fraction.',a,'fraction-divide'));return cxSeq({kind:'fraction-as-division',title:`${a.n} shared among ${a.d}`,answer:a.n/a.d,answerCheck:v=>cxEq(cxRead(v),a),steps,audit:{family:'frac-as-division',a},done:()=>`Each share is <b>${cxText(a)}</b>.`});}
@@ -11401,6 +11823,74 @@ for(const sk of CX_NEW_SKILLS)STEP_COMPS[sk]=new Set(Object.keys(CX_GUIDES));
 NOT_YET_COVERED=curriculumCoverageNote();
 // Profiles load after all curriculum and lesson registration in the final bootstrap.
 
+// Explicit common-unit revision on dynamic fraction-combination lessons/homework.
+// Entry checks read original denominators only. No solution fields enter this UI.
+function fractionReconsiderContext(it){
+ const descriptor=it?.step?.fractionReconsider,st=it?.st;
+ if(!descriptor||!st||st.done||it.phase==='model'||st.model)return null;
+ const inner=descriptor.state;
+ if(!inner||!Number.isInteger(inner.D)||inner.D<=0||inner.stage==='denominator'||inner.stage==='done')return null;
+ const denominators=descriptor.denominators;
+ if(!Array.isArray(denominators)||denominators.length!==2||!denominators.every(d=>Number.isInteger(d)&&d>0))return null;
+ return {descriptor,inner,st,denominators};
+}
+function fractionReconsiderHTML(it){
+ const c=fractionReconsiderContext(it);if(!c)return '';
+ const edit=c.st.fractionReconsiderEdit;
+ return `<section class="fraction-reconsider" aria-label="Choose a different common piece size"><p class="muted">Your checked piece count: ${c.inner.D} in each whole.</p>${edit?.open?`<label for="fraction-new-pieces">New pieces in each whole</label><input class="ans small" id="fraction-new-pieces" inputmode="numeric" autocomplete="off" value="${esc(String(edit.draft||''))}"><p class="muted">Choose a whole number up to 120 that both original denominators divide evenly. A different choice reopens the renaming and later calculation steps. Your original problem stays the same.</p><div class="actions"><button type="button" class="btn" id="fraction-check-pieces">Use this piece count</button><button type="button" class="btn quiet" id="fraction-keep-pieces">Keep my checked piece count</button></div><p id="fraction-piece-message" role="status">${esc(edit.message||'')}</p>`:'<button type="button" class="btn quiet small" id="fraction-change-pieces">Change piece count</button>'}</section>`;
+}
+function fractionReconsiderCheck(it,raw){
+ const c=fractionReconsiderContext(it);if(!c)return {ok:false,message:'This problem has no checked common piece count to change.'};
+ const text=String(raw??'').trim(),D=/^\d+(?:\.0+)?$/.test(text)?Number(text):NaN;
+ if(!Number.isInteger(D)||D<1||D>120)return {ok:false,message:'Enter a positive whole-number piece count up to 120.'};
+ if(c.denominators.some(d=>D%d))return {ok:false,message:'Test whether each original denominator divides your new piece count evenly.'};
+ return {ok:true,D,changed:D!==c.inner.D};
+}
+function fractionReconsiderApply(it,raw){
+ const result=fractionReconsiderCheck(it,raw);if(!result.ok)return result;
+ const c=fractionReconsiderContext(it),st=c.st;
+ if(!result.changed){delete st.fractionReconsiderEdit;return result;}
+ // Set aside dependent checks instead of displaying them as still accepted.
+ // A revision epoch isolates help while the arithmetic step count stays bounded.
+ let nested=st,arithmeticStart=0;
+ for(let depth=0;depth<4&&nested!==c.inner;depth++){
+   const inner=nested.baseState||nested.methodState;if(!inner)break;nested=inner;arithmeticStart++;
+ }
+ const events=Array.isArray(st.stepEvents)?st.stepEvents:[],superseded=events.filter(e=>e.step>=arithmeticStart);
+ const oldD=c.inner.D,oldStage=c.inner.stage,oldStep=st.k;
+ const revisions=Array.isArray(st.fractionRevisions)?st.fractionRevisions:[];
+ revisions.push({from:oldD,to:result.D,t:Date.now(),stage:oldStage,atStep:oldStep,superseded:lpTrimEvents(superseded).slice(-12)});
+ st.fractionRevisions=revisions.slice(-4);
+ st.fractionRevisionCount=(Math.max(0,+st.fractionRevisionCount||0))+1;
+ c.descriptor.reset(result.D);
+ st.stepEvents=events.filter(e=>e.step<arithmeticStart);
+ st.stepEvents.push({step:arithmeticStart,stepId:'common-unit-revision',component:'common-unit',values:[String(result.D)],outcome:'ok',code:'changed-common-unit',field:-1,support:st.answerPreviewed?'answer-confirmed':st.helps?'helped':['guided','repair'].includes(it.phase)?'guided':'checked',t:Date.now()});
+ st.stepEvents=lpTrimEvents(st.stepEvents);st.k=arithmeticStart+1;
+ st.draft=null;st.badIndex=-1;st.msg='Your new piece count works for both fractions. Rename each amount with this piece size, then check the later steps again.';st.msgKind='';
+ st.helpShown=[];st.walterOpen=false;st.walterChoice=null;st.inlineWalter=null;st.unit5Help=null;st.exampleNarr='';st.exampleNote='';
+ delete st.walterClarification;delete st.walterApproaches;delete st.fractionReconsiderEdit;
+ delete st.unit5BlockReview;delete st.unit5BlockAcknowledged;delete st.unit5BlockLast;delete st.unit5BlockFocus;st.unit5BlockWork={};
+ it.step=it.spec.next(st);lpPrepareStep(it);
+ return result;
+}
+function fractionReconsiderBind(it){
+ const c=fractionReconsiderContext(it);if(!c)return;
+ const save=()=>lpSaveResume(),redraw=selector=>{lpRender();app.querySelector(selector)?.focus({preventScroll:true});};
+ app.querySelector('#fraction-change-pieces')?.addEventListener('click',()=>{
+   c.st.fractionReconsiderEdit={open:true,draft:'',message:''};save();redraw('#fraction-new-pieces');
+ });
+ app.querySelector('#fraction-new-pieces')?.addEventListener('input',e=>{c.st.fractionReconsiderEdit.draft=e.target.value.slice(0,32);c.st.fractionReconsiderEdit.message='';save();});
+ app.querySelector('#fraction-new-pieces')?.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();app.querySelector('#fraction-check-pieces')?.click();}else if(e.key==='Escape'){e.preventDefault();app.querySelector('#fraction-keep-pieces')?.click();}});
+ app.querySelector('#fraction-keep-pieces')?.addEventListener('click',()=>{delete c.st.fractionReconsiderEdit;save();redraw('#fraction-change-pieces');});
+ app.querySelector('#fraction-check-pieces')?.addEventListener('click',()=>{
+   const raw=app.querySelector('#fraction-new-pieces')?.value||'',snapshot=JSON.parse(JSON.stringify(it.st));
+   const resumeSnapshot=JSON.parse(JSON.stringify({lessonResume:S.lessonResume,homeworkResume:S.homeworkResume,homeworkDrafts:S.homeworkDrafts}));
+   const result=fractionReconsiderApply(it,raw);
+   if(!result.ok){c.st.fractionReconsiderEdit={open:true,draft:raw.slice(0,32),message:result.message};save();redraw('#fraction-new-pieces');return;}
+   if(save()===false){for(const name of ['lessonResume','homeworkResume','homeworkDrafts']){if(Object.prototype.hasOwnProperty.call(resumeSnapshot,name))S[name]=resumeSnapshot[name];else delete S[name];}it.st=snapshot;it.step=it.spec.next(it.st);lpPrepareStep(it);it.st.fractionReconsiderEdit={open:true,draft:raw.slice(0,32),message:'This change could not be saved. Your checked work is kept. Try again.'};redraw('#fraction-new-pieces');return;}
+   redraw(result.changed?'#lpin':'#fraction-change-pieces');
+ });
+}
 const LP_LESSONS={...LP_U2,...LP_U3,...LP_CURRICULUM};
 const lpUnit=id=>+(String(id).match(/^U(\d+)L/)?.[1]||2);
 const lpLessonLabel=id=>`Unit ${lpUnit(id)} · Lesson ${LP_LESSONS[id].lesson}`;
@@ -11442,7 +11932,7 @@ function lpHomeworkStoryMethod(base,task,preferred=0){
  const checkExpression=decimal?decimalStoryExpressionCheck:lessonStoryExpressionCheck,teaching=decimal?decimalStoryTeaching:lessonStoryTeaching;
  const guide=['orient','meaning','plan','test','smaller'].map(move=>teaching({component:meaning,relationship:task.relation,unknown:task.unknown},move).text);
  const sp={kind:base.kind,title:decimal?'Decimal word problem':task.label||'Word problem',problemKey:base.problemKey||base.title,recordQuestion:task.story,prompt:task.story,answer:base.answer,answerCheck:base.answerCheck,audit:base.audit,script:[],
-  storyTask:task,walterStory:{story:task.story,relationship:task.relation,unknown:task.unknown,storyType:task.storyType,checkedRoute:true},methodName:base.methodName,methodEvidence:base.methodEvidence,
+  openProblem:{v:1,question:task.story,answerFormat:task.fractions?'fraction':'number',unit:task.unit,help:{words:guide[0],model:guide[2],check:guide[3]}},storyTask:task,walterStory:{story:task.story,relationship:task.relation,unknown:task.unknown,storyType:task.storyType,checkedRoute:true},methodName:base.methodName,methodEvidence:base.methodEvidence,
   init:()=>({storyExpression:null,storyPlanChecked:false,baseState:null,stage:'story-meaning'}),
   storyStateValid:st=>!!st&&Number.isInteger(st.k)&&st.k>=0&&(st.k===0?st.storyExpression===null&&st.storyPlanChecked===false&&st.baseState===null:st.storyPlanChecked===true&&typeof st.storyExpression==='string'&&checkExpression(task,st.storyExpression).ok&&!!st.baseState&&typeof st.baseState==='object'&&!Array.isArray(st.baseState)),
   next:st=>{
@@ -11546,6 +12036,47 @@ function installApplicationStorySets(){
  }
 }
 installApplicationStorySets();
+// Authored decimal-measurement applications, shared by lessons and open practice.
+// Integers store tenths, so trial products and remainders are checked exactly.
+function containerTenths(raw){const m=String(raw??'').trim().match(/^(\d+)(?:\.(\d+))?$/);if(!m||/[1-9]/.test((m[2]||'').slice(1)))return null;const n=Number(m[1])*10+Number((m[2]||'0')[0]);return Number.isSafeInteger(n)?n:null;}
+function decimalContainerSpec({total,capacity,all,substance='liters of juice',container='bottle',plural='bottles',unit='L'}){
+ const amount=n=>String(n/10),question=`You have ${amount(total)} ${substance}. Each ${container} can hold ${amount(capacity)} ${unit}. `+(all?`How many ${plural} do you need to hold all of it?`:`How many ${plural} can you fill completely?`);
+ const cues={goal:'Read the last question. Are you counting only completely filled containers, or enough containers to hold everything?',count:`Choose your own number of full ${plural} to test.`,used:`Multiply your chosen count by the capacity of one ${container}.`,left:'Take the amount your checked trial used away from the total.',final:'Use your checked remainder and the last question. Decide what happens to an amount that cannot fill another container.'};
+ const guides=stage=>[cues[stage],'Draw the original amount and label the capacity of one container. Leave the unknown count blank.','Check your own trial by multiplication, then account for what is left.'];
+ const sp={kind:'decimal-container-story',title:'Decimal division story',recordQuestion:question,problemKey:question,prompt:question,script:[],answer:all?Math.ceil(total/capacity):Math.floor(total/capacity),
+  answerCheck:raw=>{const n=lpNum(raw);return Number.isInteger(n)&&n>=0&&n===(all?Math.ceil(total/capacity):Math.floor(total/capacity));},
+  openProblem:{v:1,question,answerFormat:'number',unit:plural,help:{words:cues.goal,model:guides('goal')[1],check:guides('goal')[2]}},
+  audit:{family:'decimal-containers',total,capacity,all},methodName:'trial groups and remainder',methodEvidence:'decimal-container-trials',walterStory:{checkedRoute:true,story:question,relationship:'groups',unknown:'group-count'},
+  init:()=>({stage:'goal',storyPlanChecked:false,goal:null,trial:null,used:null,left:null,lastTrial:null,returnStage:null}),
+  storyStateValid:st=>{if(!st||!['goal','count','used','left','final','done'].includes(st.stage)||!Number.isInteger(st.k)||st.k<0)return false;
+   if(st.lastTrial&&(!Number.isInteger(st.lastTrial.count)||st.lastTrial.count<1||st.lastTrial.count>999||st.lastTrial.used!==st.lastTrial.count*capacity||st.lastTrial.left!==undefined&&st.lastTrial.left!==total-st.lastTrial.used))return false;
+   if(st.goal!==null&&st.goal!==Number(all))return false;
+   if(st.trial!==null&&(!Number.isInteger(st.trial)||st.trial<1||st.trial>999))return false;
+   if(st.used!==null&&(st.trial===null||st.used!==st.trial*capacity))return false;
+   if(st.left!==null&&(st.used===null||st.used>total||st.left!==total-st.used))return false;
+   if(st.stage==='used'&&st.trial===null||st.stage==='left'&&(st.used===null||st.used>total)||['final','done'].includes(st.stage)&&(st.left===null||st.left>=capacity||st.goal===null))return false;
+   return true;},
+  next:st=>{if(st.restoreContainerDraft){const saved=st.containerDrafts?.[st.stage];if(saved)st.draft={...saved,k:st.k};delete st.restoreContainerDraft;}if(st.stage==='done')return null;
+   const stage=st.stage,help=guides(stage),base={curriculumGuide:help,help,evidence:{component:stage==='goal'?'word-story-meaning':'decimal-container-'+stage}};
+   if(stage==='goal')return {...base,prompt:cues.goal,short:'What does the question ask you to count?',input:{type:'mc',options:[`Only completely filled ${plural}`,`Enough ${plural} to hold everything`]},auto:Number(all),check:v=>Number(v)===Number(all)?{ok:true,apply:()=>{st.goal=Number(all);st.storyPlanChecked=true;st.stage=st.returnStage||'count';st.returnStage=null;st.restoreContainerDraft=true;}}:{ok:false,...(Number(v)<0?{fmt:true}:{}),msg:'Read the last sentence again and match what it asks you to count.'}};
+   if(stage==='count')return {...base,prompt:cues.count,short:'Your trial count',input:{type:'num'},auto:Math.max(1,Math.floor(total/capacity)),check:v=>{const n=lpNum(v);return Number.isInteger(n)&&n>=1&&n<=999?{ok:true,apply:()=>{st.trial=n;st.used=null;st.left=null;st.stage='used';}}:{ok:false,fmt:true,msg:'Choose a whole-number count from 1 to 999.'};}};
+   if(stage==='used')return {...base,prompt:`You chose ${st.trial} full ${plural}. How much would they hold (${unit})?`,input:{type:'num'},auto:st.trial*capacity/10,check:v=>{const n=containerTenths(v);if(n===null)return {ok:false,fmt:true,msg:'Enter an amount in tenths.'};return n===st.trial*capacity?{ok:true,msg:n>total?'Your multiplication checks out. This trial uses more than you have. Choose another count.':'Your trial product checks out.',apply:()=>{st.used=n;if(n>total){st.lastTrial={count:st.trial,used:n};st.trial=null;st.used=null;st.left=null;st.stage='count';}else st.stage='left';}}:{ok:false,msg:cues.used};}};
+   if(stage==='left')return {...base,prompt:`Your trial used ${amount(st.used)} ${unit}. How much is left (${unit})?`,input:{type:'num'},auto:(total-st.used)/10,check:v=>{const n=containerTenths(v);if(n===null)return {ok:false,fmt:true,msg:'Enter an amount in tenths.'};return n===total-st.used?{ok:true,msg:n>=capacity?'Your subtraction checks out. Compare the remainder with one container. Test another count.':'Your remainder checks out. Use the question to decide your answer.',apply:()=>{st.left=n;if(n>=capacity){st.lastTrial={count:st.trial,used:st.used,left:n};st.trial=null;st.used=null;st.left=null;st.stage='count';}else st.stage=st.goal===null?'goal':'final';if(st.stage==='goal')st.returnStage='final';}}:{ok:false,msg:cues.left};}};
+   return {...base,prompt:`How many ${plural} ${all?'are needed to hold everything':'can be filled completely'}?`,input:{type:'num'},auto:sp.answer,check:v=>sp.answerCheck(v)?{ok:true,apply:()=>{st.stage='done';}}:{ok:false,...(!Number.isFinite(lpNum(v))?{fmt:true}:{}),msg:cues.final}};
+  },
+  visual:st=>`<p class="lpstory">${esc(question)}</p>${st.lastTrial?`<p>Earlier checked trial: ${st.lastTrial.count} ${plural} would use ${amount(st.lastTrial.used)} ${unit}${Number.isInteger(st.lastTrial.left)?`; ${amount(st.lastTrial.left)} ${unit} remained`:''}.</p>`:''}${st.used!==null?`<p>Checked trial: ${st.trial} ${plural} use ${amount(st.used)} ${unit}.${st.left!==null?` Checked remainder: ${amount(st.left)} ${unit}.`:''}</p>`:''}`,
+  controls:st=>st.stage==='done'?'':`<div class="actions"><button type="button" class="btn quiet small" data-container-action="words">What am I counting?</button><button type="button" class="btn quiet small" data-container-action="trial">${st.trial!==null?'Try another count':'Check what fits'}</button></div>`,
+  bind:it=>app.querySelectorAll('[data-container-action]').forEach(b=>b.onclick=()=>{const st=it.st;if(st.draft)st.containerDrafts={...(st.containerDrafts||{}),[st.stage]:JSON.parse(JSON.stringify(st.draft))};if(b.dataset.containerAction==='words'){if(st.stage!=='goal'){st.returnStage=st.stage;st.stage='goal';}}else{st.stage='count';st.returnStage=null;st.trial=null;st.used=null;st.left=null;st.containerDrafts={};}st.k++;st.draft=null;st.msg='';st.walterChoice=null;st.inlineWalter=null;it.step=sp.next(st);lpPrepareStep(it);lpSaveResume();lpRender();}),
+  done:()=>`You checked what the story asks, your trial arithmetic, the remainder, and the final count.`,oneShot:st=>st.stage!=='done'};
+ return sp;
+}
+function decimalContainerMake(load,index){
+ const capacity=lpPick(load<=1?[3,4,5,6,7,8]:[7,8,9,11,12,15]),count=lpRnd(2,load<=1?6:load===2?12:20),left=lpRnd(1,capacity-1),all=Number.isInteger(index)?index%2===1:Math.random()<.5;
+ const contexts=[['liters of juice','bottle','bottles','L'],['kilograms of trail mix','bag','bags','kg'],['liters of paint','can','cans','L']],c=lpPick(contexts);
+ return decimalContainerSpec({total:capacity*count+left,capacity,all,substance:c[0],container:c[1],plural:c[2],unit:c[3]});
+}
+// v6-only generation keeps every older saved exact-division story reconstructible.
+LP_LESSONS.U4L9.openStoryMake=(load,phase,index)=>decimalContainerMake(load,phase==='delayed'?undefined:index);
 // Parent-selected focus catalog. A pacing entry alone never creates a route.
 const FOCUS_FEATURED={U2L8:{key:'multiply',name:'Three-digit multiplication',symbol:'×',detail:'Use the standard algorithm, including columns, carries, and row addition.'},U2L11:{key:'divide',name:'Division with an area model',symbol:'÷',detail:'Build bands and check partial quotients, products, and subtraction.'},U3L3:{key:'decimal-add',name:'Add decimals',symbol:'+',detail:'Combine matching places. Choose a chart or number line.'},U3L6:{key:'decimal-sub',name:'Subtract decimals',symbol:'−',detail:'Exchange equal values when needed. Choose a chart or number line.'}};
 const FOCUS_LESSONS=Object.freeze(Object.entries(LP_LESSONS).filter(([id,b])=>lessonById(id)&&SKILLS[b.skill]&&['model','make','repair'].every(k=>typeof b[k]==='function')&&Array.isArray(b.vocab)&&Array.isArray(b.explain)).map(([id,b])=>Object.freeze({id,kind:'lesson',skill:b.skill,key:FOCUS_FEATURED[id]?.key||'lesson:'+id,unit:lpUnit(id),name:FOCUS_FEATURED[id]?.name||b.name,symbol:FOCUS_FEATURED[id]?.symbol||'→',detail:FOCUS_FEATURED[id]?.detail||lpPlain(b.goal),featured:!!FOCUS_FEATURED[id]})));
@@ -11801,6 +12332,7 @@ function teacherReportDraft(player=S,options={}){
   lines.push('',`Clean checks recorded without help`);
   if(clean.size)for(const [k,n] of [...clean].slice(0,5))lines.push(`${k}: ${n} clean recorded finish${n===1?'':'es'} without help or retries.`);
   else lines.push('No fresh clean finish without help or retries is established by the available records in this window.');
+  if(typeof transferReportText==='function'){const transferSummary=transferReportText(p,since,now);if(transferSummary)lines.push('',transferSummary);}
   lines.push('These checks are separate from supported corrections; neither establishes paper-and-pencil mastery.', '',
     'What would help at home? Please point us to the step, language, or representation you use in class, and one fresh problem we can use to check the explanation.');
   const text=lines.join('\n');return text.length>16000?text.slice(0,15700)+'\n\nReport shortened to fit. More saved observations are available in the local practice record.':text;
@@ -12102,11 +12634,11 @@ function fractionHomeworkSave(){
   const it=lp.items[lp.i],key=homeworkDraftKey(lp.homework);
   const others=[S.homeworkResume,...(S.homeworkDrafts||[])].filter(row=>row&&homeworkDraftKey(row.task)!==key);
   setHomeworkDrafts(S,[{v:1,task:lp.homework,st:it.st,recorded:!!it.recorded,results:lp.results,t:Date.now()},...others].slice(0,HOMEWORK_DRAFT_LIMIT));
-  save();
+  return save();
 }
 function fractionHomeworkRecord(it,extra){
   if(it.recorded)return null;it.recorded=true;const st=it.st||{};
-  const e={t:Date.now(),q:lp.homework.label,...(lp.homework.weekly?{week:lp.homework.week,itemId:lp.homework.itemId}:{}),method:it.spec.methodName||it.spec.kind,ok:st.done?1:0,methodOk:st.done&&!st.skipped?1:0,helps:+st.helps||0,tries:+st.tries||0,firstTry:0,hw:1,phase:'homework',stepEvents:lpTrimEvents(st.stepEvents),walterHelp:(st.walterEvents||[]).slice(-60),...(st.diagramObservations?.length?{diagramObservations:diagramHistory(st)}:{}),...extra};
+  const e={t:Date.now(),q:lp.homework.label,...(lp.homework.weekly?{week:lp.homework.week,itemId:lp.homework.itemId}:{}),method:it.spec.methodName||it.spec.kind,ok:st.done?1:0,methodOk:st.done&&!st.skipped?1:0,helps:+st.helps||0,tries:+st.tries||0,firstTry:0,hw:1,phase:'homework',fractionRevisionCount:+st.fractionRevisionCount||0,fractionRevisions:st.fractionRevisions||[],stepEvents:lpTrimEvents(st.stepEvents),walterHelp:(st.walterEvents||[]).slice(-60),...(st.diagramObservations?.length?{diagramObservations:diagramHistory(st)}:{}),...extra};
   if(lp.homework.week===DECIMAL_GRID_PACK){
     e.gridOutcome=st.helps?'supported':st.tries?'retried':'no-hint';
     if(lp.homework.gridCheck)e.gridCheck=true;

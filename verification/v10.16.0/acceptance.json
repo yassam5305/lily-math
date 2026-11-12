@@ -1,0 +1,682 @@
+{
+  "version": "v10.16.0",
+  "verifiedAt": "2026-11-12T04:00:27.932005+00:00",
+  "artifact": "index-v10.16.0.html",
+  "sha256": "929c1162450402a1e80abbe4ba9d0e73525f234183e4bbf5c952700d4b451bf9",
+  "sourceParity": "PASS",
+  "result": {
+    "passed": 117,
+    "failed": 0,
+    "skipped": 0
+  },
+  "checks": [
+    {
+      "status": "PASS",
+      "name": "coaching scan (strict echo, hint length)",
+      "localLog": "output/v10.16.0-verification/final-0.log"
+    },
+    {
+      "status": "PASS",
+      "name": "worksheet coaching (compatible division chunks, hard facts, voluntary guide)",
+      "localLog": "output/v10.16.0-verification/final-0.log"
+    },
+    {
+      "status": "PASS",
+      "name": "number sense check-up v9.19 (show what you know: items, no labels, weak spots, grown-ups profile, school note weighting)",
+      "localLog": "output/v10.16.0-verification/final-0.log"
+    },
+    {
+      "status": "PASS",
+      "name": "foundations v9.21: place value with big numbers, tenths and hundredths, factors and multiples (Home card, check-up routing)",
+      "localLog": "output/v10.16.0-verification/final-0.log"
+    },
+    {
+      "status": "PASS",
+      "name": "privacy source scan v9.23 (no personal or report-card details in the published file)",
+      "localLog": "output/v10.16.0-verification/final-0.log"
+    },
+    {
+      "status": "PASS",
+      "name": "first step v9.25 (the card says what to do, confirms a pick, letters pick a choice; share-size choices split cleanly)",
+      "localLog": "output/v10.16.0-verification/final-0.log"
+    },
+    {
+      "status": "PASS",
+      "name": "homework help v9.25.2 (no exact answer reveal after repeated help taps or misses)",
+      "localLog": "output/v10.16.0-verification/final-0.log"
+    },
+    {
+      "status": "PASS",
+      "name": "school calendar v9.36.1 (no-school days match the MCS 2026\u201327 calendar; every unit's school days match the pacing guide)",
+      "localLog": "output/v10.16.0-verification/final-0.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Unit 3 v9.47 (six decimal routes, block exchanges, flexible jumps, source examples, evidence, and recovery)",
+      "localLog": "output/v10.16.0-verification/final-0.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Product and source improvements v9.54 (daily action, exact fraction homework, separate evidence overview, and pure summary)",
+      "localLog": "output/v10.16.0-verification/final-0.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Printed decimal forms v9.60 (exact worksheet instructions, fixed numbers, zero places, strict rejection, task selector, and homework evidence)",
+      "localLog": "output/v10.16.0-verification/final-0.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Walter repair and model integration v9.62 (all repair UIs, no solved clues, early models, cold resume, and support evidence)",
+      "localLog": "output/v10.16.0-verification/final-0.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Walter tentative known-pattern notes and fictional models v10",
+      "localLog": "output/v10.16.0-verification/final-0.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Parent feedback, Unit1 practice, teacher notes and summaries v10",
+      "localLog": "output/v10.16.0-verification/final-0.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Homework-style story sets v10.3 (meaning-first applications, original methods, load bounds, persistence, and old-generation recovery)",
+      "localLog": "output/v10.16.0-verification/final-0.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Learner progress celebrations v10.7.1 (checked wins, corrections, fresh checks, round counts, and profile isolation)",
+      "localLog": "output/v10.16.0-verification/final-0.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Unit 5 block-aware Walter v10.12.0 (drawing evidence, answer conflicts, equivalent arrangements, explicit continuation, and format coaching)",
+      "localLog": "output/v10.16.0-verification/final-0.log"
+    },
+    {
+      "status": "PASS",
+      "name": "walter-adaptive-dialogue-v10150",
+      "localLog": "output/v10.16.0-verification/final-0.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Walter dialogue browser v10.15",
+      "localLog": "output/v10.16.0-verification/final-0.log"
+    },
+    {
+      "status": "PASS",
+      "name": "open-problem-browser-v10160",
+      "localLog": "output/v10.16.0-verification/final-0.log"
+    },
+    {
+      "status": "PASS",
+      "name": "jsdom walkthroughs (all skills, cues, after notes)",
+      "localLog": "output/v10.16.0-verification/final-1.log"
+    },
+    {
+      "status": "PASS",
+      "name": "worksheet entry v9.16\u2013v9.16.1 (narrowed ghost-tap guard, cue by the pad, swapped two-digit step, left start, no neighbor overwrite, carry return, held keys, caret, ghost taps)",
+      "localLog": "output/v10.16.0-verification/final-1.log"
+    },
+    {
+      "status": "PASS",
+      "name": "number sense habits v9.19 (quick look, estimate first, reasonableness note, number line)",
+      "localLog": "output/v10.16.0-verification/final-1.log"
+    },
+    {
+      "status": "PASS",
+      "name": "foundations v9.21: two-step stories, grown-up foundation settings, Today foundation slot",
+      "localLog": "output/v10.16.0-verification/final-1.log"
+    },
+    {
+      "status": "PASS",
+      "name": "red-team-v98.cjs",
+      "localLog": "output/v10.16.0-verification/final-1.log"
+    },
+    {
+      "status": "PASS",
+      "name": "taught so far v9.25 (mixed practice, practice list, and check-ins stay within the class calendar)",
+      "localLog": "output/v10.16.0-verification/final-1.log"
+    },
+    {
+      "status": "PASS",
+      "name": "later Hint v9.30 (comparison, one-chunk division, decimal and fraction conversion do not state the answer)",
+      "localLog": "output/v10.16.0-verification/final-1.log"
+    },
+    {
+      "status": "PASS",
+      "name": "red-team fixes v9.37 (estimated lesson stays advisory in Today; expression and factor-tree work survives clues, corrections, and resume)",
+      "localLog": "output/v10.16.0-verification/final-1.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Homework Ask Walter v9.49 (authored methods, active checks, boxes, drafts, support accounting, and saved deliveries)",
+      "localLog": "output/v10.16.0-verification/final-1.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Source build v9.54 (deterministic single-file output, stale-output detection, syntax rejection, and preserved artifact)",
+      "localLog": "output/v10.16.0-verification/final-1.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Expanded-form Walter v9.60.1 (all questions/depths, active cards, hidden-solution traps, wrong drafts, distinct example, and supported evidence)",
+      "localLog": "output/v10.16.0-verification/final-1.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Walter independent red team v9.62 (every route and family, pending-field provenance, examples, drafts, and no-help mutations)",
+      "localLog": "output/v10.16.0-verification/final-1.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Walter current-route menus, drafts, models, and speech controls v10",
+      "localLog": "output/v10.16.0-verification/final-1.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Teacher report observed-step evidence and privacy v10.1",
+      "localLog": "output/v10.16.0-verification/final-1.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Reviewed printed story recognition v10.3 (currency, spending, inches, feet, complete context, and safe help)",
+      "localLog": "output/v10.16.0-verification/final-1.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Homepage journeys v10.8.0 (Parents, named recommendations, homework help, saved work and cold recovery)",
+      "localLog": "output/v10.16.0-verification/final-1.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Structured diagram coach v10.13.0 (live drafts, visual edits, specific help, preserved work and evidence)",
+      "localLog": "output/v10.16.0-verification/final-1.log"
+    },
+    {
+      "status": "PASS",
+      "name": "walter-examples-v10150",
+      "localLog": "output/v10.16.0-verification/final-1.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Walter example browser v10.15",
+      "localLog": "output/v10.16.0-verification/final-1.log"
+    },
+    {
+      "status": "PASS",
+      "name": "unit5-home-prominence-v10160",
+      "localLog": "output/v10.16.0-verification/final-1.log"
+    },
+    {
+      "status": "PASS",
+      "name": "v9.30 checked work stays open after repeated wrong entries",
+      "localLog": "output/v10.16.0-verification/final-2.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Unit 2 homework pages v9.17 (every photographed item: typed, solved right, solved wrong with the full walkthrough; practice examples)",
+      "localLog": "output/v10.16.0-verification/final-2.log"
+    },
+    {
+      "status": "PASS",
+      "name": "kid-facing language v9.19 (no deficit labels on any screen the learner sees)",
+      "localLog": "output/v10.16.0-verification/final-2.log"
+    },
+    {
+      "status": "PASS",
+      "name": "local school-document preview v9.21.1 (photo/PDF stays out of saved progress)",
+      "localLog": "output/v10.16.0-verification/final-2.log"
+    },
+    {
+      "status": "PASS",
+      "name": "red-team-v981.cjs",
+      "localLog": "output/v10.16.0-verification/final-2.log"
+    },
+    {
+      "status": "PASS",
+      "name": "division jumps v9.25.1/v9.62 (4,536 \u00f7 27: learner trials, checked oversized products, fit, and safe help)",
+      "localLog": "output/v10.16.0-verification/final-2.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Unit 2 lesson practice v9.33 (lesson route pinned to each lesson's method, flexible division boards, expression tiles, factor trees, cells-to-rows, find-the-slip, evidence, check-ins)",
+      "localLog": "output/v10.16.0-verification/final-2.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Walter v9.40 (visible poses, skipped-ahead miss, no ordinary-answer reward, embedded art, motion and reduced motion)",
+      "localLog": "output/v10.16.0-verification/final-2.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Homework strategy v9.50 (learner-directed help, learner trials, product/fit/ledger checks, all parser families, and evidence)",
+      "localLog": "output/v10.16.0-verification/final-2.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Homework method alignment v9.56 (strategy choice, shaded decimal grids, exact products, help, legacy saves, and separate method checks)",
+      "localLog": "output/v10.16.0-verification/final-2.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Unit 3 focus v9.61 (Home access, per-player goals, both operations and methods, actual loads, safe help, cold recovery, and separate future checks)",
+      "localLog": "output/v10.16.0-verification/final-2.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Walter organic lessons v9.64 (free-order help, clarification, repairs, drafts, cold recovery, and support evidence)",
+      "localLog": "output/v10.16.0-verification/final-2.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Walter local first-next-check linkage and rating boundaries v10",
+      "localLog": "output/v10.16.0-verification/final-2.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Offline teacher PDF bytes, editable preview, privacy, and fallback v10.1",
+      "localLog": "output/v10.16.0-verification/final-2.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Weekly homework v10.4 (44 source questions, arithmetic, strategy choices, replay-validated recovery, and separate evidence)",
+      "localLog": "output/v10.16.0-verification/final-2.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Mixed-number walkthrough v10.8.4 (novice errors, fraction strip, preserved checked work and evidence)",
+      "localLog": "output/v10.16.0-verification/final-2.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Unit 5 integration v10.14.0 (reviewed classroom fixtures and 10.13 draft recovery)",
+      "localLog": "output/v10.16.0-verification/final-2.log"
+    },
+    {
+      "status": "PASS",
+      "name": "walter-unified-workspace-v10150",
+      "localLog": "output/v10.16.0-verification/final-2.log"
+    },
+    {
+      "status": "PASS",
+      "name": "decimal-containers-v10160",
+      "localLog": "output/v10.16.0-verification/final-2.log"
+    },
+    {
+      "status": "PASS",
+      "name": "unit5-home-prominence-browser-v10160",
+      "localLog": "output/v10.16.0-verification/final-2.log"
+    },
+    {
+      "status": "PASS",
+      "name": "v9.12 red-team invariants (math, cues, why bias, calendar, parsing)",
+      "localLog": "output/v10.16.0-verification/final-3.log"
+    },
+    {
+      "status": "PASS",
+      "name": "ask before tell v9.18: Unit 1 walkthroughs",
+      "localLog": "output/v10.16.0-verification/final-3.log"
+    },
+    {
+      "status": "PASS",
+      "name": "grown-up PIN gate v9.20 (no adult text reachable from Home without the PIN; reset is tamper-evident)",
+      "localLog": "output/v10.16.0-verification/final-3.log"
+    },
+    {
+      "status": "PASS",
+      "name": "per-learner focus choices v9.22 (starter, isolation, rotation)",
+      "localLog": "output/v10.16.0-verification/final-3.log"
+    },
+    {
+      "status": "PASS",
+      "name": "shared app v9.24 (class pacing calendar is a per-learner choice, neutral grown-up wording, device PIN reset confirmation and banners)",
+      "localLog": "output/v10.16.0-verification/final-3.log"
+    },
+    {
+      "status": "PASS",
+      "name": "division ones v9.25.2/v9.62 (4,536 \u00f7 27: learner-owned final chunks, independent arithmetic, and non-revealing help)",
+      "localLog": "output/v10.16.0-verification/final-3.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Unit 2 lesson practice v9.34 (honest evidence, column work, retained entries, phase targets, spoken reasoning, resume)",
+      "localLog": "output/v10.16.0-verification/final-3.log"
+    },
+    {
+      "status": "PASS",
+      "name": "teacher feedback v9.42 (per-player goals, Walter, methods, adaptive load, resume, check-in, privacy)",
+      "localLog": "output/v10.16.0-verification/final-3.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Shared adaptive engine v9.51 (every skill and mapped lesson, learner-directed help, learner trials, drafts, all lesson phases, and coverage gaps)",
+      "localLog": "output/v10.16.0-verification/final-3.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Full age-story homework v9.57 (source text, strict references, own expression and arithmetic, help, recovery, and neutral evidence)",
+      "localLog": "output/v10.16.0-verification/final-3.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Parent focus v9.63 (immediate durable toggles, migration, failures, profile isolation, all verified focus routes, recovery, and inactive review policy)",
+      "localLog": "output/v10.16.0-verification/final-3.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Walter organic practice v9.64 (all families, unlimited requests, safe smaller actions, unchecked edits, and hidden fields)",
+      "localLog": "output/v10.16.0-verification/final-3.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Walter current reply string quality v10",
+      "localLog": "output/v10.16.0-verification/final-3.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Decimal story meaning versus calculation v10.2 (bounded relations, ambiguity, operation ownership, component evidence, and cold recovery)",
+      "localLog": "output/v10.16.0-verification/final-3.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Equal-group homework v10.4.1 (typed stories, matched units, Walter, and cold recovery)",
+      "localLog": "output/v10.16.0-verification/final-3.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Unit 5 tutor v10.9.0 (beginner entries, worked fraction models, trial choices, recovery and evidence)",
+      "localLog": "output/v10.16.0-verification/final-3.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Unit 5 migration v10.14.0 (practiced loads, evidence isolation, bounded grid and failed saves)",
+      "localLog": "output/v10.16.0-verification/final-3.log"
+    },
+    {
+      "status": "PASS",
+      "name": "transfer-checks-v10150",
+      "localLog": "output/v10.16.0-verification/final-3.log"
+    },
+    {
+      "status": "PASS",
+      "name": "fraction-reconsider-v10160",
+      "localLog": "output/v10.16.0-verification/final-3.log"
+    },
+    {
+      "status": "PASS",
+      "name": "v9.13 independent-learner acceptance (warm-up, Help me, progressive example, soft reason, break signals)",
+      "localLog": "output/v10.16.0-verification/final-4.log"
+    },
+    {
+      "status": "PASS",
+      "name": "ask before tell v9.18: order of operations, expressions, primes, multiplication",
+      "localLog": "output/v10.16.0-verification/final-4.log"
+    },
+    {
+      "status": "PASS",
+      "name": "help steps v9.20 (Do it with me: checked first step for her exact problem, counted as help)",
+      "localLog": "output/v10.16.0-verification/final-4.log"
+    },
+    {
+      "status": "PASS",
+      "name": "report-card helper v9.23 (guided marks \u2192 practice candidates; nothing about the document or marks is stored; no network)",
+      "localLog": "output/v10.16.0-verification/final-4.log"
+    },
+    {
+      "status": "PASS",
+      "name": "report-card review v9.24 (separate cards and terms, editable combined plan, private marks)",
+      "localLog": "output/v10.16.0-verification/final-4.log"
+    },
+    {
+      "status": "PASS",
+      "name": "SWUN division v9.31 (video examples, checked addends, separate division problems, lesson links)",
+      "localLog": "output/v10.16.0-verification/final-4.log"
+    },
+    {
+      "status": "PASS",
+      "name": "home usability v9.35 (first choice, optional sections, exact routes, no-calendar and pause states)",
+      "localLog": "output/v10.16.0-verification/final-4.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Ask Walter v9.45 (authored help, carry targeting, support evidence, drafts, resume, delayed probes)",
+      "localLog": "output/v10.16.0-verification/final-4.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Grade 5 curriculum v9.52 (86 new routes, rational arithmetic oracle, methods, authored help repertoire, resume, and delayed checks)",
+      "localLog": "output/v10.16.0-verification/final-4.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Zero-ending multiplication and paper story v9.58 (exact factors, methods, worksheet zeros, learner quantities, capacity, help, recovery, and neutral evidence)",
+      "localLog": "output/v10.16.0-verification/final-4.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Walter lessons v9.62 (current-step observations, all authored routes and strategies, hidden-field traps, and mistake-specific checks)",
+      "localLog": "output/v10.16.0-verification/final-4.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Walter organic independent red team v9.64 (all routes, free-order needs, repeated misses, revisions, and solution traps)",
+      "localLog": "output/v10.16.0-verification/final-4.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Walter current reply reading-load audit v10",
+      "localLog": "output/v10.16.0-verification/final-4.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Teacher source provenance v10.2 (reported feedback, app observations, scope, privacy, and PDF bytes)",
+      "localLog": "output/v10.16.0-verification/final-4.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Decimal division grids v10.5 (both strategies, eight photographed tasks, checked marks, help, and recovery)",
+      "localLog": "output/v10.16.0-verification/final-4.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Shared Walter v10.9.0 (one-tap help, smaller models, practice/lesson coverage, repairs, and checked homework)",
+      "localLog": "output/v10.16.0-verification/final-4.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Unit 5 browser journeys v10.14.0 (four full lessons and next-day checks)",
+      "localLog": "output/v10.16.0-verification/final-4.log"
+    },
+    {
+      "status": "PASS",
+      "name": "walter-unified-workspace-browser-v10150",
+      "localLog": "output/v10.16.0-verification/final-4.log"
+    },
+    {
+      "status": "PASS",
+      "name": "fraction-reconsider-browser-v10160",
+      "localLog": "output/v10.16.0-verification/final-4.log"
+    },
+    {
+      "status": "PASS",
+      "name": "multiplication worksheet direct entry (tap, keypad, keyboard, correction, tens zero)",
+      "localLog": "output/v10.16.0-verification/final-5.log"
+    },
+    {
+      "status": "PASS",
+      "name": "ask before tell v9.18: place value, division, decimals, fractions (plan panel fills in as she finds parts)",
+      "localLog": "output/v10.16.0-verification/final-5.log"
+    },
+    {
+      "status": "PASS",
+      "name": "foundations v9.21: multiplication facts (fact memory, strategies, no timer)",
+      "localLog": "output/v10.16.0-verification/final-5.log"
+    },
+    {
+      "status": "PASS",
+      "name": "fraction building blocks v9.23 (unit fractions, equivalence, compare, like denominators)",
+      "localLog": "output/v10.16.0-verification/final-5.log"
+    },
+    {
+      "status": "PASS",
+      "name": "report-card review v9.25 (one on-screen order with a teacher-comment starter pick, Undo, idle and away clearing, card-order check)",
+      "localLog": "output/v10.16.0-verification/final-5.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Unit 2 video links v9.32 (Lessons 1\u201314 by skill/method; opening counts as help)",
+      "localLog": "output/v10.16.0-verification/final-5.log"
+    },
+    {
+      "status": "PASS",
+      "name": "home and class position v9.36 (estimate state, stale pins, one due check-in, no-route order, resume with calendar off, pin guard)",
+      "localLog": "output/v10.16.0-verification/final-5.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Adaptive repairs v9.46 (distinct problems, corrected struggle, future reviews, step evidence, no-answer clues, optional places, legacy resume)",
+      "localLog": "output/v10.16.0-verification/final-5.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Whole-app plumbing v9.53 (late registration, reached lessons, contextual evidence, literal player names, stale tabs, choice keyboard, and widget recovery)",
+      "localLog": "output/v10.16.0-verification/final-5.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Storage and decimal reliability v9.59 (transactional restores, bounds, multi-player budget, drafts, device metadata, protection status, and padding)",
+      "localLog": "output/v10.16.0-verification/final-5.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Walter practice v9.62 (all families, distinct intents, task-local preparation, drafts, row/place help, models, and safe legacy fallback)",
+      "localLog": "output/v10.16.0-verification/final-5.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Walter visible givens and original-answer provenance v10",
+      "localLog": "output/v10.16.0-verification/final-5.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Math-aware local read-aloud, fallback, access, and privacy v10",
+      "localLog": "output/v10.16.0-verification/final-5.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Player support preference and private feedback import v10.2 (isolation, optin, stale handles, rollback, and migration)",
+      "localLog": "output/v10.16.0-verification/final-5.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Smart Walter v10.7 (recipient cue, checked fields, shared practice, repair, and history thresholds)",
+      "localLog": "output/v10.16.0-verification/final-5.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Unit 5 workspace v10.11.0 (original fractions, fillable blocks, blank targets, preserved work and beginner checks)",
+      "localLog": "output/v10.16.0-verification/final-5.log"
+    },
+    {
+      "status": "PASS",
+      "name": "Fill squares browser v10.14.0 (touch, mouse, keyboard, resume and all ten workspaces)",
+      "localLog": "output/v10.16.0-verification/final-5.log"
+    },
+    {
+      "status": "PASS",
+      "name": "transfer-browser-v10150",
+      "localLog": "output/v10.16.0-verification/final-5.log"
+    },
+    {
+      "status": "PASS",
+      "name": "open-problem-v10160",
+      "localLog": "output/v10.16.0-verification/final-5.log"
+    }
+  ],
+  "sourceHashes": {
+    "src/app-shell.html": "a07e2fa7b26f538b95a8223d75a9267d3175d68a453b2fbede80127cfd8100f9",
+    "src/bootstrap.js": "f2494048d5e253e7138b14a727b6a6a802d365411dabd031ff298a78f01c7b87",
+    "src/build-manifest.json": "eeada846afcb36b680ada8fbfb7d1e6dbd2c43a15733e747acc8757e7fad5850",
+    "src/choice-widgets.js": "3cf2dda8609450b279234b42ef63a63057fabb9686544dfcc65a09978c1390f8",
+    "src/curriculum-calendar.js": "cc2d1126e54fb3b802819aae3d17a30be5ea6ed395283e89ec459b4cf318e1be",
+    "src/decimal-container-stories.js": "a947bfc26a5ca79f411d6c1808b5f90c52bfeba1deaae5e07f9baf1edc6580c0",
+    "src/decimal-division-grid.js": "7c1d70f63bb21ad693c09e8502fb4186e3071224acac157717d8ce2e73265f02",
+    "src/decimal-fraction-generators.js": "ccbaf93152c1c07efae3fc4374af40aa4c59b0af0a9546dd6e5b8f919dd98069",
+    "src/decimal-lessons.js": "535cc29b7b66209eca2162da44f3c4cbdfb3324258b198cf054c67364539a587",
+    "src/decimal-story-help.js": "0914e94a1a280988632b357bdc2e71725319d288cbe06c59645fba050edb083a",
+    "src/diagram-coach.js": "e56b07f1a6f4124467e0b58466bc4334519ec28e216f247929176cab6063e780",
+    "src/evidence-policy.js": "29a437bde1c1a1e5e85a802c1c6ad1e4d104b5eece7fb9708803a621c92d2881",
+    "src/evidence-recovery.js": "fe06c21b8eb80118ef5b34bd757002827308c39060ef45ccaae4a32c93a92474",
+    "src/fact-generators.js": "5ace81fe81d63c2c0c8778014752208436809f9c6a4da9b1cc02fca9928f832d",
+    "src/focus-controls.js": "dfcad65528487e96db6f66888aeb4b1e164b835128d6fb7dd51f147a7c01dffa",
+    "src/foundation-fractions.js": "5fe73918d9d2a1efd3554b00cf5d7a707b4baee59518b8f20aeed7d7784472a1",
+    "src/foundation-place-factors.js": "56edafca3b2929c764532b908be67b39d018af7a7dca93b79a49fdaf477af0ac",
+    "src/foundation-stories.js": "24f426717e93a3e9639a239c96f6c5f052bb4071410670afb8054ce1afdb5697",
+    "src/fraction-homework.js": "ae4fae473d91993572de86bf909ab27f384a1c7523fb87039cbc3ee849389ddf",
+    "src/fraction-reconsider.js": "ddbbdd03148b88a9b1536f44c2f30e37a932324a9f45c247136da78785a19615",
+    "src/fraction-walkthrough.js": "109364ab02970c9e4ab33367175072be16ff7c61acb98f3ae36d34de4546564d",
+    "src/grade5-lessons.js": "13fc117c7b2626ce9dc83f13e91be58bd6c6682613a16d26c32cb2e1abf6978f",
+    "src/grownup-gate.js": "eb6e9bc122a62138512a763727070e19ddab151504754b392eb53bd6c16cbe0b",
+    "src/grownup-report.js": "4b180a5f207b2693f5c8e3ae1e01936ea18ec9f3d79decce5136f41ed8a3004d",
+    "src/habits-and-foundations.js": "10e1fb522e77c2766001c9fe5ba81ce2f5a08c0d0d91bd74f3905eea48d07cca",
+    "src/home-and-plans.js": "91d6024622d52acc2e12a7b2398ef4bdaa66890ca99a2f20a471dcba6e873168",
+    "src/homework-parser.js": "9c20cff45bbb83b953fd6c1b929ac1b064b5218fd440f395684c49b023fc0d25",
+    "src/homework-story-sets.js": "213f10b4866d1c1e41e17aad602373f7cff09cc4969487cdaae28df8110169b1",
+    "src/learner-support-context.js": "8ceb142d524a99e9ae68b67f28c18e5af6547694453d6e338eb651c6ee5c73bd",
+    "src/lesson-engine.js": "aef5602e58567624fec1a19ad0500bf8e6edfe543ceb957c97ba2ff939ab358b",
+    "src/lesson-navigation.js": "e446f8044c1dc823f0bb82dbc618e3f8adfe4ac9c120ed9744efc0cef18108d0",
+    "src/lesson-registry.js": "825c3c80312ae0e1f1865b8b692e167d88f1e79fe26a8c903da2d85443267847",
+    "src/lesson-session.js": "4a6185d83d1cb1a701a03aeef20ccd374c4e957da629a5852ece3e501addd866",
+    "src/lesson-strategy-choice.js": "0cc41af2503053bc7c7e2fbcf0bcb3264f5652cf0c4c0810ded3ee0f7f61ff7b",
+    "src/lesson-widgets.js": "dd5c76ee2e93850059f7eaa368c0d665e825d9e4a07c913e22ed120ea34e09bb",
+    "src/math-generators.js": "16bc876ab31ea3f736e08f7a71a518f7905df059ed3b63efe913fbf38a03af84",
+    "src/number-sense.js": "9c28eff9f0992e5f8063a8712c240122803f776890f21ad268ff3e93add910ca",
+    "src/number-words.js": "873d87d50cf99b073ce96a7830f1daa1ef68bce1457f005dfd448621f08ffaf8",
+    "src/overview-ui.js": "479a0f69e79ef9e013af479f091008a7a99daac431277d2d18387e65b6e5c904",
+    "src/practice-session.js": "af3d1647adf709058517a618211a5d5a196a6db9bd982133ce161b5e0004588b",
+    "src/profile-persistence.js": "af6ca75d8f6654db226d9deb1cfa07368972aa600ac35c8cc89a8c022b7b4143",
+    "src/profile-storage.js": "edbd8bd7ae40f4ee21080a95ed28896b639f50fefa854f3a7d9d59efbfbed607",
+    "src/progress-celebrations.js": "123c939f72a449d138aec52c6901d451908b75d169c37bb6857e8dc71be284af",
+    "src/progression.js": "e8a49c5ae9d4a43347bb32aa81db7a281a2877039c1c582794cf7d0410b7e528",
+    "src/read-aloud.js": "b26518ed5deda244de7d7d9ee4c1ebb75b71510809816f5840f94c992e613367",
+    "src/report-card-helper.js": "f45e98d9ded8c0c5aaece845ef185cc61378f0e652b37f259fba5a2cd3a21729",
+    "src/storage-policy.js": "35a83731d9f75bcfb25d3e0b8b122fb99c89cda27134a8f8084eaa4044bf6d9d",
+    "src/teacher-feedback.js": "a34d4fbae3edd4914681e684bb49873d614523b7bdcb9b19e2671b6993cafb02",
+    "src/teacher-pdf.js": "53273af3df13cda38bc873412fb7645a4240379b3cba622c01a0c74555c9e441",
+    "src/teacher-report-data.js": "4acf36d3b534846ec906ead1f5c5f8db37e1300e24c3f09433007074e717dc7a",
+    "src/transfer-checks.js": "6d6f954b80416b94245ee8ebe9964d08190612d56d94f63e856608068957190f",
+    "src/unit2-generators.js": "e40784beda8dbf8d80bf174a6f3415cbaebbc2d2dd23efd750a4a47adb4cfba2",
+    "src/unit2-lessons.js": "0b84197b9df6593e3c66ef038d13ce2c85ed183360b969212856d1e272ff1f24",
+    "src/unit5-block-coach.js": "b8f200f6e5bf82ee61ea19e3d0612708f5771bc2f908df1fe0db8807ae89db38",
+    "src/unit5-tutoring.js": "ac9dd6dd1efdfa4eafd254d298353cca4a8e2242ae58bafd385e4450f61a4e1b",
+    "src/unit5-workspace.js": "7842c98edb6939752bf5304c4b71fed5f4e4e3cc38ea5f3c5424d44d098dceb2",
+    "src/view-helpers.js": "bce963397822c829a4321cbccc79dfe4ccb70960eef9fd18acdd9122f6f46894",
+    "src/walter-dialogue-routing.js": "ac1d8eee2d32b4dfdb7f58b28677e9052fbfb6dd4058c816b1aae2952b952b65",
+    "src/walter-evidence.js": "cb8c8dce1cbd49d4a79f86953e0ded7744f0f31f9e38cd49d60951db8af41d2d",
+    "src/walter-example-bridge.js": "c657db108b8f90c31f82dcf51d2b7376c049eb5e965b0df07387d6f3a1080d65",
+    "src/walter-givens.js": "fa523b095ead912b42d8fb5a2c11744849e1096a68cf415f08564698c57340cc",
+    "src/walter-help-policy.js": "57b08984b6660abc63f5157126316548f9d1c36dee69f0f83eaad4cf2c136b7c",
+    "src/walter-inline.js": "92f3e03b8e47ee4f9f7bfc6a9bf9065cd771a302d10c33b48e717b8813b2a085",
+    "src/walter-misconceptions.js": "53323614afb12d013b0c8c6fb5c6f4f432f1487f0b7b11d7b834f1ab0946327a",
+    "src/walter-repertoire.js": "876966352133300139ec7bd60007ec33afe1d5740e0a72f2af15152a4ed769ff",
+    "src/walter-unit5-lessons.js": "1cb29098880de4e2bf39a8a8d01a46eaca80f4cc29b9d4178a0bf71f70848f1f",
+    "src/walter-workspace.js": "bc657d7b44e0aa06a2b543806ac80b35747aa2809d9f8db8e1962ffe2ed83b6e",
+    "src/weekly-homework.js": "5651a5f4ba803e30cd0c7f33ed4ad91bfe65a936d12dfb8fbd7cb8ec982abd98",
+    "src/word-homework.js": "672d4ebc6282cf50361858153f536881ff2149f660383a3c17154bfd71be3651"
+  },
+  "logsRetainedLocally": true,
+  "coverage": {
+    "authoredRoutes": 106,
+    "openCapable": 59,
+    "checkedFlowOnly": 47
+  },
+  "limits": [
+    "Physical iPad, Safari, and Pencil have not been tested.",
+    "Software checks do not establish learning gains.",
+    "Whole answers and self-reported approaches do not establish checked method or paper mastery."
+  ],
+  "publicationRecordedSeparately": true
+}

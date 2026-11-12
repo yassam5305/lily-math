@@ -1,0 +1,5011 @@
+{
+  "version": "10.16.0",
+  "artifact": "index-v10.16.0.html",
+  "sha256": "929c1162450402a1e80abbe4ba9d0e73525f234183e4bbf5c952700d4b451bf9",
+  "generatedAt": "2026-11-12T03:54:25.469Z",
+  "method": "Frozen artifact in disposable jsdom profile; actual lpStart per route at loads 1,2,3, generation version 6. Rendering disabled after synthetic profile creation. Initial eligibility uses transferOpenCandidate; delayed capability uses transferTaskSupported and transferHasChecker, ignoring prior-evidence eligibility gate.",
+  "authoredRoutes": 106,
+  "initialEligibleCount": 59,
+  "initialEligible": [
+    "U2L6",
+    "U2L7",
+    "U2L8",
+    "U2L9",
+    "U2L10",
+    "U2L11",
+    "U2L12",
+    "U2L13",
+    "U2L14",
+    "U3L1",
+    "U3L2",
+    "U3L3",
+    "U3L4",
+    "U3L5",
+    "U3L6",
+    "U4L1",
+    "U4L2",
+    "U4L3",
+    "U4L4",
+    "U4L5",
+    "U4L6",
+    "U4L7",
+    "U4L8",
+    "U4L9",
+    "U4L10",
+    "U4L11",
+    "U5L1",
+    "U5L2",
+    "U5L5",
+    "U5L6",
+    "U5L7",
+    "U5L8",
+    "U5L9",
+    "U5L10",
+    "U6L1",
+    "U6L2",
+    "U6L3",
+    "U6L4",
+    "U6L5",
+    "U6L6",
+    "U6L7",
+    "U6L8",
+    "U6L9",
+    "U6L10",
+    "U6L11",
+    "U7L5",
+    "U7L6",
+    "U7L7",
+    "U7L8",
+    "U7L9",
+    "U7L10",
+    "U7L11",
+    "U8L1",
+    "U8L2",
+    "U8L3",
+    "U8L4",
+    "U8L5",
+    "U8L6",
+    "U8L7"
+  ],
+  "initialIneligible": [
+    "U2L1",
+    "U2L2",
+    "U2L3",
+    "U2L4",
+    "U2L5",
+    "U5L3",
+    "U5L4",
+    "U7L1",
+    "U7L2",
+    "U7L3",
+    "U7L4",
+    "U9L1",
+    "U9L2",
+    "U9L3",
+    "U9L4",
+    "U9L5",
+    "U9L6",
+    "U9L7",
+    "U9L8",
+    "U9L9",
+    "U9L10",
+    "U9L11",
+    "U10L1",
+    "U10L2",
+    "U10L3",
+    "U10L4",
+    "U10L5",
+    "U10L6",
+    "U10L7",
+    "U10L8",
+    "U10L9",
+    "U10L11",
+    "U10L12",
+    "U10L13",
+    "U10L14",
+    "U10L15",
+    "U10L16",
+    "U11L1",
+    "U11L2",
+    "U11L3",
+    "U11L4",
+    "U11L5",
+    "U11L6",
+    "U11L8",
+    "U11L9",
+    "U11L10",
+    "U11L11"
+  ],
+  "delayedCapabilityCount": 59,
+  "delayedCapable": [
+    "U2L6",
+    "U2L7",
+    "U2L8",
+    "U2L9",
+    "U2L10",
+    "U2L11",
+    "U2L12",
+    "U2L13",
+    "U2L14",
+    "U3L1",
+    "U3L2",
+    "U3L3",
+    "U3L4",
+    "U3L5",
+    "U3L6",
+    "U4L1",
+    "U4L2",
+    "U4L3",
+    "U4L4",
+    "U4L5",
+    "U4L6",
+    "U4L7",
+    "U4L8",
+    "U4L9",
+    "U4L10",
+    "U4L11",
+    "U5L1",
+    "U5L2",
+    "U5L5",
+    "U5L6",
+    "U5L7",
+    "U5L8",
+    "U5L9",
+    "U5L10",
+    "U6L1",
+    "U6L2",
+    "U6L3",
+    "U6L4",
+    "U6L5",
+    "U6L6",
+    "U6L7",
+    "U6L8",
+    "U6L9",
+    "U6L10",
+    "U6L11",
+    "U7L5",
+    "U7L6",
+    "U7L7",
+    "U7L8",
+    "U7L9",
+    "U7L10",
+    "U7L11",
+    "U8L1",
+    "U8L2",
+    "U8L3",
+    "U8L4",
+    "U8L5",
+    "U8L6",
+    "U8L7"
+  ],
+  "delayedIneligible": [
+    "U2L1",
+    "U2L2",
+    "U2L3",
+    "U2L4",
+    "U2L5",
+    "U5L3",
+    "U5L4",
+    "U7L1",
+    "U7L2",
+    "U7L3",
+    "U7L4",
+    "U9L1",
+    "U9L2",
+    "U9L3",
+    "U9L4",
+    "U9L5",
+    "U9L6",
+    "U9L7",
+    "U9L8",
+    "U9L9",
+    "U9L10",
+    "U9L11",
+    "U10L1",
+    "U10L2",
+    "U10L3",
+    "U10L4",
+    "U10L5",
+    "U10L6",
+    "U10L7",
+    "U10L8",
+    "U10L9",
+    "U10L11",
+    "U10L12",
+    "U10L13",
+    "U10L14",
+    "U10L15",
+    "U10L16",
+    "U11L1",
+    "U11L2",
+    "U11L3",
+    "U11L4",
+    "U11L5",
+    "U11L6",
+    "U11L8",
+    "U11L9",
+    "U11L10",
+    "U11L11"
+  ],
+  "limitations": [
+    "Representative generated tasks at three loads; not exhaustive random-value coverage.",
+    "Delayed offers additionally require the existing clean prior delayed method evidence at the practiced difficulty.",
+    "Whole-answer checks do not establish method mastery, independent paper mastery, or learning gains.",
+    "Calendar-only entries are not counted as authored instruction.",
+    "This is an implementation inventory, not a real-browser or real-learner outcome test."
+  ],
+  "rows": [
+    {
+      "id": "U2L1",
+      "name": "Evaluate Expressions Containing Parentheses",
+      "skill": "orderops",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "parens"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "parens"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "parens"
+        }
+      ]
+    },
+    {
+      "id": "U2L2",
+      "name": "Interpret Numerical Expressions",
+      "skill": "expressions",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "build"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "build"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "build"
+        }
+      ]
+    },
+    {
+      "id": "U2L3",
+      "name": "Prime Factorization",
+      "skill": "primes",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "tree"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "tree"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "tree"
+        }
+      ]
+    },
+    {
+      "id": "U2L4",
+      "name": "Write and Evaluate Expressions",
+      "skill": "expressions",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "story"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "story"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "story"
+        }
+      ]
+    },
+    {
+      "id": "U2L5",
+      "name": "Introduction to Order of Operations",
+      "skill": "orderops",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "order"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "order"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "order"
+        }
+      ]
+    },
+    {
+      "id": "U2L6",
+      "name": "Linking the Area Model to the Multiplication Algorithm",
+      "skill": "multiply",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "rows"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "rows"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "rows"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areamul"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areamul"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areamul"
+        }
+      ]
+    },
+    {
+      "id": "U2L7",
+      "name": "Linking the Distributive Property to the Multiplication Algorithm",
+      "skill": "multiply",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "distmul"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "distmul"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "distmul"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "distmul"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "distmul"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "distmul"
+        }
+      ]
+    },
+    {
+      "id": "U2L8",
+      "name": "Multiply Using the Standard Algorithm",
+      "skill": "multiply",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "algorithm"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "algorithm"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "algorithm"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "algorithm"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "algorithm"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "algorithm"
+        }
+      ]
+    },
+    {
+      "id": "U2L9",
+      "name": "Divide Using the Place Value Strategy",
+      "skill": "divide",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "compat"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "compat"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "compat"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "compat"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "compat"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "compat"
+        }
+      ]
+    },
+    {
+      "id": "U2L10",
+      "name": "Divide Using the Place Value Strategy",
+      "skill": "divide",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "compat"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "compat"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "compat"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "compat"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "compat"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "compat"
+        }
+      ]
+    },
+    {
+      "id": "U2L11",
+      "name": "Divide Using an Area Model",
+      "skill": "divide",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        }
+      ]
+    },
+    {
+      "id": "U2L12",
+      "name": "Divide Using an Area Model",
+      "skill": "divide",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        }
+      ]
+    },
+    {
+      "id": "U2L13",
+      "name": "Divide Using the Area Model",
+      "skill": "divide",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        }
+      ]
+    },
+    {
+      "id": "U2L14",
+      "name": "Divide Using an Area Model",
+      "skill": "divide",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "areadiv"
+        }
+      ]
+    },
+    {
+      "id": "U3L1",
+      "name": "Build & Add Decimals on the Place Value Chart",
+      "skill": "addsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-blocks"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-blocks"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-blocks"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-blocks"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-blocks"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-blocks"
+        }
+      ]
+    },
+    {
+      "id": "U3L2",
+      "name": "Add Decimals: Number Line Strategy",
+      "skill": "addsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-line"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-line"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-line"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-line"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-line"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-line"
+        }
+      ]
+    },
+    {
+      "id": "U3L3",
+      "name": "Add Decimals",
+      "skill": "addsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-addsub-choice"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-addsub-choice"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-addsub-choice"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-addsub-choice"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-addsub-choice"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-addsub-choice"
+        }
+      ]
+    },
+    {
+      "id": "U3L4",
+      "name": "Subtract Decimals: Build & Subtract on the Place Value Chart",
+      "skill": "addsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-blocks"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-blocks"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-blocks"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-blocks"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-blocks"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-blocks"
+        }
+      ]
+    },
+    {
+      "id": "U3L5",
+      "name": "Subtract Decimals: Number Line Strategy",
+      "skill": "addsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-line"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-line"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-line"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-line"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-line"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-line"
+        }
+      ]
+    },
+    {
+      "id": "U3L6",
+      "name": "Subtract Decimals",
+      "skill": "addsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-addsub-choice"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-addsub-choice"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-addsub-choice"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-addsub-choice"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-addsub-choice"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-addsub-choice"
+        }
+      ]
+    },
+    {
+      "id": "U4L1",
+      "name": "Multiply Decimals by Whole Numbers: Area Model",
+      "skill": "decmul",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        }
+      ]
+    },
+    {
+      "id": "U4L2",
+      "name": "Multiply Decimals by Whole Numbers: Area Model",
+      "skill": "decmul",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        }
+      ]
+    },
+    {
+      "id": "U4L3",
+      "name": "Multiply Decimals by Whole Numbers: Distributive Property",
+      "skill": "decmul",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-distributive"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-distributive"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-distributive"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-distributive"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-distributive"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-distributive"
+        }
+      ]
+    },
+    {
+      "id": "U4L4",
+      "name": "Multiply Decimals by Whole Numbers",
+      "skill": "decmul",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-multiply-choice"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-multiply-choice"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-multiply-choice"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-multiply-choice"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-multiply-choice"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-multiply-choice"
+        }
+      ]
+    },
+    {
+      "id": "U4L5",
+      "name": "Multiply Decimals by Decimals: Area Model",
+      "skill": "decmul",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        }
+      ]
+    },
+    {
+      "id": "U4L6",
+      "name": "Multiply Decimals by Decimals: Area Model",
+      "skill": "decmul",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-area"
+        }
+      ]
+    },
+    {
+      "id": "U4L7",
+      "name": "Multiply Decimals by Decimals: Distributive Property",
+      "skill": "decmul",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-distributive"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-distributive"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-distributive"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-distributive"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-distributive"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-distributive"
+        }
+      ]
+    },
+    {
+      "id": "U4L8",
+      "name": "Multiply Decimals by Decimals",
+      "skill": "decmul",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-multiply-choice"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-multiply-choice"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-multiply-choice"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-multiply-choice"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-multiply-choice"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-multiply-choice"
+        }
+      ]
+    },
+    {
+      "id": "U4L9",
+      "name": "Divide Decimals: Measuring Up Strategy",
+      "skill": "decdiv",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-container-story"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-container-story"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-container-story"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-container-story"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-container-story"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-container-story"
+        }
+      ]
+    },
+    {
+      "id": "U4L10",
+      "name": "Divide Decimals: Dealing Strategy",
+      "skill": "decdiv",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-dealing"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-dealing"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-dealing"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-dealing"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-dealing"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-dealing"
+        }
+      ]
+    },
+    {
+      "id": "U4L11",
+      "name": "Divide Decimals",
+      "skill": "decdiv",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-dealing"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-dealing"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-measuring"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-measuring"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-measuring"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "decimal-measuring"
+        }
+      ]
+    },
+    {
+      "id": "U5L1",
+      "name": "Simplify Fractions",
+      "skill": "fractions",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-simplify"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-simplify"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-simplify"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-simplify"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-simplify"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-simplify"
+        }
+      ]
+    },
+    {
+      "id": "U5L2",
+      "name": "Simplify Fractions",
+      "skill": "fractions",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-simplify"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-simplify"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-simplify"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-simplify"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-simplify"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-simplify"
+        }
+      ]
+    },
+    {
+      "id": "U5L3",
+      "name": "Reasonable Estimates: Fraction Sums",
+      "skill": "fractions",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "fraction-estimate"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "fraction-estimate"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "fraction-estimate"
+        }
+      ]
+    },
+    {
+      "id": "U5L4",
+      "name": "Convert between Mixed Numbers and Improper Fractions",
+      "skill": "fractions",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "fraction-mixed"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "fraction-mixed"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "fraction-mixed"
+        }
+      ]
+    },
+    {
+      "id": "U5L5",
+      "name": "Add Fractions with Unlike Denominators Using an Area Model",
+      "skill": "fracaddsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        }
+      ]
+    },
+    {
+      "id": "U5L6",
+      "name": "Add Fractions with Unlike Denominators Using an Area Model",
+      "skill": "fracaddsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        }
+      ]
+    },
+    {
+      "id": "U5L7",
+      "name": "Add Fractions with Unlike Denominators Using a Number Line",
+      "skill": "fracaddsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        }
+      ]
+    },
+    {
+      "id": "U5L8",
+      "name": "Add Fractions with Unlike Denominators Using a Number Line",
+      "skill": "fracaddsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        }
+      ]
+    },
+    {
+      "id": "U5L9",
+      "name": "Add Fractions with Unlike Denominators Using an Algorithm",
+      "skill": "fracaddsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        }
+      ]
+    },
+    {
+      "id": "U5L10",
+      "name": "Add Fractions with Unlike Denominators Using an Algorithm",
+      "skill": "fracaddsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        }
+      ]
+    },
+    {
+      "id": "U6L1",
+      "name": "Reasonable Estimates: Fraction Differences",
+      "skill": "fracaddsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-estimate"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-estimate"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-estimate"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-estimate"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-estimate"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-estimate"
+        }
+      ]
+    },
+    {
+      "id": "U6L2",
+      "name": "Subtract Fractions with Unlike Denominators Using an Area Model (without regrouping)",
+      "skill": "fracaddsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        }
+      ]
+    },
+    {
+      "id": "U6L3",
+      "name": "Subtract Fractions with Unlike Denominators Using an Area Model (without regrouping)",
+      "skill": "fracaddsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        }
+      ]
+    },
+    {
+      "id": "U6L4",
+      "name": "Subtract Fractions with Unlike Denominators Using a Number Line",
+      "skill": "fracaddsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        }
+      ]
+    },
+    {
+      "id": "U6L5",
+      "name": "Subtract Fractions with Unlike Denominators Using a Number Line",
+      "skill": "fracaddsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-line"
+        }
+      ]
+    },
+    {
+      "id": "U6L6",
+      "name": "Subtract Fractions with Unlike Denominators Using an Algorithm",
+      "skill": "fracaddsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        }
+      ]
+    },
+    {
+      "id": "U6L7",
+      "name": "Subtract Fractions with Unlike Denominators Using an Algorithm",
+      "skill": "fracaddsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        }
+      ]
+    },
+    {
+      "id": "U6L8",
+      "name": "Subtract Fractions with Unlike Denominators Using an Area Model (with regrouping)",
+      "skill": "fracaddsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        }
+      ]
+    },
+    {
+      "id": "U6L9",
+      "name": "Subtract Fractions with Unlike Denominators Using an Area Model (with regrouping)",
+      "skill": "fracaddsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-area"
+        }
+      ]
+    },
+    {
+      "id": "U6L10",
+      "name": "Subtract Fractions with Regrouping Using an Algorithm",
+      "skill": "fracaddsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        }
+      ]
+    },
+    {
+      "id": "U6L11",
+      "name": "Subtract Fractions with Regrouping Using an Algorithm",
+      "skill": "fracaddsub",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": true,
+          "kind": "fraction-algorithm"
+        }
+      ]
+    },
+    {
+      "id": "U7L1",
+      "name": "Fractions as Division",
+      "skill": "fracmultiply",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "fraction-as-division"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "fraction-as-division"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "fraction-as-division"
+        }
+      ]
+    },
+    {
+      "id": "U7L2",
+      "name": "Fractions as Division",
+      "skill": "fracmultiply",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "fraction-as-division"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "fraction-as-division"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "fraction-as-division"
+        }
+      ]
+    },
+    {
+      "id": "U7L3",
+      "name": "Reason about Multiplying Fractions",
+      "skill": "fracmultiply",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "fraction-factor-compare"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "fraction-factor-compare"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "fraction-factor-compare"
+        }
+      ]
+    },
+    {
+      "id": "U7L4",
+      "name": "Reason about Multiplying Fractions",
+      "skill": "fracmultiply",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "fraction-factor-compare"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "fraction-factor-compare"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "fraction-factor-compare"
+        }
+      ]
+    },
+    {
+      "id": "U7L5",
+      "name": "Reason about Multiplying Fractions by One",
+      "skill": "fracmultiply",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-one"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-one"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-one"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-one"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-one"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-one"
+        }
+      ]
+    },
+    {
+      "id": "U7L6",
+      "name": "Reason about Multiplying Fractions by One",
+      "skill": "fracmultiply",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-one"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-one"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-one"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-one"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-one"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-one"
+        }
+      ]
+    },
+    {
+      "id": "U7L7",
+      "name": "Reason about Multiplying a Fraction by a Fraction",
+      "skill": "fracmultiply",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-scale"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-scale"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-scale"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-scale"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-scale"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-scale"
+        }
+      ]
+    },
+    {
+      "id": "U7L8",
+      "name": "Multiply Fractions Using an Area Model",
+      "skill": "fracmultiply",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-area"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-area"
+        }
+      ]
+    },
+    {
+      "id": "U7L9",
+      "name": "Multiply Fractions Using an Area Model",
+      "skill": "fracmultiply",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-area"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-area"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-area"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-area"
+        }
+      ]
+    },
+    {
+      "id": "U7L10",
+      "name": "Multiply Fractions Using an Algorithm",
+      "skill": "fracmultiply",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-algorithm"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-algorithm"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-algorithm"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-algorithm"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-algorithm"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-algorithm"
+        }
+      ]
+    },
+    {
+      "id": "U7L11",
+      "name": "Solve Word Problems by Multiplying Fractions Using an Algorithm",
+      "skill": "fracmultiply",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-story"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-story"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-story"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-story"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-story"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-product-story"
+        }
+      ]
+    },
+    {
+      "id": "U8L1",
+      "name": "Divide a Unit Fraction by a Whole Number-Word Problems",
+      "skill": "fracdivide",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        }
+      ]
+    },
+    {
+      "id": "U8L2",
+      "name": "Divide a Unit Fraction by a Whole Number-Create a Story",
+      "skill": "fracdivide",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-create"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-create"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-create"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-create"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-create"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-create"
+        }
+      ]
+    },
+    {
+      "id": "U8L3",
+      "name": "Divide a Unit Fraction by a Whole Number",
+      "skill": "fracdivide",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        }
+      ]
+    },
+    {
+      "id": "U8L4",
+      "name": "Divide a Whole Number by a Unit Fraction-Word Problems",
+      "skill": "fracdivide",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        }
+      ]
+    },
+    {
+      "id": "U8L5",
+      "name": "Divide a Whole Number by a Unit Fraction-Create a Story",
+      "skill": "fracdivide",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-create"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-create"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-create"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-create"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-create"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-create"
+        }
+      ]
+    },
+    {
+      "id": "U8L6",
+      "name": "Divide a Whole Number by a Unit Fraction",
+      "skill": "fracdivide",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        }
+      ]
+    },
+    {
+      "id": "U8L7",
+      "name": "Word Problems Involving Unit Fractions and Whole Numbers",
+      "skill": "fracdivide",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        },
+        {
+          "load": 2,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        },
+        {
+          "load": 3,
+          "eligible": true,
+          "contextual": false,
+          "kind": "fraction-division-solve"
+        }
+      ]
+    },
+    {
+      "id": "U9L1",
+      "name": "Classifying Polygons",
+      "skill": "geometry",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "polygon-properties"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "polygon-properties"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "polygon-properties"
+        }
+      ]
+    },
+    {
+      "id": "U9L2",
+      "name": "Classifying Polygons",
+      "skill": "geometry",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "polygon-hierarchy"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "polygon-hierarchy"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "polygon-hierarchy"
+        }
+      ]
+    },
+    {
+      "id": "U9L3",
+      "name": "Classifying Polygons",
+      "skill": "geometry",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "polygon-hierarchy"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "polygon-hierarchy"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "polygon-hierarchy"
+        }
+      ]
+    },
+    {
+      "id": "U9L4",
+      "name": "Finding Volume with Unit Cubes",
+      "skill": "geometry",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-cubes"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-cubes"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-cubes"
+        }
+      ]
+    },
+    {
+      "id": "U9L5",
+      "name": "Finding Volume with Unit Cubes",
+      "skill": "geometry",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-cubes"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-cubes"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-cubes"
+        }
+      ]
+    },
+    {
+      "id": "U9L6",
+      "name": "Finding Volume Using the Area of the Base",
+      "skill": "geometry",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-base"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-base"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-base"
+        }
+      ]
+    },
+    {
+      "id": "U9L7",
+      "name": "Finding Volume Using the Area of the Base",
+      "skill": "geometry",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-base"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-base"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-base"
+        }
+      ]
+    },
+    {
+      "id": "U9L8",
+      "name": "Finding Volume Using an Algorithm",
+      "skill": "geometry",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-algorithm"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-algorithm"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-algorithm"
+        }
+      ]
+    },
+    {
+      "id": "U9L9",
+      "name": "Finding Volume Using an Algorithm",
+      "skill": "geometry",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-algorithm"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-algorithm"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-algorithm"
+        }
+      ]
+    },
+    {
+      "id": "U9L10",
+      "name": "Finding the Volume of Three-Dimensional Figures",
+      "skill": "geometry",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-parts"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-parts"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-parts"
+        }
+      ]
+    },
+    {
+      "id": "U9L11",
+      "name": "Finding the Volume of Three-Dimensional Figures",
+      "skill": "geometry",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-parts"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-parts"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "volume-parts"
+        }
+      ]
+    },
+    {
+      "id": "U10L1",
+      "name": "Plotting Ordered Pairs",
+      "skill": "graphing",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-plot"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-plot"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-plot"
+        }
+      ]
+    },
+    {
+      "id": "U10L2",
+      "name": "Plotting Ordered Pairs: Scaled Coordinate Plane",
+      "skill": "graphing",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-plot"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-plot"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-plot"
+        }
+      ]
+    },
+    {
+      "id": "U10L3",
+      "name": "Plotting Ordered Pairs: Scaled Coordinate Plane",
+      "skill": "graphing",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-plot"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-plot"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-plot"
+        }
+      ]
+    },
+    {
+      "id": "U10L4",
+      "name": "Graphing Shapes",
+      "skill": "graphing",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-shape"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-shape"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-shape"
+        }
+      ]
+    },
+    {
+      "id": "U10L5",
+      "name": "Graphing Shapes",
+      "skill": "graphing",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-shape"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-shape"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-shape"
+        }
+      ]
+    },
+    {
+      "id": "U10L6",
+      "name": "Finding the Location of an Ending Point Given a Starting Point",
+      "skill": "graphing",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-directions"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-directions"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-directions"
+        }
+      ]
+    },
+    {
+      "id": "U10L7",
+      "name": "Finding the Location of an Ending Point Given a Starting Point",
+      "skill": "graphing",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-directions"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-directions"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-directions"
+        }
+      ]
+    },
+    {
+      "id": "U10L8",
+      "name": "Locating a Point on the Coordinate Grid Using Cardinal Directions",
+      "skill": "graphing",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-directions"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-directions"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-directions"
+        }
+      ]
+    },
+    {
+      "id": "U10L9",
+      "name": "Locating a Point on the Coordinate Grid Using Cardinal Directions",
+      "skill": "graphing",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-directions"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-directions"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "coordinate-directions"
+        }
+      ]
+    },
+    {
+      "id": "U10L11",
+      "name": "Identifying Relationships between Numerical Patterns",
+      "skill": "graphing",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "pattern-relationship"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "pattern-relationship"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "pattern-relationship"
+        }
+      ]
+    },
+    {
+      "id": "U10L12",
+      "name": "Identifying Relationships between Numerical Patterns",
+      "skill": "graphing",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "pattern-relationship"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "pattern-relationship"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "pattern-relationship"
+        }
+      ]
+    },
+    {
+      "id": "U10L13",
+      "name": "Graphing Patterns",
+      "skill": "graphing",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "pattern-graph"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "pattern-graph"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "pattern-graph"
+        }
+      ]
+    },
+    {
+      "id": "U10L14",
+      "name": "Graphing Patterns",
+      "skill": "graphing",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "pattern-graph"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "pattern-graph"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "pattern-graph"
+        }
+      ]
+    },
+    {
+      "id": "U10L15",
+      "name": "Graph & Analyze Real World Data",
+      "skill": "graphing",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "data-change"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "data-change"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "data-change"
+        }
+      ]
+    },
+    {
+      "id": "U10L16",
+      "name": "Graph & Analyze Real World Data",
+      "skill": "graphing",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "data-advanced"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "data-advanced"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "data-advanced"
+        }
+      ]
+    },
+    {
+      "id": "U11L1",
+      "name": "Length: Multi-Step Word Problems",
+      "skill": "measurement",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "measurement-convert"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "measurement-convert"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "measurement-convert"
+        }
+      ]
+    },
+    {
+      "id": "U11L2",
+      "name": "Length: Multi-Step Word Problems",
+      "skill": "measurement",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "measurement-convert"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "measurement-convert"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "measurement-convert"
+        }
+      ]
+    },
+    {
+      "id": "U11L3",
+      "name": "Weight: Multi-Step Word Problems",
+      "skill": "measurement",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "measurement-convert"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "measurement-money"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "measurement-money"
+        }
+      ]
+    },
+    {
+      "id": "U11L4",
+      "name": "Weight: Multi-Step Word Problems",
+      "skill": "measurement",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "measurement-convert"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "measurement-money"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "measurement-money"
+        }
+      ]
+    },
+    {
+      "id": "U11L5",
+      "name": "Volume: Multi-Step Word Problems",
+      "skill": "measurement",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "measurement-convert"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "measurement-money"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "measurement-money"
+        }
+      ]
+    },
+    {
+      "id": "U11L6",
+      "name": "Volume: Multi-Step Word Problems",
+      "skill": "measurement",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "measurement-convert"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "measurement-money"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "measurement-money"
+        }
+      ]
+    },
+    {
+      "id": "U11L8",
+      "name": "Line Plots: Multi-Step Word Problems",
+      "skill": "measurement",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "lineplot-combine"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "lineplot-combine"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "lineplot-combine"
+        }
+      ]
+    },
+    {
+      "id": "U11L9",
+      "name": "Line Plots: Multi-Step Word Problems",
+      "skill": "measurement",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "lineplot-combine"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "lineplot-combine"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "lineplot-combine"
+        }
+      ]
+    },
+    {
+      "id": "U11L10",
+      "name": "Line Plots: Multi-Step Word Problems with Division",
+      "skill": "measurement",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "lineplot-division"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "lineplot-division"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "lineplot-division"
+        }
+      ]
+    },
+    {
+      "id": "U11L11",
+      "name": "Line Plots: Multi-Step Word Problems with Division",
+      "skill": "measurement",
+      "initial": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": null
+        }
+      ],
+      "delayed": [
+        {
+          "load": 1,
+          "eligible": false,
+          "contextual": false,
+          "kind": "lineplot-division"
+        },
+        {
+          "load": 2,
+          "eligible": false,
+          "contextual": false,
+          "kind": "lineplot-division"
+        },
+        {
+          "load": 3,
+          "eligible": false,
+          "contextual": false,
+          "kind": "lineplot-division"
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "browserErrors": []
+}
