@@ -486,6 +486,36 @@ button.u5-block:focus-visible{outline:3px solid #111;outline-offset:-3px;z-index
 .u5-block-target{outline:3px solid #a65d00;outline-offset:5px;border-radius:3px}
 .lpmsg.block-review,.inline-msg.block-review{color:#785000}
 .diagram-tree{text-align:center}.diagram-cells{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.diagram-cells>div{border:1px solid #9aaab9;text-align:center;overflow-wrap:anywhere}.diagram-draft{margin:12px 0;padding:12px;border:1px solid #9aaab9;border-radius:12px}.diagram-block-row{padding:8px 0;border-top:1px solid #d8dfe6}.diagram-block-row .lpdecunits{display:flex;flex-wrap:wrap;gap:3px;max-width:100%;overflow:hidden}.diagram-block-row .actions{margin-top:6px}
+.pilot-workbench{display:grid;gap:16px;align-items:start}
+.pilot-workbench>.card{margin:0;min-width:0}
+.pilot-task h2,.pilot-paper h2{margin-top:0}
+.pilot-form-actions{margin-top:10px;gap:14px;align-items:center}
+.pilot-form-actions .ans{flex:1 1 8rem;width:auto;min-width:0;max-width:100%}
+.pilot-help-actions{border-top:1px solid var(--line);margin-top:18px;padding-top:16px}
+.pilot-paper .scratch canvas{height:clamp(185px,29vh,300px)}
+.pilot-paper .scratch-bar .btn.small{min-height:44px}
+.pilot-paper details summary{cursor:pointer;font-weight:700;min-height:44px;padding-block:8px}
+#pilot-notes{display:block;width:100%;resize:vertical;padding:10px;border:2px solid var(--line);border-radius:10px;color:var(--ink);font:inherit}
+#pilot-notes:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+#pilot-message:empty,#pilot-step-message:empty,#pilot-ink-message:empty{margin:0}
+@media(min-width:760px){
+  .pilot-task{grid-area:task}.pilot-paper{grid-area:paper}#pilot-coach{grid-area:coach}
+  .pilot-workbench{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);grid-template-areas:"task paper" "coach paper"}
+}
+#pilot-coach h3{margin-top:0}
+.pilot-workbench>.pilot-task>.card{margin:0}
+.pilot-workbench>.pilot-task{min-width:0}
+.unit5-walter-model-choice{margin:12px 0}
+
+.spboard{position:relative;flex:1;min-width:0}
+.spboard canvas{width:100%}
+.pilot-paper .scratch canvas{height:auto;aspect-ratio:1}
+#sp-fill-grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));touch-action:none}
+#sp-fill-grid[hidden]{display:none}
+#sp-fill-grid button{border:0;border-radius:0;background:transparent;padding:0;min-width:0;min-height:0;cursor:pointer;touch-action:none}
+#sp-fill-grid button[aria-pressed=true]{background:#97c8e8;border:1px solid #e6e9ee}
+#sp-fill-grid button:focus-visible{outline:3px solid #1b2733;outline-offset:-3px;z-index:1}
+.unit5-walter-model-choice{margin:12px 0}
 </style>
 </head>
 <body>
@@ -1768,7 +1798,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.13.0 · November 11, 2026";
+const BUILD="v10.14.0 · November 11, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -4629,7 +4659,7 @@ function home(){
     ${homeWinHTML()}
     ${weekWork}
     ${feedbackHTML}
-    <details class="card home-fold" id="homealternatives"${foldAttr("alternatives")}><summary>Browse all math</summary><div class="home-more-body">${nextUp.kind!=='today'?`<div class="actions"><button class="btn quiet" data-skill="today">Start new daily practice</button></div>`:""}${weekHTML.replace(/btn primary/g,'btn quiet')}${unit3FocusHomeHTML()}${nsHomeTile()}${foundationsHomeHTML()}
+    <details class="card home-fold" id="homealternatives"${foldAttr("alternatives")}><summary>Browse all math</summary><div class="home-more-body">${nextUp.kind!=='today'?`<div class="actions"><button class="btn quiet" data-skill="today">Start new daily practice</button></div>`:""}${weekHTML.replace(/btn primary/g,'btn quiet')}${walterUnit5HomeHTML()}${unit3FocusHomeHTML()}${nsHomeTile()}${foundationsHomeHTML()}
     <details class="card home-fold home-topics"${foldAttr("topics")}><summary>Choose a math topic</summary><div class="home-more-body">
       <p class="muted home-desc">Pick one thing you want to work on.</p>
       <div class="skills">${SKILL_ORDER.filter(k=>!SKILLS[k].foundation)/* v9.21: foundation skills live only in "Build your foundations" */.map(k=>`<button class="skill" data-skill="${k}"><div style="flex:1"><div class="name">${SKILLS[k].name}</div><div class="blurb">${esc(SKILLS[k].blurb)}</div>${tagsHTML(k)}</div>${dots(S.levels[k])}</button>`).join("")}</div>
@@ -4653,7 +4683,7 @@ function home(){
   });
   const recommended=app.querySelector(saved.length?'#homepractice':'#dailygo');
   if(nextUp.kind==='assigned'||nextUp.kind==='check')recommended.onclick=()=>startHomeLesson(nextUp.id,nextUp.kind==='check',!!nextUp.focus);
-  bindWeeklyHomework(); bindDecimalStoryHome(); bindFolds(); armWalterMotion();
+  walterUnit5BindHome(); bindWeeklyHomework(); bindDecimalStoryHome(); bindFolds(); armWalterMotion();
   app.querySelector(".topbar h1").focus({preventScroll:true});
   try{window.scrollTo(0,0);}catch(e){}
 }
@@ -6920,7 +6950,7 @@ function u5LessonDelivery(it,cue,model=false){
     if(['delayed','mixed'].includes(it.phase)&&!st.walterProbe)st.walterProbe=st.tries?'miss-before-help':'help-before-miss';
   }
   lpWalterTrimEvents(st);
-  st.unit5Help={k:st.k,cue:model?st.unit5Help.cue:cue,model:model||!!st.unit5Help?.model};
+  st.unit5Help={k:st.k,cue:model?(st.unit5Help?.k===st.k?st.unit5Help.cue:undefined):cue,model:model||!!st.unit5Help?.model};
 }
 function u5LessonFeedback(it,result,submitted){
   const card=it.step.unit5,values=Array.isArray(submitted)?submitted:[submitted];
@@ -7782,46 +7812,108 @@ let idleTimer=null; const IDLE_MS=75000;
 function idleText(){ if(phase==="wt" && sc && sc.state==="open" && !mixedWalkActive() && !u5PracticeCard()) return `Tap <b>${stepHelpLabel(cur.steps[stepIdx],cur.steps[stepIdx]?.check)}</b> for help with this step, or <b>Home</b> to take a break.`; if(phase==="q" && onrampWaiting()) return `Stuck? That is OK. Tap <b>Help me start</b> or <b>Show me one</b>, or <b>Home</b> to take a break.`; if(phase==="q" && walkthroughBtn()) return `Stuck? That is OK. Tap <b>Work through this problem</b> above for one small step at a time.`; if(phase==="q" && withMeOK()) return `Stuck? That is OK. Tap <b>Do it with me, one step at a time</b> to do this one together, or <b>Home</b> to take a break.`; /* v9.20: the same words as the button */ if(phase==="q") return `Tap <b>${cur&&cur.ws?"Help with this box":"Help me"}</b> for a next step, or <b>Home</b> to take a break.`; return ""; }
 function armIdle(){ if(idleTimer) clearTimeout(idleTimer); idleTimer=null; if(!(phase==="q"||phase==="wt")) return; idleTimer=setTimeout(()=>{ const el=app.querySelector("#idletip"); const t=idleText(); if(el && t){ el.innerHTML=t; el.classList.add("on"); if(cur) cur.idleTips=(cur.idleTips||0)+1; } }, IDLE_MS); }
 ["pointerdown","keydown","input"].forEach(ev=>app.addEventListener(ev,()=>{ if(idleTimer){ armIdle(); } const el=app.querySelector("#idletip.on"); if(el && ev!=="pointerdown"){ el.classList.remove("on"); el.innerHTML=""; } }, true));
-function scratchHTML(){
+function scratchHTML(fill=false){
   return `<div class="scratch" id="scratch">
     <div class="scratch-bar"><span class="muted">Scratch paper</span>
-      <div class="row"><button class="btn quiet small" id="sp-pen" aria-pressed="${scratchTool==="pen"}">Pencil</button><button class="btn quiet small" id="sp-eraser" aria-pressed="${scratchTool==="eraser"}">Eraser</button><button class="btn quiet small" id="sp-undo">Undo</button><button class="btn quiet small" id="sp-clear">Clear</button></div></div>
-    <p class="muted">Walter cannot read freehand marks. Use the diagram controls or answer boxes for feedback.</p><div class="spwrap"><canvas id="spc" aria-label="Scratch paper. Write here with the pencil; nothing here is checked." role="img"></canvas><div class="spstrip" aria-hidden="true" title="Drag here to scroll"></div></div>
+      <div class="row">${fill?'<button type="button" class="btn quiet small" id="sp-fill" aria-pressed="false">Fill squares</button>':''}<button class="btn quiet small" id="sp-pen" aria-pressed="${scratchTool==="pen"}">Pencil</button><button class="btn quiet small" id="sp-eraser" aria-pressed="${scratchTool==="eraser"}">Eraser</button><button class="btn quiet small" id="sp-undo">Undo</button><button class="btn quiet small" id="sp-clear">Clear</button></div></div>
+    <p class="muted">Walter cannot read freehand marks. Use the diagram controls or answer boxes for feedback.</p><div class="spwrap"><div class="spboard"><canvas id="spc" aria-label="Scratch paper. Write here with the pencil; nothing here is checked." role="img"></canvas>${fill?'<div id="sp-fill-grid" aria-label="Shade scratch squares" hidden></div>':''}</div><div class="spstrip" aria-hidden="true" title="Drag here to scroll"></div></div>
   </div>`;
 }
 let scratchTool="pen";
-function drawScratch(cv){ // redraw every stroke (called after each render and each stroke)
+function drawScratch(cv, strokes=scratchStrokes, proportional=false){ // redraw every stroke (called after each render and each stroke)
   if(!cv.width || !cv.height) return; // A resize can arrive while scratch paper is hidden.
   const ctx=cv.getContext ? cv.getContext("2d") : null; if(!ctx) return; const dpr=window.devicePixelRatio||1; const w=cv.width/dpr, h=cv.height/dpr;
   ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,cv.width,cv.height); ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.fillStyle="#FFFEF8"; ctx.fillRect(0,0,w,h);
-  const g=34; ctx.strokeStyle="#E6E9EE"; ctx.lineWidth=1; ctx.beginPath(); for(let x=g;x<w;x+=g){ ctx.moveTo(x+0.5,0); ctx.lineTo(x+0.5,h); } for(let y=g;y<h;y+=g){ ctx.moveTo(0,y+0.5); ctx.lineTo(w,y+0.5); } ctx.stroke();
+  if(proportional){
+    ctx.fillStyle="#97c8e8";
+    for(const cell of walterWorkspaceCells(strokes))ctx.fillRect(cell%8*w/8,Math.floor(cell/8)*h/8,w/8,h/8);
+  }
+  const gx=proportional?w/8:34,gy=proportional?h/8:34; ctx.strokeStyle="#E6E9EE"; ctx.lineWidth=1; ctx.beginPath(); for(let x=gx;x<w;x+=gx){ ctx.moveTo(x+0.5,0); ctx.lineTo(x+0.5,h); } for(let y=gy;y<h;y+=gy){ ctx.moveTo(0,y+0.5); ctx.lineTo(w,y+0.5); } ctx.stroke();
   // Ink lives on its own layer so the eraser removes pencil marks without punching holes in the paper.
   let layer=cv._layer; if(!layer || layer.width!==cv.width || layer.height!==cv.height){ layer=document.createElement("canvas"); layer.width=cv.width; layer.height=cv.height; cv._layer=layer; }
   const lc=layer.getContext("2d"); if(!lc) return; lc.setTransform(1,0,0,1,0,0); lc.clearRect(0,0,layer.width,layer.height); lc.setTransform(dpr,0,0,dpr,0,0); lc.lineCap="round"; lc.lineJoin="round";
-  for(const st of scratchStrokes){ if(st.pts.length<1) continue;
+  const sx=proportional?w/1000:1, sy=proportional?h/1000:1;
+  for(const st of strokes){ if(!st.pts?.length) continue;
     lc.globalCompositeOperation = st.erase ? "destination-out" : "source-over"; lc.strokeStyle="#1B2733"; lc.lineWidth = st.erase ? 26 : st.width;
-    lc.beginPath(); lc.moveTo(st.pts[0][0], st.pts[0][1]); if(st.pts.length===1) lc.lineTo(st.pts[0][0]+0.1, st.pts[0][1]); for(let i=1;i<st.pts.length;i++) lc.lineTo(st.pts[i][0], st.pts[i][1]); lc.stroke(); }
+    const [x,y]=st.pts[0];
+    lc.beginPath(); lc.moveTo(x*sx,y*sy); if(st.pts.length===1) lc.lineTo(x*sx+0.1,y*sy);
+    for(let i=1;i<st.pts.length;i++) lc.lineTo(st.pts[i][0]*sx,st.pts[i][1]*sy); lc.stroke(); }
   lc.globalCompositeOperation="source-over";
   ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(layer,0,0); ctx.setTransform(dpr,0,0,dpr,0,0);
 }
-function bindScratch(){
+function bindScratch(paper){
   const cv=app.querySelector("#spc"); if(!cv) return;
   const q=id=>app.querySelector("#"+id);
-  const size=()=>{ const dpr=window.devicePixelRatio||1; const r=cv.getBoundingClientRect(); const w=Math.max(200,Math.round(r.width)); const narrowWT = window.innerWidth<1000 && (phase==="wt"||phase==="reveal"); const h=Math.max(narrowWT?160:220, Math.min(420, Math.round(window.innerHeight*(narrowWT?0.24:0.38)))); /* v9.12: a shorter pad while a walkthrough is open in one column */ cv.style.height=h+"px"; cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr); drawScratch(cv); };
-  size(); if(!bindScratch.resizeBound){ bindScratch.resizeBound=true; window.addEventListener("resize",()=>{ const c=app.querySelector("#spc"); if(c) setTimeout(()=>{ const dpr=window.devicePixelRatio||1; const r=c.getBoundingClientRect(); c.width=Math.round(r.width*dpr); c.height=Math.round(r.height*dpr); drawScratch(c); },60); }); }
-  let cur=null;
-  const pos=e=>{ const r=cv.getBoundingClientRect(); return [e.clientX-r.left, e.clientY-r.top]; };
-  cv.addEventListener("pointerdown",e=>{ if(e.pointerType==="pen") penSeen=true; if(e.pointerType==="touch" && penSeen) return; if(e.button!==0 && e.pointerType==="mouse") return;
-    e.preventDefault(); try{ cv.setPointerCapture(e.pointerId); }catch(err){}
-    const erase = scratchTool==="eraser" || (e.pointerType==="pen" && (e.buttons&32)); // the pencil's barrel eraser, where supported
-    cur={pts:[pos(e)], erase, width: e.pointerType==="pen" ? 2.4 + (e.pressure||0.5)*2 : 3}; scratchStrokes.push(cur); drawScratch(cv); });
-  cv.addEventListener("pointermove",e=>{ if(!cur) return; if(e.pointerType==="touch" && penSeen) return; e.preventDefault(); let pts = typeof e.getCoalescedEvents==="function" ? e.getCoalescedEvents() : []; if(!pts || !pts.length) pts=[e]; for(const ev of pts) cur.pts.push(pos(ev)); drawScratch(cv); });
-  const end=()=>{ cur=null; }; cv.addEventListener("pointerup",end); cv.addEventListener("pointercancel",end); cv.addEventListener("pointerleave",end);
-  q("sp-pen").onclick=()=>{ scratchTool="pen"; q("sp-pen").setAttribute("aria-pressed","true"); q("sp-eraser").setAttribute("aria-pressed","false"); };
-  q("sp-eraser").onclick=()=>{ scratchTool="eraser"; q("sp-pen").setAttribute("aria-pressed","false"); q("sp-eraser").setAttribute("aria-pressed","true"); };
-  q("sp-undo").onclick=()=>{ scratchStrokes.pop(); drawScratch(cv); };
-  q("sp-clear").onclick=()=>{ scratchStrokes=[]; drawScratch(cv); };
+  const strokes=()=>paper?paper.strokes:scratchStrokes;
+  const repaint=()=>drawScratch(cv,strokes(),!!paper);
+  cv.scratchRedraw=repaint;
+  const size=()=>{
+    const dpr=window.devicePixelRatio||1, r=cv.getBoundingClientRect();
+    const narrowWT=window.innerWidth<1000&&(phase==="wt"||phase==="reveal");
+    const h=paper?Math.round(r.height):Math.max(narrowWT?160:220,Math.min(420,Math.round(window.innerHeight*(narrowWT?0.24:0.38))));
+    if(!paper) cv.style.height=h+"px";
+    cv.width=Math.round(Math.max(1,paper?r.width:Math.max(200,r.width))*dpr);
+    cv.height=Math.round(h*dpr);
+    repaint();
+  };
+  size();
+  if(!bindScratch.resizeBound){
+    bindScratch.resizeBound=true;
+    window.addEventListener("resize",()=>{
+      const c=app.querySelector("#spc"); if(!c) return;
+      setTimeout(()=>{const dpr=window.devicePixelRatio||1,r=c.getBoundingClientRect();c.width=Math.round(r.width*dpr);c.height=Math.round(r.height*dpr);c.scratchRedraw();},60);
+    });
+  }
+  let cur=null, activePointer=null, room=Infinity, usedPen=false, tool=paper?"pen":scratchTool;
+  const pos=e=>{
+    const r=cv.getBoundingClientRect(), x=e.clientX-r.left,y=e.clientY-r.top;
+    const normalized=(v,size)=>Math.round(1000*Math.min(1,Math.max(0,v/(size||1))));
+    return paper?[normalized(x,r.width),normalized(y,r.height)]:[x,y];
+  };
+  const palm=e=>e.pointerType==="touch"&&(paper?usedPen:penSeen);
+  cv.addEventListener("pointerdown",e=>{
+    if(e.pointerType==="pen"){if(paper)usedPen=true;else penSeen=true;}
+    if(tool==="fill"||cur||palm(e)||(e.button!==0&&e.pointerType==="mouse")) return;
+    if(paper){
+      room=paper.maxPoints-strokes().reduce((count,stroke)=>count+(stroke.pts?.length||0),0);
+      if(!room||strokes().length>=paper.maxStrokes){paper.onFull();return;}
+    }
+    e.preventDefault();try{cv.setPointerCapture(e.pointerId);}catch(err){}
+    activePointer=e.pointerId;
+    const erase=tool==="eraser"||(e.pointerType==="pen"&&!!(e.buttons&32));
+    cur={pts:[pos(e)],erase,width:e.pointerType==="pen"?2.4+(e.pressure||0.5)*2:3};
+    strokes().push(cur);room--;repaint();
+  });
+  cv.addEventListener("pointermove",e=>{
+    if(!cur||e.pointerId!==activePointer||palm(e)) return;
+    e.preventDefault();
+    const points=e.getCoalescedEvents?.();
+    for(const ev of points?.length?points:[e]){
+      if(room<=0) break;
+      cur.pts.push(pos(ev));room--;
+    }
+    repaint();
+  });
+  const end=e=>{
+    if(!cur||e.pointerId!==activePointer)return;
+    cur=null;activePointer=null;paper?.onChange(strokes());
+  };
+  for(const event of ["pointerup","pointercancel","pointerleave","lostpointercapture"])cv.addEventListener(event,end);
+  const selectTool=next=>{
+    tool=next;if(!paper)scratchTool=next;
+    for(const name of ['pen','eraser','fill'])q('sp-'+name)?.setAttribute('aria-pressed',String(next===name));
+    if(q('sp-fill-grid'))q('sp-fill-grid').hidden=next!=='fill';
+  };
+  q('sp-pen').onclick=()=>selectTool('pen');q('sp-eraser').onclick=()=>selectTool('eraser');
+  if(q('sp-fill'))q('sp-fill').onclick=()=>selectTool('fill');
+  selectTool(tool);
+  const replace=next=>{if(paper){paper.strokes=next;paper.onChange(next);syncCells();}else scratchStrokes=next;repaint();};
+  let syncCells=()=>{};
+  if(paper&&q('sp-fill-grid'))syncCells=walterWorkspaceBindCells(q('sp-fill-grid'),strokes,replace,paper,()=>tool);
+  let cleared=null;
+  q("sp-undo").onclick=()=>{if(paper&&!strokes().length&&cleared){const previous=cleared;cleared=null;replace(previous);}else replace(strokes().slice(0,-1));};
+  q("sp-clear").onclick=()=>{if(paper&&strokes().length)cleared=strokes().slice();replace([]);};
 }
 // v9.32: link to the supplied Unit 2 videos by the method on this problem. These are
 // references for the learner; the videos stay on SWUN's site and are not embedded here.
@@ -8847,6 +8939,176 @@ function finishStepCheck(c, last){
   }
   save(); render();
 }
+const WALTER_WORKSPACE_INK_STROKES = 100;
+const WALTER_WORKSPACE_INK_POINTS = 3500;
+const walterWorkspaceNotes = value => typeof value === 'string' ? value.slice(0, 1200) : '';
+function walterWorkspaceInk(value) {
+  if (!Array.isArray(value)) return [];
+  const strokes = [];
+  let remaining = WALTER_WORKSPACE_INK_POINTS;
+  for (const stroke of value.slice(0, WALTER_WORKSPACE_INK_STROKES)) {
+    if (!remaining) break;
+    if(Array.isArray(stroke?.cells)&&typeof stroke.filled==='boolean'){
+      const cells=[...new Set(stroke.cells.filter(n=>Number.isInteger(n)&&n>=0&&n<64))].slice(0,64);
+      if(cells.length)strokes.push({cells,filled:stroke.filled});
+      continue;
+    }
+    if (!Array.isArray(stroke?.pts) || !Number.isFinite(stroke.width) || stroke.width < 1 || stroke.width > 8) continue;
+    const pts = [];
+    for (const point of stroke.pts.slice(0, remaining)) {
+      if (Array.isArray(point) && point.length === 2 && point.every(n => Number.isInteger(n) && n >= 0 && n <= 1000)) pts.push(point.slice());
+    }
+    if (pts.length) strokes.push({pts, width:stroke.width, erase:stroke.erase === true});
+    remaining -= pts.length;
+  }
+  return strokes;
+}
+function walterWorkspaceState(value) {
+  return {notes:walterWorkspaceNotes(value?.notes), ink:walterWorkspaceInk(value?.ink)};
+}
+function walterWorkspaceHTML(work, notesOpen) {
+  return `<section class="card pilot-paper" aria-labelledby="pilot-paper-title">
+      <h2 id="pilot-paper-title">Work it out</h2>
+      <p class="muted">Tap Fill squares, then tap or drag to shade. Tap a shaded square to clear it. You can also use Pencil or type your steps.</p>
+      ${scratchHTML(true)}
+      <p id="pilot-ink-message" role="status"></p>
+      <details id="pilot-notes-panel" ${(notesOpen ?? !!work.notes) ? 'open' : ''}><summary>Type my work</summary>
+        <label class="vh" for="pilot-notes">My working notes</label>
+        <textarea id="pilot-notes" maxlength="1200" rows="4" placeholder="Write your steps here">${esc(work.notes || '')}</textarea>
+      </details>
+    </section>`;
+}
+function walterWorkspaceBind(work, saveWork, rememberOpen) {
+  const notes = app.querySelector('#pilot-notes');
+  const status = app.querySelector('#pilot-ink-message');
+  const savePatch = patch => {
+    const next = {...work, ...patch};
+    if (saveWork(next) === false) {
+      status.textContent = 'Your work could not be saved. Try again before leaving.';
+      return;
+    }
+    Object.assign(work, patch);
+    status.textContent = '';
+  };
+  notes.oninput = () => savePatch({notes:walterWorkspaceNotes(notes.value)});
+  if (rememberOpen) app.querySelector('#pilot-notes-panel').ontoggle = event => rememberOpen(event.currentTarget.open);
+  bindScratch({
+    strokes:walterWorkspaceInk(work.ink),
+    maxStrokes:WALTER_WORKSPACE_INK_STROKES, maxPoints:WALTER_WORKSPACE_INK_POINTS,
+    onFull:() => {status.textContent = 'This page is full. Use Undo or Clear, or type the rest below.';},
+    onChange:strokes => savePatch({ink:walterWorkspaceInk(strokes)})
+  });
+}
+
+// Generic scratch squares have no prescribed whole or target count. Only the
+// authored fraction blocks and answer fields supply mathematical observations.
+function walterWorkspaceCells(ink){
+  const cells=new Set();
+  for(const action of ink)for(const cell of action.cells||[])action.filled?cells.add(cell):cells.delete(cell);
+  return cells;
+}
+function walterWorkspaceBindCells(grid,strokes,replace,paper,getTool){
+  grid.innerHTML=Array.from({length:64},(_,i)=>`<button type="button" data-scratch-cell="${i}" tabindex="${i===0?0:-1}" aria-label="Row ${Math.floor(i/8)+1}, column ${i%8+1}" aria-pressed="false"></button>`).join('');
+  const buttons=[...grid.children];
+  const sync=()=>{const cells=walterWorkspaceCells(strokes());buttons.forEach((b,i)=>b.setAttribute('aria-pressed',String(cells.has(i))));};
+  let gesture=null;
+  const room=()=>{if(strokes().length<paper.maxStrokes)return true;paper.onFull();return false;};
+  const focus=i=>{buttons.forEach((b,j)=>b.tabIndex=i===j?0:-1);buttons[i].focus({preventScroll:true});};
+  const add=e=>{
+    const r=grid.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+    if(x<0||y<0||x>=r.width||y>=r.height)return;
+    const cell=Math.floor(y/r.height*8)*8+Math.floor(x/r.width*8);
+    gesture.cells.add(cell);
+    for(const i of gesture.cells)buttons[i].setAttribute('aria-pressed',String(gesture.filled));
+  };
+  grid.onpointerdown=e=>{
+    if(gesture||getTool()!=='fill'||e.button!==0&&!['touch','pen'].includes(e.pointerType)||!room())return;
+    const cell=+e.target.dataset.scratchCell;if(!Number.isInteger(cell))return;
+    e.preventDefault();focus(cell);grid.setPointerCapture(e.pointerId);
+    gesture={pointer:e.pointerId,cells:new Set(),filled:!walterWorkspaceCells(strokes()).has(cell)};add(e);
+  };
+  grid.onpointermove=e=>{if(gesture?.pointer===e.pointerId){e.preventDefault();add(e);}};
+  const end=e=>{if(gesture?.pointer!==e.pointerId)return;const action={cells:[...gesture.cells],filled:gesture.filled};gesture=null;replace([...strokes(),action]);};
+  grid.onpointerup=end;grid.onpointercancel=end;grid.onlostpointercapture=end;
+  grid.onclick=e=>{
+    if(e.detail!==0||getTool()!=='fill'||!room())return;
+    const cell=+e.target.dataset.scratchCell;if(!Number.isInteger(cell))return;
+    replace([...strokes(),{cells:[cell],filled:!walterWorkspaceCells(strokes()).has(cell)}]);
+  };
+  grid.onkeydown=e=>{
+    if(gesture)return;
+    const i=+e.target.dataset.scratchCell,delta={ArrowRight:1,ArrowLeft:-1,ArrowDown:8,ArrowUp:-8}[e.key];
+    if(delta){e.preventDefault();focus(Math.min(63,Math.max(0,i+delta)));}
+  };
+  sync();return sync;
+}
+const WALTER_UNIT5_LESSONS = Array.from({length:10}, (_, i) => 'U5L' + (i + 1));
+const walterUnit5Lesson = id => WALTER_UNIT5_LESSONS.includes(id);
+
+function walterUnit5Work(item) {
+  if (!lp.homework && walterUnit5Lesson(item.lid || lp.id) && item.st &&
+      ['guided','repair','independent','delayed','mixed'].includes(item.phase)) {
+    return item.st.workspace || {};
+  }
+  return null;
+}
+function walterUnit5SaveWork(item, work) {
+  const old = item.st.workspace;
+  item.st.workspace = work;
+  if (lpSaveResume() !== false) return true;
+  item.st.workspace = old;
+  return false;
+}
+function walterUnit5ModelChoice() {
+  return '<div class="unit5-walter-model-choice"><button type="button" class="btn quiet" id="walter-unit5-model">Show a model</button></div>';
+}
+function walterUnit5HomeAction(id, now = Date.now()) {
+  if (lpResumeReady() && S.lessonResume.id === id && !S.lessonResume.focus) return 'resume';
+  const due = S.lessons?.[id]?.due;
+  return due > 0 && due <= now ? 'check' : 'start';
+}
+function walterUnit5HomeHTML() {
+  return '<section class="card" id="walter-unit5-home"><h2>Unit 5 with Walter</h2>' +
+    '<p class="muted home-desc">Work it out on scratch paper. Ask Walter for help whenever you need it.</p>' +
+    WALTER_UNIT5_LESSONS.map(id => {
+      const lesson = lessonById(id), action = walterUnit5HomeAction(id), due = S.lessons?.[id]?.due;
+      const label = {resume:'Keep going',check:'Start check-in',start:'Start lesson'}[action];
+      const status = action === 'check' ? 'A fresh problem is ready.' : action === 'resume' ? 'Your work is saved.' : due > Date.now()
+        ? 'Next check-in ' + new Date(due).toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'}) + '.' : '';
+      return `<div class="home-saved-row"><div><b>Lesson ${lesson.lesson} · ${esc(lesson.name)}</b>${status ? `<p class="muted">${esc(status)}</p>` : ''}</div>
+        <button type="button" class="btn" data-walter-unit5="${id}" data-action="${action}" aria-label="${label}, Unit 5 Lesson ${lesson.lesson}">${label}</button></div>`;
+    }).join('') + '</section>';
+}
+function walterUnit5BindHome() {
+  app.querySelectorAll('[data-walter-unit5]').forEach(button => {
+    button.onclick = () => {
+      const id = button.dataset.walterUnit5, action = walterUnit5HomeAction(id);
+      if (action === 'resume') lpResume();
+      else startHomeLesson(id, action === 'check');
+    };
+  });
+}
+function walterUnit5RefreshHome() {
+  const tile = app.querySelector('#walter-unit5-home');
+  if (!tile || !S || ![...tile.querySelectorAll('[data-walter-unit5]')].some(button =>
+    button.dataset.action !== walterUnit5HomeAction(button.dataset.walterUnit5))) return;
+  const focused = tile.contains(document.activeElement) ? document.activeElement.dataset.walterUnit5 : '';
+  tile.outerHTML = walterUnit5HomeHTML();
+  walterUnit5BindHome();
+  if (focused) app.querySelector(`[data-walter-unit5="${focused}"]`)?.focus({preventScroll:true});
+}
+
+function walterUnit5NextDay(now){const day=new Date(now);day.setDate(day.getDate()+1);day.setHours(0,0,0,0);return +day;}
+window.addEventListener('focus',walterUnit5RefreshHome);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')walterUnit5RefreshHome();});
+// Older releases saved next-practice load but not the load of the pending check.
+// Recover it only from this learner's completed-session practice/check records.
+function walterUnit5DueLoad(id,focus){
+  const state=(focus?S.teacherFocus:S.lessons)?.[id];
+  if([1,2,3].includes(state?.dueLoad))return state.dueLoad;
+  const row=(S.lessonLog||[]).filter(e=>e.id===id&&!!e.teacherFocus===!!focus&&['independent','delayed'].includes(e.phase)&&e.t<=+state?.last&&[1,2,3].includes(e.load)).at(-1);
+  return row?.load||0;
+}
 // ===== v9.19 "Show what you know" check-up (Agent A) =====
 // A short, low-stakes check of the Unit 1 place-value ideas (5.NBT.1–4; since the v9.19 review also expanded form and exponents, see NS_ORDER) plus number-sense items (a number line, estimating, breaking a
 // number apart, does-it-make-sense). Kid-facing words never label her: she sees what she showed and what comes next. Self-contained: it does
@@ -9574,7 +9836,7 @@ function lpObserve(item,v,r){ if(item.phase==="model") return; const st=item.st,
   const all=[...(st.stepEvents||[]),ev]; st.stepEvents=lpTrimEvents(all); st.eventsTrimmed=(+st.eventsTrimmed||0)+all.length-st.stepEvents.length; }
 function lpMethodChecks(x){const out={};if(!x||typeof x!=='object'||Array.isArray(x))return out;for(const [key,v] of Object.entries(x).slice(0,8)){if(!/^[a-z-]{1,80}$/.test(key)||!v||typeof v!=='object')continue;out[key]={last:Math.max(0,+v.last||0),due:Math.max(0,+v.due||0),checked:Math.max(0,+v.checked||0),checkedLoad:Math.max(0,Math.min(3,+v.checkedLoad||0)),checkClean:v.checkClean?1:0,retentionStage:Math.max(0,Math.min(2,+v.retentionStage||0))};}return out;}
 function lpEvidenceState(x){ return {sessions:Math.max(0,Math.floor(+x.sessions||0)),load:Math.max(1,Math.min(3,Math.round(+x.load||1))),due:Math.max(0,+x.due||0),last:Math.max(0,+x.last||0),checked:Math.max(0,+x.checked||0),checkClean:x.checkClean?1:0,
-    checkedLoad:Math.max(0,Math.min(3,+x.checkedLoad||0)),retentionStage:Math.max(0,Math.min(2,+x.retentionStage||0)),adjustment:["raised","smaller-practice","held"].includes(x.adjustment)?x.adjustment:"held",methodChecks:lpMethodChecks(x.methodChecks)}; }
+    checkedLoad:Math.max(0,Math.min(3,+x.checkedLoad||0)),retentionStage:Math.max(0,Math.min(2,+x.retentionStage||0)),adjustment:["raised","smaller-practice","held"].includes(x.adjustment)?x.adjustment:"held",methodChecks:lpMethodChecks(x.methodChecks),...([1,2,3].includes(x.dueLoad)?{dueLoad:x.dueLoad}:{})}; }
 function lpFreshSpec(bp,load,phase,i,used){ let sp, fingerprint; for(let n=0;n<160;n++){ const previous=new Set(lpUsed); sp=bp.make(load,phase,i); fingerprint=lpFingerprint(sp); if(!used.has(fingerprint)) break; lpUsed=previous; }
   const repeated=used.has(fingerprint); used.add(fingerprint); return {phase,spec:sp,load,fingerprint,repeated}; }
 function lpRecurringSupport(id,focus){ const rows=(S.lessonLog||[]).filter(e=>e.id===id&&!!e.teacherFocus===!!focus&&e.t>=Date.now()-30*864e5&&["guided","independent","delayed"].includes(e.phase)).slice(-8);
@@ -9812,14 +10074,15 @@ function lpLoadFor(id){ const o=lpState(id); return Math.max(1, Math.min(3, Math
 function lpSeeded(seed, work){ const old=Math.random; let state=seed>>>0; Math.random=()=>{ state=(Math.imul(1664525,state)+1013904223)>>>0; return state/4294967296; }; try{ return work(); } finally { Math.random=old; } }
 function lpSaveResume(){ if(!S||!lp||lp.items[lp.i].phase==="summary") return; if(lp.homework){fractionHomeworkSave();return;} const it=lp.items[lp.i], st=it.st||null;
   S.lessonResume={v:lp.generationVersion||1,blocked:lp.blocked||[],mixedChoices:lp.mixedChoices||[],focusSupport:lp.focusSupport||null,id:lp.id,delayed:lp.delayed,focus:!!lp.focus,seed:lp.seed,load:lp.load,i:lp.i,phase:it.phase,lid:it.lid||null,t:Date.now(),
-    st,...(it.spec?.recordQuestion?{question:it.spec.recordQuestion}:{}),rep:it.rep||null,recorded:!!it.recorded,results:lp.results}; save(); }
+    st,...(it.spec?.recordQuestion?{question:it.spec.recordQuestion}:{}),rep:it.rep||null,recorded:!!it.recorded,results:lp.results}; return save(); }
 function lpResumeReady(){ const r=S&&S.lessonResume; return !!(r&&[1,2,3,4,5].includes(r.v)&&LP_LESSONS[r.id]&&Number.isInteger(r.i)&&r.i>=0&&r.i<9&&Number.isInteger(r.seed)&&Number.isInteger(r.load)&&r.load>=1&&r.load<=3&&Number.isFinite(+r.t)&&Date.now()-r.t<30*864e5); }
 function lpResume(){ if(!lpResumeReady()) return; const id=S.lessonResume.id, delayed=!!S.lessonResume.delayed, focus=!!S.lessonResume.focus; try{ lpStart(id,delayed,S.lessonResume,focus); }catch(e){ delete S.lessonResume; lp=null; save(); lpStart(id,delayed,null,focus); } }
 function lpStart(id, delayed, resume, focus){ focus=!!(focus || (resume&&resume.focus)); const bp=focus?teacherFocusBlueprint(id):lpBlueprint(id); if(!bp || !S) return; lpSanitize(); if(typeof home==="function" && cur && phase==="q") leaveProblem(); cur=null; mode="lesson:"+id;
-  const load=resume?resume.load:(focus?teacherFocusState(id).load:lpLoadFor(id)), seed=resume?resume.seed:Math.floor(Math.random()*4294967296), items=[], generationVersion=resume?([2,3,4,5].includes(resume.v)?resume.v:1):5;
+  const scheduled=delayed&&walterUnit5Lesson(id)?walterUnit5DueLoad(id,focus):0;
+  const load=resume?resume.load:([1,2,3].includes(scheduled)?scheduled:(focus?teacherFocusState(id).load:lpLoadFor(id))), seed=resume?resume.seed:Math.floor(Math.random()*4294967296), items=[], generationVersion=resume?([2,3,4,5].includes(resume.v)?resume.v:1):5;
   const blocked=generationVersion===1?[]:resume?(Array.isArray(resume.blocked)?resume.blocked.filter(x=>typeof x==="string").slice(-80):[]):(S.lessonLog||[]).slice(-80).map(lpRecordFingerprint).filter(Boolean);
   const used=new Set(blocked), focusSupport=resume?resume.focusSupport||null:lpRecurringSupport(id,focus); lpUsed=new Set();
-  const mixedChoices=generationVersion>=2&&resume? (Array.isArray(resume.mixedChoices)?resume.mixedChoices.filter(x=>x&&LP_LESSONS[x.id]&&x.id!==id&&Number.isInteger(x.load)&&x.load>=1&&x.load<=3):[]) : focus?[]:lpReached().filter(x=>x!==id&&(S.lessons||{})[x]&&+S.lessons[x].sessions>0).map(x=>({id:x,load:lpLoadFor(x)}));
+  const mixedChoices=generationVersion>=2&&resume? (Array.isArray(resume.mixedChoices)?resume.mixedChoices.filter(x=>x&&LP_LESSONS[x.id]&&x.id!==id&&Number.isInteger(x.load)&&x.load>=1&&x.load<=3):[]) : focus||delayed&&walterUnit5Lesson(id)?[]:lpReached().filter(x=>x!==id&&(S.lessons||{})[x]&&+S.lessons[x].sessions>0).map(x=>({id:x,load:lpLoadFor(x)}));
   const versioned=blue=>generationVersion>=4&&blue.storyMake?{...blue,make:(load,phase,index,preferred)=>blue.storyMake(load,phase,index,preferred,generationVersion===4)}:generationVersion<3&&blue.legacyMake?{...blue,make:blue.legacyMake,model:blue.legacyModel,repair:blue.legacyRepair}:blue;
   const make=(original,L,ph,i)=>{const blue=versioned(original);return generationVersion===1?{phase:ph,spec:blue.make(L,ph,i),load:L}:lpFreshSpec(blue,L,ph,i,used);};
   lpSeeded(seed,()=>{ if(delayed){ items.push(make(bp,load,"delayed",0));
@@ -9830,7 +10093,7 @@ function lpStart(id, delayed, resume, focus){ focus=!!(focus || (resume&&resume.
   if(resume){ const it=items[resume.i]; if(!it||it.phase!==resume.phase||it.lid!==(resume.lid||undefined)){ delete S.lessonResume; lp=null; lpStart(id,delayed,null,focus); return; }
     lp.i=resume.i; lp.results=Array.isArray(resume.results)?resume.results:[]; if(it.phase==="repair"){ it.spec=it.rspec.fix; it.rep=resume.rep&&typeof resume.rep==="object"?resume.rep:{stage:"spot",picked:-1,tries:0}; }
     if(it.spec){ if(it.phase==="model"){ lpItemStart(it); } else if(resume.st&&typeof resume.st==="object"&&!Array.isArray(resume.st)&&Number.isInteger(resume.st.k)&&resume.st.k>=0){
-        it.st=resume.st;if(it.spec.storyStateValid&&!it.spec.storyStateValid(it.st)){lpItemStart(it);lpRender();return;} const shown=Array.isArray(it.st.helpShown)?it.st.helpShown.length:0; it.st.msg=""; it.st.msgKind=""; it.st.codes=Array.isArray(it.st.codes)?it.st.codes.filter(x=>typeof x==="string"):[]; it.st.stepEvents=lpTrimEvents(it.st.stepEvents); it.step=it.spec.next(it.st); it.st.helpShown=(it.step&&it.step.help||[]).slice(0,shown); it.recorded=!!resume.recorded;
+        it.st=resume.st;if(it.st.workspace)it.st.workspace=walterWorkspaceState(it.st.workspace);if(it.spec.storyStateValid&&!it.spec.storyStateValid(it.st)){lpItemStart(it);lpRender();return;} const shown=Array.isArray(it.st.helpShown)?it.st.helpShown.length:0; it.st.msg=""; it.st.msgKind=""; it.st.codes=Array.isArray(it.st.codes)?it.st.codes.filter(x=>typeof x==="string"):[]; it.st.stepEvents=lpTrimEvents(it.st.stepEvents); it.step=it.spec.next(it.st); it.st.helpShown=(it.step&&it.step.help||[]).slice(0,shown); it.recorded=!!resume.recorded;
       } else lpItemStart(it); }
     lpRender(); return; }
   lpEnter(); }
@@ -9860,7 +10123,9 @@ function lpFinish(){ if(lp.homework){removeHomeworkDraft(lp.homework);save();ret
     else if(!clean&&o.load>1){ const recent=(S.lessonLog||[]).filter(e=>e.id===lp.id&&!!e.teacherFocus===!!lp.focus&&e.load===lp.load&&["independent","delayed"].includes(e.phase)&&e.t>=Date.now()-14*864e5).slice(-2);
       if(recent.length===2&&recent.every(e=>(Number.isInteger(e.storyArithmeticMisses)?e.storyArithmeticMisses:e.tries)>=3&&!e.repeated&&lpRecordFingerprint(e))&&lpRecordFingerprint(recent[0])!==lpRecordFingerprint(recent[1])){ o.load--; o.adjustment="smaller-practice"; } }
     if(lp.delayed){ const sameLoad=o.checkedLoad===lp.load; o.checked=Date.now(); o.checkedLoad=lp.load; o.checkClean=clean?1:0; o.retentionStage=clean?Math.min(2,(sameLoad?+o.retentionStage||0:0)+1):0; o.due=Date.now()+(clean?(o.retentionStage===1?7:14):3)*864e5; }
-    else { o.retentionStage=0; o.due=Date.now()+LP_DELAY_MS; } }
+    else { o.retentionStage=0; o.due=Date.now()+LP_DELAY_MS; }
+    if(walterUnit5Lesson(lp.id)){o.dueLoad=lp.load;if(!lp.delayed||!clean)o.due=walterUnit5NextDay(o.last);}
+  }
   if(lp.bp.strategyChoices&&own.length){
     const now=Date.now(),methods=o.methodChecks=lpMethodChecks(o.methodChecks);
     for(const key of new Set(own.filter(e=>e.methodEvidence&&e.methodEvidence!=='strategy-not-selected').map(e=>e.methodEvidence))){
@@ -9884,8 +10149,11 @@ function lpRender(){ const it=lp.items[lp.i], bp=lp.bp, n=lp.items.length;
   else if(it.phase==="summary") body=lpSummaryHTML();
   else if(it.phase==="repair") body=lpRepairHTML(it);
   else body=lpWorkHTML(it);
+  const workspace=walterUnit5Work(it);
+  if(workspace)body=`<div class="pilot-workbench"><div class="pilot-task">${body}</div>${walterWorkspaceHTML(workspace,it.workspaceOpen)}</div>`;
   app.innerHTML=head+body; app.querySelector("#back").onclick=()=>{ lpSaveResume(); lp=null; home(); };
-  lpBind(it); if(typeof bindReadAloud==='function')bindReadAloud(app); armWalterMotion(); lpSaveResume(); if(typeof noteScreen==="function") noteScreen(); }
+  lpBind(it); if(workspace)walterWorkspaceBind(workspace,next=>walterUnit5SaveWork(it,next),open=>{it.workspaceOpen=open;});
+  if(typeof bindReadAloud==='function')bindReadAloud(app); armWalterMotion(); lpSaveResume(); if(typeof noteScreen==="function") noteScreen(); }
 function lpVideoHTML(){ const n=lp.bp.lesson, u=lpUnit(lp.id);
   if(lp.id==='U3L1') return `<div class="lpvideo video-choices"><a class="video-link" id="lpvideoLesson" data-video-type="lesson" href="https://videoplayer.swunmath.com/?videoType=lesson&amp;videoCode=G5_U3_L1" target="_blank" rel="noopener noreferrer">Watch the full lesson: Unit 3 Lesson 1</a><a class="video-link" id="lpvideo" data-video-type="strategy" href="https://videoplayer.swunmath.com/?videoType=strategy&amp;videoCode=G5_U3_L1" target="_blank" rel="noopener noreferrer">Watch the strategy: Unit 3 Lesson 1</a><p>Opens SWUN’s site in a new tab.</p></div>`;
   return `<p class="lpvideo"><a class="video-link" id="lpvideo" data-video-type="${u===3||u>=8?'strategy':'lesson'}" href="https://videocdn.swunmath.com/${u===3||u>=8?'strategy_videos':'lesson_videos'}/g5/G5_U${u}_L${n}.mp4" target="_blank" rel="noopener noreferrer">Watch the ${u===3||u>=8?'strategy':'full lesson'}: Unit ${u} Lesson ${n}</a> <span class="muted">(opens SWUN’s site in a new tab)</span></p>`; }
@@ -10057,7 +10325,7 @@ function lpWorkHTML(it){ lpPrepareStep(it); const sp=it.spec, st=it.st, ph=it.ph
     const readText=[sp.title||'',prompt,cue,unit5Model?u5Model(unit5Model).action:inlineModel?.text||''].filter(Boolean).join('. ');
     work=`<p class="lpstep" id="lpstep-prompt">${prompt}</p>${typeof readAloudButton==='function'?readAloudButton(readText,'lp-prompt'):''}${sp.controls?.(st)||''}${step.unit5?.role==='simplest'?u5DivisionLayout(step.unit5,[],u5CheckedDivision(st)):''}${lpInputHTML(step, st, false)}${diagramDraftHTML(it)}<div class="inline-err lpmsg${st.msgKind==="ok"?" ok":""}${st.unit5BlockReview?.k===st.k?" block-review":""}" id="lpmsg" tabindex="-1" role="status" aria-live="polite">${(unit5||inline||hasMiss)&&cue?'<b>Walter:</b> ':''}${cue}</div>${clues}
       <div class="actions"><button class="btn primary" id="lpcheck">${step.input&&step.input.type==="button"?esc(step.input.label||"Next"):"Check"}</button>${focused?`<button class="btn quiet" id="lpunit5help">${unit5?.model?'Look at the model':unit5?'Still stuck':'Help me'}</button>`:''}${focused&&st.unit5BlockReview?.k===st.k?'<button class="btn quiet" id="lpkeepblockanswer">Keep my checked answer</button>':''}${compact?`<button class="btn quiet" id="lpinlinehelp">${inlineModel?'Look at the model':inline||hasMiss?'Still stuck':'Help me'}</button>`:''}${!lpWalterEligible(it)&&(step.help||[]).length>(st.helpShown||[]).length?`<button class="btn quiet" id="lphelp">${own?"I need a clue":"Clue"}</button>`:""}${!focused&&!compact&&own&&sp.answer!==undefined&&st.answerOnly===null?`<button class="btn quiet small" id="lpknow">I know the answer</button>`:""}${own&&st.answerOnly===true?`<button class="btn quiet small" id="lpskip">Skip building it</button>`:""}</div>
-      ${focused?u5BlocksHTML(focused,st):''}${unit5Model?u5ModelHTML(unit5Model,'u5lessonmodel'):''}${inlineModel?walterInlineModel(lpWalterSemanticContext(it),inlineModel,'walter-lesson-model'):''}${focused||compact?`<details${st.walterOpen||st.exampleNarr?' open':''}><summary>More help</summary>${lpWalterHTML(it)}${own&&sp.answer!==undefined&&st.answerOnly===null?'<button class="btn quiet small" id="lpknow">I know the answer</button>':''}</details>`:lpWalterHTML(it)}${walterFictionalHTML(st.fictional,st.fictionalNote,'lp')}${st.exampleNarr||""}${st.exampleNote?`<p class="muted">${esc(st.exampleNote)}</p>`:""}${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
+      ${focused?u5BlocksHTML(focused,st):''}${unit5Model?u5ModelHTML(unit5Model,'u5lessonmodel'):''}${inlineModel?walterInlineModel(lpWalterSemanticContext(it),inlineModel,'walter-lesson-model'):''}${focused||compact?`<details${st.walterOpen||st.exampleNarr?' open':''}><summary>More help</summary>${focused&&walterUnit5Work(it)?walterUnit5ModelChoice():''}${lpWalterHTML(it)}${own&&sp.answer!==undefined&&st.answerOnly===null?'<button class="btn quiet small" id="lpknow">I know the answer</button>':''}</details>`:lpWalterHTML(it)}${walterFictionalHTML(st.fictional,st.fictionalNote,'lp')}${st.exampleNarr||""}${st.exampleNote?`<p class="muted">${esc(st.exampleNote)}</p>`:""}${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
   const walterLesson=st.done && ph!=="model" && !st.skipped && (st.tries>0 || st.helps>0) ? walterNote("nice","You worked through the steps and finished this one.",true) : ph==="delayed" ? walterNote("checkin","Here are new numbers. Show what you remember.",true) : ph==="guided" || (st.helpShown||[]).length ? walterNote("work","Let's check one step at a time.",true) : "";
   return `<div class="card lpcard"><h2 style="margin-top:0" class="lptitle">${sp.title}</h2>${intro}<div class="lpboard" id="lpboard">${visual}</div><div id="lpwork" class="lpwork">${work}</div>${walterLesson}${sp.prompt?`<details class="lpcontext"><summary>About this problem</summary><p class="muted lpsub">${sp.prompt}</p></details>`:""}${model||own||lp.homework?"":lpVideoHTML()}</div>`; }
 // Spotting a slip is still pending work. Do not use the hidden slip index,
@@ -10196,6 +10464,7 @@ function lpBind(it){ const q=s=>app.querySelector(s);
   q("#lpcheck").onclick=go; if(q("#lpkeepblockanswer"))q("#lpkeepblockanswer").onclick=()=>{st.unit5UseTyped=true;go();}; const pb=q("#lpprime"); if(pb) pb.onclick=()=>{ const ok=lpApply(it, {prime:true}); lpRender(); const f=q("[data-lpi]")||q("#lpnext")||q("#lpcheck"); if(f) f.focus({preventScroll:true}); };
   app.querySelectorAll("#lpwork input.ans:not(#lpknowin)").forEach(el=>el.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); if(!e.repeat) go(); } }));
   const ki=q("#lpknowin"); if(ki) ki.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); if(!e.repeat){ const g2=q("#lpknowgo"); if(g2) g2.click(); } } });
+  if(q('#walter-unit5-model'))q('#walter-unit5-model').onclick=()=>{keepDraft();u5LessonDelivery(it,u5Model(u5ModelForEntry(it.step.unit5,it.st.draft?.values?.[0])).action,true);lpRender();};
   const hb=q("#lphelp"); if(hb) hb.onclick=()=>{ keepDraft(); st.helpShown=st.helpShown||[]; const h=(step.help||[])[st.helpShown.length]; if(h){ st.helpShown.push(h); st.helps++; } lpRender(); };
   const kb=q("#lpknow"); if(kb) kb.onclick=()=>{ q("#lpknowbox").hidden=false; q("#lpknowin").focus(); };
   const kg=q("#lpknowgo"); if(kg) kg.onclick=()=>{ keepDraft(); const raw=q("#lpknowin").value,v=it.spec.answerCheck?cxRead(raw):lpNum(raw); if(v===null||typeof v==="number"&&isNaN(v)){ q("#lpmsg").textContent="Type a number."; return; } const right=it.spec.answerCheck?it.spec.answerCheck(raw):Math.abs(v-it.spec.answer)<1e-9; st.answerOnly=right; if(right) st.answerPreviewed=true; if(!right){ st.tries++; st.codes.push("answer-only"); }
