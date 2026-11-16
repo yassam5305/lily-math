@@ -1852,7 +1852,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.16.0 · November 11, 2026";
+const BUILD="v10.18.0 · November 15, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -6463,27 +6463,36 @@ function walterDraftFingerprint(draft){
 function walterWorkEvidence(ctx,move){
   const code=ctx.tag||ctx.code;
   if(!ctx.work||!['miss','checked-mismatch'].includes(ctx.status)||!code||!ctx.component||!ctx.family)return null;
-  return {family:ctx.family,component:ctx.component,code,move,draft:ctx.work.draft||'',field:Number.isInteger(ctx.work.field)?ctx.work.field:-1};
+  return {family:ctx.family,component:ctx.component,code,move,draft:ctx.work.draft||'',field:Number.isInteger(ctx.work.field)?ctx.work.field:-1,...([1,2,3].includes(ctx.work.load)?{load:ctx.work.load}:{}),...([1,2,3,4,5].includes(ctx.work.level)?{level:ctx.work.level}:{})};
 }
 // Prefer only repeated, comparable observations. Neither ratings nor corrections
 // establish a diagnosis or causal learning effect.
-function walterMoveMemory(work,player=typeof S==='undefined'?null:S){
-  const successes={},failures={},seen=new Set();
+function walterMoveMemory(work,player=typeof S==='undefined'?null:S,now=Date.now()){
+  const outcomes={},seen=new Set();
   if(!work?.draft||!player)return {preferred:'',avoid:[]};
-  const rows=[...(player.lessonLog||[]).slice(-40),...(player.homeworkLog||[]).slice(-40),...(player.log||[]).slice(-40)].sort((a,b)=>(b?.t||0)-(a?.t||0));
+  // A small, recent, problem-distinct window can change its mind. Unknown dates
+  // and future records cannot establish a preference. Ratings remain self-reports.
+  const rows=[...(player.lessonLog||[]).slice(-40),...(player.homeworkLog||[]).slice(-40),...(player.log||[]).slice(-40)]
+    .filter(r=>Number.isFinite(r?.t)&&r.t>=now-30*864e5&&r.t<=now)
+    .reverse().sort((a,b)=>b.t-a.t);
   for(const row of rows){
-    const key=row?.fingerprint||row?.itemId||row?.q;
+    const key=row.fingerprint||row.itemId||row.q;
     if(!key||key===work.problem||seen.has(key)||!Array.isArray(row.walterHelp))continue;
+    if([1,2,3].includes(work.load)&&row.load!==work.load)continue;
+    if([1,2,3,4,5].includes(work.level)&&row.lvl!==work.level)continue;
     const events=row.walterHelp.filter(e=>e?.work?.family===work.family&&e.work.component===work.component&&e.work.code===work.code);
     if(!events.length)continue;seen.add(key);
     for(const move of ['smaller','plan','units','meaning','test']){
       const last=events.filter(e=>e.work.move===move).at(-1);if(!last)continue;
-      if(last.rating==='stuck')failures[move]=(failures[move]||0)+1;
-      else if(last.nextOutcome==='ok'&&last.nextDraftChanged===true&&last.nextHelpBetween===0)successes[move]=(successes[move]||0)+1;
+      const result=last.rating==='stuck'?'stuck':last.nextOutcome==='ok'&&last.nextDraftChanged===true&&last.nextHelpBetween===0?'corrected':last.nextOutcome==='miss'?'unresolved':'';
+      const recent=outcomes[move]||(outcomes[move]=[]);if(result&&recent.length<4)recent.push(result);
     }
   }
-  const avoid=Object.keys(failures).filter(m=>failures[m]>=2);
-  const preferred=Object.keys(successes).filter(m=>successes[m]>=2&&!avoid.includes(m)).sort((a,b)=>successes[b]-successes[a])[0]||'';
+  // Two newer corrections retire earlier avoidance, and two newer unsuccessful
+  // reports retire a preference. One event alone cannot establish either.
+  const avoid=Object.keys(outcomes).filter(m=>outcomes[m].slice(0,2).length===2&&outcomes[m].slice(0,2).every(x=>x==='stuck'));
+  const preferred=Object.keys(outcomes).filter(m=>outcomes[m].slice(0,2).length===2&&outcomes[m].slice(0,2).every(x=>x==='corrected'))
+    .sort((a,b)=>outcomes[b].filter(x=>x==='corrected').length-outcomes[a].filter(x=>x==='corrected').length)[0]||'';
   return {preferred,avoid};
 }
 function walterPreferredMove(work){return walterMoveMemory(work).preferred;}
@@ -6532,7 +6541,12 @@ function walterNextReply({guide,intent='start',move,lastMove,repeats=0,observati
 }
 
 // Clarification is a learner report, never a checked mathematical answer.
-function walterClarificationSpec(kind=''){
+function walterClarificationSpec(kind='',reports=[]){
+  if(reports.length)return {prompt:'That explanation did not settle it. Choose a different way to work on this part.',options:[
+    {id:'sketch',label:'Build a drawing',text:'Start with an empty drawing of one given amount. Label what one whole or one unit means. Add only the part named in this step.',move:'smaller'},
+    {id:'say',label:'Connect words to my work',text:'Read the active step, then point to the matching part of your work. Name what that mark or number counts. Which part still needs a label?',move:'units'},
+    {id:'compare',label:'Check one change',text:'Compare your unfinished step with the last checked work or the given question. Point to what changed and what must stay equal. Check only that change.',move:'test'},
+    {id:'example',label:'Open a different example',text:'Look for the matching decision in this different worked example. Your own work stays in place.',move:'connection',action:'example'}]};
   const drawing=/block|rename|grid|diagram|shade/.test(kind);
   const story=/story|expression|word|tiles/.test(kind);
   if(drawing&&!story)return {prompt:'Are you showing the whole amount, or working on one part?',options:[
@@ -6546,7 +6560,7 @@ function walterClarificationSpec(kind=''){
   return {prompt:'Which part should we work on together?',options:[
     {id:'meaning',label:'What this step means',text:'Point to the amount or place named in this step. Say what it counts or measures before changing your entry.',move:'units'},
     {id:'action',label:'What to do next',text:'Choose one unfinished part. Draw or write what you would try there; keep the earlier checked work. Then check just that part.',move:'plan'},
-    {id:'example',label:'I need to see an example',text:'Open More help and choose a different worked example. Look for the decision that matches your unfinished step, then return to your own problem.',move:'connection'}]};
+    {id:'example',label:'I need to see an example',text:'Look for the matching decision in this different worked example. Your own work stays in place.',move:'connection',action:'example'}]};
 }
 function walterAdaptReply(owner,key,reply,request={}){
   if(!owner||!reply?.text)return reply;
@@ -6555,10 +6569,11 @@ function walterAdaptReply(owner,key,reply,request={}){
   if(!memory||memory.key!==token)memory=owner.walterApproaches={key:token,seen:[],declined:[],kind:String(request.kind||'').slice(0,100)};
   if(!Array.isArray(memory.seen))memory.seen=[];
   if(!Array.isArray(memory.declined))memory.declined=[];
+  memory.reports=Array.isArray(memory.reports)?memory.reports.filter(x=>typeof x==='string').slice(-8):[];
   if(request.stuck&&memory.last&&!memory.declined.includes(memory.last))memory.declined.push(memory.last);
   const repeat=memory.seen.includes(signature);
   if(repeat||(request.stuck&&/Which part is getting in your way/.test(reply.text))){
-    const spec=walterClarificationSpec(request.kind||memory.kind);
+    const spec=walterClarificationSpec(request.kind||memory.kind,memory.reports||[]);
     owner.walterClarification={key:token,kind:memory.kind,prompt:spec.prompt,selected:'',pending:true};
     const text='Let’s try a different approach. '+spec.prompt;
     memory.declined=memory.declined.slice(-8);
@@ -6570,15 +6585,15 @@ function walterAdaptReply(owner,key,reply,request={}){
 }
 function walterClarificationHTML(owner,key){
   const c=owner?.walterClarification;if(!c?.pending||c.key!==String(key||'').slice(0,240))return '';
-  const spec=walterClarificationSpec(c.kind);
+  const spec=walterClarificationSpec(c.kind,owner.walterApproaches?.reports||[]);
   return `<section class="lpclue walter-clarification" aria-label="Tell Walter what you are working on"><p>${esc(spec.prompt)}</p><div class="actions">${spec.options.map(o=>`<button type="button" class="btn quiet small" data-walter-clarify="${o.id}">${esc(o.label)}</button>`).join('')}</div><p class="muted">This tells Walter what you mean. It does not check your answer.</p></section>`;
 }
 function walterChooseClarification(owner,key,id){
   const c=owner?.walterClarification;if(!c?.pending||c.key!==String(key||'').slice(0,240))return null;
-  const option=walterClarificationSpec(c.kind).options.find(x=>x.id===id);if(!option)return null;
+  const option=walterClarificationSpec(c.kind,owner.walterApproaches?.reports||[]).options.find(x=>x.id===id);if(!option)return null;
   c.pending=false;c.selected=id;c.selfReported=true;
-  const reply={text:option.text,move:option.move,choices:[],signature:walterHelpSignature(c.key+'|clarification|'+id),clarificationReport:id};
-  if(owner.walterApproaches){owner.walterApproaches.last=walterHelpSignature(option.text);owner.walterApproaches.seen=[...(owner.walterApproaches.seen||[]),owner.walterApproaches.last].slice(-12);}
+  const reply={text:option.text,move:option.move,choices:[],signature:walterHelpSignature(c.key+'|clarification|'+id),clarificationReport:id,action:option.action};
+  if(owner.walterApproaches){owner.walterApproaches.reports=[...new Set([...(owner.walterApproaches.reports||[]),id])].slice(-8);owner.walterApproaches.last=walterHelpSignature(option.text);owner.walterApproaches.seen=[...(owner.walterApproaches.seen||[]),owner.walterApproaches.last].slice(-12);}
   return reply;
 }
 function walterBindClarification(owner,key,onReply){
@@ -7400,6 +7415,7 @@ function u5BlockPracticeReview(ok,bypass){
   return false;
 }
 function u5BlocksChanged(owner){
+  walterDiagnosticWorkChanged(owner);
   walterClarificationClear(owner);app.querySelector('.walter-clarification')?.remove();
   delete owner.unit5BlockAcknowledged;
   if(!owner.unit5BlockLast)return;
@@ -7944,7 +7960,7 @@ function render(){
   if(S.scratch) body+=scratchHTML();
   const card = right ? `<div class="card two"><div class="left">${body}</div><div class="right">${right}</div></div>` : `<div class="card">${body}</div>`;
   app.innerHTML=top+card;
-  bind(); hwDialogueBind(); if(typeof walterPracticeWorkspace==='function')walterPracticeWorkspace(); if(S.scratch) bindScratch(); armWalterMotion(); armIdle(); noteScreen();
+  bind(); hwDialogueBind(); walterDiagnosticPracticeBind(); if(typeof walterPracticeWorkspace==='function')walterPracticeWorkspace(); if(S.scratch) bindScratch(); armWalterMotion(); armIdle(); noteScreen();
 }
 // v9.13 long-pause signal: after 75 seconds with no typing, tapping, or new screen, one calm line points at the help that is already there.
 // It changes nothing in the records. Any touch or key restarts the clock; a new screen clears the line.
@@ -8368,7 +8384,7 @@ function hwWalterSemanticContext(ctx){
   const box=phase==='q'&&cur.ws&&ws?String(ws.sel||'').split('-'):null;
   const component=box?box[0].startsWith('c')?'column-carry':box[0]==='t'&&cur.meta.b>=10?'column-sum':box[0]==='r1'&&box[1]==='0'?'tens-place':'column-product':ctx.comp;
   return {contextKey:ctx.key,mistakeNotes:S?.walterMistakeNotes!==false,family:cur.skill,kind:box?'algorithm':cur.skill,component,stage:phase==='wt'?String(cur.steps[stepIdx]?.hwStage||''):'',question,visibleText:[walterRenderedText(cur.prompt||''),question].join(' '),acceptedText,work:{
-    earlier:phase==='wt'&&Array.isArray(stepRes)?stepRes.slice(0,stepIdx).filter(result=>result==='ok').length:0,
+    level:cur.level,earlier:phase==='wt'&&Array.isArray(stepRes)?stepRes.slice(0,stepIdx).filter(result=>result==='ok').length:0,
     draft:walterDraftFingerprint(ctx.draft),problem:plain(cur.prompt||'')
   },status:ctx.observation,label:ctx.target,
   code:ctx.observation==='checked-mismatch'?ctx.checked?.code||'':'',tag:ctx.observation==='checked-mismatch'?ctx.checked?.tag||'':''};
@@ -8493,12 +8509,12 @@ function hwWalterHTML(){ if(!hwWalterEligible())return ''; const ctx=hwWalterCon
   return `<div class="lpwalter" id="hwwalter"><button type="button" class="btn quiet" id="hwdirecthelp">Ask Walter</button> <button type="button" class="btn quiet" id="hwask" aria-expanded="${!!st.open}" aria-controls="hwaskpanel">Choose help</button>${st.open?`<section id="hwaskpanel" aria-label="Ask Walter step help"><p><b>What would help?</b></p><div class="actions" aria-label="Choose what you need">${primary.map(([id,label])=>`<button type="button" class="btn quiet small" data-hw-walter="${id}" aria-pressed="${picked?.id===id}">${esc(label)}</button>`).join('')}</div>${picked?`<div id="hwaskreply" tabindex="-1" role="status" aria-live="polite">${walterNote('clue',esc(reply),true)}${typeof readAloudButton==='function'?readAloudButton(reply,'hw-reply'):''}</div><div class="actions" aria-label="Optional reply feedback"><button type="button" class="btn quiet small" data-hw-rating="helped" data-signature="${esc(st.choice.signature||'')}">That helped</button><button type="button" class="btn quiet small" id="hwaskmore" data-hw-rating="stuck" data-signature="${esc(st.choice.signature||'')}">Still stuck</button><button type="button" class="btn quiet small" data-hw-walter="meaning">Why does this work?</button></div>${st.lastReply?.choices?.length?`<details open><summary>Choose another part</summary><div class="actions">${st.lastReply.choices.map(id=>qs.find(x=>x.id===id)||({id:id==='test'?'check':id,label:id==='test'?'Checking':id})).map(x=>`<button type="button" class="btn quiet small" data-hw-walter="${x.id}">${esc(x.label)}</button>`).join('')}</div></details>`:''}`:''}${st.choice?.move==='test'&&walterFictionalEligible(hwWalterSemanticContext(ctx))?`<button type="button" class="btn quiet small" id="hwerror">Check a fictional mistake</button>`:''}<button type="button" class="btn quiet small" id="hwaskexample">See a different worked example</button><button type="button" class="btn quiet small" id="hwaskreturn">Back to my work</button>${walterFictionalHTML(cur.fictional,cur.fictionalNote,'hw')}</section>`:''}</div>`;
 }
 
-function hwRecordHelp(ctx,id,type,depth,signature,text='',work=null){
+function hwRecordHelp(ctx,id,type,depth,signature,text='',work=null,diagnostic=null){
   cur.walterHelp=cur.walterHelp||[];
   if(!cur.walterHelp.some(e=>e.context===ctx.key&&e.id===id&&(signature?e.signature===signature:e.depth===depth))){
     cur.walterSession=cur.walterSession||`${TAB_ID}:${Date.now()}:${Math.random()}`;
     cur.walterDeliveryN=Math.max(cur.walterDeliveryN||0,cur.walterHelp.length)+1;
-    const event={delivery:`${cur.walterSession}:${cur.walterDeliveryN}:${Date.now()}`, context:ctx.key,id,type:type,depth,...(signature?{signature}:{}),phase,tries:phase==='wt'?sc.tries:0,t:Date.now(),sk:cur.skill,text:String(text).slice(0,500),contextLabel:ctx.q||ctx.target,...(work?{work}:{})};cur.walterHelp.push(event);cur.walterHelp=cur.walterHelp.slice(-200);
+    const event={delivery:`${cur.walterSession}:${cur.walterDeliveryN}:${Date.now()}`, context:ctx.key,id,type:type,depth,...(signature?{signature}:{}),phase,tries:phase==='wt'?sc.tries:0,t:Date.now(),sk:cur.skill,text:String(text).slice(0,500),contextLabel:ctx.q||ctx.target,...(work?{work}:{}),...(diagnostic?{diagnostic}:{})};cur.walterHelp.push(event);cur.walterHelp=cur.walterHelp.slice(-200);
     const store=cur.hw?'homeworkWalter':'practiceWalter';S[store]=Array.isArray(S[store])?S[store]:[];S[store].push({...event});S[store]=S[store].slice(-200);
   }
   if(missEntry)missEntry.walterHelp=cur.walterHelp.map(e=>({...e}));
@@ -8536,6 +8552,7 @@ function hwWalterReportHTML(){ const deliveries=Array.isArray(S.homeworkWalter)?
   const report=practice.length?`<div class="card"><h2>Practice: Ask Walter and step help</h2><p>${practice.length} distinct help deliveries in recent saved work (up to the latest 200). Menu opening is not a help delivery. Work with delivered replies is supported practice and does not raise levels or clear an independent check.</p></div>`:"";
   return report+(deliveries.length?`<div class="card"><h2 style="margin-top:0">Homework: Ask Walter</h2><p>${deliveries.length} distinct help ${deliveries.length===1?'delivery':'deliveries'} in recent saved work (up to the latest 200). Opening the question menu is not counted as help. Walter replies and walkthrough help are recorded by requested support, reply, and active step, including unfinished walkthroughs. Work with replies is practice with help; homework does not change levels.</p></div>`:''); }
 function hwWalterRefresh(){ const el=app.querySelector('#hwwalter');if(!el||!hwWalterEligible())return;
+  walterDiagnosticPracticeRefresh();
   const ctx=hwWalterContext();if(cur.hwWalter?.context===ctx.key){const note=el.querySelector('#hwwalterobservation');if(note)note.textContent=hwWalterObservation(ctx);return;}el.outerHTML=hwWalterHTML();hwWalterBind();
 }
 
@@ -8759,7 +8776,7 @@ function submit(){
   const stepWrong = !!(cur.pre && preRes && !preRes.ok); // the required step was wrong: the calculation may be right, but the attempt did not show the skill cleanly
   const independent = stage==="fresh" && hintIdx===0 && !supported && !prompted && !cur.studied && !stepWrong; // a worked example seen first is help, like a hint; an opened nudge is a prompt
   const entry={t:Date.now(), sk, lvl:cur.level, q:plain(cur.prompt), yours:String(yours), ans:cur.display, ok:ok?1:0, stage, hints:hintIdx, independent:(ok&&independent)?1:0, tag: cur.mistake ? cur.mistake.tag : (cur.focusTag||"")};
-  if(cur.walterHelp?.length) entry.walterHelp=cur.walterHelp.map(e=>({...e})); if(cur.hw) entry.hw=1; if(cur.fixed) entry.page=1; if(cur.studied) entry.studied=1; if(mode==="today" && todayPlan && stage==="fresh"){ entry.today=todaySid; if(cur.todaySlot) entry.todaySlot=cur.todaySlot; } /* a primary problem of this planned sitting; a follow-up or walkthrough is help attached to the miss, not another problem */ entry.hintsOf=(cur.hintTotal||(cur.hints||[]).length)-((coachOn()||nudgeAvailable())?1:0); if(cur.ws){ entry.ws=1; entry.support=wsSup(); } if(supported) entry.supported=1; if(prompted) entry.prompted=1; if(coachVisible) entry.cues="coach line"; if(cur.transferCheck) entry.freshAfterHelp=1; if(mode==="miss"&&cur.focusKey) entry.focus=cur.focusKey; /* every support visible before she answered is logged; a fresh transfer item after help is marked */ const eck=ctxKey(ctxOf(cur)); if(eck) entry.ctx=eck;
+  if(cur.walterDiagnostics?.length)entry.diagnosticObservations=cur.walterDiagnostics.slice(-24);if(cur.walterHelp?.length) entry.walterHelp=cur.walterHelp.map(e=>({...e})); if(cur.hw) entry.hw=1; if(cur.fixed) entry.page=1; if(cur.studied) entry.studied=1; if(mode==="today" && todayPlan && stage==="fresh"){ entry.today=todaySid; if(cur.todaySlot) entry.todaySlot=cur.todaySlot; } /* a primary problem of this planned sitting; a follow-up or walkthrough is help attached to the miss, not another problem */ entry.hintsOf=(cur.hintTotal||(cur.hints||[]).length)-((coachOn()||nudgeAvailable())?1:0); if(cur.ws){ entry.ws=1; entry.support=wsSup(); } if(supported) entry.supported=1; if(prompted) entry.prompted=1; if(coachVisible) entry.cues="coach line"; if(cur.transferCheck) entry.freshAfterHelp=1; if(mode==="miss"&&cur.focusKey) entry.focus=cur.focusKey; /* every support visible before she answered is logged; a fresh transfer item after help is marked */ const eck=ctxKey(ctxOf(cur)); if(eck) entry.ctx=eck;
   if(cur.pre && preRes){ entry.pre={comp:cur.pre.comp, ok:preRes.ok?1:0, yours:preRes.yours, ans:String(cur.pre.check.display), q:plain(cur.pre.check.q||"")}; cur.comps=cur.comps||{}; cur.comps[cur.pre.comp]={ok:preRes.ok?1:0, miss:preRes.ok?0:1}; entry.comps=cur.comps; if(!preRes.ok){ noteComp(sk, cur.pre.comp, false, {lvl:cur.level, ctx:ctxOf(cur)}); cur.preMiss=true; } }
   if(wsGrade){ entry.rows=wsGrade.yours; if(!ok) entry.wrong=wsGrade.wrongText; if(wsGrade.comps) entry.comps=wsGrade.compsTally; if(cur.unfinished) entry.unfinished=cur.unfinished; if(cur.swapCaught) entry.swapCaught=cur.swapCaught; /* v9.16: two left digits typed in reverse, sent back once */
     const cues=[]; if(ws&&ws.locked["r1-0"]) cues.push("zero written in"); if(coachOn()) cues.push("coach line"); if(wsSup()>=2) cues.push("column labels"); if(wsSup()>=1) cues.push("carry boxes"); if(cues.length) entry.cues=cues.join(", "); } // the assistance that was actually visible, not just whether Hint was tapped
@@ -9000,7 +9017,7 @@ function checkStep(){
   if(phase==="reveal"){ // copying the shown answer in unlocks Next. Logged as "finished with the answer shown": not a right answer, not a guided completion, never independent
     if(ok){ sc.state="ok"; sc.msg=`<span aria-hidden="true">✓</span> That's it.`;
       if(!cur.shownLogged){ cur.shownLogged=true; S.shown=(S.shown||0)+1;
-        pushLog({t:Date.now(), sk:cur.skill, lvl:cur.level, q:plain(cur.prompt), yours:c.type==="mc"?String((c.options||[])[sc.sel]):String(sc.val).trim(), ans:cur.display, ok:1, guided:1, shown:1, stage:"reveal", hints:hintIdx, independent:0, tag:cur.mistake?cur.mistake.tag:"", revealed, passed, expanded}); } }
+        pushLog({diagnosticObservations:(cur.walterDiagnostics||[]).slice(-24),t:Date.now(), sk:cur.skill, lvl:cur.level, q:plain(cur.prompt), yours:c.type==="mc"?String((c.options||[])[sc.sel]):String(sc.val).trim(), ans:cur.display, ok:1, guided:1, shown:1, stage:"reveal", hints:hintIdx, independent:0, tag:cur.mistake?cur.mistake.tag:"", revealed, passed, expanded}); } }
     else { sc.msg = c.type==="mc" ? "Not that one. Pick the answer to continue." : "Not quite. Type the answer to continue."; sc.val=""; sc.sel=-1; }
     save(); render(); return; // saved now, not on the next action: a reload here must not lose the record
   }
@@ -9074,7 +9091,7 @@ function finishStepCheck(c, last){
     // "ok": she got the final answer herself → a guided completion. "revealed": the final answer was shown after repeated misses and she copied it in → finished with the answer shown (counted like the reveal path, never as guided).
     const shownIn = sc.state==="revealed";
     if(shownIn) S.shown=(S.shown||0)+1; else S.guided++;
-    pushLog({t:Date.now(), sk:cur.skill, lvl:cur.level, q:plain(cur.prompt), yours:c.type==="mc"?String((c.options||[])[sc.sel]):String(sc.val).trim(), ans:cur.display, ok:1, guided:1, ...(shownIn?{shown:1}:{}), ...(cur.voluntaryWalkthrough?{studied:1}:{}), ...(cur.hw?{hw:1,page:cur.fixed?1:0}:{}), ...(cur.walterHelp?.length?{walterHelp:cur.walterHelp.map(e=>({...e})),studied:1}:{}), stage:"wt", hints:hintIdx, independent:0, tag:cur.mistake?cur.mistake.tag:"", revealed, passed}); /* the reason counts live on the miss entry (missEntry), so they are not counted twice */
+    pushLog({diagnosticObservations:(cur.walterDiagnostics||[]).slice(-24),t:Date.now(), sk:cur.skill, lvl:cur.level, q:plain(cur.prompt), yours:c.type==="mc"?String((c.options||[])[sc.sel]):String(sc.val).trim(), ans:cur.display, ok:1, guided:1, ...(shownIn?{shown:1}:{}), ...(cur.voluntaryWalkthrough?{studied:1}:{}), ...(cur.hw?{hw:1,page:cur.fixed?1:0}:{}), ...(cur.walterHelp?.length?{walterHelp:cur.walterHelp.map(e=>({...e})),studied:1}:{}), stage:"wt", hints:hintIdx, independent:0, tag:cur.mistake?cur.mistake.tag:"", revealed, passed}); /* the reason counts live on the miss entry (missEntry), so they are not counted twice */
   }
   save(); render();
 }
@@ -10238,17 +10255,33 @@ function walterExampleBridge(kind='') {
   if(/story|word/.test(kind))return 'What did each amount mean in the example? Name the amounts in your own story before choosing your next step.';
   return 'Which idea from the example could you use? Return to your unfinished step and choose what to do next.';
 }
+// Saved examples are display data, never trusted executable markup. Preserve
+// ordinary mathematical formatting, but exclude controls, URLs and attributes.
+function lpExampleSafeHTML(value) {
+  if(typeof value!=='string')return '';
+  const template=document.createElement('template');template.innerHTML=value;
+  const allowed=new Set(['B','STRONG','I','EM','BR','SUP','SUB','SPAN','CODE','P','DIV','SECTION','H3','H4','OL','UL','LI','TABLE','THEAD','TBODY','TR','TH','TD']);
+  const blocked=new Set(['SCRIPT','STYLE','SVG','MATH','IFRAME','OBJECT','EMBED','TEMPLATE','FORM','INPUT','BUTTON','TEXTAREA','SELECT','LINK','META','IMG','VIDEO','AUDIO','SOURCE','BASE']);
+  const clean=parent=>{for(const node of [...parent.childNodes]){
+    if(node.nodeType===3)continue;
+    if(node.nodeType!==1||blocked.has(node.tagName)){node.remove();continue;}
+    clean(node);
+    if(!allowed.has(node.tagName)){node.replaceWith(...node.childNodes);continue;}
+    for(const attribute of [...node.attributes])node.removeAttribute(attribute.name);
+  }};
+  clean(template.content);return template.innerHTML;
+}
 function lpExampleHTML(it) {
   const st=it.st, example=st.exampleLesson;
-  if(!example)return st.exampleNarr||'';
+  if(!example||!Array.isArray(example.lines))return lpExampleSafeHTML(st.exampleNarr);
   if(!example.open)return '<button class="btn quiet small" id="lp-example-reopen">See the different example again</button>';
-  const lines=Array.isArray(example.lines)?example.lines.slice(0,160):[];
+  const lines=example.lines.filter(x=>typeof x==='string').slice(0,160);
   const shown=Math.max(1,Math.min(lines.length,Number(example.shown)||1));
-  return `<section class="lpclue" id="lp-example-panel" tabindex="-1" aria-label="Different worked example"><h3>Different worked example: ${esc(example.title)}</h3><p>Your problem and checked work stay where you left them.</p>${example.question?`<p>${esc(example.question)}</p>`:''}<p>Decision ${shown} of ${lines.length}</p><ol>${lines.slice(0,shown).map(t=>`<li>${t}</li>`).join('')}</ol><div class="actions">${shown<lines.length?'<button class="btn" id="lp-example-next">Show the next decision</button><button class="btn quiet" id="lp-example-all">See the whole example</button>':''}<button class="btn quiet" id="lp-example-return">Back to my step</button></div><p>${esc(walterExampleBridge(it.spec.kind))}</p></section>`;
+  return `<section class="lpclue" id="lp-example-panel" tabindex="-1" aria-label="Different worked example"><h3>Different worked example: ${esc(example.title)}</h3><p>Your problem and checked work stay where you left them.</p>${example.question?`<p>${esc(example.question)}</p>`:''}<p>Decision ${shown} of ${lines.length}</p><ol>${lines.slice(0,shown).map(t=>`<li>${lpExampleSafeHTML(t)}</li>`).join('')}</ol><div class="actions">${shown<lines.length?'<button class="btn" id="lp-example-next">Show the next decision</button><button class="btn quiet" id="lp-example-all">See the whole example</button>':''}<button class="btn quiet" id="lp-example-return">Back to my step</button></div><p>${esc(walterExampleBridge(it.spec.kind))}</p></section>`;
 }
 function lpExampleBind(it,keep) {
-  const st=it.st, example=st.exampleLesson;if(!example)return;
-  const act=(id,fn)=>{const b=app.querySelector('#'+id);if(b)b.onclick=()=>{keep();fn();lpSaveResume();lpRender();const target=example.open?app.querySelector('#lp-example-panel'):app.querySelector('#lpin, [data-lpi], .lpopt, #lpcheck');target?.focus({preventScroll:true});target?.scrollIntoView({block:'nearest'});};};
+  const st=it.st, example=st.exampleLesson;if(!example||!Array.isArray(example.lines))return;
+  const act=(id,fn)=>{const b=app.querySelector('#'+id);if(b)b.onclick=()=>{keep();fn();lpSaveResume();lpRender();const target=example.open?app.querySelector('#lp-example-panel'):app.querySelector('#transfer-answer, #lpin, [data-lpi], .lpopt, [data-lpr], #lpcheck');target?.focus({preventScroll:true});target?.scrollIntoView({block:'nearest'});};};
   act('lp-example-next',()=>example.shown=Math.min(example.lines.length,example.shown+1));
   act('lp-example-all',()=>example.shown=example.lines.length);
   act('lp-example-return',()=>example.open=false);
@@ -10314,19 +10347,23 @@ function transferPrepare(it){
 const TRANSFER_PLANS={model:'Draw a model',equation:'Write an equation',mental:'Work it out mentally',other:'Use another approach'};
 function transferHTML(it){
   const t=transferPrepare(it);if(!t||t.mode==='steps')return '';
-  const question=esc(transferQuestion(it)),supported=t.delivered.length>0;
+  const question=esc(transferQuestion(it)),supported=transferSupportTotal(it)>0;
   if(t.mode==='complete')return `<section class="card lpcard"><h2>A fresh problem checked</h2><p>${question}</p><p role="status">${supported?'You checked this problem with Walter’s help.':t.tries?'You revised your answer and checked this problem without step prompts.':'You checked this problem without step prompts.'} This checks your answer; it does not check the method you used.</p><button class="btn primary" id="transfer-next">${t.source==='open-practice'?'Finish this problem':'Finish check-in'}</button></section>`;
-  return `<section class="card lpcard" aria-labelledby="transfer-title"><h2 id="transfer-title" tabindex="-1">${t.source==='open-practice'?'Work out this problem your way':'Try a fresh problem your way'}</h2><p>${question}</p><p>Choose how to start. You can open the checked steps whenever you want.</p>${t.mode==='offer'?`<div class="actions">${Object.entries(TRANSFER_PLANS).map(([key,label])=>`<button type="button" class="btn quiet" data-transfer-plan="${key}">${label}</button>`).join('')}</div>`:`<p>Your starting idea: ${esc(TRANSFER_PLANS[t.plan]||'Your own approach')}. This choice is not graded.</p><label for="transfer-answer">Your answer${transferCapability(it)?.unit?' ('+esc(transferCapability(it).unit)+')':''}</label><input class="ans" id="transfer-answer" autocomplete="off" value="${esc(t.draft||'')}" maxlength="100"><p class="lpmsg" id="transfer-message" role="status">${esc(t.message||'')}</p><div class="actions"><button class="btn primary" id="transfer-check">Check my answer</button><button class="btn quiet" id="transfer-change-plan">Choose another approach</button></div>`}${t.mode==='working'?transferHelpHTML(it):''}<div class="actions"><button class="btn quiet" id="transfer-steps">Help me with the checked steps</button></div><p class="muted">This is a fresh answer check. Your method and explanation are not automatically assessed.</p></section>`;
+  return `<section class="card lpcard" aria-labelledby="transfer-title"><h2 id="transfer-title" tabindex="-1">${t.source==='open-practice'?'Work out this problem your way':'Try a fresh problem your way'}</h2><p>${question}</p><p>Choose how to start. You can open the checked steps whenever you want.</p>${t.mode==='offer'?`<div class="actions">${Object.entries(TRANSFER_PLANS).map(([key,label])=>`<button type="button" class="btn quiet" data-transfer-plan="${key}">${label}</button>`).join('')}</div>`:`<p>Your starting idea: ${esc(TRANSFER_PLANS[t.plan]||'Your own approach')}. This choice is not graded.</p><label for="transfer-answer">Your answer${transferCapability(it)?.unit?' ('+esc(transferCapability(it).unit)+')':''}</label><input class="ans" id="transfer-answer" autocomplete="off" value="${esc(t.draft||'')}" maxlength="100"><p class="lpmsg" id="transfer-message" role="status">${esc(t.message||'')}</p><div class="actions"><button class="btn primary" id="transfer-check">Check my answer</button><button class="btn quiet" id="transfer-change-plan">Choose another approach</button></div>`}${t.mode==='working'?transferHelpHTML(it):''}${it.st.exampleLesson?lpExampleHTML(it):''}${it.st.exampleNote?`<p class="muted">${esc(it.st.exampleNote)}</p>`:''}<div class="actions"><button class="btn quiet" id="transfer-steps">Help me with the checked steps</button></div><p class="muted">This is a fresh answer check. Your method and explanation are not automatically assessed.</p></section>`;
 }
 function transferHelpHTML(it){const t=transferState(it);return `<section aria-label="Walter help for this problem"><p>What would help?</p><div class="actions"><button type="button" class="btn quiet" data-transfer-help="words">Understand the question</button><button type="button" class="btn quiet" data-transfer-help="model">Help me draw it</button><button type="button" class="btn quiet" data-transfer-help="check">Check my approach</button></div>${t.helpText?`<p role="status"><b>Walter:</b> ${esc(t.helpText)}</p>`:''}</section>`;}
 function transferDeliverHelp(it,intent){
   const t=transferState(it);if(!t||t.mode!=='working'||!['words','model','check'].includes(intent))return false;
   const defaults={words:'Point to what the question asks you to find. Label what each given amount means before choosing your calculation.',model:'Draw the given amounts and label what each part means. Leave the amount you need to find blank.',check:'Compare your calculation or drawing with the given question. Does it show the same amounts and the same relationship?'};
+  if(t.delivered.some(e=>e.id===intent)&&typeof walterDiagnosticLessonContext==='function'){
+    const context=walterDiagnosticLessonContext(it);if(context){walterDiagnosticState(it.st,context).open=true;t.helpText='Let’s look at what is getting in the way. Tell me about this part below, or choose a different way to explore it.';return true;}
+  }
   const authored=transferCapability(it)?.help?.[intent],text=typeof authored==='string'&&authored.trim()?lpPlain(authored).slice(0,700):defaults[intent];
   if(!t.delivered.some(e=>e.id===intent&&e.text===text)){t.delivered.push({id:intent,text});t.delivered=t.delivered.slice(-12);it.st.helps=(+it.st.helps||0)+1;}
   t.helpText=text;return true;
 }
-function transferEvidence(it){const t=transferState(it);return t?{transferCheck:{v:1,mode:t.mode,source:t.source,helpDeliveries:t.delivered.length,plan:Object.hasOwn(TRANSFER_PLANS,t.plan)?t.plan:'',tries:Math.max(0,+t.tries||0),formats:Math.max(0,+t.formats||0),promptsSeen:!!t.promptsSeen,outcome:t.mode==='complete'?(t.delivered.length?'supported-without-step-prompts':t.tries?'revised-without-step-prompts':'answer-without-step-prompts'):'opened-checked-steps'}}:{};}
+function transferSupportTotal(it){const t=transferState(it);return t?Math.max(t.delivered.length,Math.max(0,Math.floor(+it.st.helps||0))):0;}
+function transferEvidence(it){const t=transferState(it);return t?{transferCheck:{v:1,mode:t.mode,source:t.source,helpDeliveries:transferSupportTotal(it),modeledSupport:(it.st.walterEvents||[]).filter(e=>e.type==='modeled').length,plan:Object.hasOwn(TRANSFER_PLANS,t.plan)?t.plan:'',tries:Math.max(0,+t.tries||0),formats:Math.max(0,+t.formats||0),promptsSeen:!!t.promptsSeen,outcome:t.mode==='complete'?(transferSupportTotal(it)>0?'supported-without-step-prompts':t.tries?'revised-without-step-prompts':'answer-without-step-prompts'):'opened-checked-steps'}}:{};}
 function transferCheckAnswer(it,raw){
   const t=transferState(it);if(!t||t.mode!=='working')return false;
   t.draft=String(raw??'').slice(0,100).trim();
@@ -10351,7 +10388,7 @@ function transferFinishOpenMethod(it){
 function transferComplete(it){
   const t=transferState(it);if(!t||t.mode!=='complete'||it.recorded)return;
   const id=it.lid||lp.id,e={t:Date.now(),id,lesson:(LP_LESSONS[id]||lp.bp).lesson,phase:it.phase,kind:'whole-problem-check',q:transferQuestion(it),load:it.load||lp.load,
-    fingerprint:lpFingerprint(it.spec),teacherFocus:!!lp.focus,ok:1,methodOk:0,firstTry:0,answerOnly:1,answerPreviewed:0,helps:t.delivered.length,tries:t.tries,steps:0,stepEvents:[],codes:[],supportClass:t.delivered.length?'supported-answer-only':'answer-only',...transferEvidence(it)};
+    fingerprint:lpFingerprint(it.spec),teacherFocus:!!lp.focus,ok:1,methodOk:0,firstTry:0,answerOnly:1,answerPreviewed:0,helps:transferSupportTotal(it),tries:t.tries,steps:0,stepEvents:[],codes:[],walterHelp:(it.st.walterEvents||[]).map(e=>({...e})),diagnosticObservations:(it.st.walterDiagnostics||[]).slice(-24),supportClass:transferSupportTotal(it)>0?'supported-answer-only':'answer-only',...transferEvidence(it)};
   it.recorded=true;S.lessonLog=Array.isArray(S.lessonLog)?S.lessonLog:[];S.lessonLog.push(e);while(S.lessonLog.length>LP_LOG_CAP)S.lessonLog.shift();lp.results.push(e);
   // Answer-only evidence neither changes practice load nor clears method readiness.
   if(t.source==='open-practice')transferScheduleOpenMethod(id);
@@ -10365,6 +10402,7 @@ function transferComplete(it){
 }
 function transferBind(it){
   const t=transferState(it);if(!t||t.mode==='steps')return false;
+  lpExampleBind(it,()=>{const input=app.querySelector('#transfer-answer');if(input)t.draft=input.value.slice(0,100);});
   const redraw=()=>{lpSaveResume();lpRender();(app.querySelector('#transfer-answer')||app.querySelector('#transfer-title')||app.querySelector('#transfer-next'))?.focus({preventScroll:true});};
   app.querySelectorAll('[data-transfer-plan]').forEach(b=>b.onclick=()=>{t.plan=b.dataset.transferPlan;t.mode='working';redraw();});
   app.querySelectorAll('[data-transfer-help]').forEach(b=>b.onclick=()=>{transferDeliverHelp(it,b.dataset.transferHelp);redraw();});
@@ -10406,6 +10444,8 @@ function lpDialogueBind(it){
     if(st.unit5Help)st.unit5Help.cue=reply.text;if(st.inlineWalter)st.inlineWalter={...st.inlineWalter,...reply};if(it.rep?.inlineWalter)it.rep.inlineWalter={...it.rep.inlineWalter,...reply};
     if(st.walterChoice)st.walterChoice={...st.walterChoice,...reply};
     if(it.rep?.walterChoice)it.rep.walterChoice={...it.rep.walterChoice,...reply};
+    if(['unsure','meaning','action'].includes(reply.clarificationReport)){const diagnosticContext=walterDiagnosticLessonContext(it);if(diagnosticContext){const diagnostic=walterDiagnosticState(st,diagnosticContext);diagnostic.open=true;}}
+    if(reply.action==='example')lpDifferentExample(it);
     lpWalterTrimEvents(st);lpSaveResume();lpRender();walterInlineFocus('#lpaskreply, #lpmsg');
   });
   walterBindDraftChoices(st,'.lpopt, .lpchip, .lptok, .lptile, [data-lpr], [data-diagram-place]');
@@ -10421,6 +10461,8 @@ function hwDialogueBind(){
     }
     if(cur.mainHelp?.[ctx.key]?.lastReply)cur.mainHelp[ctx.key].lastReply={...cur.mainHelp[ctx.key].lastReply,...reply};if(phase==='wt'&&sc.organicHelp?.lastReply)sc.organicHelp.lastReply={...sc.organicHelp.lastReply,...reply};
     if(cur.hwWalter?.choice)cur.hwWalter.choice={...cur.hwWalter.choice,...reply};
+    if(['unsure','meaning','action'].includes(reply.clarificationReport)){const diagnosticContext=walterDiagnosticPracticeContext();if(diagnosticContext)walterDiagnosticState(cur,diagnosticContext).open=true;}
+    if(reply.action==='example')hwOpenDifferentExample();
     save();render();walterInlineFocus('#hwaskreply, #cmsg, #hwwalter');
   });
   walterBindDraftChoices(cur,'#opts .opt, #copts .opt, #preopts .opt, .ws .cell[data-k]');
@@ -10431,6 +10473,283 @@ function walterBindDraftChoices(owner,selector){
   app.querySelectorAll(selector).forEach(button=>button.addEventListener('click',()=>{
     walterClarificationClear(owner);app.querySelectorAll('.walter-clarification').forEach(el=>el.remove());
   },{capture:true}));
+}
+// Shared diagnostic tutoring. Inputs are active roles, checked observations and
+// learner reports. No solution, checker, freehand interpretation or diagnosis.
+const WALTER_DIAGNOSTIC_TOPICS={
+  pieces:{label:'What the pieces mean',question:'In a fraction, what does the bottom number name?',options:[['size','How many equal pieces make one whole'],['shaded','How many pieces are shaded'],['wholes','How many whole shapes there are']],match:'size',rule:'The bottom number tells how many equal pieces make one whole. The top number counts pieces of that size.'},
+  rename:{label:'Keeping the same amount',question:'You split each piece into smaller equal pieces without changing the shaded amount. What changes?',options:[['same','The shaded piece count stays the same'],['more','There are more shaded pieces'],['less','There are fewer shaded pieces']],match:'more',rule:'Smaller pieces need a larger count to cover the same amount. Both fraction counts change together; the shaded amount stays the same.'},
+  simplify:{label:'Making bigger pieces',question:'When you simplify a fraction, what must stay the same?',options:[['amount','The amount the fraction represents'],['counts','Both written counts'],['size','The size of each piece']],match:'amount',rule:'Simplifying groups small pieces into bigger pieces. Divide both counts by the same factor to keep the amount equal.'},
+  mixed:{label:'Wholes and leftover pieces',question:'To count all the pieces in a mixed number, which parts belong in your count?',options:[['left','Only the leftover fraction'],['full','Only the complete wholes'],['both','The pieces in the wholes and the leftover pieces']],match:'both',rule:'Each complete whole contains a full set of equal pieces. Count those pieces and the leftover pieces in the same unit.'},
+  combine:{label:'Combining fraction amounts',question:'Before adding or subtracting fraction piece counts, what must match?',options:[['tops','The top numbers'],['unit','The size of the whole and the pieces'],['shading','The shaded amounts']],match:'unit',rule:'Counts can be combined when they count the same-sized pieces of the same-sized whole. Renaming keeps each amount equal.'},
+  benchmark:{label:'Estimating and comparing',question:'When comparing fractions on a number line, what must stay consistent?',options:[['spacing','The distance representing one whole'],['tops','The top numbers'],['bottoms','The written bottom numbers']],match:'spacing',rule:'Use the same distance for one whole. Compare positions or distances to benchmarks, even when the fractions have different names.'}
+};
+const WALTER_DIAGNOSTIC_REPORTS={words:'I am unsure what the question means',concept:'I am unsure about the idea',calculation:'I want to check my calculation',partial:'My drawing is not finished',format:'The answer box is confusing',other:'Something else / I am not sure'};
+const WALTER_DIAGNOSTIC_ACTIONS={explain:'Explain the idea',strip:'Use a whole and pieces',line:'Use a number line',check:'Check one calculation',example:'Open a different example'};
+// Authored concept checks concern relationships, not the pending answer. Each
+// route selects a small relevant set; a probe is never independent evidence.
+Object.assign(WALTER_DIAGNOSTIC_TOPICS,{
+  place:{label:'Digits and their places',question:'What tells you the value of a digit in a number?',options:[["place","The digit and the place it occupies"],["digit","Only the digit itself"],["length","How long the number looks"]],match:'place',rule:'A digit counts units of its place. Label that place before deciding the value.',resource:'place-chart'},
+  exchange:{label:'Exchanging equal amounts',question:'When you exchange units between neighboring places, what must stay the same?',options:[["count","The number of pieces"],["place","The place names of all the pieces"],["amount","The total amount"]],match:'amount',rule:'An exchange changes the units and their counts while keeping the total amount unchanged.',resource:'place-chart'},
+  groups:{label:'Multiplication and equal groups',question:'What do the two factors describe in an equal-group model?',options:[["left","The total and what is left over"],["groups","The number of groups and the amount in each group"],["total","Two names for the total"]],match:'groups',rule:'Label the number of equal groups and the amount in each group. Multiplication connects these to the total.',resource:'array'},
+  sharing:{label:'What division is finding',question:'Two division stories can have the same numbers. What do you need to know before drawing the groups?',options:[["unknown","Whether you need the number of groups or the amount in each group"],["size","Which written number looks longer"],["sign","Only where the division sign is"]],match:'unknown',rule:'Division can find a group count or a share size. Label the total and the known group quantity before choosing a model.',resource:'groups'},
+  power:{label:'What an exponent means',question:'What does an exponent count in a power?',options:[["add","Copies of the base added together"],["digits","Digits in the final answer"],["factors","Copies of the base used as factors"]],match:'factors',rule:'The base is a repeated factor. The exponent counts those factors; write the factor chain before calculating.',resource:'factor-chain'},
+  order:{label:'Choosing an operation',question:'If multiplication and division occur at the same grouping level, how do you decide their order?',options:[["divide","Always do division first"],["left","Work from left to right"],["multiply","Always do multiplication first"]],match:'left',rule:'Respect grouping first. Multiplication and division share a priority and go left to right; addition and subtraction also share a priority.',resource:'expression-marks'},
+  relationship:{label:'What the problem is asking',question:'What is a useful first check for an expression you wrote from a story?',options:[["meaning","Read it back with the quantities and units to see if it describes the story"],["use","Check only that every number was used"],["keyword","Choose an operation from one word"]],match:'meaning',rule:'Name what is known and what is missing. Read each operation as a relationship between those quantities; a single word is not enough.',resource:'story-bar'},
+  rounding:{label:'Nearness and benchmarks',question:'What makes a rounding benchmark the nearest one?',options:[["larger","It is always the larger benchmark"],["digits","It has fewer written digits"],["distance","Its distance from the given number is smallest"]],match:'distance',rule:'The requested rounding place sets the benchmark spacing. Compare distances to those benchmarks on a number line.',resource:'number-line'},
+  factor:{label:'Factors and equal groups',question:'How can you check a proposed whole-number factor pair?',options:[["small","Check only that both factors are smaller"],["product","Multiply the factors and compare with the original number"],["sum","Add the factors and compare with the original number"]],match:'product',rule:'A factor pair multiplies to the original number. For prime factors, also check whether each factor can split further.',resource:'factor-tree'},
+  fractionProduct:{label:'A fraction of an amount',question:'In an area model for a fraction of a fraction, what does the overlap show?',options:[["part","The requested part of the starting fraction"],["sum","The sum of both fractions"],["whole","Always the entire whole"]],match:'part',rule:'Keep the whole fixed. Show the starting fraction, then take the requested fraction of that amount.',resource:'area-grid'},
+  scaling:{label:'Scaling a product',question:'One positive factor stays fixed. What happens to the product if the other factor is multiplied by a positive scale factor?',options:[["add","The scale factor is added to the product"],["fixed","The product stays fixed"],["scale","The product is multiplied by that same scale factor"]],match:'scale',rule:'Track which factor changes and which stays fixed. Multiplying one factor by a scale factor scales the product by that factor.',resource:'area-grid'},
+  shape:{label:'Properties of shapes',question:'What decides whether a shape belongs in a geometric category?',options:[["size","How large it is drawn"],["properties","Its defining properties"],["turn","Which way it is turned"]],match:'properties',rule:'Use properties such as sides, angles and parallel lines. Size and rotation do not change the category.',resource:'shape-model'},
+  volume:{label:'Counting space in layers',question:'What does one layer of unit cubes tell you about a rectangular prism?',options:[["layer","How many cubes are in that layer"],["all","Always the total number of cubes"],["edge","Only the length of one edge"]],match:'layer',rule:'Count cubes in a layer and how many equal layers fill the prism. Volume counts cubic units, not just visible faces.',resource:'shape-model'},
+  coordinate:{label:'Coordinates and axes',question:'What do the two entries in an ordered pair tell you?',options:[["total","A single total distance"],["reverse","The vertical position first on every graph"],["axes","A position along each labeled axis, in order"]],match:'axes',rule:'Use the origin, axis labels and scale. On an x-y grid the first entry gives x and the second gives y.',resource:'coordinate-grid'},
+  data:{label:'Reading a graph or pattern',question:'Before comparing values on a graph, what should you check?',options:[["count","Only the number of marks"],["scale","The labels, units and scale"],["height","Only which mark looks tallest"]],match:'scale',rule:'Read what each mark represents and the scale of each axis. Compare quantities with their units attached.',resource:'coordinate-grid'},
+  measure:{label:'Changing measurement units',question:'When you rename a measurement in another unit, what stays the same?',options:[["amount","The measured amount"],["number","Always the written number"],["unit","The unit name"]],match:'amount',rule:'A conversion keeps the measured amount equal. Label the old and new units and use their known relationship.',resource:'unit-table'}
+});
+Object.assign(WALTER_DIAGNOSTIC_ACTIONS,{model:'Build a model of this part',organize:'Organize what I know'});
+const WALTER_DIAGNOSTIC_FRACTION_TOPICS=['pieces','rename','simplify','mixed','combine','benchmark'];
+const WALTER_DIAGNOSTIC_FAMILIES={standard:['place'],words:['place'],expanded:['place'],wholepv:['place','exchange'],placevalue:['place'],tenths:['place','pieces'],shift:['place','exchange'],powers:['power','place'],rounding:['rounding','place'],compare:['place','rounding'],order:['place','rounding'],addsub:['exchange','place'],orderops:['order'],expressions:['relationship','order'],primes:['factor'],factors:['factor','groups'],multiply:['groups','place','exchange'],facts:['groups','sharing'],divide:['sharing','place'],decmul:['groups','place'],decdiv:['sharing','place','exchange'],twostep:['relationship','order'],fractions:WALTER_DIAGNOSTIC_FRACTION_TOPICS,fracbasics:WALTER_DIAGNOSTIC_FRACTION_TOPICS,fracaddsub:WALTER_DIAGNOSTIC_FRACTION_TOPICS,fracmultiply:['fractionProduct','scaling','pieces'],fracdivide:['sharing','pieces'],geometry:['shape','volume'],graphing:['coordinate','data'],measurement:['measure','data','pieces']};
+function walterDiagnosticTopics(context){return context.topics||WALTER_DIAGNOSTIC_FRACTION_TOPICS;}
+function walterDiagnosticActions(context){return context.fractionPilot!==false?['explain','strip','line','check','example']:['explain','model','organize','check','example'];}
+function walterDiagnosticRoute(semantic,role='',fractionPilot=false){
+  const kind=semantic.kind||'',component=semantic.component||'';
+  const base=WALTER_COMPONENTS[component]?.base||WALTER_KIND_BASE[kind]||semantic.family;
+  let topics=WALTER_DIAGNOSTIC_FAMILIES[base]||['relationship'];
+  if(fractionPilot)topics=WALTER_DIAGNOSTIC_FRACTION_TOPICS;
+  else if(/volume/.test(kind))topics=['volume','groups','measure'];
+  else if(/polygon/.test(kind))topics=['shape'];
+  else if(/pattern|data-|lineplot/.test(kind))topics=['data','relationship','measure'];
+  else if(/fraction-product-scale|fraction-factor-compare/.test(kind))topics=['scaling','fractionProduct'];
+  else if(/decimal-story-meaning|story-expression|group-count-setup|grid-setup|box-count-needed/.test(component)||semantic.storyStage==='setup')topics=['relationship','sharing','groups'];
+  else if(/column-carry|carry|exchange/.test(component))topics=['exchange','place'];
+  if(/story/.test(semantic.family)&&!topics.includes('relationship'))topics=[...topics,'relationship'];
+  return {semantic,topics,role,fractionPilot,topic:fractionPilot?walterDiagnosticTopic(role):topics[0]};
+}
+function walterDiagnosticMove(action){return {explain:'meaning',strip:'smaller',line:'units',model:'smaller',organize:'plan',check:'test'}[action]||'diagnostic';}
+function walterDiagnosticTopic(role){
+  if(/factor|reduce|simplest/.test(role))return 'simplify';
+  if(/mixed|whole-and-left|pieces-in-wholes|pieces-from/.test(role))return 'mixed';
+  if(/benchmark|estimate|compare/.test(role))return 'benchmark';
+  if(/common|add-counts|sum|jump|landing/.test(role))return 'combine';
+  return role==='rename'?'rename':'pieces';
+}
+function walterDiagnosticState(owner,context){
+  let d=owner.walterDiagnostic;
+  if(!d||d.v!==1||d.key!==context.key)d={v:1,key:context.key,open:false,topic:context.topic||walterDiagnosticTopic(context.role),report:'',pick:'',action:'',declined:[],delivered:[]};
+  const topics=walterDiagnosticTopics(context),resetTopic=!topics.includes(d.topic)||!Object.hasOwn(WALTER_DIAGNOSTIC_TOPICS,d.topic);
+  if(resetTopic){d.topic=topics.includes(context.topic)?context.topic:topics[0];d.pick='';d.action='';d.message='';d.probeOpen=false;d.declined=[];}
+  d.report=Object.hasOwn(WALTER_DIAGNOSTIC_REPORTS,d.report)?d.report:'';
+  d.action=walterDiagnosticActions(context).includes(d.action)?d.action:'';
+  const probe=WALTER_DIAGNOSTIC_TOPICS[d.topic];d.pick=[...probe.options.map(x=>x[0]),'unsure'].includes(d.pick)?d.pick:'';
+  d.declined=Array.isArray(d.declined)?[...new Set(d.declined.filter(x=>walterDiagnosticActions(context).includes(x)))].slice(-7):[];
+  d.delivered=Array.isArray(d.delivered)?d.delivered.filter(x=>typeof x==='string'&&x.length<=80).slice(-128):[];
+  d.probeOpen=d.probeOpen===true;d.open=d.open===true;d.alternatives=d.alternatives===true;d.message=typeof d.message==='string'?d.message.slice(0,700):'';
+  owner.walterDiagnostics=Array.isArray(owner.walterDiagnostics)?owner.walterDiagnostics.filter(x=>x&&typeof x==='object'&&x.observation).slice(-12):[];
+  owner.walterDiagnostic=d;return d;
+}
+function walterDiagnosticObservation(context){
+  if(context.status==='format')return 'The last entry had a format issue. It did not check the mathematics.';
+  if(['miss','checked-mismatch'].includes(context.status))return 'The last checked entry did not match this step. That alone does not tell me why. We can separate the idea, the calculation and the way the answer is entered.';
+  if(context.pattern==='same-amount')return 'The structured model currently matches the given amount. That alone does not tell me how you worked it out.';
+  if(context.pattern==='old-piece-count')return 'The model uses a changed piece size with the earlier piece count. Is that your finished drawing, or just a start?';
+  if(context.pattern==='leftover-only')return 'The model currently shows the leftover fraction without the full wholes. Is it finished, or are you still adding parts?';
+  if(context.pattern==='whole-only')return 'The model currently shows complete wholes. Are you still adding the fractional part?';
+  if(context.pattern==='erased')return 'The model is empty after an edit. You may still be building it.';
+  if(context.pattern==='different-amount')return 'The model currently covers a different amount. It may be unfinished; tell me what you are trying.';
+  return 'I do not yet know what is getting in your way. We can look at just this part together.';
+}
+function walterDiagnosticHypothesis(d,context){
+  if(d.report==='words')return 'task-meaning-to-clarify';
+  if(d.report==='partial')return 'unfinished-model-reported';
+  if(d.report==='format'||context.status==='format')return 'entry-format-to-clarify';
+  if(d.pick==='unsure')return 'concept-uncertain-reported';
+  if(d.pick&&d.pick!==WALTER_DIAGNOSTIC_TOPICS[d.topic].match)return d.topic+'-worth-revisiting';
+  if(d.pick&&d.report==='calculation')return 'calculation-or-entry-to-check';
+  return 'undetermined';
+}
+function walterDiagnosticSuggestion(d,context){
+  if(!d.report&&!d.pick)return '';
+  const h=walterDiagnosticHypothesis(d,context);
+  let preferred=h==='task-meaning-to-clarify'?(context.fractionPilot===false?'organize':'explain'):h==='entry-format-to-clarify'||h==='calculation-or-entry-to-check'?'check'
+    :h==='concept-uncertain-reported'?'explain':context.fractionPilot===false?'model':d.topic==='benchmark'?'line':'strip';
+  const work=context.semantic&&walterWorkEvidence(context.semantic,walterDiagnosticMove(preferred));
+  if(work){const memory=walterMoveMemory({...work,problem:context.semantic.work?.problem});
+    if(memory.avoid.includes(walterDiagnosticMove(preferred)))preferred='';
+  }
+  return d.declined.includes(preferred)?'':preferred;
+}
+function walterDiagnosticActionText(d,context){
+  const rule=WALTER_DIAGNOSTIC_TOPICS[d.topic].rule;
+  if(d.action==='explain')return rule+' Point to the part of your problem where this idea matters.';
+  if(d.action==='model')return rule+' '+(context.semantic?walterTeachingReply(context.semantic,'smaller')?.text||'Sketch this relationship and label what you know.':'Sketch the relationship and label what you know.');
+  if(d.action==='organize')return context.semantic?walterTeachingReply(context.semantic,'plan')?.text||'Name what is known, what is missing, and the relationship between them. Leave the missing quantity blank.':'Name what is known and what is missing.';
+  if(d.action==='strip')return 'Use equal-length strips for the same whole. Outline one given amount. Mark its pieces without changing the amount covered. Compare your outline with your work.';
+  if(d.action==='line')return 'Mark the start and end of one whole on a number line. Place one given amount yourself. Keep the same whole length when you rename or compare amounts.';
+  if(d.action==='check')return d.report==='format'||context.status==='format'?'Read the label on the active answer box. What form or unit does it ask for? Enter that form; leave the other checked boxes alone.':context.semantic?walterTeachingReply(context.semantic,'test')?.text||'Keep the checked parts. Compare one unfinished step with the quantities, units and relationship it must represent.':'Keep the parts already checked. Choose one unfinished calculation, label what its numbers count, and check it with a drawing or reverse operation.';
+  if(d.action==='example')return 'Compare the decision in the different example with your unfinished step. Your original problem stays in place.';
+  return '';
+}
+function walterDiagnosticReply(d,context,type,value){
+  let text='';
+  if(type==='start-probe'){
+    d.probeOpen=true;text=WALTER_DIAGNOSTIC_TOPICS[d.topic].question;
+  }else if(type==='report'){
+    if(!Object.hasOwn(WALTER_DIAGNOSTIC_REPORTS,value))return null;
+    if(d.report===value){d.alternatives=true;d.action='';d.message='Choose a different way below, or tell me about another part.';return null;}
+    d.report=value;d.action='';d.pick='';d.alternatives=false;
+    text=value==='words'?'Let’s name what the question gives and what it asks for before calculating. You can keep your draft while we look at the words.':value==='partial'?'Thanks for telling me. An unfinished drawing does not show that you misunderstand. Keep your work and finish the part you intended, or choose a way to explore it.'
+      :value==='format'?'Let’s separate the answer box from the mathematics. We can check the requested form without changing your calculation.'
+      :value==='calculation'?'Let’s separate the idea from the calculation. Try the short idea check if you want, or choose Check one calculation.'
+      :'We can test one idea, or choose a different way to explore it. Your answer stays open.';
+  }else if(type==='probe'){
+    const p=WALTER_DIAGNOSTIC_TOPICS[d.topic];if(![...p.options.map(x=>x[0]),'unsure'].includes(value))return null;
+    d.pick=value;d.action='';d.alternatives=true;
+    text=value==='unsure'?'Thank you for saying so. Choose a drawing or an explanation to explore this idea.'
+      :value===p.match?'That choice fits this idea. It does not check your original answer. Choose a way to connect the idea to your work.'
+      :p.rule+' Let’s try a representation of that idea. Your original answer is still open.';
+  }else if(type==='action'){
+    if(!walterDiagnosticActions(context).includes(value))return null;
+    d.action=value;d.alternatives=false;text=walterDiagnosticActionText(d,context);
+  }else if(type==='stuck'){
+    if(d.action&&!d.declined.includes(d.action))d.declined.push(d.action);
+    d.declined=d.declined.slice(-7);d.action='';d.alternatives=true;
+    text='Thanks for telling me. Choose a different way below, or change what you told me about this step.';
+  }else return null;
+  const signature=walterHelpSignature([context.key,d.topic,type,value,text].join('|'));
+  const diagnostic={v:1,report:d.report||null,topic:d.topic,probe:d.pick?{choice:d.pick,outcome:d.pick==='unsure'?'self-reported-unsure':d.pick===WALTER_DIAGNOSTIC_TOPICS[d.topic].match?'supported-match':'supported-mismatch'}:null,
+    observation:{status:context.status,pattern:context.pattern||null},hypothesis:walterDiagnosticHypothesis(d,context),tentative:true,suggestedAction:walterDiagnosticSuggestion(d,context)||null,action:d.action||null};
+  const fresh=!d.delivered.includes(signature);if(fresh)d.delivered=[...d.delivered,signature].slice(-128);
+  d.message=text;const move=type==='action'?walterDiagnosticMove(value):'diagnostic';
+  return {text,signature,move,type:'clue',diagnostic,fresh,work:type==='action'&&context.semantic?walterWorkEvidence(context.semantic,move):null};
+}
+function walterDiagnosticVisual(action,d,context){
+  if(action==='model'&&context?.semantic){
+    const topic=WALTER_DIAGNOSTIC_TOPICS[d.topic];
+    if(topic.resource==='place-chart')return '<div class="lpclue" id="wd-model" tabindex="-1"><p>Start with the place you are working on. Label these blank columns with the place names you need.</p><table class="walter-place" aria-label="Empty neighboring-place chart"><thead><tr><th scope="col">One place left</th><th scope="col">Current place</th><th scope="col">One place right</th></tr></thead><tbody><tr><td>___</td><td>___</td><td>___</td></tr></tbody></table></div>';
+    return walterInlineModel(context.semantic,{resource:topic.resource||'fraction-bar',text:'Use this blank setup on your scratch paper. Label it yourself before calculating.'},'wd-model');
+  }
+  if(action==='organize')return '<div class="walter-work-pair" aria-label="Unfilled planning frame"><span>What I know<b>___</b></span><span>What I need to find<b>___</b></span><span>How they are related<b>___</b></span></div>';
+  if(action==='strip')return '<svg viewBox="0 0 280 76" role="img" aria-label="Two empty equal-length strips. Choose your own partitions and amounts on your work." style="width:100%;max-width:340px"><rect x="10" y="8" width="260" height="22" fill="none" stroke="currentColor"/><rect x="10" y="44" width="260" height="22" fill="none" stroke="currentColor"/></svg>';
+  if(action==='line')return '<svg viewBox="0 0 280 62" role="img" aria-label="An empty number line. The two end marks define one whole. Place the given amount yourself." style="width:100%;max-width:340px"><path d="M15 24h250M15 14v20M265 14v20" fill="none" stroke="currentColor"/><text x="140" y="52" text-anchor="middle" fill="currentColor" font-size="14">One whole</text></svg>';
+  return '';
+}
+function walterDiagnosticHTML(d,context){
+  const button=(type,id,label)=>`<button type="button" class="btn quiet small" data-wd-${type}="${id}">${esc(label)}</button>`;
+  if(!d.open)return `<section id="walter-diagnostic"><button type="button" class="btn quiet" data-wd-open>Help Walter understand where I’m stuck</button></section>`;
+  const p=WALTER_DIAGNOSTIC_TOPICS[d.topic],suggested=walterDiagnosticSuggestion(d,context),alternatives=walterDiagnosticActions(context).filter(x=>!d.declined.includes(x));
+  return `<section class="lpclue" id="walter-diagnostic" aria-label="Work out what is getting in the way" tabindex="-1"><h3>Let’s figure out this part</h3>${d.report?`<p id="wd-observation">${esc(walterDiagnosticObservation(context))}</p>`:''}${d.report?`<p>You told me: ${esc(WALTER_DIAGNOSTIC_REPORTS[d.report])}.</p><details id="wd-change-report"><summary>Change what I told Walter</summary>`:'<p>What are you trying to work on?</p>'}<div class="actions">${Object.entries(WALTER_DIAGNOSTIC_REPORTS).map(([id,label])=>button('report',id,label)).join('')}</div>${d.report?'</details>':''}
+    <label for="wd-topic">An idea we could explore</label><select id="wd-topic" style="display:block;width:100%;max-width:100%;font:inherit">${walterDiagnosticTopics(context).map(id=>[id,WALTER_DIAGNOSTIC_TOPICS[id]]).map(([id,t])=>`<option value="${id}"${id===d.topic?' selected':''}>${esc(t.label)}</option>`).join('')}</select>
+    ${d.probeOpen?`${d.pick?'<details id="wd-revisit-probe"><summary>Revisit the idea check</summary>':''}<p>${esc(p.question)}</p><div class="actions">${[...p.options,['unsure','I am not sure yet']].map(([id,label])=>button('probe',id,label)).join('')}</div><p class="muted">This is supported practice of an idea, not a check of your answer.</p>${d.pick?'</details>':''}`:button('start-probe','yes','Try a short idea check')}
+    ${d.message?`<p id="wd-message" role="status">${esc(d.message)}</p>`:''}${d.action?walterDiagnosticVisual(d.action,d,context):''}
+    <p>${d.alternatives?'Choose a different way to explore this step.':'Choose how we work on it.'}</p>${suggested&&!d.action?`<p class="muted">From what you have shared, this might help:</p>${button('action',suggested,WALTER_DIAGNOSTIC_ACTIONS[suggested])}`:''}<div class="actions">${alternatives.filter(id=>d.action||id!==suggested).map(id=>button('action',id,WALTER_DIAGNOSTIC_ACTIONS[id])).join('')}</div>${d.declined.length?`<details><summary>Ways you said did not help this time</summary><div class="actions">${d.declined.map(id=>button('action',id,'Try again: '+WALTER_DIAGNOSTIC_ACTIONS[id])).join('')}</div></details>`:''}
+    <div class="actions">${d.action?button('stuck','yes','That did not help'):''}<button type="button" class="btn quiet small" data-wd-close>Back to my work</button></div><p class="muted">Your choices help me choose support. You can change your mind at any time.</p></section>`;
+}
+function walterDiagnosticLessonContext(it){
+  if(!it?.st||it.st.done||!it.step||!['guided','repair','independent','delayed','mixed'].includes(it.phase))return null;
+  const unit5=typeof walterUnit5Lesson==='function'&&walterUnit5Lesson(it.lid||lp?.id),card=it.step.unit5;
+  const sharedFraction=['fraction-area','fraction-line','fraction-algorithm'].includes(it.spec.kind);
+  const transfer=it.st.transferCheck,open=transfer&&['offer','working'].includes(transfer.mode);
+  if(transfer?.mode==='complete')return null;
+  const observation=card&&!open?u5InspectBlocks(card,it.st):null,c=open?{status:'draft'}:lpHelpContext(it);
+  const role=card?.role||({denominator:'common',first:'rename',second:'rename',exchange:'whole-and-left',combine:'sum',final:'sum'}[it.st.stage])||it.st.stage||'';
+  const semantic=lpWalterSemanticContext(it);
+  // The pack's spiral-review cards share an engine but teach different subjects.
+  const reviewFamily={'times-ten':'shift','divide-ten':'shift',cilantro:'multiply','equation-bank':'powers','power-bank':'powers','place-two':'placevalue','compare-decimals':'compare','round-thousandth':'rounding',steaks:'expressions'};
+  if(it.spec.kind==='weekly-review'&&Object.hasOwn(reviewFamily,lp?.homework?.itemId))semantic.family=reviewFamily[lp.homework.itemId];
+  const route=walterDiagnosticRoute(semantic,role,!!(unit5||card||sharedFraction));
+  return {key:lpWalterContextKey(it)+(open?':open-problem':''),...route,status:c.status||'draft',pattern:observation?.mismatch?.pattern||(observation?'same-amount':''),open:!!open};
+}
+function walterDiagnosticPracticeContext(){
+  if(!cur||!hwWalterEligible())return null;
+  const card=phase==='wt'?u5PracticeWorkspaceCard():null;
+  if(phase==='wt'&&sc.state!=='open')return null;
+  const ctx=hwWalterContext(),obs=card?u5InspectBlocks(card,cur):null;
+  return {key:ctx.key,...walterDiagnosticRoute(hwWalterSemanticContext(ctx),card?.role||'fraction',!!card||['fractions','fracbasics','fracaddsub'].includes(cur.skill)),status:ctx.observation||'draft',pattern:obs?.mismatch?.pattern||(obs?'same-amount':'')};
+}
+function walterDiagnosticMount(owner,context,{deliver,saveWork,redraw,example,current,rate}){
+  if(!context)return;
+  const d=walterDiagnosticState(owner,context);
+  const nearby=app.querySelector('#lpmsg, #transfer-message, #cmsg')||app.querySelector('.prompt');
+  const anchor=nearby||app.querySelector('.pilot-task')||app.querySelector('#lpwork')||app.querySelector('#hwwalter')||app;
+  anchor.insertAdjacentHTML(nearby?'afterend':'beforeend',walterDiagnosticHTML(d,context));
+  const panel=app.querySelector('#walter-diagnostic');
+  const active=()=>{if(!panel.isConnected||owner.walterDiagnostic!==d)return false;const next=current();if(!next||next.key!==context.key)return false;context=next;return true;};
+  app.querySelectorAll('#lpwork .lpans, #transfer-answer, #ans, #cans, #preans').forEach(input=>input.addEventListener('input',()=>walterDiagnosticWorkChanged(owner)));
+  const refresh=()=>{walterDiagnosticTrim(owner);saveWork();redraw();app.querySelector('#walter-diagnostic')?.focus({preventScroll:true});};
+  panel.querySelector('[data-wd-open]')?.addEventListener('click',()=>{if(!active())return;d.open=true;refresh();});
+  panel.querySelector('[data-wd-close]')?.addEventListener('click',()=>{if(!active())return;d.open=false;saveWork();redraw();(app.querySelector('#transfer-answer, #lpin, [data-lpi], #cans, #ans, #lpcheck')||app.querySelector('[data-wd-open]'))?.focus({preventScroll:true});});
+  panel.querySelector('#wd-topic')?.addEventListener('change',e=>{if(!active())return;if(walterDiagnosticTopics(context).includes(e.target.value)){d.topic=e.target.value;d.pick='';d.message='';d.action='';d.declined=[];d.probeOpen=false;refresh();}});
+  for(const type of ['report','start-probe','probe','action','stuck'])panel.querySelectorAll(`[data-wd-${type}]`).forEach(b=>b.addEventListener('click',()=>{
+    if(!active())return;
+    if(type==='stuck'&&d.lastActionSignature)rate?.(d.lastActionSignature);
+    const reply=walterDiagnosticReply(d,context,type,b.getAttribute('data-wd-'+type));
+    if(type==='action'&&reply)d.lastActionSignature=reply.signature;
+    if(reply){
+      const observation={context:context.key,event:type,...reply.diagnostic};
+      const prior=(owner.walterDiagnostics||[]).at(-1);
+      if(!prior||JSON.stringify(prior.observation)!==JSON.stringify(observation))owner.walterDiagnostics=[...(owner.walterDiagnostics||[]),{t:Date.now(),observation}].slice(-12);
+      if(reply.fresh)deliver(reply);
+    }
+    if(type==='action'&&d.action==='example'){d.open=false;example();}
+    refresh();
+  }));
+}
+function walterDiagnosticLessonBind(it){
+  const context=walterDiagnosticLessonContext(it);if(!context)return;
+  walterDiagnosticMount(it.st,context,{
+    current:()=>lp?.items[lp.i]===it?walterDiagnosticLessonContext(it):null,
+    rate:signature=>walterRecordRating(it.st.walterEvents,signature,'stuck'),
+    deliver:reply=>{
+      const st=it.st;st.walterEvents=Array.isArray(st.walterEvents)?st.walterEvents:[];
+      st.walterEvents.push({step:st.k,stepId:'diagnostic',id:'diagnostic',type:'clue',move:reply.move,work:reply.work,signature:reply.signature,text:reply.text,context:lpWalterContextKey(it),t:Date.now(),tries:st.tries||0,diagnostic:reply.diagnostic});
+      st.helps=(+st.helps||0)+1;lpWalterTrimEvents(st);
+      // Open-problem support must travel through its own evidence boundary too.
+      if(context.open){const t=transferState(it);t.delivered.push({id:reply.signature,text:reply.text});t.delivered=t.delivered.slice(-12);}
+    },saveWork:()=>lpSaveResume(),redraw:()=>lpRender(),example:()=>{
+      // Explicitly requested models are supported work; never advance a step.
+      lpDifferentExample(it);
+    }
+  });
+}
+function walterDiagnosticPracticeBind(){
+  const context=walterDiagnosticPracticeContext();if(!context)return;
+  const owner=cur;walterDiagnosticMount(owner,context,{
+    current:()=>cur===owner?walterDiagnosticPracticeContext():null,
+    rate:signature=>{walterRecordRating(cur.walterHelp,signature,'stuck');hwWalterSyncEvidence();},
+    deliver:reply=>{cur.studied=true;if(phase==='wt')sc.helped=true;hwRecordHelp(hwWalterContext(),'diagnostic','clue',0,reply.signature,reply.text,reply.work,reply.diagnostic);},
+    saveWork:()=>{const a=app.querySelector('#ans'),c=app.querySelector('#cans'),p=app.querySelector('#preans');if(a)lastAnswer=a.value;if(c)sc.val=c.value;if(p)preVal=p.value;return save();},redraw:()=>render(),example:()=>hwOpenDifferentExample()
+  });
+}
+// Worksheet cells can change without a full screen render. A conversation must
+// follow the selected box, and detached controls must not act on the new box.
+function walterDiagnosticPracticeRefresh(){
+  if(!cur)return;
+  const context=walterDiagnosticPracticeContext(),panel=app.querySelector('#walter-diagnostic');
+  if(!panel)return; // Initial screen binding mounts once, after the worksheet.
+  if(!context){panel?.remove();return;}
+  if(cur.walterDiagnostic?.key===context.key&&panel){walterDiagnosticWorkChanged(cur);return;}
+  panel?.remove();walterDiagnosticPracticeBind();
+}
+
+function walterDiagnosticWorkChanged(owner){
+  if(!owner?.walterDiagnostic?.open)return;
+  const note=app.querySelector('#wd-observation');
+  if(note)note.textContent='Your work changed. The next conversation will use the updated work; your entry still needs its own check.';
+}
+
+// Bound detail rather than requests. Support totals and the compact per-context
+// delivery ledger survive trimming; checked arithmetic and drafts are untouched.
+function walterDiagnosticTrim(owner,budget=10000){
+  if(!owner?.walterDiagnostic)return;
+  const events=Array.isArray(owner.walterEvents)?owner.walterEvents:[],diagnostic=events.filter(e=>e.id==='diagnostic');
+  let removed=0;
+  while(diagnostic.length>12){const event=diagnostic.shift();events.splice(events.indexOf(event),1);removed++;}
+  const history=owner.walterDiagnostics;
+  const bytes=()=>JSON.stringify({events:diagnostic,history,d:owner.walterDiagnostic}).length;
+  while(bytes()>budget&&(history.length||diagnostic.length)){
+    if(history.length)history.shift();else{const event=diagnostic.shift();events.splice(events.indexOf(event),1);removed++;}
+  }
+  if(removed)owner.walterEventsTrimmed=(+owner.walterEventsTrimmed||0)+removed;
 }
 // ---- session ----
 function lpBlueprint(id){ return LP_LESSONS[id]||null; }
@@ -10516,7 +10835,7 @@ function lpRecord(it, extra){ if(lp.homework)return fractionHomeworkRecord(it,ex
   const fingerprint=lpFingerprint(sp), repeated=!!it.repeated||!!(fingerprint&&!model&&(S.lessonLog||[]).slice(-80).some(e=>lpRecordFingerprint(e)===fingerprint));
   const e=Object.assign({t:Date.now(), id:lid, lesson:(LP_LESSONS[lid]||lp.bp).lesson, phase:it.phase, kind:sp.kind||it.phase, q:it.spec?lpPlain(sp.recordQuestion||sp.title||""):"",
     ...(sp.walterStory?.checkedRoute?{problemForm:"word-problem",storyArithmeticMisses:Math.max(0,+st.storyArithmeticMisses||0)}:{}),
-    ...transferEvidence(it),fractionRevisionCount:+st.fractionRevisionCount||0,fractionRevisions:st.fractionRevisions||[],evidenceVersion:2,load:+it.load||+lp.load||1,fingerprint,repeated:repeated?1:0,features:sp.features||null,stepEvents:lpTrimEvents(st.stepEvents),eventsTrimmed:+st.eventsTrimmed||0,
+    ...transferEvidence(it),diagnosticObservations:(st.walterDiagnostics||[]).slice(-24),fractionRevisionCount:+st.fractionRevisionCount||0,fractionRevisions:st.fractionRevisions||[],evidenceVersion:2,load:+it.load||+lp.load||1,fingerprint,repeated:repeated?1:0,features:sp.features||null,stepEvents:lpTrimEvents(st.stepEvents),eventsTrimmed:+st.eventsTrimmed||0,
     ok:st.done?1:0, methodOk:method, methodEvidence:sp.methodEvidence||sp.kind||it.phase, teacherFocus:!!lp.focus, answerOnly:oneShot?1:(st.answerOnly===null||st.answerOnly===undefined?null:(st.answerOnly?1:0)), answerPreviewed:st.answerPreviewed?1:0,
     helps:+st.helps||0, tries:+st.tries||0, firstTry:method&&!st.tries&&!st.helps&&!st.answerPreviewed&&!repeated?1:0,
     ...(st.diagramObservations?.length?{diagramObservations:diagramHistory(st)}:{}),
@@ -10563,7 +10882,7 @@ function lpRender(){ const it=lp.items[lp.i], bp=lp.bp, n=lp.items.length;
   const workspace=walterUnit5Work(it);
   if(workspace)body=`<div class="pilot-workbench"><div class="pilot-task">${body}</div>${walterWorkspaceHTML(workspace,it.workspaceOpen)}</div>`;
   app.innerHTML=head+body; app.querySelector("#back").onclick=()=>{ lpSaveResume(); lp=null; home(); };
-  lpBind(it); fractionReconsiderBind(it); lpDialogueBind(it); if(workspace)walterWorkspaceBind(workspace,next=>walterUnit5SaveWork(it,next),open=>{it.workspaceOpen=open;});
+  lpBind(it); fractionReconsiderBind(it); lpDialogueBind(it); walterDiagnosticLessonBind(it); if(workspace)walterWorkspaceBind(workspace,next=>walterUnit5SaveWork(it,next),open=>{it.workspaceOpen=open;});
   if(typeof bindReadAloud==='function')bindReadAloud(app); armWalterMotion(); lpSaveResume(); if(typeof noteScreen==="function") noteScreen(); }
 function lpVideoHTML(){ const n=lp.bp.lesson, u=lpUnit(lp.id);
   if(lp.id==='U3L1') return `<div class="lpvideo video-choices"><a class="video-link" id="lpvideoLesson" data-video-type="lesson" href="https://videoplayer.swunmath.com/?videoType=lesson&amp;videoCode=G5_U3_L1" target="_blank" rel="noopener noreferrer">Watch the full lesson: Unit 3 Lesson 1</a><a class="video-link" id="lpvideo" data-video-type="strategy" href="https://videoplayer.swunmath.com/?videoType=strategy&amp;videoCode=G5_U3_L1" target="_blank" rel="noopener noreferrer">Watch the strategy: Unit 3 Lesson 1</a><p>Opens SWUN’s site in a new tab.</p></div>`;
@@ -10619,7 +10938,7 @@ function lpWalterSemanticContext(it){const c=lpHelpContext(it),st=it.st,question
   // future script entries, hidden checker values, or unchecked drafts as number provenance.
   return {contextKey:lpWalterContextKey(it),mistakeNotes:S?.walterMistakeNotes!==false,storyCheckedRoute:it.spec.walterStory?.checkedRoute===true,storyPlanChecked:it.spec.walterStory?.checkedRoute===true&&it.st.storyPlanChecked===true,family:it.spec.kind==='decimal-container-story'?'decimal-containers':it.spec.walterStory?.checkedRoute===true&&it.spec.storyTask?.storyType==='lesson-story'?'lesson-story':(it.spec.walterStory&&(it.spec.walterStory.checkedRoute===true||decimalStorySupportEnabled()))||it.step.evidence?.component?.startsWith('decimal-story-')?'decimal-story':LP_LESSONS[it.lid||lp?.id]?.skill||(lp?.homework?lp.bp.skill:''),kind:c.kind,component:c.component,stage:c.stage,role:c.role,last:c.last,relationship:it.step.walter?.relationship||it.spec.walterStory?.relationship||'',unknown:it.step.walter?.unknown||it.spec.walterStory?.unknown||'',storyStage:it.step.walter?.stage||'',question,visibleText:[walterRenderedText(it.spec.title||''),it.spec.walterStory&&(it.spec.walterStory.checkedRoute===true||decimalStorySupportEnabled())?walterRenderedText(it.spec.walterStory.story):'',question].join(' '),acceptedText:'',work:{
     earlier:(st.stepEvents||[]).filter(e=>e.step<st.k&&e.outcome==='ok'&&e.support!=='answer-confirmed').length,
-    field:c.field,
+    field:c.field,load:lp?.load,
     draft:walterDraftFingerprint(st.draft?.k===st.k?
       (c.field>=0?st.draft.values?.[c.field]:it.step.input?.type==='tiles'?
        st.draft.values?.[0]||st.tiles:st.draft.values||st.draft.selected||st.draft.group):''),
@@ -10653,7 +10972,7 @@ function lpDifferentExample(it){
   }
   if(!demo.st.done)return;
   const st=it.st;st.walterEvents=Array.isArray(st.walterEvents)?st.walterEvents:[];
-  if(!st.walterEvents.some(e=>e.id==='different-example')){
+  if(!st.walterEvents.some(e=>e.id==='different-example'&&e.context===lpWalterContextKey(it))){
     st.walterEvents.push({step:st.k,stepId:'different-example',id:'different-example',type:'modeled',depth:0,context:lpWalterContextKey(it),text:lpPlain(sp.title||'Different worked example').slice(0,500),t:Date.now(),tries:+st.tries||0});st.helps=(+st.helps||0)+1;
     if(['delayed','mixed'].includes(it.phase)&&!st.walterProbe)st.walterProbe=st.tries?'miss-before-help':'help-before-miss';
   }
@@ -10783,7 +11102,7 @@ function lpRepairHTML(it){ const r=it.rspec, rp=it.rep;
     <div class="inline-err" id="lpmsg" tabindex="-1" role="status" aria-live="polite">${r.unit5&&rp.unit5Cue?'<b>Walter:</b> '+esc(rp.unit5Cue):rp.msg||''}</div>
     ${r.unit5?`<div class="actions"><button class="btn quiet" id="u5repairhelp">${rp.unit5Model?'Look at the model':rp.unit5Cue?'Still stuck':'Help me'}</button></div>${rp.unit5Model?u5ModelHTML(it.step.unit5,'u5repairmodel'):''}`:`<div class="actions"><button class="btn quiet" id="lprepairinline">${rp.inlineWalter?.move==='smaller'?'Look at the model':rp.inlineWalter||rp.tries?'Still stuck':'Help me'}</button></div>
     ${rp.inlineWalter?.move==='smaller'?walterInlineModel({kind:'repair-spot',family:(LP_LESSONS[it.lid||lp.id]||lp.bp).skill},rp.inlineWalter,'walter-repair-model'):''}`}
-    <details class="walter-more"${rp.walterOpen?' open':''}><summary>More help</summary>${lpRepairWalterHTML(it)}</details></div>`;
+    <details class="walter-more"${rp.walterOpen?' open':''}><summary>More help</summary>${lpRepairWalterHTML(it)}</details>${lpExampleHTML(it)}${it.st.exampleNote?`<p class="muted">${esc(it.st.exampleNote)}</p>`:""}</div>`;
   return lpWorkHTML(it); }
 function lpSummaryHTML(){ if(lp.homework)return fractionHomeworkSummaryHTML(); const rs=lp.results, own=rs.filter(e=>e.phase==="independent"||e.phase==="delayed"||e.phase==="mixed"), right=own.filter(checkedProgressComplete).length, o=lp.focus?teacherFocusState(lp.id):lpState(lp.id);
   const due=+o.due>0?new Date(+o.due).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}):"";
@@ -10801,7 +11120,7 @@ function lpBind(it){ const q=s=>app.querySelector(s);
   if(it.phase==="intro"){ q("#lpopenproblem")?.addEventListener("click",transferStartOpen); q("#lpgo").onclick=lpNext; q("#lpgo").focus({preventScroll:true}); return; }
   if(it.phase==="explain"){ q("#lpexpsave").onclick=()=>{ const t=String(q("#lpexp").value||"").trim().slice(0,280); if(!t){ q("#lpexpmsg").textContent="Type a thought, choose ‘I said it aloud,’ or skip."; return; } lpRecord(it, {kind:"explain", ok:1, text:t, mode:"typed", skipped:0}); lpNext(); }; q("#lpexpsaid").onclick=()=>{ lpRecord(it, {kind:"explain", ok:0, mode:"spoken", selfReported:1, skipped:0}); lpNext(); }; q("#lpexpskip").onclick=()=>{ lpRecord(it, {kind:"explain", ok:0, mode:"skipped", skipped:1}); lpNext(); }; return; }
   if(it.phase==="summary"){ q("#lphome").onclick=()=>{ lp=null; home(); }; q("#lpagain").onclick=()=>{if(lp.homework?.weekly){const item=weeklyHomeworkItem(lp.homework.itemId);if(item?.fresh)decimalDivisionGridStart(item.method);else weeklyHomeworkHub(item?.grid?'grid':'all');}else if(lp.homework)hwEntry();else lpStart(lp.id, false, null, lp.focus);}; return; }
-  if(it.phase==="repair" && it.rep.stage==="spot"){ app.querySelectorAll("[data-lpr]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.lpr, r=it.rspec, rp=it.rep; rp.picked=i;
+  if(it.phase==="repair" && it.rep.stage==="spot"){ lpExampleBind(it,()=>{}); app.querySelectorAll("[data-lpr]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.lpr, r=it.rspec, rp=it.rep; rp.picked=i;
       if(typeof walterLinkNextCheck==='function')walterLinkNextCheck(it.st.walterEvents||[],lpWalterContextKey(it),{status:i===r.wrongAt?'accepted':'miss',code:'spot'});
       if(i===r.wrongAt){ rp.stage="fix"; if(rp.tries) it.st.tries+=rp.tries; it.st.msg=`You found the first slip. Rebuild the step and check your own work.`; it.st.msgKind="ok"; lpRender(); }
       else { rp.tries++; rp.msg = i===0?'Compare your selected line with the original question. Check whether it keeps the same amounts and operation.':'Read your selected line with the one above it. Test what changed, then check the earlier lines in order.'; it.st.codes.push("spot"); if(r.unit5)u5RepairHelp(it,true); lpRender(); } });
@@ -11868,7 +12187,7 @@ function fractionReconsiderApply(it,raw){
  st.stepEvents=lpTrimEvents(st.stepEvents);st.k=arithmeticStart+1;
  st.draft=null;st.badIndex=-1;st.msg='Your new piece count works for both fractions. Rename each amount with this piece size, then check the later steps again.';st.msgKind='';
  st.helpShown=[];st.walterOpen=false;st.walterChoice=null;st.inlineWalter=null;st.unit5Help=null;st.exampleNarr='';st.exampleNote='';
- delete st.walterClarification;delete st.walterApproaches;delete st.fractionReconsiderEdit;
+ delete st.walterClarification;delete st.walterApproaches;delete st.walterDiagnostic;delete st.fractionReconsiderEdit;
  delete st.unit5BlockReview;delete st.unit5BlockAcknowledged;delete st.unit5BlockLast;delete st.unit5BlockFocus;st.unit5BlockWork={};
  it.step=it.spec.next(st);lpPrepareStep(it);
  return result;
@@ -12638,7 +12957,7 @@ function fractionHomeworkSave(){
 }
 function fractionHomeworkRecord(it,extra){
   if(it.recorded)return null;it.recorded=true;const st=it.st||{};
-  const e={t:Date.now(),q:lp.homework.label,...(lp.homework.weekly?{week:lp.homework.week,itemId:lp.homework.itemId}:{}),method:it.spec.methodName||it.spec.kind,ok:st.done?1:0,methodOk:st.done&&!st.skipped?1:0,helps:+st.helps||0,tries:+st.tries||0,firstTry:0,hw:1,phase:'homework',fractionRevisionCount:+st.fractionRevisionCount||0,fractionRevisions:st.fractionRevisions||[],stepEvents:lpTrimEvents(st.stepEvents),walterHelp:(st.walterEvents||[]).slice(-60),...(st.diagramObservations?.length?{diagramObservations:diagramHistory(st)}:{}),...extra};
+  const e={t:Date.now(),q:lp.homework.label,...(lp.homework.weekly?{week:lp.homework.week,itemId:lp.homework.itemId}:{}),method:it.spec.methodName||it.spec.kind,ok:st.done?1:0,methodOk:st.done&&!st.skipped?1:0,diagnosticObservations:(st.walterDiagnostics||[]).slice(-24),helps:+st.helps||0,tries:+st.tries||0,firstTry:0,hw:1,phase:'homework',fractionRevisionCount:+st.fractionRevisionCount||0,fractionRevisions:st.fractionRevisions||[],stepEvents:lpTrimEvents(st.stepEvents),walterHelp:(st.walterEvents||[]).slice(-60),...(st.diagramObservations?.length?{diagramObservations:diagramHistory(st)}:{}),...extra};
   if(lp.homework.week===DECIMAL_GRID_PACK){
     e.gridOutcome=st.helps?'supported':st.tries?'retried':'no-hint';
     if(lp.homework.gridCheck)e.gridCheck=true;
