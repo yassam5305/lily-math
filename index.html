@@ -536,6 +536,20 @@ button.u5-block:focus-visible{outline:3px solid #111;outline-offset:-3px;z-index
 }
 
 
+/* Calm help: the problem and primary actions stay ahead of optional tools. */
+.walter-calm-help{margin:10px 0;min-width:0;font-size:16px}
+.walter-calm-help.has-reply{padding:14px;border:1px solid #c6d6e5;border-left:4px solid #276482;border-radius:12px;background:#f3f8fc}
+.walter-calm-help h3{margin:0 0 8px;font-size:18px}
+.walter-calm-help p{margin:8px 0;line-height:1.5}
+.walter-help-menus{display:flex;flex-wrap:wrap;gap:8px 20px}
+.walter-help-menus>details{flex:1 1 200px;min-width:0}
+.walter-calm-help summary{cursor:pointer;min-height:44px;padding:10px 0;color:#28536e;font-size:15px}
+.walter-calm-help select{display:block;width:100%;max-width:100%;font:inherit;margin:8px 0}
+.wd-methods{display:grid;grid-template-columns:1fr;gap:8px;margin:6px 0 10px}
+.wd-methods .btn{text-align:left;min-height:44px;white-space:normal}
+.walter-calm-help #wd-more{border-top:1px solid var(--line);margin-top:10px}
+.walter-calm-help [hidden],.lpmsg[hidden]{display:none}
+.lpmsg:empty{display:none}
 .spboard{position:relative;flex:1;min-width:0}
 .spboard canvas{width:100%}
 .pilot-paper .scratch canvas{height:auto;aspect-ratio:1}
@@ -1852,7 +1866,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.19.0 · November 15, 2026";
+const BUILD="v10.20.0 · November 16, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -7294,7 +7308,7 @@ function u5BlocksHTML(c,owner){
     return `<div class="u5-block-amount${owner?.unit5BlockFocus===key?' u5-block-target':''}"><p class="u5-original-label">${plans.length>1?(i?'Second':'First')+' original amount':'Original amount'}: ${esc(u5GivenText(f))}</p><div class="u5-reference" role="img" aria-label="Original shaded amount ${esc(u5GivenText(f))}">${original}</div><p><b>Your blocks</b> — ${c.role==='pieces-in-wholes'?'shade only the full wholes for this step.':'shade the same amount.'}</p>${mine}</div>`;
   }).join('');
   const line=['benchmark','estimate-total','jump','landing'].includes(c.role)?u5Model(c).visual:'';
-  return `<section class="u5-blocks" aria-label="Fraction blocks workspace"><h3>Work with blocks</h3><p>Tap to shade or erase. Walter looks at your blocks and answer when you press Check or Help me.</p>${line}${body}</section>`;
+  return `<section class="u5-blocks" aria-label="Fraction blocks workspace"><h3>Work with blocks</h3><p>Tap a block to shade it or erase it. Walter checks these blocks with your answer.</p>${line}${body}</section>`;
 }
 function u5BindBlocks(owner,persist){
   app.querySelectorAll('[data-u5-block]').forEach(button=>button.addEventListener('click',()=>{
@@ -7329,7 +7343,8 @@ function u5InspectBlocks(card,owner){
 }
 function u5BlockCue(card,obs,base='',typedOk=false,small=false){
   const bad=obs.mismatch;
-  if(card.role==='pieces-in-wholes')return (typedOk?'Your typed answer checks out. Fix the blocks, or keep your answer with the drawing unfinished. ':'')+(bad?(small?'Match all the blocks in one full whole. Repeat for each full whole in the original.':'For this step, shade only the full wholes shown in the original. Save the extra fraction for the next step.'):'Your blocks match the full wholes for this step. ')+(bad?'':base||'Count the shaded pieces in those wholes.');
+  if(typedOk&&bad&&!small)return 'Your number works. Your picture does not match yet. You can finish it or continue without it.';
+  if(card.role==='pieces-in-wholes')return (typedOk?'Your number works. ':'')+(bad?(small?'Match all the blocks in one full whole. Repeat for each full whole in the original.':'For this step, shade only the full wholes shown in the original. Save the extra fraction for the next step.'):'Your blocks match the full wholes for this step. ')+(bad?'':base||'Count the shaded pieces in those wholes.');
   if(!bad)return 'Your shaded amount matches the original. '+(base||'Use your drawing to work out the answer box above.');
   const location=obs.drawings.length>1?(obs.drawings.indexOf(bad)===0?'first':'second')+' drawing':'drawing';
   const preserve=obs.drawings.some(x=>x.matches)?'Keep the drawing that already matches. ':'';
@@ -7346,7 +7361,7 @@ function u5BlockCue(card,obs,base='',typedOk=false,small=false){
       :bad.pattern==='whole-only'?`Your ${location} shows only full wholes. Compare it with the partly shaded whole in the original too.`
       :`Your ${location} covers a different amount from the original. Compare the shaded areas, one whole at a time.`;
   }
-  return (typedOk?'Your typed answer checks out. Fix the blocks, or keep your answer with the drawing unfinished. ':'')+preserve+cue+(!typedOk&&!small&&base?' '+base:'');
+  return (typedOk?'Your number works. ':'')+preserve+cue+(!typedOk&&!small&&base?' '+base:'');
 }
 function u5BlockRecord(owner,card,obs,submitted,context,outcome){
   const signature=JSON.stringify([context,card.role,obs.signature,(Array.isArray(submitted)?submitted:[submitted]).slice(0,4).map(x=>String(x??'').slice(0,64)),outcome]);
@@ -7888,7 +7903,7 @@ function render(){
       const compact=!cur.ws,ctx=hwWalterEligible()?hwWalterContext():null;
       const reply=ctx&&cur.mainHelp?.[ctx.key]?.lastReply;
       body+=`<div class="hints" id="hints" aria-live="polite">${ctx?hwMainHintHTML(ctx):''}</div>
-        <div class="actions"><button class="btn primary" id="check">Check</button>${onrampWaiting()?"":`<button class="btn quiet" id="showhint">${cur.ws?"Help with this box":reply?.move==='smaller'?"Look at the model":reply?"Still stuck":"Help me"}</button>`}${compact?'':withMeBtn()+exampleBtn()}</div>
+        <div class="actions"><button class="btn primary" id="check">Check</button>${onrampWaiting()?"":`<button class="btn quiet" id="showhint">${cur.ws?"Help with this box":"Help me"}</button>`}${compact?'':withMeBtn()+exampleBtn()}</div>
         ${ctx?`<div id="walter-main-slot" data-context="${esc(ctx.key)}">${hwMainModelHTML(ctx)}</div>`:''}
         ${compact&&reply?withMeBtn():''}${exampleHTML()}`;
 
@@ -8577,7 +8592,7 @@ function stepHTML(s,i,dim,withCheck){
       sub=`<div class="substep ${sc.state==="ok"?"ok":sc.state==="revealed"?"bad":sc.state==="confirm"||sc.state==="explain"?"confirm":""}">${mixed&&open?mixedWalkReminder():s.unit5&&open?`<p class="muted" style="margin:0 0 8px">Given <b>${esc(cur.unit5Given||plain(cur.prompt))}</b></p>`:''}<div class="cq">${c.q}</div>${typeof readAloudButton==='function'?readAloudButton(focused&&sc.msg?[c.q,sc.msg,hasModel?(mixed?mixedWalkStripAction(s.mixedRole,sc.mixedFocus):u5Model(u5ModelForEntry(s.unit5,sc.lastCheck?.draft)).action):''].join(' '):c.q,'step-prompt'):''}${checkCtlHTML(c)}
         <div class="inline-msg${sc.unit5BlockReview?' block-review':''}" id="cmsg" role="status" aria-live="polite" tabindex="-1">${focused&&open&&hasCue&&sc.msg?'<b>Walter:</b> ':''}${sc.msg}</div>
         ${mixed&&open?mixedWalkForm(s.mixedRole):''}${settled && s.after && !sc.xdone?`<div class="res after">${s.after}</div>`:""}${explainHTML}
-        ${open?`<div class="actions" style="margin-top:10px"><button class="btn primary" id="cstep">Check</button>${sc.state==="open"?`<button class="btn quiet" id="stephelp" title="Get the next clue for this step. You can ask before you try.">${helpLbl}</button>`:""}${sc.unit5BlockReview?'<button type="button" class="btn quiet" id="keepblockanswer">Keep my checked answer</button>':''}</div>`:""}
+        ${open?`<div class="actions" style="margin-top:10px"><button class="btn primary" id="cstep">Check</button>${sc.state==="open"?`<button class="btn quiet" id="stephelp" title="Get the next clue for this step. You can ask before you try.">${helpLbl}</button>`:""}${sc.unit5BlockReview?'<button type="button" class="btn quiet" id="keepblockanswer">Continue without the picture</button>':''}</div>`:""}
         ${open&&inlineModel?walterInlineModel(hwWalterSemanticContext(hwWalterContext()),inlineModel,'walter-step-model'):''}
         ${focused&&open?u5BlocksHTML(u5PracticeWorkspaceCard(),cur):''}${focused&&open&&hasModel?(mixed?mixedWalkStrip(s.mixedRole):u5ModelHTML(u5ModelForEntry(s.unit5,sc.lastCheck?.draft),'u5practicemodel')):''}
         ${focused&&open&&hasModel?`<details${exampleOpen?' open':''}><summary>More help</summary><button type="button" class="btn quiet small" id="hwaskexample">See a different worked example</button></details>`:""}</div>`;
@@ -9221,24 +9236,23 @@ function walterWorkspaceCompose(work,savePatch){
   const tabs=document.createElement('div');tabs.className='walter-work-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Choose your working tool');
   const math=document.createElement('div');math.id='walter-math-panel';math.setAttribute('role','tabpanel');math.setAttribute('aria-labelledby','walter-math-tab');
   scratch.setAttribute('role','tabpanel');scratch.setAttribute('aria-labelledby','walter-scratch-tab');
-  if(blocks){math.append(blocks);blocks.querySelector('h3').textContent='Math model';}
+  if(blocks){math.append(blocks);blocks.querySelector('h3').hidden=true;}
   else math.innerHTML='<p>Your math tools and answer fields are in the current step. Use them when you want Walter to check your work.</p><button type="button" class="btn quiet" data-work-return>Back to my step</button>';
   tabs.innerHTML='<button type="button" class="btn quiet" role="tab" id="walter-math-tab" aria-controls="walter-math-panel">Math model</button><button type="button" class="btn quiet" role="tab" id="walter-scratch-tab" aria-controls="walter-scratch-panel">My scratch paper</button>';
   paper.append(tabs,math,scratch);
   const pane=document.createElement('div');pane.className='walter-task-pane';
-  for(const child of [...area.childNodes]){pane.append(child);if(child===actions)break;}
+  const lastTask=area.querySelector('#walter-diagnostic')||area.querySelector('#lpmsg')||actions;
+  for(const child of [...area.childNodes]){pane.append(child);if(child===lastTask)break;}
   const footer=document.createElement('div');footer.className='walter-work-footer';
   for(const child of [...area.childNodes])footer.append(child);
   area.append(pane,paper,footer);area.classList.add('walter-unified-work');
   app.querySelector('.pilot-workbench')?.classList.add('walter-unified-bench');
   const dock=document.createElement('div');dock.className='walter-work-dock';
-  const title=task.querySelector('.lptitle')?.textContent||'Your current problem';
-  const label=document.createElement('b');label.textContent=title;dock.append(label);
+  dock.setAttribute('aria-label','Check your work while using the picture');
   const buttons=document.createElement('div');buttons.className='actions';
   const check=area.querySelector('#lpcheck'),help=area.querySelector('#lpunit5help,#lpinlinehelp,#lphelp');
   const proxy=(text,target)=>{const b=document.createElement('button');b.type='button';b.className='btn quiet small';b.textContent=text;b.onclick=()=>{target.click();};buttons.append(b);};
   proxy('Check',check);if(help)proxy('Help me',help);
-  const back=document.createElement('button');back.type='button';back.className='btn quiet small';back.textContent='My answer';back.setAttribute('data-work-return','');buttons.append(back);
   dock.append(buttons);paper.insertBefore(dock,heading);
   const returnToWork=()=>{const target=pane.querySelector('.lpans,input,button');target?.focus({preventScroll:true});pane.scrollIntoView({block:'start',behavior:'smooth'});};
   paper.querySelectorAll('[data-work-return]').forEach(b=>b.onclick=returnToWork);
@@ -10599,6 +10613,7 @@ function walterDiagnosticState(owner,context){
   const probe=WALTER_DIAGNOSTIC_TOPICS[d.topic];d.pick=[...probe.options.map(x=>x[0]),'unsure'].includes(d.pick)?d.pick:'';
   d.declined=Array.isArray(d.declined)?[...new Set(d.declined.filter(x=>walterDiagnosticActions(context).includes(x)))].slice(-7):[];
   d.delivered=Array.isArray(d.delivered)?d.delivered.filter(x=>typeof x==='string'&&x.length<=80).slice(-128):[];
+  d.menu=['ways','words'].includes(d.menu)?d.menu:'';
   d.probeOpen=d.probeOpen===true;d.open=d.open===true;d.alternatives=d.alternatives===true;d.message=typeof d.message==='string'?d.message.slice(0,700):'';
   const savedWord=d.word;d.word=typeof savedWord==='string'&&walterTopicWords(d.topic).includes(savedWord)?savedWord:'';
   if(savedWord&&!d.word)d.message='';
@@ -10641,8 +10656,8 @@ function walterDiagnosticActionText(d,context){
   if(d.action==='explain')return d.topic==='rename'&&Number.isInteger(context.semantic?.checkedUnit)?'That bottom number works for both fractions. You can keep it. Try it on one fraction.':rule+' Point to the part of your problem where this idea matters.';
   if(d.action==='model')return rule+' '+(context.semantic?walterTeachingReply(context.semantic,'smaller')?.text||'Sketch this relationship and label what you know.':'Sketch the relationship and label what you know.');
   if(d.action==='organize')return context.semantic?walterTeachingReply(context.semantic,'plan')?.text||'Name what is known, what is missing, and the relationship between them. Leave the missing quantity blank.':'Name what is known and what is missing.';
-  if(d.action==='strip')return d.topic==='rename'?'Use equal-length strips for the same whole. Shade the same amount on both strips. Try cutting the parts differently.':'Use equal-length strips for the same whole. Outline one given amount. Mark its pieces without changing the amount covered. Compare your outline with your work.';
-  if(d.action==='line')return 'Mark the start and end of one whole on a number line. Place one given amount yourself. Keep the same whole length when you rename or compare amounts.';
+  if(d.action==='strip')return d.topic==='rename'?'Use equal-length strips for the same whole. Shade the same amount on both strips. Try cutting the parts differently.':'Use two strips of the same length. Show the original amount on one. Make your other strip show the same amount.';
+  if(d.action==='line')return 'Mark where one whole starts and ends on a number line. Put the original amount on it. Keep the whole the same length.';
   if(d.action==='check')return d.report==='format'||context.status==='format'?walterEntryFormatText(context.semantic||{}):context.semantic?walterTeachingReply(context.semantic,'test')?.text||'Keep the checked parts. Compare one unfinished step with the quantities, units and relationship it must represent.':'Keep the parts already checked. Choose one unfinished calculation, label what its numbers count, and check it with a drawing or reverse operation.';
   if(d.action==='example')return 'Compare the decision in the different example with your unfinished step. Your original problem stays in place.';
   return '';
@@ -10696,17 +10711,26 @@ function walterDiagnosticVisual(action,d,context){
   if(action==='line')return '<svg viewBox="0 0 280 62" role="img" aria-label="An empty number line. The two end marks define one whole. Place the given amount yourself." style="width:100%;max-width:340px"><path d="M15 24h250M15 14v20M265 14v20" fill="none" stroke="currentColor"/><text x="140" y="52" text-anchor="middle" fill="currentColor" font-size="14">One whole</text></svg>';
   return '';
 }
+// Help methods stay freely available, but only the requested group is expanded.
+// Native disclosures work with touch, keyboard and older saved conversations.
 function walterDiagnosticHTML(d,context){
   const button=(type,id,label)=>`<button type="button" class="btn quiet small" data-wd-${type}="${id}">${esc(label)}</button>`;
-  if(!d.open)return `<section id="walter-diagnostic"><button type="button" class="btn quiet" data-wd-open>Help Walter understand where I’m stuck</button>${walterMathWordsHTML(d.topic)}</section>`;
-  if(d.word&&walterTopicWords(d.topic).includes(d.word))return `<section class="lpclue" id="walter-diagnostic" aria-label="Help with a math word" tabindex="-1"><h3>${esc(WALTER_MATH_WORDS[d.word][0])}</h3><p id="wd-message" role="status">${esc(WALTER_MATH_WORDS[d.word][1])}</p>${walterMathWordsHTML(d.topic)}<div class="actions"><button type="button" class="btn quiet" data-wd-words-back>Other help</button><button type="button" class="btn quiet" data-wd-close>Back to my work</button></div><p class="muted">Your work stays where you left it.</p></section>`;
-  const p=WALTER_DIAGNOSTIC_TOPICS[d.topic],suggested=walterDiagnosticSuggestion(d,context),alternatives=walterDiagnosticActions(context).filter(x=>!d.declined.includes(x));
-  return `<section class="lpclue" id="walter-diagnostic" aria-label="Work out what is getting in the way" tabindex="-1"><h3>Let’s figure out this part</h3>${d.report?`<p id="wd-observation">${esc(walterDiagnosticObservation(context))}</p>`:''}${d.report?`<p>You told me: ${esc(WALTER_DIAGNOSTIC_REPORTS[d.report])}.</p><details id="wd-change-report"><summary>Change what I told Walter</summary>`:'<p>What are you trying to work on?</p>'}<div class="actions">${Object.entries(WALTER_DIAGNOSTIC_REPORTS).map(([id,label])=>button('report',id,label)).join('')}</div>${d.report?'</details>':''}
-    <label for="wd-topic">An idea we could explore</label><select id="wd-topic" style="display:block;width:100%;max-width:100%;font:inherit">${walterDiagnosticTopics(context).map(id=>[id,WALTER_DIAGNOSTIC_TOPICS[id]]).map(([id,t])=>`<option value="${id}"${id===d.topic?' selected':''}>${esc(t.label)}</option>`).join('')}</select>${walterMathWordsHTML(d.topic)}
-    ${d.probeOpen?`${d.pick?'<details id="wd-revisit-probe"><summary>Revisit the idea check</summary>':''}<p>${esc(p.question)}</p><div class="actions">${[...p.options,['unsure','I am not sure yet']].map(([id,label])=>button('probe',id,label)).join('')}</div><p class="muted">This is supported practice of an idea, not a check of your answer.</p>${d.pick?'</details>':''}`:button('start-probe','yes','Try a short idea check')}
-    ${d.message?`<p id="wd-message" role="status">${esc(d.message)}</p>`:''}${d.action?walterDiagnosticVisual(d.action,d,context):''}
-    <p>${d.alternatives?'Choose a different way to explore this step.':'Choose how we work on it.'}</p>${suggested&&!d.action?`<p class="muted">From what you have shared, this might help:</p>${button('action',suggested,WALTER_DIAGNOSTIC_ACTIONS[suggested])}`:''}<div class="actions">${alternatives.filter(id=>d.action||id!==suggested).map(id=>button('action',id,WALTER_DIAGNOSTIC_ACTIONS[id])).join('')}</div>${d.declined.length?`<details><summary>Ways you said did not help this time</summary><div class="actions">${d.declined.map(id=>button('action',id,'Try again: '+WALTER_DIAGNOSTIC_ACTIONS[id])).join('')}</div></details>`:''}
-    <div class="actions">${d.action?button('stuck','yes','That did not help'):''}<button type="button" class="btn quiet small" data-wd-close>Back to my work</button></div><p class="muted">Your choices help me choose support. You can change your mind at any time.</p></section>`;
+  const p=WALTER_DIAGNOSTIC_TOPICS[d.topic],word=d.open&&d.word&&walterTopicWords(d.topic).includes(d.word);
+  const probing=d.open&&d.probeOpen&&!d.pick&&!d.action&&!word;
+  const message=d.open&&!probing?(word?WALTER_MATH_WORDS[d.word][1]:d.message):'';
+  return `<section id="walter-diagnostic" class="walter-calm-help${message?' has-reply':''}" aria-label="Walter’s help" tabindex="-1">
+    ${message?`<h3>${word?esc(WALTER_MATH_WORDS[d.word][0]):'Walter'}</h3><p id="wd-message" role="status">${esc(message)}</p>${typeof readAloudButton==='function'?readAloudButton(message,'wd-reply'):''}${!word&&d.action?walterDiagnosticVisual(d.action,d,context):''}<div class="actions">${!word&&d.action?button('stuck','yes','That did not help'):''}<button type="button" class="btn quiet small" data-wd-close>Back to my work</button>${word?'<button type="button" class="btn quiet small" data-wd-words-back>Other help</button>':''}</div>`:''}
+    ${probing?`<div class="wd-probe"><p>${esc(p.question)}</p><div class="actions">${[...p.options,['unsure','I am not sure yet']].map(([id,label])=>button('probe',id,label)).join('')}</div><p class="muted">This explores an idea. Your answer still needs its own check.</p><button type="button" class="btn quiet small" data-wd-close>Back to my work</button></div>`:''}
+    <div class="walter-help-menus">
+      <details id="wd-ways" name="walter-help-mode" data-wd-menu="ways"${d.menu==='ways'?' open':''}><summary data-wd-open>Try another way</summary><div class="wd-methods">${walterDiagnosticActions(context).filter(id=>!d.declined.includes(id)).map(id=>button('action',id,WALTER_DIAGNOSTIC_ACTIONS[id])).join('')}</div>
+        <details id="wd-more"><summary>Tell Walter more</summary>
+          ${d.declined.length?`<details><summary>Try an earlier way again</summary><div class="actions">${d.declined.map(id=>button('action',id,WALTER_DIAGNOSTIC_ACTIONS[id])).join('')}</div></details>`:''}
+          <details id="wd-change-report"><summary>What feels hard?</summary><div class="actions">${Object.entries(WALTER_DIAGNOSTIC_REPORTS).map(([id,label])=>button('report',id,label)).join('')}</div></details>
+          <details id="wd-ideas"><summary>Explore an idea</summary><label for="wd-topic">Choose an idea</label><select id="wd-topic">${walterDiagnosticTopics(context).map(id=>`<option value="${id}"${id===d.topic?' selected':''}>${esc(WALTER_DIAGNOSTIC_TOPICS[id].label)}</option>`).join('')}</select>${button('start-probe','yes',d.pick?'Revisit the idea check':'Try a short idea check')}${d.pick?`<details id="wd-revisit-probe"><summary>My earlier idea check</summary><p>${esc(p.question)}</p><div class="actions">${[...p.options,['unsure','I am not sure yet']].map(([id,label])=>button('probe',id,label)).join('')}</div></details>`:''}</details>
+        </details>
+      </details>
+      ${walterMathWordsHTML(d.topic).replace('<details class="walter-math-words">',`<details class="walter-math-words" name="walter-help-mode" data-wd-menu="words"${d.menu==='words'?' open':''}>`)}
+    </div></section>`;
 }
 function walterDiagnosticLessonContext(it){
   if(!it?.st||it.st.done||!it.step||!['guided','repair','independent','delayed','mixed'].includes(it.phase))return null;
@@ -10737,16 +10761,53 @@ function walterDiagnosticMount(owner,context,{deliver,saveWork,redraw,example,cu
   const anchor=nearby||app.querySelector('.pilot-task')||app.querySelector('#lpwork')||app.querySelector('#hwwalter')||app;
   anchor.insertAdjacentHTML(nearby?'afterend':'beforeend',walterDiagnosticHTML(d,context));
   const panel=app.querySelector('#walter-diagnostic');
+  const check=app.querySelector('#lpcheck'),controls=check?.closest('.actions');
+  if(controls&&!controls.querySelector('#lpunit5help,#lpinlinehelp,#lphelp')){const help=app.querySelector('#lpask');if(help){help.textContent='Help me';controls.append(help);}}
   const active=()=>{if(!panel.isConnected||owner.walterDiagnostic!==d)return false;const next=current();if(!next||next.key!==context.key)return false;context=next;return true;};
   app.querySelectorAll('#lpwork .lpans, #transfer-answer, #ans, #cans, #preans').forEach(input=>input.addEventListener('input',()=>walterDiagnosticWorkChanged(owner)));
   const refresh=()=>{walterDiagnosticTrim(owner);saveWork();redraw();app.querySelector('#walter-diagnostic')?.focus({preventScroll:true});};
-  panel.querySelector('[data-wd-open]')?.addEventListener('click',()=>{if(!active())return;d.open=true;refresh();});
-  panel.querySelector('[data-wd-close]')?.addEventListener('click',()=>{if(!active())return;d.open=false;saveWork();redraw();(app.querySelector('#transfer-answer, #lpin, [data-lpi], #cans, #ans, #lpcheck')||app.querySelector('[data-wd-open]'))?.focus({preventScroll:true});});
-  panel.querySelector('[data-wd-words-back]')?.addEventListener('click',()=>{if(!active())return;d.word='';d.message='';refresh();});
+  // Menu browsing does not deliver support. Open only one group at a time.
+  panel.querySelectorAll('[data-wd-menu]').forEach(detail=>detail.addEventListener('toggle',()=>{
+    if(!active())return;
+    if(detail.open){panel.querySelectorAll('[data-wd-menu]').forEach(other=>{if(other!==detail)other.open=false;});d.menu=detail.dataset.wdMenu;}
+    else if(d.menu===detail.dataset.wdMenu)d.menu='';
+    saveWork();
+  }));
+  panel.querySelectorAll('#wd-more > details').forEach(detail=>detail.addEventListener('toggle',()=>{
+    if(detail.open)panel.querySelectorAll('#wd-more > details').forEach(other=>{if(other!==detail)other.open=false;});
+  }));
+  // The main Check/Help controls take over the current reply. Reuse the existing
+  // mathematical and help handlers; menu visibility never changes their evidence.
+  const primarySelector='#lpcheck,#lpkeepblockanswer,#keepblockanswer,#transfer-check,#check,#cgo,#checkstep,#cstep,#lpask,#lpunit5help,#lpinlinehelp,#u5repairhelp,#lprepairinline,#showhint,#cshowhint,#chint,#stephelp,#lpdirecthelp,#hwdirecthelp,#hwask,[data-transfer-help],[data-walter-question],[data-walter-move],[data-hw-walter]';
+  const primary=app.querySelectorAll(primarySelector);
+  const closeReply=()=>{if(!active())return;d.open=false;d.menu='';};
+  primary.forEach(b=>b.addEventListener('click',closeReply,true));
+  // Worksheet refresh can replace older help buttons while the panel survives.
+  panel.addEventListener('click',e=>{if(e.target.closest?.(primarySelector))closeReply();},true);
+  app.querySelectorAll('#lpin,[data-lpi],#ans,#cans,#transfer-answer,#lpknowin,#lptype,#preans').forEach(input=>input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.repeat&&!e.altKey&&!e.ctrlKey&&!e.metaKey)closeReply();},true));
+  const covered=[];
+  const cover=el=>{if(el&&!covered.some(x=>x.el===el)){covered.push({el,hidden:el.hidden});el.hidden=true;}};
+  if(d.open&&d.message){if(nearby?.id)cover(nearby);cover(app.querySelector('#hints'));app.querySelectorAll('#u5lessonmodel,#walter-lesson-model,#u5walkmodel,#walter-main-slot,#lpaskpanel,#hwaskpanel').forEach(cover);}
+  let restoreLegacy=()=>{};
+  panel.walterCleanup=()=>{covered.forEach(({el,hidden})=>{el.hidden=hidden;});restoreLegacy();};
+  // Older specialised tools stay usable behind the optional methods disclosure.
+  const legacy=app.querySelector('#lpask,#hwask')?.closest('.lpwalter');
+  if(legacy){const outer=legacy.closest('details');if(outer&&outer!==panel&& !panel.contains(outer)){
+    const marker=document.createComment('Walter optional tools');outer.replaceWith(marker);
+    outer.open=!!(owner.walterOpen||owner.hwWalter?.open);panel.querySelector('#wd-more').append(outer);
+    restoreLegacy=()=>{if(marker.isConnected)marker.replaceWith(outer);};
+  }}
+
+  panel.querySelector('[data-wd-close]')?.addEventListener('click',()=>{if(!active())return;d.open=false;d.menu='';saveWork();redraw();(app.querySelector('#transfer-answer, #lpin, [data-lpi], #cans, #ans, #lpcheck')||app.querySelector('[data-wd-open]'))?.focus({preventScroll:true});});
+  panel.querySelector('[data-wd-words-back]')?.addEventListener('click',()=>{if(!active())return;d.word='';d.message='';d.menu='ways';refresh();});
   panel.querySelector('#wd-topic')?.addEventListener('change',e=>{if(!active())return;if(walterDiagnosticTopics(context).includes(e.target.value)){d.topic=e.target.value;d.word='';d.pick='';d.message='';d.action='';d.declined=[];d.probeOpen=false;refresh();}});
   for(const type of ['report','start-probe','probe','action','stuck','word'])panel.querySelectorAll(`[data-wd-${type}]`).forEach(b=>b.addEventListener('click',()=>{
     if(!active())return;
     if(type==='stuck'&&d.lastActionSignature)rate?.(d.lastActionSignature);
+    d.open=true;d.menu=type==='stuck'?'ways':'';
+    owner.walterOpen=false;if(owner.hwWalter)owner.hwWalter.open=false;
+    if(['word','action','report','stuck'].includes(type))d.probeOpen=false;
+    if(type==='start-probe'){d.pick='';d.action='';d.word='';}
     const reply=walterDiagnosticReply(d,context,type,b.getAttribute('data-wd-'+type));
     if(type==='action'&&reply)d.lastActionSignature=reply.signature;
     if(reply){
@@ -10791,9 +10852,9 @@ function walterDiagnosticPracticeRefresh(){
   if(!cur)return;
   const context=walterDiagnosticPracticeContext(),panel=app.querySelector('#walter-diagnostic');
   if(!panel)return; // Initial screen binding mounts once, after the worksheet.
-  if(!context){panel?.remove();return;}
+  if(!context){panel.walterCleanup?.();panel.remove();return;}
   if(cur.walterDiagnostic?.key===context.key&&panel){walterDiagnosticWorkChanged(cur);return;}
-  panel?.remove();walterDiagnosticPracticeBind();
+  panel.walterCleanup?.();panel.remove();walterDiagnosticPracticeBind();
 }
 
 function walterDiagnosticWorkChanged(owner){
@@ -11184,11 +11245,11 @@ function lpWorkHTML(it){ const transfer=transferHTML(it);if(transfer)return tran
     const clues=(st.helpShown||[]).map(t=>`<div class="lpclue">${t}</div>`).join("");
     const cue=st.msg||esc(unit5?.cue||(!inlineModel?inline?.text:'')||'');
     const readText=[sp.title||'',prompt,cue,unit5Model?u5Model(unit5Model).action:inlineModel?.text||''].filter(Boolean).join('. ');
-    work=`<p class="lpstep" id="lpstep-prompt">${prompt}</p>${typeof readAloudButton==='function'?readAloudButton(readText,'lp-prompt'):''}${sp.controls?.(st)||''}${fractionReconsiderHTML(it)}${step.unit5?.role==='simplest'?u5DivisionLayout(step.unit5,[],u5CheckedDivision(st)):''}${lpInputHTML(step, st, false)}${diagramDraftHTML(it)}<div class="inline-err lpmsg${st.msgKind==="ok"?" ok":""}${st.unit5BlockReview?.k===st.k?" block-review":""}" id="lpmsg" tabindex="-1" role="status" aria-live="polite">${(unit5||inline||hasMiss)&&cue?'<b>Walter:</b> ':''}${cue}</div>${clues}
-      <div class="actions"><button class="btn primary" id="lpcheck">${step.input&&step.input.type==="button"?esc(step.input.label||"Next"):"Check"}</button>${focused?`<button class="btn quiet" id="lpunit5help">${unit5?.model?'Look at the model':unit5?'Still stuck':'Help me'}</button>`:''}${focused&&st.unit5BlockReview?.k===st.k?'<button class="btn quiet" id="lpkeepblockanswer">Keep my checked answer</button>':''}${compact?`<button class="btn quiet" id="lpinlinehelp">${inlineModel?'Look at the model':inline||hasMiss?'Still stuck':'Help me'}</button>`:''}${!lpWalterEligible(it)&&(step.help||[]).length>(st.helpShown||[]).length?`<button class="btn quiet" id="lphelp">${own?"I need a clue":"Clue"}</button>`:""}${!focused&&!compact&&own&&sp.answer!==undefined&&st.answerOnly===null?`<button class="btn quiet small" id="lpknow">I know the answer</button>`:""}${own&&st.answerOnly===true?`<button class="btn quiet small" id="lpskip">Skip building it</button>`:""}</div>
+    work=`<p class="lpstep" id="lpstep-prompt">${prompt}</p>${typeof readAloudButton==='function'?readAloudButton(readText,'lp-prompt'):''}${sp.controls?.(st)||''}${fractionReconsiderHTML(it)}${step.unit5?.role==='simplest'?u5DivisionLayout(step.unit5,[],u5CheckedDivision(st)):''}${lpInputHTML(step, st, false)}${diagramDraftHTML(it)}      <div class="actions"><button class="btn primary" id="lpcheck">${step.input&&step.input.type==="button"?esc(step.input.label||"Next"):"Check"}</button>${focused?`<button class="btn quiet" id="lpunit5help">Help me</button>`:''}${focused&&st.unit5BlockReview?.k===st.k?'<button class="btn quiet" id="lpkeepblockanswer">Continue without the picture</button>':''}${compact?`<button class="btn quiet" id="lpinlinehelp">Help me</button>`:''}${!lpWalterEligible(it)&&(step.help||[]).length>(st.helpShown||[]).length?`<button class="btn quiet" id="lphelp">${own?"I need a clue":"Clue"}</button>`:""}${!focused&&!compact&&own&&sp.answer!==undefined&&st.answerOnly===null?`<button class="btn quiet small" id="lpknow">I know the answer</button>`:""}${own&&st.answerOnly===true?`<button class="btn quiet small" id="lpskip">Skip building it</button>`:""}</div><div class="inline-err lpmsg${st.msgKind==="ok"?" ok":""}${st.unit5BlockReview?.k===st.k?" block-review":""}" id="lpmsg" tabindex="-1" role="status" aria-live="polite">${(unit5||inline||hasMiss)&&cue?'<b>Walter:</b> ':''}${cue}</div>${clues}
+
       ${focused?u5BlocksHTML(focused,st):''}${unit5Model?u5ModelHTML(unit5Model,'u5lessonmodel'):''}${inlineModel?walterInlineModel(lpWalterSemanticContext(it),inlineModel,'walter-lesson-model'):''}${focused||compact?`<details${st.walterOpen||st.exampleNarr?' open':''}><summary>More help</summary>${focused&&walterUnit5Work(it)?walterUnit5ModelChoice():''}${lpWalterHTML(it)}${own&&sp.answer!==undefined&&st.answerOnly===null?'<button class="btn quiet small" id="lpknow">I know the answer</button>':''}</details>`:lpWalterHTML(it)}${walterFictionalHTML(st.fictional,st.fictionalNote,'lp')}${lpExampleHTML(it)}${st.exampleNote?`<p class="muted">${esc(st.exampleNote)}</p>`:""}${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
   const walterLesson=st.done && ph!=="model" && !st.skipped && (st.tries>0 || st.helps>0) ? walterNote("nice","You worked through the steps and finished this one.",true) : ph==="delayed" ? walterNote("checkin","Here are new numbers. Show what you remember.",true) : ph==="guided" || (st.helpShown||[]).length ? walterNote("work","Let's check one step at a time.",true) : "";
-  return `<div class="card lpcard"><h2 style="margin-top:0" class="lptitle">${sp.title}</h2>${intro}<div class="lpboard" id="lpboard">${visual}</div><div id="lpwork" class="lpwork">${work}</div>${walterLesson}${walterDiscoveryLessonHTML(it)}${sp.prompt?`<details class="lpcontext"><summary>About this problem</summary><p class="muted lpsub">${sp.prompt}</p></details>`:""}${model||own||lp.homework?"":lpVideoHTML()}</div>`; }
+  return `<div class="card lpcard"><h2 style="margin-top:0" class="lptitle">${sp.title}</h2>${intro}<div class="lpboard" id="lpboard">${visual}</div><div id="lpwork" class="lpwork">${work}</div>${st.done?walterLesson:""}${walterDiscoveryLessonHTML(it)}${sp.prompt?`<details class="lpcontext"><summary>About this problem</summary><p class="muted lpsub">${sp.prompt}</p></details>`:""}${model||own||lp.homework?"":lpVideoHTML()}</div>`; }
 // Spotting a slip is still pending work. Do not use the hidden slip index,
 // the raw clue, or whyWrong to choose a line or supply the forthcoming repair.
 function lpRepairWalterQuestions(it){
