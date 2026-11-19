@@ -476,6 +476,7 @@ details.more>div{padding:4px 0 2px;color:var(--graphite)}
 .u5-equation .u5-stack .ans{max-width:76px;min-width:48px}
 .u5-work-note{font-size:14px;margin:8px 0 0;text-align:center}
 .u5-blocks{max-width:360px;margin:16px auto;padding:10px;border:1px solid #b9c5d1;border-radius:12px;background:#f8fbfe}
+.fraction-pictures{max-width:420px;margin:0 auto}.fraction-pictures figure{margin:10px 0}.fraction-pictures figcaption{margin-bottom:4px;font-weight:600}.fraction-class-grid{display:grid;grid-template-columns:repeat(var(--cols),1fr);grid-template-rows:repeat(var(--rows),1fr);height:74px;border:1px solid #303347;margin-bottom:4px;background:#fff}.fraction-class-grid span{border:0.5px solid #56576a}.fraction-class-grid .shaded{background:#bd9dde}.fraction-pictures p{margin:8px 0}
 .u5-blocks h3{font-size:16px;margin:0 0 6px}
 .u5-blocks p{font-size:14px;line-height:1.4;margin:6px 0}
 .u5-block-whole{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));grid-auto-rows:minmax(0,1fr);height:120px;margin:6px 0 12px;border:2px solid #276482;gap:0;overflow:hidden}
@@ -1866,7 +1867,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.20.0 · November 16, 2026";
+const BUILD="v10.21.0 · November 18, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -7297,14 +7298,16 @@ function u5BlockPlan(c){
   }).filter(x=>Number.isInteger(x.d)&&x.d>0&&x.d<=120&&x.wholes*x.d<=480);
 }
 const u5GivenText=f=>(f.w?String(f.w)+' ':'')+f.n+'/'+f.d;
-function u5BlocksHTML(c,owner){
+function u5BlocksHTML(c,owner,areaColumns,gridCells){
   const plans=u5BlockPlan(c);if(!plans.length)return '';
   const draft=owner?.unit5BlockWork||{};
-  const whole=(parts,shades,editable,key,w)=>`<div class="u5-block-whole" style="--cols:${u5BlockColumns(parts)}" role="group" aria-label="One whole split into ${parts} equal blocks">${Array.from({length:parts},(_,i)=>editable?`<button type="button" class="u5-block" data-u5-block="${key}" data-u5-piece="${w*parts+i}" aria-label="Whole ${w+1}, block ${i+1} of ${parts}" aria-pressed="${shades.includes(w*parts+i)}"></button>`:`<span class="u5-block${i<shades?' given':''}" aria-hidden="true"></span>`).join('')}</div>`;
+  const whole=(parts,shades,editable,key,w,cols=u5BlockColumns(parts))=>`<div class="u5-block-whole" style="--cols:${cols}" role="group" aria-label="One whole split into ${parts} equal blocks">${Array.from({length:parts},(_,i)=>editable?`<button type="button" class="u5-block" data-u5-block="${key}" data-u5-piece="${w*parts+i}" aria-label="Whole ${w+1}, block ${i+1} of ${parts}" aria-pressed="${shades.includes(w*parts+i)}"></button>`:`<span class="u5-block${i<shades?' given':''}" aria-hidden="true"></span>`).join('')}</div>`;
   const body=plans.map(({f,d,total,wholes,key},i)=>{
     const selected=Array.isArray(draft[key])?draft[key].filter(x=>Number.isInteger(x)&&x>=0&&x<wholes*d):[];
-    const original=Array.from({length:wholes},(_,w)=>whole(f.d,Math.max(0,Math.min(f.d,total-w*f.d)),false,key,w)).join('');
-    const mine=Array.from({length:wholes},(_,w)=>`<span class="u5-block-row-label">One whole · ${d} equal blocks</span>${whole(d,selected,true,key,w)}`).join('');
+    const sourceColumns=areaColumns?((c.sourceIndex??i)===0?1:f.d):u5BlockColumns(f.d);
+    const workColumns=areaColumns&&d===gridCells?areaColumns:d===f.d?sourceColumns:u5BlockColumns(d);
+    const original=Array.from({length:wholes},(_,w)=>whole(f.d,Math.max(0,Math.min(f.d,total-w*f.d)),false,key,w,sourceColumns)).join('');
+    const mine=Array.from({length:wholes},(_,w)=>`<span class="u5-block-row-label">One whole · ${d} equal blocks</span>${whole(d,selected,true,key,w,workColumns)}`).join('');
     return `<div class="u5-block-amount${owner?.unit5BlockFocus===key?' u5-block-target':''}"><p class="u5-original-label">${plans.length>1?(i?'Second':'First')+' original amount':'Original amount'}: ${esc(u5GivenText(f))}</p><div class="u5-reference" role="img" aria-label="Original shaded amount ${esc(u5GivenText(f))}">${original}</div><p><b>Your blocks</b> — ${c.role==='pieces-in-wholes'?'shade only the full wholes for this step.':'shade the same amount.'}</p>${mine}</div>`;
   }).join('');
   const line=['benchmark','estimate-total','jump','landing'].includes(c.role)?u5Model(c).visual:'';
@@ -11234,7 +11237,10 @@ function lpWorkHTML(it){ const transfer=transferHTML(it);if(transfer)return tran
   const hasMiss=compact&&(lpHelpContext(it).status==='miss'||lpHelpContext(it).status==='trial');
   const unit5=focused&&st.unit5Help?.k===st.k?st.unit5Help:null;
   const unit5Model=unit5?.model?u5ModelForEntry(focused,st.stepEvents?.at(-1)?.values?.[0]):null;
-  const visual=focused?'':sp.visual?sp.visual(st,ph):'';
+  const drawingState=sp.gridCells&&(sp.storyTask?st.baseState:st);
+  const drawingChoice=drawingState?cxFractionDrawingView(drawingState,sp.gridCells):null;
+  const drawingPicker=drawingChoice?`<label class="hwmethod">Drawing <select id="fraction-drawing"><option value="grid"${drawingChoice==='grid'?' selected':''}>Classroom grid</option><option value="strips"${drawingChoice==='strips'?' selected':''}>Fraction strips</option></select></label>`:'';
+  const visual=focused&&!drawingChoice?'':sp.visual?sp.visual(st,ph):'';
   const intro = lp.homework?.gridCheck
     ? `<p class="lpmodel-note"><b>Fresh check.</b> ${st.helps?'You’re working with Walter’s help.':'Try it on your own. Walter is here if you need him.'}</p>`
     : own&&(st.helps||st.walterProbe) ? `<p class="lpmodel-note"><b>Practice with help.</b> Try the step, then check back with another problem later.</p>` : own&&it.repeated ? `<p class="lpmodel-note"><b>Practice repeat.</b> These numbers have appeared before. Work through the steps again.</p>` : ph==="repair" ? `<p class="lpmodel-note"><b>Fix it.</b> ${esc(lpPlain(it.rspec?it.rspec.story:""))} Clues are there if you want one.</p>` : model ? `<p class="lpmodel-note"><b>Watch one.</b> Each step shows what to do and why. Think about what you would do before you tap.</p>` : own ? `<p class="lpmodel-note"><b>On your own.</b> Try the step. Walter can help if you get stuck.</p>` : `<p class="lpmodel-note"><b>Together.</b> Do each step; ask for a clue any time.</p>`;
@@ -11247,9 +11253,9 @@ function lpWorkHTML(it){ const transfer=transferHTML(it);if(transfer)return tran
     const readText=[sp.title||'',prompt,cue,unit5Model?u5Model(unit5Model).action:inlineModel?.text||''].filter(Boolean).join('. ');
     work=`<p class="lpstep" id="lpstep-prompt">${prompt}</p>${typeof readAloudButton==='function'?readAloudButton(readText,'lp-prompt'):''}${sp.controls?.(st)||''}${fractionReconsiderHTML(it)}${step.unit5?.role==='simplest'?u5DivisionLayout(step.unit5,[],u5CheckedDivision(st)):''}${lpInputHTML(step, st, false)}${diagramDraftHTML(it)}      <div class="actions"><button class="btn primary" id="lpcheck">${step.input&&step.input.type==="button"?esc(step.input.label||"Next"):"Check"}</button>${focused?`<button class="btn quiet" id="lpunit5help">Help me</button>`:''}${focused&&st.unit5BlockReview?.k===st.k?'<button class="btn quiet" id="lpkeepblockanswer">Continue without the picture</button>':''}${compact?`<button class="btn quiet" id="lpinlinehelp">Help me</button>`:''}${!lpWalterEligible(it)&&(step.help||[]).length>(st.helpShown||[]).length?`<button class="btn quiet" id="lphelp">${own?"I need a clue":"Clue"}</button>`:""}${!focused&&!compact&&own&&sp.answer!==undefined&&st.answerOnly===null?`<button class="btn quiet small" id="lpknow">I know the answer</button>`:""}${own&&st.answerOnly===true?`<button class="btn quiet small" id="lpskip">Skip building it</button>`:""}</div><div class="inline-err lpmsg${st.msgKind==="ok"?" ok":""}${st.unit5BlockReview?.k===st.k?" block-review":""}" id="lpmsg" tabindex="-1" role="status" aria-live="polite">${(unit5||inline||hasMiss)&&cue?'<b>Walter:</b> ':''}${cue}</div>${clues}
 
-      ${focused?u5BlocksHTML(focused,st):''}${unit5Model?u5ModelHTML(unit5Model,'u5lessonmodel'):''}${inlineModel?walterInlineModel(lpWalterSemanticContext(it),inlineModel,'walter-lesson-model'):''}${focused||compact?`<details${st.walterOpen||st.exampleNarr?' open':''}><summary>More help</summary>${focused&&walterUnit5Work(it)?walterUnit5ModelChoice():''}${lpWalterHTML(it)}${own&&sp.answer!==undefined&&st.answerOnly===null?'<button class="btn quiet small" id="lpknow">I know the answer</button>':''}</details>`:lpWalterHTML(it)}${walterFictionalHTML(st.fictional,st.fictionalNote,'lp')}${lpExampleHTML(it)}${st.exampleNote?`<p class="muted">${esc(st.exampleNote)}</p>`:""}${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
+      ${focused?u5BlocksHTML(focused,st,step.areaColumns,sp.gridCells):''}${unit5Model?u5ModelHTML(unit5Model,'u5lessonmodel'):''}${inlineModel?walterInlineModel(lpWalterSemanticContext(it),inlineModel,'walter-lesson-model'):''}${focused||compact?`<details${st.walterOpen||st.exampleNarr?' open':''}><summary>More help</summary>${focused&&walterUnit5Work(it)?walterUnit5ModelChoice():''}${lpWalterHTML(it)}${own&&sp.answer!==undefined&&st.answerOnly===null?'<button class="btn quiet small" id="lpknow">I know the answer</button>':''}</details>`:lpWalterHTML(it)}${walterFictionalHTML(st.fictional,st.fictionalNote,'lp')}${lpExampleHTML(it)}${st.exampleNote?`<p class="muted">${esc(st.exampleNote)}</p>`:""}${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
   const walterLesson=st.done && ph!=="model" && !st.skipped && (st.tries>0 || st.helps>0) ? walterNote("nice","You worked through the steps and finished this one.",true) : ph==="delayed" ? walterNote("checkin","Here are new numbers. Show what you remember.",true) : ph==="guided" || (st.helpShown||[]).length ? walterNote("work","Let's check one step at a time.",true) : "";
-  return `<div class="card lpcard"><h2 style="margin-top:0" class="lptitle">${sp.title}</h2>${intro}<div class="lpboard" id="lpboard">${visual}</div><div id="lpwork" class="lpwork">${work}</div>${st.done?walterLesson:""}${walterDiscoveryLessonHTML(it)}${sp.prompt?`<details class="lpcontext"><summary>About this problem</summary><p class="muted lpsub">${sp.prompt}</p></details>`:""}${model||own||lp.homework?"":lpVideoHTML()}</div>`; }
+  return `<div class="card lpcard"><h2 style="margin-top:0" class="lptitle">${sp.title}</h2>${intro}<div class="lpboard" id="lpboard">${drawingPicker}${visual}</div><div id="lpwork" class="lpwork">${work}</div>${st.done?walterLesson:""}${walterDiscoveryLessonHTML(it)}${sp.prompt?`<details class="lpcontext"><summary>About this problem</summary><p class="muted lpsub">${sp.prompt}</p></details>`:""}${model||own||lp.homework?"":lpVideoHTML()}</div>`; }
 // Spotting a slip is still pending work. Do not use the hidden slip index,
 // the raw clue, or whyWrong to choose a line or supply the forthcoming repair.
 function lpRepairWalterQuestions(it){
@@ -11333,6 +11339,14 @@ function lpBind(it){ const q=s=>app.querySelector(s);
     if(q('#lpaskreturn'))q('#lpaskreturn').onclick=()=>{it.rep.walterOpen=false;lpRender();q('[data-lpr]')?.focus({preventScroll:true});};
     return; }
   const st=it.st, step=it.step;
+  const picker=q('#fraction-drawing');
+  if(picker)picker.onchange=()=>{
+    const drawingState=it.spec.storyTask?st.baseState:st;
+    drawingState.fractionView=picker.value;
+    if(st.model&&!st.done)it.step=it.spec.next(st);
+    lpRender();
+    q('#fraction-drawing')?.focus({preventScroll:true});
+  };
   if(transferBind(it))return;
   if(st.done){ q("#lpnext").onclick=()=>{ lpRecord(it); if(transferFinishOpenMethod(it))return; if(lp.i+1>=lp.items.length-1) lpFinish(); lpNext(); }; q("#lpnext").focus({preventScroll:true}); return; }
   if(it.spec.bind) it.spec.bind(it, ()=>lpRender());
@@ -12096,6 +12110,39 @@ function cxEstimate(o){
 function cxSimple(prompt,ans){const c=cxFrac(prompt,ans,'fraction-simplify'),check=c.check;c.check=v=>{const r=check(v);if(!r.ok)return r;const f=parseFraction(String(v));return f&&gcd(f.n,f.d)===1?{ok:true}:{ok:false,code:'fraction-simplify',msg:'The value matches. Test whether a common factor remains.'};};return c;}
 function cxFractionLine(st,op){const fval=f=>f.n/f.d,max=Math.max(2,Math.ceil(fval(st.cur)+fval(st.remaining))),X=f=>35+fval(f)/max*450;return `<svg viewBox="0 0 520 150" role="img" aria-label="Fraction number line with accepted jumps only"><line x1="35" y1="100" x2="485" y2="100" stroke="#1b2a41"/>${Array.from({length:max+1},(_,i)=>`<line x1="${35+i/max*450}" y1="94" x2="${35+i/max*450}" y2="106" stroke="#1b2a41"/><text x="${35+i/max*450}" y="130" text-anchor="middle" font-size="13">${i}</text>`).join('')}${st.jumps.map((j,i)=>`<path d="M${X(j.from)} 100 Q${(X(j.from)+X(j.to))/2} ${20+(i%3)*15} ${X(j.to)} 100" fill="none" stroke="#2f7c9e" stroke-width="2"/><text x="${(X(j.from)+X(j.to))/2}" y="${24+(i%3)*15}" font-size="12" text-anchor="middle">${op}${cxText(j.jump)}</text>`).join('')}<circle cx="${X(st.cur)}" cy="100" r="5" fill="#b45309"/></svg>`;}
 
+// Each picture has its own whole. Horizontal bands name the first addend,
+// vertical bands the second. Crossing both partitions preserves each area.
+function cxFractionDrawingView(st, cells){
+ return st.fractionView==='strips'||st.fractionView==='grid'?st.fractionView:
+   st.D&&st.D!==cells?'strips':'grid';
+}
+function cxAdditionDrawing(a,b,st){
+ const cells=a.d*b.d,grid=cxFractionDrawingView(st,cells)==='grid';
+ const finished=st.stage==='done',least=cells/gcd(a.d,b.d);
+ const D=grid?cells:finished?least:st.D;
+ const pictures=[a,b].map((f,index)=>{
+   const label=index?'Second original amount':'First original amount';
+   if(!grid)return cxFractionBars(f,label,D);
+   const wholes=Math.max(1,Math.ceil(f.n/f.d));
+   const rectangles=Array.from({length:wholes},(_,w)=>{
+     const shaded=Math.min(f.d,Math.max(0,f.n-w*f.d));
+     const parts=Array.from({length:cells},(_,k)=>{
+       const row=Math.floor(k/b.d),col=k%b.d;
+       return `<span class="${(index?col:row)<shaded?'shaded':''}"></span>`;
+     }).join('');
+     return `<div class="fraction-class-grid" style="--cols:${b.d};--rows:${a.d}" role="img" aria-label="One whole with ${a.d} rows and ${b.d} columns. ${shaded} ${index?'columns':'rows'} shaded.">${parts}</div>`;
+   }).join('');
+   return `<figure><figcaption>${label} · ${esc(cxText(f))}</figcaption>${rectangles}</figure>`;
+ }).join('');
+ let note=grid?'Count the little boxes in one whole. Then count the shaded boxes in each drawing.':'Look at the shaded length in each strip. Split both wholes into parts of the same size.';
+ if(grid&&st.D&&st.D!==cells&&!finished)note='The boxes show one way to split the whole. Your answer boxes use your chosen denominator of '+st.D+'.';
+ if(finished){
+   const first=a.n*(D/a.d),second=b.n*(D/b.d),total=first+second,result=cxText(cxF(total,D));
+   note=`${first}/${D} + ${second}/${D} = ${total}/${D}${result===total+'/'+D?'':' = '+result}`;
+ }
+ return `<div class="fraction-pictures">${pictures}<p>${esc(note)}</p></div>`;
+}
+
 function cxFractionCombine(o){const {a,b,op,method,regroup}=o,value=op==='+'?cxAdd(a,b):cxSub(a,b),minD=a.d*b.d/gcd(a.d,b.d),sp={kind:'fraction-'+method,discoveryTopic:op==='+'?'fraction-addition':'fraction-subtraction',methodName:method==='line'?'number line':method==='area'?'equal-part area model':'equivalent-fraction algorithm',methodEvidence:'equivalent-parts-'+method,title:`${cxText(a)} ${op} ${cxText(b)}`,answer:value.n/value.d,answerCheck:v=>cxEq(cxRead(v),value),audit:{family:'fraccombine',a,b,op,result:value,method},init:()=>({D:null,an:null,bn:null,combined:null,stage:'denominator',jumps:[],cur:a,remaining:b}),script:[],next:st=>{
   if(st.stage==='denominator')return cxStep({prompt:'Choose a common denominator for both original fractions (at most 120).',input:{type:'num'},auto:minD,check:v=>{const n=lpNum(v);if(!Number.isInteger(n)||n<=0||n>120)return {ok:false,fmt:true,msg:'Choose a positive whole-number denominator up to 120.'};if(n%a.d||n%b.d)return {ok:false,safe:true,code:'common-unit',msg:'Test whether both original denominators divide your choice evenly.'};return {ok:true,apply:()=>{st.D=n;st.stage='first';}};}},'common-unit');
   if(st.stage==='first')return cxNum(`Rename the first amount entirely as ${st.D}ths. Numerator?`,a.n*st.D/a.d,'fraction-equivalent',()=>{st.an=a.n*st.D/a.d;st.stage='second';});
@@ -12107,6 +12154,19 @@ function cxFractionCombine(o){const {a,b,op,method,regroup}=o,value=op==='+'?cxA
   if(st.stage==='final')return cxFrac('Write the result, simplifying the fraction when possible.',value,'fraction-combine',()=>{st.stage='done';});return null;},
   oneShot:st=>method==='line'&&st.jumps.length<=1,
   visual:st=>method==='area'?cxFractionBars(a,'First original amount',st.D)+cxFractionBars(b,'Second original amount',st.D):method==='line'?cxFractionLine(st,op)+`<p>Current point: ${cxText(st.cur)}. Amount still to ${op==='+'?'add':'subtract'}: ${cxText(st.remaining)}.</p>${st.jumps.map(j=>`<p>Checked: ${cxText(j.from)} → ${cxText(j.to)} (${op}${cxText(j.jump)})</p>`).join('')}`:st.an!==null?`<p>Checked first numerator: ${st.an}, denominator: ${st.D}.${st.bn!==null?` Checked second numerator: ${st.bn}.`:''}</p>`:'',done:()=>`${cxText(a)} ${op} ${cxText(b)} = <b>${cxText(value)}</b>.`};
+ // Use the same two drawings in the area-addition lesson and matching homework.
+ // Larger homework operands keep the bounded strip renderer.
+ if(method==='area'&&op==='+'&&a.d*b.d<=120&&[a,b].every(f=>f.n>0&&f.n<=6*f.d)){
+  sp.gridCells=a.d*b.d;
+  sp.visual=st=>cxAdditionDrawing(a,b,st);
+  const next=sp.next;
+  sp.next=st=>{
+   const step=next(st);
+   if(st.model&&st.stage==='denominator'&&cxFractionDrawingView(st,sp.gridCells)==='grid')step.auto=sp.gridCells;
+   if(step&&o.unit5)step.areaColumns=b.d;
+   return step;
+  };
+ }
  if(o.unit5){
   const next=sp.next;
   sp.next=st=>{
@@ -12309,7 +12369,7 @@ function cxOrdinary(skill,level,focus){let id=focus?.lessonId;if(!id||!LP_CURRIC
   else if(c.input.type==='text')steps.push({...base,check:wc({q:c.prompt,type:'input',text:true,display:String(c.auto),answer:cxRead(c.auto)?.n/cxRead(c.auto)?.d,validate:v=>cxEq(cxRead(v),cxRead(c.auto))&&(comp!=='fraction-simplify'||gcd(parseFraction(String(v))?.n||0,parseFraction(String(v))?.d||1)===1)},comp)});
   else steps.push({...base,check:wc(ci(c.prompt,+c.auto),comp)});
  }
- const selected=Number.isInteger(focus?.cardIndex)&&steps[focus.cardIndex]||focus?.tag&&steps.find(x=>x.check.comp===focus.tag)||[...steps].reverse().find(x=>x.check.type!=='mc')||steps.at(-1),last=selected.check,p={skill,level,discoveryTopic:sp.discoveryTopic,prompt:`${esc(lpPlain(sp.title))}${sp.prompt?'<p>'+esc(lpPlain(sp.prompt))+'</p>':''}${sp.visual?'<div class="cxvisual">'+sp.visual({k:0,...sp.init()})+'</div>':''}<br>${last.q}`,type:last.type,answer:last.answer,display:last.display??String(last.options?.[last.answer]),text:!!last.text,validate:last.validate,options:last.options,steps,unit5Given:lpPlain(sp.title),unit5Answer:selected.unit5,meta:{variant:sp.kind,lessonId:id,cardIndex:steps.indexOf(selected)},mainComp:last.comp,traps:[last.comp],show:null,why:null};return p;}
+ const selected=Number.isInteger(focus?.cardIndex)&&steps[focus.cardIndex]||focus?.tag&&steps.find(x=>x.check.comp===focus.tag)||[...steps].reverse().find(x=>x.check.type!=='mc')||steps.at(-1),last=selected.check,p={skill,level,discoveryTopic:sp.discoveryTopic,prompt:`${esc(lpPlain(sp.title))}${sp.prompt?'<p>'+esc(lpPlain(sp.prompt))+'</p>':''}${sp.visual?'<div class="cxvisual">'+sp.visual({k:0,...sp.init(),...(sp.gridCells?{fractionView:'strips'}:{})})+'</div>':''}<br>${last.q}`,type:last.type,answer:last.answer,display:last.display??String(last.options?.[last.answer]),text:!!last.text,validate:last.validate,options:last.options,steps,unit5Given:lpPlain(sp.title),unit5Answer:selected.unit5,meta:{variant:sp.kind,lessonId:id,cardIndex:steps.indexOf(selected)},mainComp:last.comp,traps:[last.comp],show:null,why:null};return p;}
 for(const [skill,name,std,blurb] of [
  ['fracaddsub','Add and subtract fractions','5.NF.1 5.NF.2','Equivalent fractions, unlike denominators, and whole-number exchanges'],
  ['fracmultiply','Multiply fractions','5.NF.3 5.NF.4 5.NF.5 5.NF.6','Fractions as division, scaling, product comparisons, and fraction products'],
@@ -12439,7 +12499,7 @@ function lpHomeworkStoryMethod(base,task,preferred=0){
  const decimal=task.storyType==='decimal',meaning=decimal?'decimal-story-meaning':'word-story-meaning',calculation=decimal?'decimal-story-calculation':'word-story-calculation';
  const checkExpression=decimal?decimalStoryExpressionCheck:lessonStoryExpressionCheck,teaching=decimal?decimalStoryTeaching:lessonStoryTeaching;
  const guide=['orient','meaning','plan','test','smaller'].map(move=>teaching({component:meaning,relationship:task.relation,unknown:task.unknown},move).text);
- const sp={kind:base.kind,discoveryTopic:base.discoveryTopic,title:decimal?'Decimal word problem':task.label||'Word problem',problemKey:base.problemKey||base.title,recordQuestion:task.story,prompt:task.story,answer:base.answer,answerCheck:base.answerCheck,audit:base.audit,script:[],
+ const sp={kind:base.kind,gridCells:base.gridCells,discoveryTopic:base.discoveryTopic,title:decimal?'Decimal word problem':task.label||'Word problem',problemKey:base.problemKey||base.title,recordQuestion:task.story,prompt:task.story,answer:base.answer,answerCheck:base.answerCheck,audit:base.audit,script:[],
   openProblem:{v:1,question:task.story,answerFormat:task.fractions?'fraction':'number',unit:task.unit,help:{words:guide[0],model:guide[2],check:guide[3]}},storyTask:task,walterStory:{story:task.story,relationship:task.relation,unknown:task.unknown,storyType:task.storyType,checkedRoute:true},methodName:base.methodName,methodEvidence:base.methodEvidence,
   init:()=>({storyExpression:null,storyPlanChecked:false,baseState:null,stage:'story-meaning'}),
   storyStateValid:st=>!!st&&Number.isInteger(st.k)&&st.k>=0&&(st.k===0?st.storyExpression===null&&st.storyPlanChecked===false&&st.baseState===null:st.storyPlanChecked===true&&typeof st.storyExpression==='string'&&checkExpression(task,st.storyExpression).ok&&!!st.baseState&&typeof st.baseState==='object'&&!Array.isArray(st.baseState)),
