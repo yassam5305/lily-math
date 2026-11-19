@@ -477,6 +477,7 @@ details.more>div{padding:4px 0 2px;color:var(--graphite)}
 .u5-work-note{font-size:14px;margin:8px 0 0;text-align:center}
 .u5-blocks{max-width:360px;margin:16px auto;padding:10px;border:1px solid #b9c5d1;border-radius:12px;background:#f8fbfe}
 .fraction-pictures{max-width:420px;margin:0 auto}.fraction-pictures figure{margin:10px 0}.fraction-pictures figcaption{margin-bottom:4px;font-weight:600}.fraction-class-grid{display:grid;grid-template-columns:repeat(var(--cols),1fr);grid-template-rows:repeat(var(--rows),1fr);height:74px;border:1px solid #303347;margin-bottom:4px;background:#fff}.fraction-class-grid span{border:0.5px solid #56576a}.fraction-class-grid .shaded{background:#bd9dde}.fraction-pictures p{margin:8px 0}
+.fraction-builder section,.fraction-extras details{margin:12px 0}.fraction-builder h4,.fraction-extras figure{margin:8px 0}.fraction-build-scroll{overflow-x:auto}.build-bands{min-width:calc(var(--final-cols)*24px);height:max(74px,calc(var(--final-rows)*24px))}.build-bands button{appearance:none;min-width:0;min-height:0;padding:0;border:1px solid #56576a;border-radius:0;background:white}.build-bands button[aria-pressed=true]{background:#bd9dde}.build-bands button:focus-visible{outline:3px solid #143e68;outline-offset:-3px}.fraction-build-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0}.fraction-build-actions input{max-width:8em}.fraction-feedback:empty{display:none}.fraction-extras summary{cursor:pointer;font-weight:600;padding:8px 0}.fraction-group-strip{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));margin:4px 0}.fraction-group{display:flex;border:1px solid #34374b;min-height:16px}.fraction-group i{flex:1;border-inline-end:1px dashed #514666}.fraction-group i:last-child{border:0}.fraction-group.first{background:#bd9dde}.fraction-group.second{background:#7fb5d5}
 .u5-blocks h3{font-size:16px;margin:0 0 6px}
 .u5-blocks p{font-size:14px;line-height:1.4;margin:6px 0}
 .u5-block-whole{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));grid-auto-rows:minmax(0,1fr);height:120px;margin:6px 0 12px;border:2px solid #276482;gap:0;overflow:hidden}
@@ -1867,7 +1868,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.21.0 · November 18, 2026";
+const BUILD="v10.22.0 · November 18, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -6877,6 +6878,20 @@ const u5Format='Use a slash between the top and bottom numbers, like top/bottom.
 const u5BenchmarkFormat='Enter a whole number or a number halfway between two whole numbers.';
 const u5PositiveBottom='The bottom number tells how many equal pieces make a whole. Use a bottom number greater than zero.';
 
+// A submitted numerator can be a perfectly good group size. Compare it
+// with the given or checked fraction before offering that interpretation.
+function u5EnteredGroupSize(top,bottom,raw){
+  const match=String(raw??'').trim().match(/^(\d+)(?:\s*\/\s*(\d+))?$/);
+  if(!match||!Number.isSafeInteger(top)||!Number.isSafeInteger(bottom)||top<1||bottom<1)return 0;
+  const size=Number(match[1]);
+  if(size<2||top%size||bottom%size||top===size*size)return 0;
+  if(match[2]===undefined)return top===size*bottom?0:size;
+  return Number(match[2])*size===bottom?size:0;
+}
+function u5GroupingQuestion(top,size){
+  return `Are you making groups of ${size}? That group size works. Count by ${size} up to ${top}, making one tally mark for each group. How many groups did you make? That count goes on top.`;
+}
+
 function u5Cue(c,values=[],checked=false,field=-1){
   const {role,a,b,factor,D,first,second,checkedBench,remaining,from,jump}=c;
   const raw=checked?(field>=0?values[field]:values[0]):undefined;
@@ -6895,15 +6910,19 @@ function u5Cue(c,values=[],checked=false,field=-1){
       const index=role==='reduce-bottom'?1:role==='reduce-top'?0:field;
       if(index<0)return `Use your checked group size of ${factor} for both boxes. Start with the top number.`;
       const given=index===0?a.n:a.d,position=index===0?'top':'bottom';
+      if(index===0&&n===factor&&u5EnteredGroupSize(a.n,a.d,raw))return u5GroupingQuestion(a.n,factor);
       if(n===given)return `The ${position} still shows the old count. Count groups of ${factor} in ${given}.`;
       if(n===given*factor)return `You’re making bigger pieces. Divide ${given} by ${factor} to count the new groups.`;
       return `Check just the ${position} box. How many groups of ${factor} fit in ${given}?`;
     }
-    case 'simplest':
+    case 'simplest': {
+      const size=u5EnteredGroupSize(a.n,a.d,values[0]);
+      if(size)return u5GroupingQuestion(a.n,size);
       if(u5Same(f,a))return 'That covers the same amount. Can the top and bottom still be divided by the same whole number bigger than 1?';
       if(f&&f.n===a.n&&f.d!==a.d)return 'Only the bottom changed. Divide the top by the same number you used on the bottom.';
       if(f&&f.d===a.d&&f.n!==a.n)return 'Only the top changed. Divide the bottom by the same number you used on the top.';
       return 'Choose one group size that divides both counts evenly. Divide both by it, and check if you can do that again.';
+    }
     case 'benchmark':
       if(n===a.n/a.d)return `That’s the exact amount. Find the nearest whole or halfway mark to ${u5Name(a)}.`;
       if(Number.isFinite(n)&&!Number.isInteger(n*2))return 'Choose a whole number or a halfway mark. Use the number line to see which mark is closest.';
@@ -6936,11 +6955,15 @@ function u5Cue(c,values=[],checked=false,field=-1){
     case 'landing':
       if(u5Same(f,from))return 'That’s the starting point. Move forward by the jump you checked, then name where you land.';
       return `Start at ${u5Name(from)} and move right by ${u5Name(jump)}. Enter the landing point.`;
-    case 'sum':
+    case 'sum': {
+      const size=u5EnteredGroupSize(first,D,values[0]);
+      if(size)return u5GroupingQuestion(first,size);
       if(f&&f.w===0&&f.d===a.d+b.d)return 'Keep the piece size you checked. Only the number of pieces changes when you add.';
+      if(D&&first>0&&gcd(first,D)>1)return `You checked ${first}/${D}. To simplify it, choose a group size that fits both numbers evenly. How many groups of shaded pieces will go on top?`;
       if(D&&first!==undefined)return `Use the ${first} pieces you checked. Write that count over ${D}, or write an equal fraction.`;
       if(from)return `Use the last point you reached on the number line. Write that amount as a fraction or mixed number.`;
       return 'Rename the two fractions using the same piece size. Add the top numbers and keep the common bottom number.';
+    }
     case 'whole-and-left':
       if(field===1)return `Keep the whole count. Set aside ${a.d} pieces for each whole and count the pieces left over.`;
       return `Group the ${a.n} pieces in sets of ${a.d}. Count only the full groups for the whole-number box.`;
@@ -6970,6 +6993,10 @@ function u5Line(start,end,point,label,division=1){
   return `<svg style="display:block;width:100%;max-width:360px;margin:8px auto" viewBox="0 0 300 82" role="img" aria-label="Number line from ${start} to ${end}, marked at ${esc(label)}${halfway?', with halfway marks':''}"><line x1="24" y1="45" x2="276" y2="45" stroke="currentColor" stroke-width="2"/>${smallTicks}${ticks}${halfway}<circle cx="${x(point)}" cy="45" r="5" fill="#176687"/><text x="${x(point)}" y="23" text-anchor="middle">${esc(label)}</text></svg>`;
 }
 function u5ModelForEntry(card,raw){
+  if(card.role==='sum'){
+    const factor=u5EnteredGroupSize(card.first,card.D,raw);
+    if(factor&&card.D<=120&&card.first<=6*card.D)return {role:'reduce-top',a:{n:card.first,d:card.D},factor};
+  }
   const f=u5Fraction(raw);
   if(card.role==='mixed-form'){
     const entry=parseMixedWalkEntry(raw);
@@ -10190,7 +10217,12 @@ function lpAdaptiveGuide(it,base,intent='start'){
   // Status and focus wording belong to the shared response policy.
   return g;
 }
-function lpCheckFeedback(it,r){
+function lpCheckFeedback(it,r,submitted){
+  const fraction=it.step?.fractionReconsider?.state;
+  if(!r.fmt&&fraction?.stage==='final'){
+    const size=u5EnteredGroupSize(fraction.combined,fraction.D,submitted);
+    if(size)return u5GroupingQuestion(fraction.combined,size);
+  }
   if(r.fmt)return diagramReply(it,lpHelpContext(it),'test')?.text||r.msg||'Check the entry format before testing the calculation.';
   const c=lpHelpContext(it),target=c.label?`Check ${c.label}. `:'';
   const targeted=it.spec.walterReply?.(it.st,c,'test')||diagramReply(it,c,'test');
@@ -10232,7 +10264,7 @@ function lpApply(item, v){ const st=item.st, step=item.step; if(!step) return; c
   lpObserve(item,v,r);
   if(item.phase!=='model'&&typeof walterLinkNextCheck==='function')walterLinkNextCheck(st.walterEvents||[],helpContext,{status:r.fmt?'format':r.safe||r.ok&&step.short==='Your trial count'?'trial':r.ok?'ok':'miss',code:r.code||'',draft:walterDraftFingerprint(v),fields:Array.isArray(v)?v.map(value=>walterDraftFingerprint(value)):null,gridDigits:item.spec.walterCheck?.(st,v)});
   if(r.ok){ if(r.apply) r.apply(); st.k++; st.draft=null; st.badIndex=-1; st.walterOpen=false; st.walterChoice=null; st.inlineWalter=null; st.unit5Help=null; st.exampleNarr="";st.exampleNote=""; st.msg=r.msg||""; st.msgKind="ok"; st.helpShown=[]; item.step=item.spec.next(st); lpPrepareStep(item); if(!item.step){ st.done=true; } return true; }
-  if(item.phase!=="model" && !r.fmt){ if(r.safe){ if(r.code) st.codes.push(r.code); } else { st.tries++; if(r.code) st.codes.push(r.code); } } st.badIndex=Number.isInteger(r.badIndex)?r.badIndex:-1; st.msg=item.phase!=="model"?(step.unit5?u5LessonFeedback(item,r,v):lpCheckFeedback(item,r)):r.msg||"Not yet. Check that step and try again."; st.msgKind=r.safe?"":"no";
+  if(item.phase!=="model" && !r.fmt){ if(r.safe){ if(r.code) st.codes.push(r.code); } else { st.tries++; if(r.code) st.codes.push(r.code); } } st.badIndex=Number.isInteger(r.badIndex)?r.badIndex:-1; st.msg=item.phase!=="model"?(step.unit5?u5LessonFeedback(item,r,v):lpCheckFeedback(item,r,v)):r.msg||"Not yet. Check that step and try again."; st.msgKind=r.safe?"":"no";
   if(!r.fmt&&walterInlineLesson(item)||diagramObservation(item))walterInlineLessonMiss(item,st.msg);
   return false; }
 
@@ -11239,7 +11271,8 @@ function lpWorkHTML(it){ const transfer=transferHTML(it);if(transfer)return tran
   const unit5Model=unit5?.model?u5ModelForEntry(focused,st.stepEvents?.at(-1)?.values?.[0]):null;
   const drawingState=sp.gridCells&&(sp.storyTask?st.baseState:st);
   const drawingChoice=drawingState?cxFractionDrawingView(drawingState,sp.gridCells):null;
-  const drawingPicker=drawingChoice?`<label class="hwmethod">Drawing <select id="fraction-drawing"><option value="grid"${drawingChoice==='grid'?' selected':''}>Classroom grid</option><option value="strips"${drawingChoice==='strips'?' selected':''}>Fraction strips</option></select></label>`:'';
+  const drawingPicker=drawingChoice?`<label class="hwmethod">Drawing <select id="fraction-drawing"><option value="grid"${drawingChoice==='grid'?' selected':''}>Classroom grid</option><option value="strips"${drawingChoice==='strips'?' selected':''}>Fraction strips</option><option value="build"${drawingChoice==='build'?' selected':''}>Build it like class</option></select></label>`:'';
+  const extras=drawingChoice&&st.done&&!st.skipped&&drawingState.stage==='done'?fractionPostActivities(sp.audit.a,sp.audit.b,drawingState):'';
   const visual=focused&&!drawingChoice?'':sp.visual?sp.visual(st,ph):'';
   const intro = lp.homework?.gridCheck
     ? `<p class="lpmodel-note"><b>Fresh check.</b> ${st.helps?'You’re working with Walter’s help.':'Try it on your own. Walter is here if you need him.'}</p>`
@@ -11255,7 +11288,7 @@ function lpWorkHTML(it){ const transfer=transferHTML(it);if(transfer)return tran
 
       ${focused?u5BlocksHTML(focused,st,step.areaColumns,sp.gridCells):''}${unit5Model?u5ModelHTML(unit5Model,'u5lessonmodel'):''}${inlineModel?walterInlineModel(lpWalterSemanticContext(it),inlineModel,'walter-lesson-model'):''}${focused||compact?`<details${st.walterOpen||st.exampleNarr?' open':''}><summary>More help</summary>${focused&&walterUnit5Work(it)?walterUnit5ModelChoice():''}${lpWalterHTML(it)}${own&&sp.answer!==undefined&&st.answerOnly===null?'<button class="btn quiet small" id="lpknow">I know the answer</button>':''}</details>`:lpWalterHTML(it)}${walterFictionalHTML(st.fictional,st.fictionalNote,'lp')}${lpExampleHTML(it)}${st.exampleNote?`<p class="muted">${esc(st.exampleNote)}</p>`:""}${own&&sp.answer!==undefined?`<div id="lpknowbox" hidden><label for="lpknowin">Your answer to ${esc(lpPlain(sp.title))}</label><input class="ans small" id="lpknowin" inputmode="decimal" autocomplete="off"><button type="button" class="btn quiet small" id="lpknowgo">Check my answer</button></div>`:""}`; }
   const walterLesson=st.done && ph!=="model" && !st.skipped && (st.tries>0 || st.helps>0) ? walterNote("nice","You worked through the steps and finished this one.",true) : ph==="delayed" ? walterNote("checkin","Here are new numbers. Show what you remember.",true) : ph==="guided" || (st.helpShown||[]).length ? walterNote("work","Let's check one step at a time.",true) : "";
-  return `<div class="card lpcard"><h2 style="margin-top:0" class="lptitle">${sp.title}</h2>${intro}<div class="lpboard" id="lpboard">${drawingPicker}${visual}</div><div id="lpwork" class="lpwork">${work}</div>${st.done?walterLesson:""}${walterDiscoveryLessonHTML(it)}${sp.prompt?`<details class="lpcontext"><summary>About this problem</summary><p class="muted lpsub">${sp.prompt}</p></details>`:""}${model||own||lp.homework?"":lpVideoHTML()}</div>`; }
+  return `<div class="card lpcard"><h2 style="margin-top:0" class="lptitle">${sp.title}</h2>${intro}<div class="lpboard" id="lpboard">${drawingPicker}${visual}${extras}</div><div id="lpwork" class="lpwork">${work}</div>${st.done?walterLesson:""}${walterDiscoveryLessonHTML(it)}${sp.prompt?`<details class="lpcontext"><summary>About this problem</summary><p class="muted lpsub">${sp.prompt}</p></details>`:""}${model||own||lp.homework?"":lpVideoHTML()}</div>`; }
 // Spotting a slip is still pending work. Do not use the hidden slip index,
 // the raw clue, or whyWrong to choose a line or supply the forthcoming repair.
 function lpRepairWalterQuestions(it){
@@ -11340,13 +11373,17 @@ function lpBind(it){ const q=s=>app.querySelector(s);
     return; }
   const st=it.st, step=it.step;
   const picker=q('#fraction-drawing');
-  if(picker)picker.onchange=()=>{
-    const drawingState=it.spec.storyTask?st.baseState:st;
+  if(picker){
+   const drawingState=it.spec.storyTask?st.baseState:st;
+   fractionActivitiesBind(it,drawingState);
+   picker.onchange=()=>{
+    if(picker.value==='build')fractionBuildSupport(it,'Shade each fraction in bands, then add matching cuts to the two wholes.');
     drawingState.fractionView=picker.value;
     if(st.model&&!st.done)it.step=it.spec.next(st);
     lpRender();
     q('#fraction-drawing')?.focus({preventScroll:true});
-  };
+   };
+  }
   if(transferBind(it))return;
   if(st.done){ q("#lpnext").onclick=()=>{ lpRecord(it); if(transferFinishOpenMethod(it))return; if(lp.i+1>=lp.items.length-1) lpFinish(); lpNext(); }; q("#lpnext").focus({preventScroll:true}); return; }
   if(it.spec.bind) it.spec.bind(it, ()=>lpRender());
@@ -12113,11 +12150,13 @@ function cxFractionLine(st,op){const fval=f=>f.n/f.d,max=Math.max(2,Math.ceil(fv
 // Each picture has its own whole. Horizontal bands name the first addend,
 // vertical bands the second. Crossing both partitions preserves each area.
 function cxFractionDrawingView(st, cells){
- return st.fractionView==='strips'||st.fractionView==='grid'?st.fractionView:
+ return ['grid','strips','build'].includes(st.fractionView)?st.fractionView:
    st.D&&st.D!==cells?'strips':'grid';
 }
 function cxAdditionDrawing(a,b,st){
- const cells=a.d*b.d,grid=cxFractionDrawingView(st,cells)==='grid';
+ const cells=a.d*b.d,view=cxFractionDrawingView(st,cells);
+ if(view==='build')return fractionBuilderHTML(a,b,st);
+ const grid=view==='grid';
  const finished=st.stage==='done',least=cells/gcd(a.d,b.d);
  const D=grid?cells:finished?least:st.D;
  const pictures=[a,b].map((f,index)=>{
@@ -12162,7 +12201,7 @@ function cxFractionCombine(o){const {a,b,op,method,regroup}=o,value=op==='+'?cxA
   const next=sp.next;
   sp.next=st=>{
    const step=next(st);
-   if(st.model&&st.stage==='denominator'&&cxFractionDrawingView(st,sp.gridCells)==='grid')step.auto=sp.gridCells;
+   if(st.model&&st.stage==='denominator'&&cxFractionDrawingView(st,sp.gridCells)!=='strips')step.auto=sp.gridCells;
    if(step&&o.unit5)step.areaColumns=b.d;
    return step;
   };
@@ -12391,6 +12430,137 @@ for(const sk of CX_NEW_SKILLS)STEP_COMPS[sk]=new Set(Object.keys(CX_GUIDES));
 NOT_YET_COVERED=curriculumCoverageNote();
 // Profiles load after all curriculum and lesson registration in the final bootstrap.
 
+// The builder stores learner-made marks separately from checked arithmetic.
+function fractionBandSelection(board,limit){
+ const selected=Array.isArray(board?.bands)?board.bands:[];
+ return new Set(selected.filter(n=>Number.isInteger(n)&&n>=0&&n<limit));
+}
+function fractionBandBoard(f,other,index,board={}){
+ board=board&&typeof board==='object'?board:{};
+ const vertical=index===1,axis=vertical?'column':'row',cross=vertical?'rows':'columns';
+ const wholes=Math.ceil(f.n/f.d),selected=fractionBandSelection(board,wholes*f.d);
+ const cut=board.cut===true&&selected.size===f.n;
+ const finalRows=vertical?other.d:f.d,finalCols=vertical?f.d:other.d;
+ const rows=vertical&&!cut?1:finalRows,cols=!vertical&&!cut?1:finalCols;
+ const pictures=Array.from({length:wholes},(_,w)=>{
+  const bands=Array.from({length:rows*cols},(_,k)=>{
+   const band=w*f.d+(vertical?k%cols:Math.floor(k/cols)),on=selected.has(band);
+   if(cut)return '<span class="'+(on?'shaded':'')+'"></span>';
+   return `<button type="button" data-band="${band}" aria-label="Whole ${w+1}, ${axis} ${band%f.d+1}" aria-pressed="${on}"></button>`;
+  }).join('');
+  return `<div class="fraction-build-scroll"><div class="fraction-class-grid build-bands" style="--cols:${cols};--rows:${rows};--final-cols:${finalCols};--final-rows:${finalRows}" role="${cut?'img':'group'}" aria-label="Whole ${w+1}, ${rows} by ${cols}. ${[...selected].filter(n=>Math.floor(n/f.d)===w).length} shaded ${axis} bands.">${bands}</div></div>`;
+ }).join('');
+ const info=cut?'The new lines split the same shaded area into smaller pieces.':`Tap ${axis}s to shade ${cxText(f)}. Then split each whole the other way.`;
+ const inputId='fraction-split-'+index;
+ return `<section data-build-board="${index}"><h4>${index?'Second':'First'} amount · ${cxText(f)}</h4><p>${info}</p>${pictures}
+ ${cut?'<button type="button" class="btn quiet small" data-edit-bands>Change my drawing</button>':
+ `<label for="${inputId}">How many equal ${cross} will match the other drawing?</label>
+ <div class="fraction-build-actions"><input class="ans small" inputmode="numeric" maxlength="3" id="${inputId}" data-split-draft value="${esc(String(board.parts??'').slice(0,3))}"><button type="button" class="btn quiet small" data-split>Make the cuts</button></div>`}
+ <p role="status" class="fraction-feedback" data-build-feedback></p></section>`;
+}
+function fractionBuilderHTML(a,b,state){
+ return `<div class="fraction-pictures fraction-builder">${fractionBandBoard(a,b,0,state.boards?.[0])}${fractionBandBoard(b,a,1,state.boards?.[1])}</div>`;
+}
+// Show the two addends end to end. Each outlined group on the upper strip
+// occupies the same area as the matching single piece on the lower strip.
+function fractionEquivalentHTML(a,b){
+ const small=a.d*b.d,group=gcd(a.d,b.d),large=small/group;
+ const first=a.n*(large/a.d),second=b.n*(large/b.d),sum=first+second;
+ const rows=Array.from({length:Math.ceil(sum/large)},(_,w)=>{
+  const strip=(subdivide)=>Array.from({length:large},(_,i)=>{
+   const k=w*large+i,color=k<first?' first':k<sum?' second':'';
+   return `<span class="fraction-group${color}">${subdivide?'<i></i>'.repeat(group):''}</span>`;
+  }).join('');
+  const cols=large<=12?large:u5BlockColumns(large);
+  return `<figure><figcaption>Whole ${w+1}</figcaption><div aria-hidden="true" style="--cols:${cols}"><div class="fraction-group-strip">${strip(true)}</div><div class="fraction-group-strip">${strip(false)}</div></div></figure>`;
+ }).join('');
+ const explanation=group===1?`Each grid box already matches one strip piece. Both drawings split a whole into ${large} equal parts.`:
+ `Each outlined group holds ${group} small boxes. It covers one piece of the strip below. The ${sum*group} shaded boxes fill ${sum} groups.`;
+ return `<details data-fraction-extra="compare"><summary>Why are these equal?</summary>
+ <p>Purple shows ${cxText(a)}. Blue shows ${cxText(b)}. Read the shaded pieces from left to right.</p>${rows}<p>${explanation}</p>
+ <p><b>${group===1?cxText(a)+' + '+cxText(b):sum*group+'/'+small} = ${sum}/${large}</b></p></details>`;
+}
+function fractionOddDenominator(a,b){
+ return (cxEq(a,cxF(1,2))&&cxEq(b,cxF(1,3)))||(cxEq(b,cxF(1,2))&&cxEq(a,cxF(1,3)))?5:3;
+}
+function fractionOddHTML(d,odd={}){
+ const cuts=odd.cut===true,answer=String(odd.answer??'').slice(0,32),goal=cxF(d+2,2*d);
+ const solved=cuts&&odd.checked===true&&cxEq(cxRead(answer),goal);
+ const pictures=[0,1].map(index=>{
+  const rows=cuts||index===0?2:1,cols=cuts||index===1?d:1;
+  const parts=Array.from({length:rows*cols},(_,k)=>'<span class="'+((index?k%cols===0:k<cols)?'shaded':'')+'"></span>').join('');
+  const name=index?'1/'+d:'1/2';
+  return `<figure><figcaption>${name}</figcaption><div class="fraction-class-grid" style="--cols:${cols};--rows:${rows}" role="img" aria-label="${name} shaded in a whole split into ${rows} rows and ${cols} columns">${parts}</div></figure>`;
+ }).join('');
+ return `<p><b>1/2 + 1/${d}</b></p><p>Can you make exactly half using whole ${d===3?'thirds':'fifths'}?</p>${pictures}
+ ${cuts?`<p>Count the boxes in one whole. How much is shaded altogether?</p><label for="fraction-odd-answer">My sum</label>
+ <div class="fraction-build-actions"><input id="fraction-odd-answer" class="ans" maxlength="32" value="${esc(answer)}"><button type="button" class="btn quiet small" data-odd-check>Check my sum</button></div>`:
+ '<button type="button" class="btn quiet small" data-odd-cut>Add the missing cuts</button>'}
+ <p role="status" class="fraction-feedback" data-odd-feedback>${solved?`Yes. ${d}/${2*d} + 2/${2*d} = ${cxText(goal)}.`:''}</p>`;
+}
+function fractionPostActivities(a,b,state){
+ const d=fractionOddDenominator(a,b);
+ return `<div class="fraction-pictures fraction-extras">${fractionEquivalentHTML(a,b)}
+ <details data-fraction-extra="odd"${state.odd?.open===true?' open':''}><summary>Try a half with ${d===3?'thirds':'fifths'}</summary><div data-odd-work>${fractionOddHTML(d,state.odd)}</div></details></div>`;
+}
+function fractionBuildSupport(it,text){
+ if(it.st.done||it.phase==='model'||!it.step)return;
+ const st=it.st,context=lpWalterContextKey(it),signature=walterHelpSignature(context+'|'+text);
+ st.walterEvents=Array.isArray(st.walterEvents)?st.walterEvents:[];
+ if(st.walterEvents.some(e=>e.id==='fraction-builder'&&e.signature===signature))return;
+ st.walterEvents.push({step:st.k,stepId:'fraction-builder',id:'fraction-builder',type:'representation',move:'smaller',context,signature,text,t:Date.now(),tries:st.tries||0});
+ st.helps=(st.helps||0)+1;
+ if(['delayed','mixed'].includes(it.phase)&&!st.walterProbe)st.walterProbe=st.tries?'miss-before-help':'help-before-miss';
+ lpWalterTrimEvents(st);
+}
+function fractionActivitiesBind(it,state){
+ const {a,b}=it.spec.audit;
+ app.querySelectorAll('[data-build-board]').forEach(section=>{
+  const i=Number(section.dataset.buildBoard),f=i?b:a,other=i?a:b;
+  const boards=Array.isArray(state.boards)?state.boards:(state.boards=[]);
+  const board=boards[i]&&typeof boards[i]==='object'?boards[i]:(boards[i]={});
+  const refresh=selector=>{lpRender();app.querySelector(`[data-build-board="${i}"] ${selector}`)?.focus({preventScroll:true});};
+  section.querySelectorAll('[data-band]').forEach(button=>button.onclick=()=>{
+   const band=Number(button.dataset.band),selected=fractionBandSelection(board,Math.ceil(f.n/f.d)*f.d);
+   if(selected.has(band))selected.delete(band);else selected.add(band);
+   board.bands=[...selected];button.setAttribute('aria-pressed',String(selected.has(band)));
+   section.querySelector('[data-build-feedback]').textContent='';lpSaveResume();
+  });
+  const input=section.querySelector('[data-split-draft]'),split=section.querySelector('[data-split]');
+  if(input){
+   input.oninput=()=>{board.parts=input.value.slice(0,3);lpSaveResume();};
+   input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();split.click();}};
+   split.onclick=()=>{
+    const count=fractionBandSelection(board,Math.ceil(f.n/f.d)*f.d).size;
+    const parts=input.value.trim();
+    let cue='';
+    if(count!==f.n)cue='Look at the original fraction. Check how many bands you shaded across your drawing.';
+    else if(!/^\d+$/.test(parts)||Number(parts)<1)cue='Enter a positive whole number for the equal parts.';
+    else if(Number(parts)!==other.d)cue='Look at the other fraction’s bottom number. Match those bands in this whole.';
+    if(cue){section.querySelector('[data-build-feedback]').textContent=cue;fractionBuildSupport(it,cue);lpSaveResume();return;}
+    board.parts=parts;board.cut=true;refresh('[data-edit-bands]');
+   };
+  }
+  const edit=section.querySelector('[data-edit-bands]');
+  if(edit)edit.onclick=()=>{board.cut=false;refresh('[data-band]');};
+ });
+ const extra=app.querySelector('[data-fraction-extra="odd"]');
+ if(!extra)return;
+ const d=fractionOddDenominator(a,b),odd=state.odd&&typeof state.odd==='object'?state.odd:(state.odd={});
+ extra.ontoggle=()=>{odd.open=extra.open;lpSaveResume();};
+ const cut=extra.querySelector('[data-odd-cut]');
+ if(cut)cut.onclick=()=>{odd.cut=true;odd.open=true;lpRender();app.querySelector('#fraction-odd-answer')?.focus({preventScroll:true});};
+ const answer=extra.querySelector('#fraction-odd-answer'),check=extra.querySelector('[data-odd-check]'),feedback=extra.querySelector('[data-odd-feedback]');
+ if(!answer)return;
+ answer.oninput=()=>{odd.answer=answer.value.slice(0,32);odd.checked=false;feedback.textContent='';lpSaveResume();};
+ answer.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();check.click();}};
+ check.onclick=()=>{
+  odd.answer=answer.value.slice(0,32);const value=cxRead(odd.answer),goal=cxF(d+2,2*d);
+  odd.checked=cxEq(value,goal);
+  feedback.textContent=odd.checked?`Yes. ${d}/${2*d} + 2/${2*d} = ${cxText(goal)}.`:value?'Count the shaded boxes from both pictures. Use the number of boxes in one whole as your denominator.':'Enter a fraction, like top/bottom.';
+  lpSaveResume();
+ };
+}
 // Explicit common-unit revision on dynamic fraction-combination lessons/homework.
 // Entry checks read original denominators only. No solution fields enter this UI.
 function fractionReconsiderContext(it){
