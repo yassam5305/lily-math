@@ -587,6 +587,13 @@ button.u5-block:focus-visible{outline:3px solid #111;outline-offset:-3px;z-index
 }
 
 .warm-groups span[aria-hidden]{width:auto;min-width:2.5rem;height:auto;min-height:2.5rem;padding:.25rem;overflow-wrap:anywhere;max-width:4rem;font-size:.75rem}.warm-place-track{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.35rem}.warm-place-track button[aria-pressed="true"]{outline:2px solid currentColor}.warm-story-bar{display:flex;max-width:25rem}.warm-story-bar span{border:2px solid currentColor;padding:.6rem;text-align:center;flex:1}.warm-story-bar span+span{border-left:0}.warm-model{display:flex;gap:1rem;flex-wrap:wrap}.warm-model figure{margin:.3rem 0}.warm-grid{display:grid;grid-template-columns:repeat(10,1fr);width:6rem;aspect-ratio:1;border:1px solid var(--ink)}.warm-grid i{border:.5px solid var(--line)}.warm-grid .filled{background:#5c72ab}.warm-chart{border-collapse:collapse;width:100%;max-width:30rem;table-layout:fixed}.warm-chart th,.warm-chart td{padding:.4em .1em;border:1px solid var(--line);text-align:center;overflow-wrap:anywhere}.warm-chart th{font-size:.82rem}.warm-groups{display:flex;flex-wrap:wrap;gap:.5rem}.warm-groups span{display:inline-grid;place-items:center;border:2px solid var(--line);border-radius:50%;width:3rem;height:3rem}
+/* Keep the homework entry as legible as the question printed above it. */
+#hwq{font:inherit;font-size:20px;line-height:1.45;padding:.6em;min-height:5em}
+html[data-reading-size="large"]{--reading-text:21px}
+html[data-reading-size="largest"]{--reading-text:25px}
+html:is([data-reading-size="large"],[data-reading-size="largest"]) .app :is(p:not(.big-num):not(.big-words),label,legend,summary,.btn,.opt,.lpstep,.inline-err,.muted,.walter-note,.step,.blurb,.home-desc,select,textarea,.prompt){font-size:var(--reading-text)!important;line-height:1.4;overflow-wrap:anywhere}
+html:is([data-reading-size="large"],[data-reading-size="largest"]) .app{font-size:var(--reading-text)}
+html:is([data-reading-size="large"],[data-reading-size="largest"]) .app :is(input.ans,textarea.ans){max-width:100%;font-size:max(1em,var(--reading-text))}
 </style>
 </head>
 <body>
@@ -1869,7 +1876,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.25.0 · November 19, 2026";
+const BUILD="v10.26.0 · November 20, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -4088,6 +4095,7 @@ function normalize(p){ // fill in anything missing (older saves, imports)
   out.homeworkLog=fractionHomeworkLogNorm(p.homeworkLog);
   setHomeworkDrafts(out,homeworkDraftList(p));
   out.homePracticeLesson=homePracticeLessonId(p.homePracticeLesson);
+  out.readingSize=['large','largest'].includes(p.readingSize)?p.readingSize:'standard';
   out.decimalWarmup=warmNormalize(p.decimalWarmup);
   return out;
 }
@@ -4667,6 +4675,7 @@ const homeOpen={};
 const foldAttr=key=>{ const k=(S&&S.name||"")+"|"+key; return ` data-fold="${key}"${homeOpen[k]?" open":""}`; };
 function bindFolds(){ app.querySelectorAll("details[data-fold]").forEach(d=>d.addEventListener("toggle",()=>{ homeOpen[(S&&S.name||"")+"|"+d.dataset.fold]=d.open; })); }
 function home(){
+  document.documentElement.dataset.readingSize=S?.readingSize||'standard';
   if(typeof reportRelease==="function") reportRelease(); // a viewed school document never follows a grown-up back to Home or another player
   if(typeof rhReset==="function") rhReset(); // v9.23: nor do the report-card helper's marks (memory only)
   if(cur && phase==="q") leaveProblem(); else resolvePending();
@@ -5315,6 +5324,7 @@ function parseDecimalFormHomework(text){
 }
 function parseHomework(text, depth){
   const decimalForm=parseDecimalFormHomework(text); if(decimalForm) return decimalForm;
+  const tailor=parseTailorHomework(text); if(tailor)return tailor;
   const story=parseWordHomework(text); if(story) return story;
   const fraction=parseFractionHomework(text); if(fraction) return fraction;
   let t=String(text||"").trim().toLowerCase().replace(/\s+/g," ").replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g,m=>"^"+[...m].map(ch=>"⁰¹²³⁴⁵⁶⁷⁸⁹".indexOf(ch)).join("")).replace(/=\s*[\d,.\s?_]*$/,"").trim(); // "= ?", "= ____", or an answer she already wrote after the equals sign are all dropped
@@ -10500,7 +10510,7 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
       ${misses.length?misses.map(e=>`<div class="miss"><div class="meta">${missMeta(e)}${e.whyMiss?" · <span class=\"tag\">reason</span>":""}</div><div class="q">${esc(str(e.q))||"<span class=\"muted\">(question not recorded)</span>"}</div>${e.whyMiss?`<div class="a">Answer <span class="good">${esc(str(e.ans))}</span> was right. Reason picked: <span class="bad">${esc(str(e.whyPick))||"—"}</span><br>The reason: <span class="good">${esc(str(e.whyRight))||"—"}</span></div>`:`<div class="a">Answered <span class="bad">${esc(str(e.yours))||"—"}</span> · correct: <span class="good">${esc(str(e.ans))||"—"}</span></div>`}</div>`).join(""):`<p class="muted">No misses logged yet.</p>`}
     </div>
     </details>
-    <details class="gu-section" id="gusettings"><summary>Practice settings and privacy</summary>${warmSettings()}${guCardHTML()}${teacherSettingsHTML()}${foundationsGrownupsHTML()}${classHTML}</details>
+    <details class="gu-section" id="gusettings"><summary>Practice settings and privacy</summary><section class="card"><h2><label for="reading-size">Reading text size</label></h2><select id="reading-size">${[['standard','Standard'],['large','Large'],['largest','Extra large']].map(([key,label])=>`<option value="${key}" ${S.readingSize===key?'selected':''}>${label}</option>`).join('')}</select><p>Questions, instructions and homework typing for ${esc(S.name)} will look this big.</p></section>${warmSettings()}${guCardHTML()}${teacherSettingsHTML()}${foundationsGrownupsHTML()}${classHTML}</details>
     <details class="gu-section" id="gubackup"><summary>Backups and app information</summary>
     <div class="card">
       <h2 style="margin-top:0">Move to a new iPad</h2>
@@ -10560,6 +10570,11 @@ function grownupsPage(){ // v9.20: reached only through grownups() (the PIN gate
     q("save-home-practice").focus({preventScroll:true});
   };
   const setClassMode=()=>{ const m=q("classmode"); if(m) m.innerHTML=classModeHTML(); };
+  app.querySelector('#reading-size').onchange=e=>{
+    S.readingSize=e.target.value;
+    document.documentElement.dataset.readingSize=S.readingSize;
+    save();
+  };
   const warmToggle=app.querySelector("#warm-enable");
   warmToggle.onchange=()=>{S.decimalWarmup.enabled=warmToggle.checked;save();};
   if(location.hash==="#decimal-warmup"){app.querySelector("#gusettings").open=true;warmToggle.focus();}
@@ -13763,10 +13778,14 @@ const LP_CODE_NAMES={"decimal-place":"a decimal unit count needed attention","de
 if(document.head){const decStyle=document.createElement("style");decStyle.textContent='.lpdecchart{border:2px solid var(--ink);border-radius:8px;overflow:hidden;margin:10px 0}.lpdecrow{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr))}.lpdecrow>div{position:relative;min-width:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 4px;text-align:center}.lpdecpoint{position:absolute;right:-5px;top:50%;font-size:22px;background:white;z-index:1;line-height:1}.lpdecrow>div:last-child{border-right:0}.lpdechead{overflow-wrap:anywhere;background:#f0f3f7;font-size:13px;font-weight:700}.lpdecunits{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;margin-bottom:5px}.lpdecunit{display:block;border:1px solid #1b2a41;background:#e6eff7}.lpdecunit.whole{width:30px;height:30px;background-image:linear-gradient(#8ca3b5 1px,transparent 1px),linear-gradient(90deg,#8ca3b5 1px,transparent 1px);background-size:3px 3px}.lpdecunit.tenth{width:3px;height:30px;background-image:linear-gradient(#8ca3b5 1px,transparent 1px);background-size:3px 3px}.lpdecunit.hundredth{width:3px;height:3px}.lpdecunit.ten{width:30px;height:300px;background-color:#e6eff7;background-image:linear-gradient(#1b2a41 1px,transparent 1px),linear-gradient(#8ca3b5 1px,transparent 1px),linear-gradient(90deg,#8ca3b5 1px,transparent 1px);background-size:30px 30px,3px 3px,3px 3px}';document.head.appendChild(decStyle);}
 // Exact homework uses the checked lesson widgets, but owns its resume and history.
 // Nothing in this route raises a level, clears a weakness, or proves independent readiness.
-function parseFractionHomework(text){
+function fractionHomeworkText(text){
   const glyphs={'½':'1/2','⅓':'1/3','⅔':'2/3','¼':'1/4','¾':'3/4','⅕':'1/5','⅖':'2/5','⅗':'3/5','⅘':'4/5','⅙':'1/6','⅚':'5/6','⅛':'1/8','⅜':'3/8','⅝':'5/8','⅞':'7/8'};
   let t=String(text||'').replace(/([0-9])([½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞])/g,'$1 $2').replace(/[½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]/g,c=>glyphs[c]);
   t=normNum(t).replace(/⁄/g,'/').trim().toLowerCase().replace(/\s+/g,' ');
+  return t;
+}
+function parseFractionHomework(text){
+  let t=fractionHomeworkText(text);
   if(!/\d\s*\/\s*\d/.test(t)||!/[+−\-×x*÷]|\b(?:plus|minus|times|divided by)\b/.test(t))return null;
   // Grouped expressions and A/B comparisons belong to the existing expression
   // parser: their slash can mean division rather than a fraction operand.
@@ -13791,7 +13810,55 @@ function parseFractionHomework(text){
   if(op==='÷'&&!((a.d===1&&a.n>=1&&b.n===1&&b.d>=2)||(a.n===1&&a.d>=2&&b.d===1&&b.n>=1)))return {err:'For fraction division, this route supports a whole number ÷ a unit fraction, or a unit fraction ÷ a whole number, like 3 ÷ 1/4 or 1/4 ÷ 3.'};
   return {fraction:true,a,b,op,method,explicitMethod,label:cxText(a)+' '+op+' '+cxText(b)};
 }
+// Read both lengths, the common unit and the question before choosing addition.
+function parseTailorHomework(text){
+  const story=String(text||'').replace(/\s+/g,' ').trim();
+  if(story.length>1000)return null;
+  const t=fractionHomeworkText(story).replace(/^(?:(?:question|problem|#)\s*\d+[.):]?|\d+[.)])\s+/,'');
+  const amount='((?:\\d+ )?\\d+\\s*/\\s*\\d+)';
+  const length=amount+' (?:of an inch|inches?) (?:off|of|from) ';
+  const garment='(?:a |the )(?:skirt|pair of pants|dress|sleeve|ribbon)';
+  const pattern=new RegExp('^(?:a|the) tailor cut '+length+garment+' and '+length+garment+'[.!]? how (?:much|many inches) did the tailor cut off (?:altogether|in all|in total)[?.!]*(?: (estimate and then add using an area model)[.!]*)?(?: (simplify if possible)[.!]*)?$');
+  const match=t.match(pattern);
+  if(!match)return null;
+  const parsed=parseFractionHomework(match[1]+' + '+match[2]+' area model');
+  if(!parsed?.fraction)return parsed;
+  return {...parsed,tailorStory:story,estimate:!!match[3],simplify:!!match[4],label:'Lengths cut by the tailor'};
+}
+function tailorHomeworkSpec(task){
+  const sp=cxFractionCombine({...task,unit5:true});
+  const {init,next,visual}=sp;
+  sp.title=esc(task.tailorStory);sp.problemKey=task.tailorStory;
+  sp.init=()=>({...init(),estimate:null});
+  sp.next=st=>{
+    if(task.estimate&&st.estimate===null){
+      const total=cxAdd(task.a,task.b);
+      return {prompt:'About how many inches altogether? Give your best whole-inch estimate. Look at the two lengths together.',short:'About how many inches?',input:{type:'num'},auto:Math.round(total.n/total.d),
+        check:v=>{
+          if(!/^\d+$/.test(String(v).trim()))return {ok:false,fmt:true,msg:'Try a whole number of inches for this estimate.'};
+          return Math.abs(Number(v)*total.d-total.n)*2<=total.d?{ok:true,apply:()=>{st.estimate=Number(v);}}:
+            {ok:false,code:'fraction-estimate',msg:'Picture the two pieces end to end. Which whole-inch mark would the end be closest to?'};
+        }};
+    }
+    const step=next(st);
+    if(task.simplify&&st.stage==='final'&&step){
+      const check=step.check;
+      step.prompt='Write the total in inches. Use a fraction or mixed number in simplest form.';
+      step.check=v=>{
+        const result=check(v);
+        if(!result.ok)return result;
+        const f=parseFraction(String(v));
+        if(gcd(f.n,f.d)>1||(f.w>0&&f.n>=f.d))return {ok:false,safe:true,code:'fraction-simplify',msg:'That is the right length. Can you write it with smaller numbers or collect the whole inches?'};
+        return result;
+      };
+    }
+    return step;
+  };
+  sp.visual=st=>(st.estimate!==null?'<p>Your estimate: '+st.estimate+' whole '+(st.estimate===1?'inch':'inches')+'.</p>':'')+visual(st);
+  return sp;
+}
 function fractionHomeworkTask(task){
+  if(task?.tailorStory){const parsed=parseTailorHomework(task.tailorStory);return parsed?.fraction?parsed:null;}
   if(task?.weekly)return weeklyHomeworkTask(task);
   if(task?.wordStory)return wordHomeworkTask(task);
   if(!task||typeof task!=='object'||Array.isArray(task))return null;
@@ -13801,6 +13868,7 @@ function fractionHomeworkTask(task){
   if(!r?.fraction)return null;return {...r,method:['algorithm','area','line'].includes(task.method)?task.method:r.method};
 }
 function fractionHomeworkSpec(task){
+  if(task.tailorStory)return tailorHomeworkSpec(task);
   if(task.weekly)return weeklyHomeworkSpec(task);
   if(task.wordStory)return wordHomeworkSpec(task);
   if(task.op==='×')return cxFractionProduct({a:task.a,b:task.b,mode:'area'});
@@ -13808,6 +13876,10 @@ function fractionHomeworkSpec(task){
   return cxFractionCombine({...task,regroup:task.op==='−'&&task.a.n%task.a.d/task.a.d<task.b.n%task.b.d/task.b.d&&task.a.n>=task.a.d});
 }
 function fractionHomeworkStateValid(task,st){
+  if(task.tailorStory&&task.estimate){
+    const total=cxAdd(task.a,task.b);
+    if(st.estimate===null?st.stage!=='denominator':!Number.isSafeInteger(st.estimate)||Math.abs(st.estimate*total.d-total.n)*2>total.d)return false;
+  }
   if(task.weekly)return weeklyHomeworkStateValid(task,st);
   if(task.wordStory)return wordHomeworkStateValid(task,st);
   if(['+','−'].includes(task.op)){
@@ -13840,6 +13912,7 @@ function fractionHomeworkResumeNorm(r){
 function fractionHomeworkLogNorm(log){return (Array.isArray(log)?log:[]).filter(e=>e&&typeof e==='object'&&!Array.isArray(e)&&Number.isFinite(e.t)&&typeof e.q==='string').slice(-100).map(e=>({...e,q:e.q.slice(0,100),firstTry:0,hw:1,stepEvents:lpTrimEvents(e.stepEvents)}));}
 const HOMEWORK_DRAFT_LIMIT=6;
 function homeworkDraftKey(task){
+  if(task.tailorStory)return JSON.stringify(['tailor',task.a,task.b,task.estimate,task.simplify]);
   if(task.weekly)return JSON.stringify([task.week,task.itemId,!!task.gridCheck]);
   if(task.wordStory)return JSON.stringify([task.storyType,task.story]);
   return JSON.stringify([task.op,task.a,task.b,['+','−'].includes(task.op)?task.method:null]);
@@ -13877,7 +13950,7 @@ function fractionHomeworkStart(request,resume){
     if(!window.confirm(`You have ${HOMEWORK_DRAFT_LIMIT} saved homework problems. Replace the oldest one, “${homeworkDraftLabel(oldest.task)},” with this problem?`))return;
   }
   if(cur&&phase==='q')leaveProblem();cur=null;mode=task.wordStory?'hw:word':'hw:fraction';
-  const sp=fractionHomeworkSpec(task),bp={name:task.weekly?'Unit 4 homework':task.wordStory?'Word problem homework':'Fraction homework',lesson:0,skill:task.weekly?weeklyHomeworkItem(task.itemId).skill:task.storyType==='decimal'?'decaddsub':task.storyType==='group-count'?'divide':task.wordStory?'expressions':'fracaddsub',make:(load,phase,i=0)=>task.weekly?weeklyHomeworkExample(task,i):fractionHomeworkSpec(task.wordStory?wordHomeworkExample(task,i):task.op==='×'?{...task,a:{n:i+2,d:5},b:{n:1,d:3}}:task.op==='÷'?{...task,a:{n:i+2,d:1},b:{n:1,d:5}}:{...task,a:{n:i+3,d:4},b:{n:1,d:6}})};bp.model=()=>bp.make(1,'model',0);
+  const sp=fractionHomeworkSpec(task),bp={name:task.weekly?'Unit 4 homework':task.wordStory?'Word problem homework':'Fraction homework',lesson:0,skill:task.weekly?weeklyHomeworkItem(task.itemId).skill:task.storyType==='decimal'?'decaddsub':task.storyType==='group-count'?'divide':task.wordStory?'expressions':'fracaddsub',make:(load,phase,i=0)=>task.weekly?weeklyHomeworkExample(task,i):fractionHomeworkSpec(task.wordStory?wordHomeworkExample(task,i):task.op==='×'?{...task,a:{n:i+2,d:5},b:{n:1,d:3}}:task.op==='÷'?{...task,a:{n:i+2,d:1},b:{n:1,d:5}}:{...task,tailorStory:null,a:{n:i+3,d:4},b:{n:1,d:6}})};bp.model=()=>bp.make(1,'model',0);
   const it={phase:'guided',spec:sp,load:1};lp={id:task.wordStory?'homework-word':'homework-fraction',homework:task,bp,items:[it,{phase:'summary'}],i:0,load:1,results:[],t0:Date.now()};
   lpItemStart(it);
   if(resume){it.st={...it.st,...resume.st,msg:'',msgKind:'',stepEvents:lpTrimEvents(resume.st.stepEvents)};it.step=sp.next(it.st);lpPrepareStep(it);it.recorded=!!resume.recorded;lp.results=Array.isArray(resume.results)?resume.results.slice(-2):[];}
