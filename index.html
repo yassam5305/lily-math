@@ -593,7 +593,7 @@ html[data-reading-size="large"]{--reading-text:21px}
 html[data-reading-size="largest"]{--reading-text:25px}
 html:is([data-reading-size="large"],[data-reading-size="largest"]) .app :is(p:not(.big-num):not(.big-words),label,legend,summary,.btn,.opt,.lpstep,.inline-err,.muted,.walter-note,.step,.blurb,.home-desc,select,textarea,.prompt){font-size:var(--reading-text)!important;line-height:1.4;overflow-wrap:anywhere}
 html:is([data-reading-size="large"],[data-reading-size="largest"]) .app{font-size:var(--reading-text)}
-html:is([data-reading-size="large"],[data-reading-size="largest"]) .app :is(input.ans,textarea.ans){max-width:100%;font-size:max(1em,var(--reading-text))}
+html:is([data-reading-size="large"],[data-reading-size="largest"]) .app :is(input.ans,textarea.ans){max-width:100%;font-size:max(28px,var(--reading-text))}
 </style>
 </head>
 <body>
@@ -1876,7 +1876,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.26.0 · November 20, 2026";
+const BUILD="v10.27.0 · November 20, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -4779,7 +4779,7 @@ function home(){
   try{window.scrollTo(0,0);}catch(e){}
 }
 // A short opt-in practice route. Enrollment, drafts and observations belong to the active profile.
-const WARMUP_NAMES={read:'Write a decimal',fact:'A familiar fact',relation:'Place-value relationships',times:'Decimal multiplication',share:'Decimal division',power:'Powers of ten',compare:'Compare decimals',round:'Round decimals',add:'Add decimals',subtract:'Subtract decimals',story:'Ribbon stories'};
+const WARMUP_NAMES={coach:'Coach Walter',change:'Change one digit',read:'Write a decimal',fact:'A familiar fact',relation:'Place-value relationships',times:'Decimal multiplication',share:'Decimal division',power:'Powers of ten',compare:'Compare decimals',round:'Round decimals',add:'Add decimals',subtract:'Subtract decimals',story:'Ribbon stories'};
 const WARMUP_ROTATION=['times','share','power','compare','times','round','share','add','power','subtract'];
 const WARMUP_MOVES={hint:'Give me a clue',picture:'Show a place chart',example:'Try a different example'};
 const WARMUP_LENGTH=8;
@@ -4805,7 +4805,8 @@ function warmPrepareNext(d,history){
   d.kind=d.index===5?WARMUP_PARTNER[d.topic]:d.topic;
   d.load=warmNextLoad(history,d.kind);
   if(d.index===2)return;
-  const recent=new Set(history.filter(r=>r.kind===d.kind&&r.load===d.load).slice(-12).map(r=>r.key));
+  const kind=warmCard(d).kind;
+  const recent=new Set(history.filter(r=>r.kind===kind&&r.load===d.load).slice(-12).map(r=>r.key));
   const start=Math.floor(Math.random()*60000);
   for(let i=0;i<96;i++){
     d.seed=start+i;
@@ -4899,6 +4900,7 @@ function warmReviewCard(d){
   return c;
 }
 function warmSignature(c){
+  if(c.challenge)return c.kind+'|'+c.givens.join('|');
   if(c.kind==='relation')return (c.goal<0.1?'down':'up')+'|'+Number(c.goal.toFixed(4));
   if(c.story)return c.story.A+'|'+c.story.B;
   return c.givens.join('|')+'|'+Number(c.goal.toFixed(6));
@@ -4919,6 +4921,7 @@ function warmReviewReady(w,d,now){
   for(let i=0;i<192 && warmSignature(warmReviewCard(d))===due.signature;i++){d.seed++;d.reverse=!d.reverse;}
 }
 function warmSchedule(w,row){
+  if(['coach','change'].includes(row.kind))row={...row,kind:'compare',load:2};
   if(!row.load&&!['story','relation'].includes(row.kind))return;
   const load=row.load||2;
   const reviews=w.reviews||(w.reviews=[]);
@@ -4957,6 +4960,9 @@ function warmNormalize(raw){
   const length=d?.length===WARMUP_LENGTH?WARMUP_LENGTH:3;
   if(d&&Number.isSafeInteger(d.index)&&d.index>=0&&d.index<=length&&WARMUP_ROTATION.includes(d.topic)){
     state.draft={length,load:warmLoad(d.load),kind:WARMUP_ROTATION.includes(d.kind)?d.kind:d.topic,index:d.index,seed:warmCount(d.seed),topic:d.topic,reverse:!!d.reverse,
+      challenge:['coach','change','practice'].includes(d.challenge)&&d.newCoach&&length===8?d.challenge:'',
+      prediction:['less','equal','more'].includes(d.prediction)?d.prediction:'',
+      covered:!!d.covered,direct:!!d.direct,
       newCoach:d.newCoach===true && length===8,storySeed:warmCount(d.storySeed),storyReverse:!!d.storyReverse,
       reviewKind:reviewKinds.includes(d.reviewKind)?d.reviewKind:'',reviewLoad:warmLoad(d.reviewLoad),
       observed:warmObservations(d.observed),pieceEntry:String(d.pieceEntry||'').slice(0,12),pieceOpen:!!d.pieceOpen,
@@ -4984,16 +4990,38 @@ function warmBegin(){
     let seed=Math.floor(Math.random()*60000);
     const last=state.history.filter(row=>row.kind===topic).at(-1);
     if(last&&seed%6===last.seed%6)seed++;
-    state.draft={newCoach:true,storySeed:seed,storyReverse:!!(serial%2),observed:[],length:WARMUP_LENGTH,load:2,kind:topic,index:0,topic,seed,reverse:serial%2===1,entry:'',checked:false,miss:false,moves:[],last:''};
+    state.draft={challenge:['coach','change','practice'][serial%3],newCoach:true,storySeed:seed,storyReverse:!!(serial%2),observed:[],length:WARMUP_LENGTH,load:2,kind:topic,index:0,topic,seed,reverse:serial%2===1,entry:'',checked:false,miss:false,moves:[],last:''};
     warmReviewReady(state,state.draft,now);
     save();
   }
   warmRender();
 }
 function warmObservations(list){
-  return ['count','place','unknown','expression','expression-retry','unknown-retry','count-help','picture'].filter(k=>Array.isArray(list)&&list.includes(k));
+  return ['count','place','unknown','expression','expression-retry','unknown-retry','count-help','picture','chose-picture','covered','prediction'].filter(k=>Array.isArray(list)&&list.includes(k));
+}
+function warmChallenge(d){
+  const tenths=1+d.seed%5, ones=1+Math.floor(d.seed/5)%9;
+  const small=(tenths*10+ones)/100, large=(tenths+1+Math.floor(d.seed/45)%2)/10;
+  const challenge=d.challenge, givens=[small,large];
+  const hint='Line up the points. Compare the tenths first. If they match, look one place farther right.';
+  const picture='Each row shows one number. Find the first column where the digits differ.';
+  if(challenge==='coach')return {kind:challenge,challenge,givens,goal:large,hint,picture,
+    q:`Walter made a mistake. “${small} is bigger than ${large} because it has more digits.” Which number is really bigger?`,
+    example:'Different example: 0.81 is smaller than 0.9. Eight tenths is less than nine tenths.'};
+  return {kind:challenge,challenge,givens,hint,picture,
+    q:`${small} is less than ${large}. Change just one digit after the point in ${small} to make it greater than ${large}. Type your new number with two decimal places.`,
+    example:'Different example: 2.14 is less than 2.6. Change the 1 to a 7 and you get 2.74, which is greater than 2.6.'};
+}
+function warmDigitChange(card,entry){
+  if(!/^(?:0)?\.\d{2}$/.test(entry))return {format:true,msg:'Keep two digits after the point, just like the starting number.'};
+  const digits=entry.split('.')[1], original=card.givens[0].toFixed(2).split('.')[1];
+  const changed=Number(digits[0]!==original[0])+Number(digits[1]!==original[1]);
+  if(changed!==1)return {msg:changed?'You changed both digits. Keep one in its old spot and try again.':'That is the starting number. Choose one digit to change.'};
+  if(Number(entry)<=card.givens[1])return {msg:`You changed the ${digits[0]===original[0]?'hundredths':'tenths'} digit. Put your number beside ${card.givens[1]} and compare the tenths first.`};
+  return {ok:true};
 }
 function warmCard(d){
+  if(['coach','change'].includes(d.challenge)&&d.index===5)return warmChallenge(d);
   if(d.newCoach){
     if(d.index===0&&d.reviewKind)return warmReviewCard(d);
     if(d.index===3||d.index===7)return warmStory(d.storySeed,d.index===3?d.storyReverse:!d.storyReverse);
@@ -5085,6 +5113,18 @@ function warmCountPicture(task,d){
     '<button class="btn quiet small" id="warm-dot-ten">Put ten in each group</button>'+
     '<button class="btn quiet small" id="warm-dot-take" '+(!dots?'disabled':'')+'>Take one from each</button></div>';
 }
+// Pair a later independent check with the last comparable practice before it.
+function warmPicturePairs(history){
+  const prior=new Map(), pairs=[];
+  for(const r of history){
+    const kind=['change','coach'].includes(r.kind)?'compare':r.kind;
+    const key=kind+'|'+(r.load||2), p=prior.get(key);
+    if(r.delayed&&p?.observed?.includes('chose-picture')&&r.time-p.time>=WARM_DAY&&r.signature!==p.signature&&
+      !r.miss&&!r.help&&!r.repeat&&!r.prompted&&!r.setAside)pairs.push({kind,load:r.load,practice:p,check:r});
+    prior.set(key,r);
+  }
+  return pairs;
+}
 function warmParentRow(r){
   const o=r.observed||[];
   const result=r.setAside?'set aside after trying':r.help?'with help':r.miss?'after another try':r.prompted?'with a checked fact':r.repeat?'on a familiar problem':'on the first try';
@@ -5092,6 +5132,8 @@ function warmParentRow(r){
   if(o.includes('count'))parts.push('checked the counting part');
   if(o.includes('place'))parts.push('placed the digit');
   if(o.includes('expression'))parts.push(o.includes('expression-retry')?'chose the math sentence after a prompt':'chose the math sentence');
+  if(o.includes('prediction'))parts.push('made a size prediction');
+  if(o.includes('covered'))parts.push('read the story with numbers covered');
   if(o.includes('picture'))parts.push('used a picture');
   const date=new Date(r.time).toLocaleDateString(undefined,{month:'short',day:'numeric'});
   return `<li>${date} · ${WARMUP_NAMES[r.kind]}${r.load?' · '+WARMUP_LOAD[r.load]:''} · ${r.delayed?'later check · ':''}${r.delayed&&result==='on the first try'?'solved independently':result}${parts.length?' ('+parts.join(', ')+')':''}</li>`;
@@ -5103,11 +5145,14 @@ function warmSettings(){
   const d=w.draft;
   const unfinished=d&&!d.checked&&(d.moves?.length||d.pieceOpen||d.fractionHelp||d.miss)?
     '<p>Paused question: '+WARMUP_NAMES[warmCard(d).kind]+'. '+(d.moves?.length||d.pieceOpen||d.fractionHelp?'Walter gave help.':'Another try is still open.')+'</p>':'';
+  const pair=warmPicturePairs(w.history).at(-1);
+  const dates=t=>new Date(t).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  const paired=pair?`<p>${dates(pair.practice.time)}: chose a picture during ${WARMUP_NAMES[pair.practice.kind].toLowerCase()}. ${dates(pair.check.time)}: solved a fresh ${WARMUP_NAMES[pair.kind].toLowerCase()} question on the first try without help.</p>`:'';
   const practiced=recent.filter(r=>r.load&&WARMUP_ROTATION.includes(r.kind)).at(-1);
   const planned=practiced?warmNextLoad(w.history,practiced.kind):null;
   const next=practiced?'<p>Next time Walter asks about '+WARMUP_NAMES[practiced.kind].toLowerCase()+', he’ll '+(planned>practiced.load?'try a stretch question':planned<practiced.load?'start with a smaller step':'stay at the same difficulty with new numbers')+'.</p>':'';
   return '<section class="card"><h2>Warm-up with Walter</h2><label><input type="checkbox" id="warm-enable" '+(w.enabled?'checked':'')+'> Show the decimal warm-up for '+esc(S.name)+'</label><p>Eight questions connect place value with decimal calculations. Two fresh first-try answers on the same skill and difficulty can bring a stretch. Two different problems needing retries can bring a smaller step. On a later day, Walter offers a fresh question at the difficulty already practiced.</p>'+
-    (recent.length?'<p>Recent warm-up work</p><ul>'+(earlierCheck?[earlierCheck,...recent]:recent).map(warmParentRow).join('')+'</ul>':'')+unfinished+next+'</section>';
+    (recent.length?'<p>Recent warm-up work</p><ul>'+(earlierCheck?[earlierCheck,...recent]:recent).map(warmParentRow).join('')+'</ul>':'')+unfinished+paired+next+'</section>';
 }
 function warmHome(){
   const w=S.decimalWarmup;
@@ -5131,16 +5176,27 @@ function warmRender(){
   const note=key=>{if(!seen.includes(key))seen.push(key);};
   const storyPlan=!!(card.story&&!delayed);
   const countTask=d.newCoach?warmCountTask(card,delayed?d.reviewLoad:d.load):null;
-  const planOpen=!d.checked&&storyPlan&&!seen.includes('expression');
+  const covered=d.challenge&&storyPlan&&d.covered&&!seen.includes('unknown')&&!d.direct&&!d.checked;
+  const prompt=covered?(card.story.startMissing?'Jo adds some ribbon. Now Jo has a longer piece. How much did Jo start with?':'Jo starts with some ribbon and adds another piece. How much does Jo have now?'):card.q;
+  const prediction=d.challenge&&card.kind==='times'&&d.index===4?card.q.match(/^([\d.]+) × ([\d.]+)$/):null;
+  const predictionHTML=prediction&&!d.checked?`<details${d.prediction?' open':''}><summary>Want to guess the size first?</summary><p>Compared with ${prediction[2]}, will the answer be smaller, the same, or bigger?</p><div class="actions">${[['less','Smaller'],['equal','The same'],['more','Bigger']].map(([key,label])=>`<button class="btn quiet small" data-predict="${key}" aria-pressed="${d.prediction===key}">${d.prediction===key?'✓ ':''}${label}</button>`).join('')}</div></details>`:'';
+  const storyOptions=d.challenge&&storyPlan&&!d.checked&&!seen.includes('unknown')&&!d.direct?`<div class="actions"><button class="btn quiet small" id="warm-cover">${covered?'Show the numbers':'Read without numbers'}</button><button class="btn quiet small" id="warm-direct">I’m ready to solve it</button></div>`:'';
+  const helpMoves=Object.entries(WARMUP_MOVES);
+  if(d.challenge){
+    const kind=card.challenge?'compare':card.kind;
+    const pictures=warmPicturePairs(w.history).filter(p=>p.kind===kind&&p.load===(card.challenge?2:delayed?d.reviewLoad:d.load));
+    if(new Set(pictures.map(p=>p.practice.signature)).size>=2)helpMoves.unshift(...helpMoves.splice(1,1));
+  }
+  const planOpen=!d.direct&&!d.checked&&storyPlan&&!seen.includes('expression');
   const pieceHTML=countTask&&!d.checked?(seen.includes('count')
     ? '<p>You checked the count: <b>'+countTask.count+' '+countTask.unit+'</b>. Write that amount as a decimal.</p>'
     : d.pieceOpen?'<form id="warm-piece-form"><label for="warm-piece">'+esc(countTask.q)+'</label><div class="actions"><input class="ans" id="warm-piece" inputmode="numeric" maxlength="12" value="'+esc(d.pieceEntry||'')+'"><button class="btn">Check the count</button></div></form>'+
       (d.pieceMiss?'<p>'+ (countTask.op==='×'?'Draw a circle for each group. Put the same number of dots in each circle, then count them.':'Draw a circle for each group. Share the dots equally. Count the dots in one circle.')+'</p>'+warmCountPicture(countTask,d):'')
     : '<button class="btn quiet small" id="warm-piece-open">Help me with the counting part</button>'):'';
   app.innerHTML='<div class="topbar"><button class="btn quiet" id="warm-home">Pause &amp; Home</button><span>Warm-up · '+(d.index+1)+' of '+(d.length||3)+'</span></div>'+warnHTML()+'<section class="card"><h1 tabindex="-1">'+(delayed?'Try this one your way':card.story?'A ribbon story':WARMUP_NAMES[card.kind])+'</h1>'+
-    (card.bridge?'<p>You already checked <b>'+card.bridge+'</b>.</p>':'')+'<p class="big-num" id="warm-prompt">'+esc(card.q)+'</p>'+readAloudButton(card.q,'warm-read')+
-    warmTaskHTML(card,d)+pieceHTML+'<form id="warm-form" '+(planOpen?'hidden':'')+'><label for="warm-answer">My answer</label><div class="actions"><input class="ans" id="warm-answer" aria-describedby="warm-prompt" inputmode="decimal" maxlength="24" value="'+esc(d.entry)+'" '+(d.checked?'readonly':'')+'><button class="btn primary">'+(d.checked?'Next':'Check')+'</button></div></form><div id="warm-status" role="status"></div>'+
-    (d.checked?'':'<div class="actions">'+Object.entries(WARMUP_MOVES).map(([k,label])=>'<button class="btn quiet small" data-warm-help="'+k+'">'+(k==='picture'&&card.kind==='fact'?'Show equal groups':k==='picture'&&card.kind==='relation'?'Show both squares':label)+'</button>').join('')+'</div>')+
+    (card.bridge?'<p>You already checked <b>'+card.bridge+'</b>.</p>':'')+'<p class="big-num" id="warm-prompt">'+esc(prompt)+'</p>'+readAloudButton(prompt,'warm-read')+storyOptions+predictionHTML+
+    (d.direct&&card.story?'':warmTaskHTML(card,d))+pieceHTML+'<form id="warm-form" '+(planOpen?'hidden':'')+'><label for="warm-answer">My answer</label><div class="actions"><input class="ans" id="warm-answer" aria-describedby="warm-prompt" inputmode="decimal" maxlength="24" value="'+esc(d.entry)+'" '+(d.checked?'readonly':'')+'><button class="btn primary">'+(d.checked?'Next':'Check')+'</button></div></form><div id="warm-status" role="status"></div><p id="warm-prediction-check" hidden></p>'+
+    (d.checked?'':'<div class="actions">'+helpMoves.map(([k,label])=>'<button class="btn quiet small" data-warm-help="'+k+'">'+(k==='picture'&&card.story?'Show the parts':k==='picture'&&card.kind==='fact'?'Show equal groups':k==='picture'&&card.kind==='relation'?'Show both squares':label)+'</button>').join('')+'</div>')+
     (!d.checked&&d.length===WARMUP_LENGTH?'<button class="btn quiet small" id="warm-aside" '+(d.canSetAside?'':'hidden')+'>Set this one aside</button>':'')+
     '<div id="warm-reply" aria-live="polite"></div></section>';
   const feedback=msg=>{q('#warm-status').innerHTML=walterNote('work',esc(msg),true);};
@@ -5149,11 +5205,20 @@ function warmRender(){
     reply.innerHTML=k==='picture'?warmChart(card):walterNote('clue',esc(card[k]),true)+readAloudButton(card[k],'warm-read-clue');
   };
   if(d.checked){
-    feedback('Yes. '+d.entry+' fits this question.');
+    let msg=card.challenge==='coach'?`You caught Walter’s mistake. ${card.goal} is bigger. More digits can still make a smaller number.`:card.challenge==='change'?`Yes. You changed one digit, and ${d.entry} is greater than ${card.givens[1]}.`:'Yes. '+d.entry+' fits this question.';
+    if(prediction&&d.prediction){
+      const word={less:'smaller',equal:'the same size',more:'bigger'};
+      const actual=Math.sign(Number(d.entry)-Number(prediction[2]));
+      msg+=` You guessed “${word[d.prediction]}.” Compared with ${prediction[2]}, your checked answer is ${word[['less','equal','more'][actual+1]]}.`;
+    }
+    feedback(msg);
     if(card.moveDigit)q('#warm-reply').innerHTML=warmChart(card);
   }
   else if(d.last)show(d.last);
   q('#warm-home').onclick=home;
+  if(q('#warm-cover'))q('#warm-cover').onclick=()=>{d.covered=!covered;if(d.covered)note('covered');save();warmRender();};
+  if(q('#warm-direct'))q('#warm-direct').onclick=()=>{d.direct=true;d.covered=false;save();warmRender();app.querySelector('#warm-answer').focus();};
+  for(const b of app.querySelectorAll('[data-predict]'))b.onclick=()=>{d.prediction=b.dataset.predict;note('prediction');save();warmRender();app.querySelector('[data-predict="'+d.prediction+'"]').focus();};
   const input=q('#warm-answer');
   const markMiss=()=>{
     if(d.miss)d.canSetAside=true;
@@ -5188,20 +5253,28 @@ function warmRender(){
       note('count');save();warmRender();app.querySelector('#warm-answer').focus();
     };
   }
-  input.oninput=()=>{d.entry=input.value.slice(0,24);q('#warm-status').textContent='';save();};
+  function comparePrediction(){
+    if(!prediction||!d.prediction||d.checked)return;
+    const msg=q('#warm-prediction-check'),v=input.value.trim();
+    const side=Number(v)-Number(prediction[2]);
+    msg.hidden=!/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(v)||['less','equal','more'][Math.sign(side)+1]===d.prediction;
+    if(!msg.hidden)msg.textContent='Your guess and the number you typed point different ways. You can change either one, or tap Check.';
+  }
+  comparePrediction();
+  input.oninput=()=>{d.entry=input.value.slice(0,24);q('#warm-status').textContent='';comparePrediction();save();};
   q('[tabindex="-1"]').focus();
   app.querySelectorAll('[data-warm-help]').forEach(b=>b.onclick=()=>{
-    const k=b.dataset.warmHelp;if(k==='picture')note('picture');d.last=k;if(!d.moves.includes(k))d.moves.push(k);save();show(k);
+    const k=b.dataset.warmHelp;if(k==='picture'){note('picture');note('chose-picture');}d.last=k;if(!d.moves.includes(k))d.moves.push(k);save();show(k);
   });
   const advance=()=>{
-    Object.assign(d,{index:d.index+1,entry:'',checked:false,miss:false,canSetAside:false,fractionHelp:false,observed:[],pieceEntry:'',pieceMiss:false,pieceOpen:false,dots:0,selectedPlace:'',moves:[],last:''});
+    Object.assign(d,{index:d.index+1,entry:'',prediction:'',covered:false,direct:false,checked:false,miss:false,canSetAside:false,fractionHelp:false,observed:[],pieceEntry:'',pieceMiss:false,pieceOpen:false,dots:0,selectedPlace:'',moves:[],last:''});
     if(d.length===WARMUP_LENGTH&&d.index>=2&&d.index<d.length)warmPrepareNext(d,w.history);
     save();warmRender();
   };
   const record=setAside=>{
-    const key=warmItemKey(card),load=delayed?d.reviewLoad:card.story?2:d.length===WARMUP_LENGTH&&d.index>=2?d.load:null;
+    const key=warmItemKey(card),load=card.challenge?2:delayed?d.reviewLoad:card.story?2:d.length===WARMUP_LENGTH&&d.index>=2?d.load:null;
     const repeat=w.history.filter(r=>r.kind===card.kind&&(delayed||r.load===load)).slice(delayed?-90:-12).some(r=>r.key===key||(delayed&&r.signature===warmSignature(card)));
-    const row={kind:card.kind,seed:d.seed,time:Date.now(),help:d.moves.length>0||!!d.fractionHelp||seen.includes('count-help'),miss:d.miss,load,key,repeat,prompted:!!card.bridge,setAside,signature:warmSignature(card),observed:seen.slice(),delayed};
+    const row={kind:card.kind,seed:d.seed,time:Date.now(),help:d.moves.length>0||!!d.fractionHelp||seen.includes('count-help')||seen.includes('covered')||seen.includes('prediction'),miss:d.miss,load,key,repeat,prompted:!!card.bridge,setAside,signature:warmSignature(card),observed:seen.slice(),delayed};
     w.history.push(row);if(d.newCoach)warmSchedule(w,row);
     w.history=w.history.slice(-90);
   };
@@ -5222,6 +5295,11 @@ function warmRender(){
       const track=q('.warm-place-track')?.closest('fieldset');if(track)track.outerHTML=warmTaskHTML(card,d);
     }
     d.entry=input.value.trim().slice(0,24);
+    if(card.challenge==='change'){
+      const result=warmDigitChange(card,d.entry);
+      if(!result.ok){if(!result.format)markMiss();feedback(result.msg);save();return;}
+      d.checked=true;record(false);save();warmRender();q('#warm-form button').focus();return;
+    }
     const fraction=d.entry.match(/^(\d{1,9})\s*\/\s*(\d{1,9})$/);
     if(fraction&&Number(fraction[2])>0){
       const equivalent=Number(fraction[1])*1000000===Math.round(card.goal*1000000)*Number(fraction[2]);
@@ -8087,6 +8165,10 @@ function hwEntry(prefill, err){
       <textarea class="ans text hw-intake" id="hwq" rows="3" inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="Type the words and numbers from your page">${esc(prefill||"")}</textarea>
       <div class="inline-err" id="hwerr" role="status" aria-live="polite">${esc(err||"")}</div>
       <div class="actions"><button class="btn primary" id="hwgo">Get step-by-step help</button></div>
+      <section id="hw-story-setup" hidden><label for="hw-story-math">Keep your story above. What fraction math would you use?</label>
+      <input class="ans text" id="hw-story-math" placeholder="For example, 2/3 + 1/4"><label for="hw-story-tool">Show my work with</label>
+      <select id="hw-story-tool"><option value="area">An area model</option><option value="line">A number line</option><option value="algorithm">Equivalent fractions</option></select>
+      <button class="btn" id="hw-story-go">Check my fraction math</button><p>Walter can check the math you choose. Read the question again to check that your math fits the story.</p><p id="hw-story-msg" role="status"></p></section>
       <details class="home-more"><summary>Problem options</summary>
       <label class="hwmethod" for="hwform">Problem type <select id="hwform"><option value="auto">Read the full question</option><option value="words">Decimal → word form</option><option value="standard">Number words → standard form</option><option value="expanded">Decimal → expanded form</option></select></label>
       <p class="muted" style="font-size:14px">If a form question uses different wording, choose its type above and enter just its number or number words.</p>
@@ -8101,7 +8183,18 @@ function hwEntry(prefill, err){
     if(form==='auto'&&/^\s*(?:#|problem\s+|question\s+)\s*\d+[.)]?\s*$/i.test(inp.value))r={err:'Copy the whole question, including what it asks you to find.'};
     else if(form==='auto')r=parseHomework(inp.value);
     else {r=parseDecimalFormHomework(inp.value)||parseDecimalFormHomework(prefix[form]+inp.value)||{err:'Enter the decimal number or number words for the selected form first.'};if(r?.skill&&r.skill!==form)r={err:'The selected problem type and the question ask for different forms. Change the type or edit the entry; your work is still here.'};}
-    if(r.err){ q("hwerr").textContent=r.err; inp.focus(); return; } if(r.fraction||r.wordStory){if(r.fraction&&!r.explicitMethod)r.method=q("hwfractionmethod").value;fractionHomeworkStart(r);return;} pendingHW=r; next(); };
+    if(r.err){
+      const setup=form==='auto'&&/[a-z]{2}/i.test(inp.value)&&/\d\s*[\/⁄]\s*\d|[½¼¾⅛⅜⅝⅞]/.test(inp.value);
+      q('hw-story-setup').hidden=!setup;
+      q("hwerr").textContent=setup?'I need your help setting up this story. Edit the question or type the fraction math below.':r.err; inp.focus(); return; } if(r.fraction||r.wordStory){if(r.fraction&&!r.explicitMethod)r.method=q("hwfractionmethod").value;fractionHomeworkStart(r);return;} pendingHW=r; next(); };
+  q('hw-story-go').onclick=()=>{
+    const task=parseFractionHomework(q('hw-story-math').value);
+    if(!task?.fraction||!['+','−'].includes(task.op)){q('hw-story-msg').textContent=task?.err||'For this tool, type two amounts with + or − between them.';return;}
+    task.method=q('hw-story-tool').value;
+    task.learnerStory=inp.value.trim().slice(0,1400);
+    fractionHomeworkStart(task);
+  };
+  inp.addEventListener('input',()=>{q('hw-story-setup').hidden=true;q('hw-story-msg').textContent='';q('hw-story-math').value='';});
   q("hwgo").onclick=go; inp.addEventListener("keydown",e=>{ if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){ e.preventDefault(); go(); } });
   inp.focus({preventScroll:true});
 }
@@ -13814,16 +13907,28 @@ function parseFractionHomework(text){
 function parseTailorHomework(text){
   const story=String(text||'').replace(/\s+/g,' ').trim();
   if(story.length>1000)return null;
-  const t=fractionHomeworkText(story).replace(/^(?:(?:question|problem|#)\s*\d+[.):]?|\d+[.)])\s+/,'');
+  const t=fractionHomeworkText(story).replace(/\s+([,.!?])/g,'$1').replace(/^(?:(?:question|problem|#)\s*\d+[.):]?|\d+[.)])\s+/,'')
+    .replace(/\b(?:a |one )?half (?:of )?an inch\b/g,'1/2 inch')
+    .replace(/\b(?:a|one) quarter (?:of )?an inch\b/g,'1/4 inch');
   const amount='((?:\\d+ )?\\d+\\s*/\\s*\\d+)';
-  const length=amount+' (?:of an inch|inches?) (?:off|of|from) ';
-  const garment='(?:a |the )(?:skirt|pair of pants|dress|sleeve|ribbon)';
-  const pattern=new RegExp('^(?:a|the) tailor cut '+length+garment+' and '+length+garment+'[.!]? how (?:much|many inches) did the tailor cut off (?:altogether|in all|in total)[?.!]*(?: (estimate and then add using an area model)[.!]*)?(?: (simplify if possible)[.!]*)?$');
-  const match=t.match(pattern);
+  const length=amount+' (?:of an inch|inch(?:es)?)';
+  const garment='(?:(?:a|the|my|her|his) )?(?:skirt|pair of pants|pants|dress|sleeve|ribbon|bottom|hem)';
+  const cut='(?:cut|cuts|trimmed|trims|took)';
+  const off=' (?:off|of|from) '+garment;
+  const actor='(a tailor|the tailor|my mom|my dad|we|i|[a-z]{1,24})';
+  const actions=actor+' '+cut+' '+length+off+'(?:,? and|[.!] (?:then )?(she|he|they|i|we)) (?:then )?(?:'+cut+' )?'+length+off;
+  const questions='(?:how (?:much|many inches) did (.+?) (?:cut(?: off)?|trim(?: off)?|remove|take off) (?:altogether|all together|in all|in total)|what (?:is|was) the total length (.+?) removed)';
+  const instructions='[?.!]*(?: (estimate(?:,? (?:and )?then| and) add (?:using|with) an area model)[.!]*)?(?: (simplify(?: your answer)? if possible)[.!]*)?';
+  const match=t.match(new RegExp('^'+actions+'[.!]? '+questions+instructions+'$'));
+  if(match){
+    const who=match[5]||match[6], person=match[1];
+    const roles=person.endsWith('tailor')?['the tailor','the person','they','he','she']:person==='my mom'?['she','my mom']:person==='my dad'?['he','my dad']:[person,...(!['we','i'].includes(person)?['she','he','they']:[])];
+    if(!roles.includes(who)||(match[3]&&!roles.includes(match[3])))return null;
+  }
   if(!match)return null;
-  const parsed=parseFractionHomework(match[1]+' + '+match[2]+' area model');
+  const parsed=parseFractionHomework(match[2]+' + '+match[4]+' area model');
   if(!parsed?.fraction)return parsed;
-  return {...parsed,tailorStory:story,estimate:!!match[3],simplify:!!match[4],label:'Lengths cut by the tailor'};
+  return {...parsed,tailorStory:story,estimate:!!match[7],simplify:!!match[8],label:'Lengths cut from two pieces'};
 }
 function tailorHomeworkSpec(task){
   const sp=cxFractionCombine({...task,unit5:true});
@@ -13865,7 +13970,9 @@ function fractionHomeworkTask(task){
   const operand=f=>f&&Number.isSafeInteger(f.n)&&Number.isSafeInteger(f.d)&&f.d>0?f.n+'/'+f.d:'?';
   // Preserve unreduced original operands. Integers need their original d=1 in division.
   const t=f=>f?.d===1?String(f.n):operand(f),r=parseFractionHomework(t(task.a)+' '+task.op+' '+t(task.b))||parseFractionHomework(operand(task.a)+' '+task.op+' '+operand(task.b));
-  if(!r?.fraction)return null;return {...r,method:['algorithm','area','line'].includes(task.method)?task.method:r.method};
+  if(!r?.fraction)return null;
+  const learnerStory=typeof task.learnerStory==='string'&&['+','−'].includes(r.op)?task.learnerStory.trim().slice(0,1400):'';
+  return {...r,...(learnerStory?{learnerStory}:{}),method:['algorithm','area','line'].includes(task.method)?task.method:r.method};
 }
 function fractionHomeworkSpec(task){
   if(task.tailorStory)return tailorHomeworkSpec(task);
@@ -13873,7 +13980,13 @@ function fractionHomeworkSpec(task){
   if(task.wordStory)return wordHomeworkSpec(task);
   if(task.op==='×')return cxFractionProduct({a:task.a,b:task.b,mode:'area'});
   if(task.op==='÷')return cxFractionDivision({d:task.a.d===1?task.b.d:task.a.d,N:task.a.d===1?task.a.n:task.b.n,share:task.a.d!==1,mode:'model'});
-  return cxFractionCombine({...task,regroup:task.op==='−'&&task.a.n%task.a.d/task.a.d<task.b.n%task.b.d/task.b.d&&task.a.n>=task.a.d});
+  const spec=cxFractionCombine({...task,regroup:task.op==='−'&&task.a.n%task.a.d/task.a.d<task.b.n%task.b.d/task.b.d&&task.a.n>=task.a.d});
+  if(task.learnerStory){
+    const drawing=spec.visual;
+    spec.visual=st=>'<p class="lpstory">'+esc(task.learnerStory)+'</p><p>Your math sentence: <b>'+esc(task.label)+'</b>.</p>'+drawing(st);
+    spec.problemKey=homeworkDraftKey(task);
+  }
+  return spec;
 }
 function fractionHomeworkStateValid(task,st){
   if(task.tailorStory&&task.estimate){
@@ -13912,6 +14025,7 @@ function fractionHomeworkResumeNorm(r){
 function fractionHomeworkLogNorm(log){return (Array.isArray(log)?log:[]).filter(e=>e&&typeof e==='object'&&!Array.isArray(e)&&Number.isFinite(e.t)&&typeof e.q==='string').slice(-100).map(e=>({...e,q:e.q.slice(0,100),firstTry:0,hw:1,stepEvents:lpTrimEvents(e.stepEvents)}));}
 const HOMEWORK_DRAFT_LIMIT=6;
 function homeworkDraftKey(task){
+  if(task.learnerStory)return JSON.stringify(['my-story',task.learnerStory,task.op,task.a,task.b,task.method]);
   if(task.tailorStory)return JSON.stringify(['tailor',task.a,task.b,task.estimate,task.simplify]);
   if(task.weekly)return JSON.stringify([task.week,task.itemId,!!task.gridCheck]);
   if(task.wordStory)return JSON.stringify([task.storyType,task.story]);
@@ -13950,7 +14064,7 @@ function fractionHomeworkStart(request,resume){
     if(!window.confirm(`You have ${HOMEWORK_DRAFT_LIMIT} saved homework problems. Replace the oldest one, “${homeworkDraftLabel(oldest.task)},” with this problem?`))return;
   }
   if(cur&&phase==='q')leaveProblem();cur=null;mode=task.wordStory?'hw:word':'hw:fraction';
-  const sp=fractionHomeworkSpec(task),bp={name:task.weekly?'Unit 4 homework':task.wordStory?'Word problem homework':'Fraction homework',lesson:0,skill:task.weekly?weeklyHomeworkItem(task.itemId).skill:task.storyType==='decimal'?'decaddsub':task.storyType==='group-count'?'divide':task.wordStory?'expressions':'fracaddsub',make:(load,phase,i=0)=>task.weekly?weeklyHomeworkExample(task,i):fractionHomeworkSpec(task.wordStory?wordHomeworkExample(task,i):task.op==='×'?{...task,a:{n:i+2,d:5},b:{n:1,d:3}}:task.op==='÷'?{...task,a:{n:i+2,d:1},b:{n:1,d:5}}:{...task,tailorStory:null,a:{n:i+3,d:4},b:{n:1,d:6}})};bp.model=()=>bp.make(1,'model',0);
+  const sp=fractionHomeworkSpec(task),bp={name:task.weekly?'Unit 4 homework':task.wordStory?'Word problem homework':'Fraction homework',lesson:0,skill:task.weekly?weeklyHomeworkItem(task.itemId).skill:task.storyType==='decimal'?'decaddsub':task.storyType==='group-count'?'divide':task.wordStory?'expressions':'fracaddsub',make:(load,phase,i=0)=>task.weekly?weeklyHomeworkExample(task,i):fractionHomeworkSpec(task.wordStory?wordHomeworkExample(task,i):task.op==='×'?{...task,a:{n:i+2,d:5},b:{n:1,d:3}}:task.op==='÷'?{...task,a:{n:i+2,d:1},b:{n:1,d:5}}:{...task,tailorStory:null,learnerStory:null,a:{n:i+3,d:4},b:{n:1,d:6}})};bp.model=()=>bp.make(1,'model',0);
   const it={phase:'guided',spec:sp,load:1};lp={id:task.wordStory?'homework-word':'homework-fraction',homework:task,bp,items:[it,{phase:'summary'}],i:0,load:1,results:[],t0:Date.now()};
   lpItemStart(it);
   if(resume){it.st={...it.st,...resume.st,msg:'',msgKind:'',stepEvents:lpTrimEvents(resume.st.stepEvents)};it.step=sp.next(it.st);lpPrepareStep(it);it.recorded=!!resume.recorded;lp.results=Array.isArray(resume.results)?resume.results.slice(-2):[];}
