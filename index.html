@@ -1869,7 +1869,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.23.0 · November 19, 2026";
+const BUILD="v10.24.0 · November 19, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -4773,16 +4773,92 @@ function home(){
 const WARMUP_NAMES={read:'Write a decimal',fact:'A familiar fact',relation:'Place-value relationships',times:'Decimal multiplication',share:'Decimal division',power:'Powers of ten',compare:'Compare decimals',round:'Round decimals',add:'Add decimals',subtract:'Subtract decimals'};
 const WARMUP_ROTATION=['times','share','power','compare','times','round','share','add','power','subtract'];
 const WARMUP_MOVES={hint:'Give me a clue',picture:'Show a place chart',example:'Try a different example'};
+const WARMUP_LENGTH=8;
+const WARMUP_LOAD=['','One step','Core practice','Stretch'];
+const WARMUP_PARTNER={times:'share',share:'times',power:'compare',compare:'round',round:'compare',add:'subtract',subtract:'add'};
+function warmLoad(n){return [1,2,3].includes(n)?n:2;}
+// Use the two most recent comparable answers in this skill. Keep what was practiced
+// distinct from what will be offered next. Earlier three-question records lack a load.
+function warmNextLoad(history,kind){
+  const rows=history.filter(r=>r.kind===kind&&r.load);
+  const last=rows.at(-1), prior=rows.at(-2);
+  if(!last)return 2;
+  if(!prior||prior.load!==last.load||prior.key===last.key)return last.load;
+  if(last.miss&&prior.miss)return Math.max(1,last.load-1);
+  if([prior,last].every(r=>!r.miss&&!r.help&&!r.prompted&&!r.repeat))return Math.min(3,last.load+1);
+  return last.load;
+}
+function warmItemKey(card){
+  return card.kind==='compare'?'compare '+[...card.givens].sort((a,b)=>a-b).join(' '):card.q;
+}
+function warmPrepareNext(d,history){
+  // The opening fact and its first decimal application deliberately share their numbers.
+  d.kind=d.index===5?WARMUP_PARTNER[d.topic]:d.topic;
+  d.load=warmNextLoad(history,d.kind);
+  if(d.index===2)return;
+  const recent=new Set(history.filter(r=>r.kind===d.kind&&r.load===d.load).slice(-12).map(r=>r.key));
+  const start=Math.floor(Math.random()*60000);
+  for(let i=0;i<96;i++){
+    d.seed=start+i;
+    d.reverse=Boolean(d.seed%2);
+    if(!recent.has(warmItemKey(warmCard(d))))break;
+  }
+}
+function warmLoadCard(d,base){
+  const level=d.load, easy=level===1, n=2+d.seed%6, g=2+Math.floor(d.seed/6)%4;
+  const whole=1+Math.floor(d.seed/4)%4;
+  const frac=easy?n/10:(10*n+g)/100;
+  const fmt=v=>String(Number(v.toFixed(4)));
+  const card={...base,bridge:'',kind:base.kind};
+  switch(base.kind){
+    case 'times':{
+      const factor=easy?g:g/10;
+      return {...card,q:fmt(factor)+' × '+fmt(frac),goal:factor*frac,givens:[factor,frac],
+        hint:easy?'Count equal groups of tenths. How many tenths have you made?':'Write each factor as a whole-number count with a unit. A tenth of a hundredth is a thousandth. Estimate before you place the point.',
+        example:easy?'Different example: 2 × 0.9 makes 18 tenths, or 1.8.':'Different example: 0.9 × 0.91 makes 819 thousandths, or 0.819.'};
+    }
+    case 'share':{
+      const divisor=easy?g:g/10, total=Number((frac*divisor).toFixed(3));
+      return {...card,q:fmt(total)+' ÷ '+fmt(divisor),goal:frac,givens:[total,divisor],
+        hint:easy?'Read the total as tenths. Share the tenths equally between the groups.':'Multiply both numbers by ten so the divisor becomes whole. The quotient stays the same. Then share the new total.',
+        example:easy?'Different example: 4.5 ÷ 5 shares 45 tenths into five groups, giving 0.9.':'Different example: 0.819 ÷ 0.9 is the same as 8.19 ÷ 9, or 0.91.'};
+    }
+    case 'power':{
+      const start=easy?frac:d.reverse?10*whole+n:whole+frac, factor=easy?10:1000;
+      return {...card,q:fmt(start)+(d.reverse?' ÷ ':' × ')+(easy?'10':'10³'),goal:d.reverse?start/factor:start*factor,givens:[start],
+        hint:'Name the starting place. Each factor of ten changes the value by one place. Decide which way the value changes before counting places.'};
+    }
+    case 'compare':{
+      const a=easy?whole+n/10:whole+n/10+(g+1)/1000, b=easy?whole+(n+1)/10:whole+n/10+g/100;
+      return {...card,q:'Which is greater, '+fmt(d.reverse?a:b)+' or '+fmt(d.reverse?b:a)+'?',goal:Math.max(a,b),givens:[a,b]};
+    }
+    case 'round':{
+      const start=easy?whole+n/10:whole+frac+(2+d.seed%7)/1000,scale=easy?1:100;
+      return {...card,q:'Round '+fmt(start)+' to the nearest '+(easy?'whole number.':'hundredth.'),goal:Math.round(Number(fmt(start*scale)))/scale,givens:[start],
+        hint:'Find the requested place. Look one place to its right. Which of the two neighboring values is nearer?',example:easy?'Different example: 8.9 is nearer to 9 than to 8.':'Different example: 8.913 lies closer to 8.91 than to 8.92.'};
+    }
+    case 'add':
+    case 'subtract':{
+      const a=easy?whole+n/10:whole+(base.kind==='add'?(9+10*n):2)/100, b=easy?g/10:(10+g)/100;
+      return {...card,q:fmt(a)+(base.kind==='add'?' + ':' − ')+fmt(b),goal:base.kind==='add'?a+b:a-b,givens:[a,b],
+        hint:easy?'Line up the decimal points and work with the tenths.':'Line up the decimal points. Trade between adjacent places if a column needs it.'};
+    }
+  }
+  return card;
+}
+
 function warmCount(n){return Number.isSafeInteger(n)&&n>=0?n:0;}
 function warmNormalize(raw){
   const src=raw&&typeof raw==='object'?raw:{};
   const history=(Array.isArray(src.history)?src.history:[]).filter(r=>r&&Object.hasOwn(WARMUP_NAMES,r.kind)&&Number.isFinite(r.time)).slice(-90)
-    .map(r=>({kind:r.kind,time:r.time,help:!!r.help,miss:!!r.miss,seed:warmCount(r.seed)}));
+    .map(r=>({kind:r.kind,time:r.time,help:!!r.help,miss:!!r.miss,seed:warmCount(r.seed),load:[1,2,3].includes(r.load)?r.load:null,key:String(r.key||"").slice(0,160),prompted:!!r.prompted,repeat:!!r.repeat,setAside:!!r.setAside}));
   const state={enabled:src.enabled===true,serial:warmCount(src.serial),history};
   const d=src.draft;
-  if(d&&Number.isSafeInteger(d.index)&&d.index>=0&&d.index<=3&&WARMUP_ROTATION.includes(d.topic)){
-    state.draft={index:d.index,seed:warmCount(d.seed),topic:d.topic,reverse:!!d.reverse,
+  const length=d?.length===WARMUP_LENGTH?WARMUP_LENGTH:3;
+  if(d&&Number.isSafeInteger(d.index)&&d.index>=0&&d.index<=length&&WARMUP_ROTATION.includes(d.topic)){
+    state.draft={length,load:warmLoad(d.load),kind:WARMUP_ROTATION.includes(d.kind)?d.kind:d.topic,index:d.index,seed:warmCount(d.seed),topic:d.topic,reverse:!!d.reverse,
       entry:String(d.entry??'').slice(0,24),miss:!!d.miss,checked:!!d.checked,
+      canSetAside:!!d.canSetAside,factSetAside:!!d.factSetAside,fractionHelp:!!d.fractionHelp,
       moves:Object.keys(WARMUP_MOVES).filter(k=>Array.isArray(d.moves)&&d.moves.includes(k)),
       last:Object.hasOwn(WARMUP_MOVES,d.last)?d.last:''};
   }
@@ -4804,12 +4880,20 @@ function warmBegin(){
     let seed=Math.floor(Math.random()*60000);
     const last=state.history.filter(row=>row.kind===topic).at(-1);
     if(last&&seed%6===last.seed%6)seed++;
-    state.draft={index:0,topic,seed,reverse:serial%2===1,entry:'',checked:false,miss:false,moves:[],last:''};
+    state.draft={length:WARMUP_LENGTH,load:2,kind:topic,index:0,topic,seed,reverse:serial%2===1,entry:'',checked:false,miss:false,moves:[],last:''};
     save();
   }
   warmRender();
 }
 function warmCard(d){
+  const adaptive=d.length===WARMUP_LENGTH&&d.index>=2;
+  const base=warmBaseCard(adaptive?{...d,topic:d.kind}:d);
+  if(!adaptive)return base;
+  if(d.load!==2)return warmLoadCard(d,base);
+  if(d.index!==2||d.factSetAside)base.bridge='';
+  return base;
+}
+function warmBaseCard(d){
   const digit=2+d.seed%6, groups=2+Math.floor(d.seed/6)%4, product=digit*groups;
   const kind=d.index===0?(['times','share'].includes(d.topic)?'fact':'read'):d.index===1?'relation':d.topic;
   const small=digit/100, tenth=digit/10, numerator=product/100;
@@ -4842,22 +4926,27 @@ function warmChart(card){
     const grid=count=>'<span class="warm-grid" aria-hidden="true">'+Array.from({length:100},(_,i)=>'<i'+(i<count?' class="filled"':'')+'></i>').join('')+'</span>';
     return '<p>Each square is one whole. Point to one shaded row. How many little boxes fit inside that row?</p><div class="warm-model"><figure>'+grid(rows*10)+'<figcaption>'+rows+' tenths</figcaption></figure><figure>'+grid(boxes)+'<figcaption>'+boxes+' hundredths</figcaption></figure></div>';
   }
-  const places=['Ones','Tenths','Hundredths','Thousandths'];
+  const hasTens=card.givens.some(n=>n>=10);
+  const places=[...(hasTens?['Tens']:[]),'Ones','Tenths','Hundredths','Thousandths'];
   const cells=(card.givens.length?card.givens:[null]).map(n=>{
-    const digits=n===null?[]:n.toFixed(3).replace(/0+$/,'').replace('.','').split('');
+    const [whole,fraction]=n===null?['','']:n.toFixed(3).split('.');
+    const digits=[...(hasTens?[whole.at(-2)]:[]),whole.at(-1),...fraction.replace(/0+$/,'')];
     return '<tr>'+places.map((_,i)=>'<td>'+(digits[i]??'·')+'</td>').join('')+'</tr>';
   }).join('');
   return '<p>'+(card.picture||'Point to each given digit and name its place. A dot marks an empty place.')+'</p><table class="warm-chart"><caption>Place-value chart</caption><thead><tr>'+places.map(p=>'<th scope="col">'+p+'</th>').join('')+'</tr></thead><tbody>'+cells+'</tbody></table>';
 }
 function warmSettings(){
-  const w=S.decimalWarmup, recent=w.history.slice(-3);
-  return '<section class="card"><h2>Warm-up with Walter</h2><label><input type="checkbox" id="warm-enable" '+(w.enabled?'checked':'')+'> Show the decimal warm-up for '+esc(S.name)+'</label><p>Three questions connect place value with decimal calculations.</p>'+
-    (recent.length?'<p>Recent warm-up work</p><ul>'+recent.map(r=>'<li>'+WARMUP_NAMES[r.kind]+' · '+(r.help?'with Walter’s help':r.miss?'after another try':'on the first try')+'</li>').join('')+'</ul>':'')+'</section>';
+  const w=S.decimalWarmup, recent=w.history.slice(-WARMUP_LENGTH);
+  const practiced=recent.filter(r=>r.load).at(-1);
+  const planned=practiced?warmNextLoad(w.history,practiced.kind):null;
+  const next=practiced?'<p>Next time Walter asks about '+WARMUP_NAMES[practiced.kind].toLowerCase()+', he’ll '+(planned>practiced.load?'try a stretch question':planned<practiced.load?'start with a smaller step':'stay at the same difficulty with new numbers')+'.</p>':'';
+  return '<section class="card"><h2>Warm-up with Walter</h2><label><input type="checkbox" id="warm-enable" '+(w.enabled?'checked':'')+'> Show the decimal warm-up for '+esc(S.name)+'</label><p>Eight questions connect place value with decimal calculations. Two fresh first-try answers on the same skill and difficulty can bring a stretch. Two different problems needing retries can bring a smaller step.</p>'+
+    (recent.length?'<p>Recent warm-up work</p><ul>'+recent.map(r=>'<li>'+WARMUP_NAMES[r.kind]+(r.load?' · '+WARMUP_LOAD[r.load]:'')+' · '+(r.setAside?'set aside after trying':r.help?'with Walter’s help':r.miss?'after another try':r.prompted?'using a checked fact':r.repeat?'revisited on the first try':'on the first try')+'</li>').join('')+'</ul>':'')+next+'</section>';
 }
 function warmHome(){
   const w=S.decimalWarmup;
   if(!w.enabled)return location.hash==='#decimal-warmup'?'<section class="card"><h2>Decimal warm-up</h2><button class="btn" id="warm-setup">Open warm-up settings for '+esc(S.name)+'</button></section>':'';
-  return '<section class="card"><h2>'+esc(S.name)+'’s warm-up with Walter</h2><p>Three short decimal questions. You can pause after any step.</p><button class="btn" id="warm-start">'+(w.draft?'Continue my warm-up':'Start my warm-up')+'</button></section>';
+  return '<section class="card"><h2>'+esc(S.name)+'’s warm-up with Walter</h2><p>'+(w.draft?.length===3?'Finish your saved three-question warm-up.':'Eight short questions. Walter picks the next one as you go.')+' You can pause anytime.</p><button class="btn" id="warm-start">'+(w.draft?'Continue my warm-up':'Start my warm-up')+'</button></section>';
 }
 function warmUnitFive(){
   home();
@@ -4866,15 +4955,16 @@ function warmUnitFive(){
 function warmRender(){
   const w=S.decimalWarmup,d=w.draft;
   if(!w.enabled||!d){home();return;}
-  if(d.index===3){
-    app.innerHTML='<section class="card"><h1>Warm-up complete</h1>'+walterNote('work','You connected a place-value idea with a decimal problem. Ready for fractions?',true)+'<div class="actions"><button class="btn primary" id="warm-unit">Go to Unit 5</button><button class="btn" id="warm-home">Back to all math</button></div></section>';
+  if(d.index===(d.length||3)){
+    app.innerHTML='<section class="card"><h1>Warm-up complete</h1>'+walterNote('work','That’s the end of this warm-up. Ready for fractions?',true)+'<div class="actions"><button class="btn primary" id="warm-unit">Go to Unit 5</button><button class="btn" id="warm-home">Back to all math</button></div></section>';
     delete w.draft;save();app.querySelector('#warm-unit').onclick=warmUnitFive;app.querySelector('#warm-home').onclick=home;app.querySelector('#warm-unit').focus();return;
   }
   const card=warmCard(d),q=s=>app.querySelector(s);
-  app.innerHTML='<div class="topbar"><button class="btn quiet" id="warm-home">Pause &amp; Home</button><span>Warm-up · '+(d.index+1)+' of 3</span></div>'+warnHTML()+'<section class="card"><h1 tabindex="-1">'+WARMUP_NAMES[card.kind]+'</h1>'+
+  app.innerHTML='<div class="topbar"><button class="btn quiet" id="warm-home">Pause &amp; Home</button><span>Warm-up · '+(d.index+1)+' of '+(d.length||3)+'</span></div>'+warnHTML()+'<section class="card"><h1 tabindex="-1">'+WARMUP_NAMES[card.kind]+'</h1>'+
     (card.bridge?'<p>You already checked <b>'+card.bridge+'</b>.</p>':'')+'<p class="big-num" id="warm-prompt">'+esc(card.q)+'</p>'+readAloudButton(card.q,'warm-read')+
     '<form id="warm-form"><label for="warm-answer">My answer</label><div class="actions"><input class="ans" id="warm-answer" aria-describedby="warm-prompt" inputmode="decimal" maxlength="24" value="'+esc(d.entry)+'" '+(d.checked?'readonly':'')+'><button class="btn primary">'+(d.checked?'Next':'Check')+'</button></div></form><div id="warm-status" role="status"></div>'+
     (d.checked?'':'<div class="actions">'+Object.entries(WARMUP_MOVES).map(([k,label])=>'<button class="btn quiet small" data-warm-help="'+k+'">'+(k==='picture'&&card.kind==='fact'?'Show equal groups':k==='picture'&&card.kind==='relation'?'Show both squares':label)+'</button>').join('')+'</div>')+
+    (!d.checked&&d.length===WARMUP_LENGTH?'<button class="btn quiet small" id="warm-aside" '+(d.canSetAside?'':'hidden')+'>Set this one aside</button>':'')+
     '<div id="warm-reply" aria-live="polite"></div></section>';
   const feedback=msg=>{q('#warm-status').innerHTML=walterNote('work',esc(msg),true);};
   const show=k=>{
@@ -4890,21 +4980,43 @@ function warmRender(){
   app.querySelectorAll('[data-warm-help]').forEach(b=>b.onclick=()=>{
     const k=b.dataset.warmHelp;d.last=k;if(!d.moves.includes(k))d.moves.push(k);save();show(k);
   });
+  const advance=()=>{
+    Object.assign(d,{index:d.index+1,entry:'',checked:false,miss:false,canSetAside:false,fractionHelp:false,moves:[],last:''});
+    if(d.length===WARMUP_LENGTH&&d.index>=2&&d.index<d.length)warmPrepareNext(d,w.history);
+    save();warmRender();
+  };
+  const record=setAside=>{
+    const key=warmItemKey(card),load=d.length===WARMUP_LENGTH&&d.index>=2?d.load:null;
+    const repeat=w.history.filter(r=>r.kind===card.kind&&r.load===load).slice(-12).some(r=>r.key===key);
+    w.history.push({kind:card.kind,seed:d.seed,time:Date.now(),help:d.moves.length>0||!!d.fractionHelp,miss:d.miss,load,key,repeat,prompted:!!card.bridge,setAside});
+    w.history=w.history.slice(-90);
+  };
+  const aside=q('#warm-aside');
+  if(aside)aside.onclick=()=>{
+    if(!d.canSetAside)return;
+    if(card.kind==='fact')d.factSetAside=true;
+    record(true);advance();
+  };
   q('#warm-form').onsubmit=e=>{
     e.preventDefault();
-    if(d.checked){
-      Object.assign(d,{index:d.index+1,entry:'',checked:false,miss:false,moves:[],last:''});save();warmRender();return;
-    }
+    if(d.checked){advance();return;}
     d.entry=input.value.trim().slice(0,24);
-    if(!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(d.entry)){feedback('Enter a number, such as 3 or 0.25.');save();return;}
+    const fraction=d.entry.match(/^(\d{1,9})\s*\/\s*(\d{1,9})$/);
+    if(fraction&&Number(fraction[2])>0){
+      const equivalent=Number(fraction[1])*1000000===Math.round(card.goal*1000000)*Number(fraction[2]);
+      d.fractionHelp=true;
+      feedback(equivalent?'Your fraction has the right value. Can you write that same amount as a decimal?':'You wrote a fraction. Try writing its value as a decimal, then check it against the question.');
+      save();return;
+    }
+    if(/^\d+\.$/.test(d.entry)){feedback('Did you mean to add digits after the point? Finish the decimal, or remove the point for a whole number.');save();return;}
+    if(!/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(d.entry)){feedback('Type a whole number or a decimal, such as 3 or 0.25.');save();return;}
     if(Number(d.entry)!==Number(card.goal.toFixed(6))){
-      if(d.miss){d.last='picture';if(!d.moves.includes('picture'))d.moves.push('picture');show('picture');}
+      if(d.miss){d.canSetAside=true;if(aside)aside.hidden=false;d.last='picture';if(!d.moves.includes('picture'))d.moves.push('picture');show('picture');}
       d.miss=true;
-      const sameWhole=['times','share'].includes(card.kind)&&Number(d.entry)===Math.round(card.goal*100);
+      const sameWhole=warmLoad(d.load)===2&&['times','share'].includes(card.kind)&&Number(d.entry)===Math.round(card.goal*100);
       feedback(sameWhole?'That matches the whole-number fact. What is one unit in this problem worth? Write the count in hundredths.':card.hint);save();return;
     }
-    d.checked=true;w.history.push({kind:card.kind,seed:d.seed,time:Date.now(),help:d.moves.length>0,miss:d.miss});
-    w.history=w.history.slice(-90);save();warmRender();q('#warm-form button').focus();
+    d.checked=true;record(false);save();warmRender();q('#warm-form button').focus();
   };
 }
 // Homework practice: the exact problem shapes on the worksheet, whatever the adaptive level says. Level-neutral (never moves the dots).
