@@ -586,7 +586,7 @@ button.u5-block:focus-visible{outline:3px solid #111;outline-offset:-3px;z-index
  .walter-work-dock{display:none}
 }
 
-.warm-model{display:flex;gap:1rem;flex-wrap:wrap}.warm-model figure{margin:.3rem 0}.warm-grid{display:grid;grid-template-columns:repeat(10,1fr);width:6rem;aspect-ratio:1;border:1px solid var(--ink)}.warm-grid i{border:.5px solid var(--line)}.warm-grid .filled{background:#5c72ab}.warm-chart{border-collapse:collapse;width:100%;max-width:30rem;table-layout:fixed}.warm-chart th,.warm-chart td{padding:.4em .1em;border:1px solid var(--line);text-align:center;overflow-wrap:anywhere}.warm-chart th{font-size:.82rem}.warm-groups{display:flex;flex-wrap:wrap;gap:.5rem}.warm-groups span{display:inline-grid;place-items:center;border:2px solid var(--line);border-radius:50%;width:3rem;height:3rem}
+.warm-groups span[aria-hidden]{width:auto;min-width:2.5rem;height:auto;min-height:2.5rem;padding:.25rem;overflow-wrap:anywhere;max-width:4rem;font-size:.75rem}.warm-place-track{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.35rem}.warm-place-track button[aria-pressed="true"]{outline:2px solid currentColor}.warm-story-bar{display:flex;max-width:25rem}.warm-story-bar span{border:2px solid currentColor;padding:.6rem;text-align:center;flex:1}.warm-story-bar span+span{border-left:0}.warm-model{display:flex;gap:1rem;flex-wrap:wrap}.warm-model figure{margin:.3rem 0}.warm-grid{display:grid;grid-template-columns:repeat(10,1fr);width:6rem;aspect-ratio:1;border:1px solid var(--ink)}.warm-grid i{border:.5px solid var(--line)}.warm-grid .filled{background:#5c72ab}.warm-chart{border-collapse:collapse;width:100%;max-width:30rem;table-layout:fixed}.warm-chart th,.warm-chart td{padding:.4em .1em;border:1px solid var(--line);text-align:center;overflow-wrap:anywhere}.warm-chart th{font-size:.82rem}.warm-groups{display:flex;flex-wrap:wrap;gap:.5rem}.warm-groups span{display:inline-grid;place-items:center;border:2px solid var(--line);border-radius:50%;width:3rem;height:3rem}
 </style>
 </head>
 <body>
@@ -1869,7 +1869,7 @@ function genPrimes(level, focus){
 }
 
 // ---- Multi-digit multiplication (5.NBT.5) ----
-const BUILD="v10.24.0 · November 19, 2026";
+const BUILD="v10.25.0 · November 19, 2026";
 // The written work so far: factors, regrouped digits above the top factor, partial-product rows (a row may be only partly written), and the total.
 // Digits are written one per two-character column (like the SWUN page), so a regrouped digit can sit above its column as "+7".
 function stackMul(a,b,parts,total,carries){
@@ -4770,7 +4770,7 @@ function home(){
   try{window.scrollTo(0,0);}catch(e){}
 }
 // A short opt-in practice route. Enrollment, drafts and observations belong to the active profile.
-const WARMUP_NAMES={read:'Write a decimal',fact:'A familiar fact',relation:'Place-value relationships',times:'Decimal multiplication',share:'Decimal division',power:'Powers of ten',compare:'Compare decimals',round:'Round decimals',add:'Add decimals',subtract:'Subtract decimals'};
+const WARMUP_NAMES={read:'Write a decimal',fact:'A familiar fact',relation:'Place-value relationships',times:'Decimal multiplication',share:'Decimal division',power:'Powers of ten',compare:'Compare decimals',round:'Round decimals',add:'Add decimals',subtract:'Subtract decimals',story:'Ribbon stories'};
 const WARMUP_ROTATION=['times','share','power','compare','times','round','share','add','power','subtract'];
 const WARMUP_MOVES={hint:'Give me a clue',picture:'Show a place chart',example:'Try a different example'};
 const WARMUP_LENGTH=8;
@@ -4814,13 +4814,13 @@ function warmLoadCard(d,base){
     case 'times':{
       const factor=easy?g:g/10;
       return {...card,q:fmt(factor)+' × '+fmt(frac),goal:factor*frac,givens:[factor,frac],
-        hint:easy?'Count equal groups of tenths. How many tenths have you made?':'Write each factor as a whole-number count with a unit. A tenth of a hundredth is a thousandth. Estimate before you place the point.',
+        hint:easy?'Count equal groups of tenths. How many tenths have you made?':'Read the pieces in each number. What is one tenth of a hundredth called? Use that place to write your answer.',
         example:easy?'Different example: 2 × 0.9 makes 18 tenths, or 1.8.':'Different example: 0.9 × 0.91 makes 819 thousandths, or 0.819.'};
     }
     case 'share':{
       const divisor=easy?g:g/10, total=Number((frac*divisor).toFixed(3));
       return {...card,q:fmt(total)+' ÷ '+fmt(divisor),goal:frac,givens:[total,divisor],
-        hint:easy?'Read the total as tenths. Share the tenths equally between the groups.':'Multiply both numbers by ten so the divisor becomes whole. The quotient stays the same. Then share the new total.',
+        hint:easy?'Read the total as tenths. Share the tenths equally between the groups.':'Multiply both numbers by ten so the divisor becomes whole. The answer stays the same. Now divide the new pair.',
         example:easy?'Different example: 4.5 ÷ 5 shares 45 tenths into five groups, giving 0.9.':'Different example: 0.819 ÷ 0.9 is the same as 8.19 ÷ 9, or 0.91.'};
     }
     case 'power':{
@@ -4847,16 +4847,111 @@ function warmLoadCard(d,base){
   return card;
 }
 
+// New sessions use two stories with the same amounts. A saved older session
+// keeps its original eight (or three) questions.
+const WARM_PLACES=['ones','tenths','hundredths','thousandths'];
+const WARM_DAY=86400000;
+function warmStory(seed,startMissing,delayed=false){
+  const a=25+seed%43,b=11+Math.floor(seed/7)%13;
+  const A=(a/100).toFixed(2),B=(b/100).toFixed(2);
+  const item=delayed?'water':'ribbon',unit=delayed?'liters':'meters';
+  const q=startMissing
+    ? `After adding ${B} ${unit} of ${item}, Jo has ${A} ${unit}. How much did Jo start with?`
+    : `Jo starts with ${A} ${unit} of ${item} and adds ${B} ${unit}. How much does Jo have now?`;
+  return {kind:'story',q,goal:(startMissing?a-b:a+b)/100,givens:[a/100,b/100],story:{A,B,startMissing},
+    hint:'Picture what Jo had at the start, what got added, and what Jo has at the end. Which amount are you looking for?',
+    example:'Different example: Jo had some string. After adding 2 meters, Jo had 5 meters. The start plus 2 makes 5, so Jo started with 3 meters.',
+    picture:'Draw one bar for the whole amount. Split it into what Jo had and what Jo added. Mark the missing piece.'};
+}
+function warmReviewCard(d){
+  const kind=d.reviewKind;
+  if(kind==='story')return warmStory(d.seed,d.reverse,true);
+  const n=2+d.seed%6;
+  if(kind==='relation'){
+    const from=d.reverse?1:2;
+    return {kind,review:true,q:`A bead is worth ${n/10**from}. A star is worth ${d.reverse?'one tenth as much':'ten times as much'}. How much is the star worth?`,
+      goal:n/10**(d.reverse?2:1),givens:[n/10**from],hint:'Think about the place where the digit starts. In which place would it be worth the new amount?',
+      example:'Different example: ten groups of 0.09 make 0.9.'};
+  }
+  const draft={...d,index:4,kind,topic:kind,load:d.reviewLoad};
+  const base=warmBaseCard(draft), c=d.reviewLoad===2?base:warmLoadCard(draft,base);
+  c.bridge='';c.math=c.q;
+  if(kind==='times'||kind==='share'){
+    const [a,b]=c.q.split(/ [×÷] /);
+    c.q=kind==='times'?`A full roll holds ${a} meters of cord. How many meters are in ${b} of a roll?`:
+      `A strip of ribbon is ${b} meters long and weighs ${a} grams. How much does one meter weigh?`;
+  }else if(kind==='add'||kind==='subtract'){
+    const [a,b]=c.q.split(/ [＋+−] /);
+    c.q=kind==='add'?`One trail is ${a} miles. Another is ${b} miles. How far is it to walk both?`:
+      `A trail is ${a} miles long. Jo has walked ${b} miles. How far is left?`;
+  }else if(kind==='round')c.q=c.q.replace(/^Round (\S+) to the nearest (.*)\.$/,'A length is $1 meters. What would you write to the nearest $2?');
+  else if(kind==='compare')c.q=`Two ribbons measure ${c.givens[0]} and ${c.givens[1]} meters. How long is the longer ribbon?`;
+  else c.q=d.reverse?'A number is '+c.q.split(' ÷ ')[0]+'. What is one '+(d.reviewLoad===1?'tenth':d.reviewLoad===3?'thousandth':'hundredth')+' of it?':'Start at '+c.q.split(' × ')[0]+'. Make it ten times as large '+(d.reviewLoad===1?'once':d.reviewLoad===3?'three times':'twice')+'. Where do you land?';
+  return c;
+}
+function warmSignature(c){
+  if(c.kind==='relation')return (c.goal<0.1?'down':'up')+'|'+Number(c.goal.toFixed(4));
+  if(c.story)return c.story.A+'|'+c.story.B;
+  return c.givens.join('|')+'|'+Number(c.goal.toFixed(6));
+}
+function warmReviewReady(w,d,now){
+  const due=(w.reviews||[]).filter(r=>r.due<=now).sort((a,b)=>a.due-b.due)[0];
+  if(!due)return;
+  d.reviewKind=due.kind;d.reviewLoad=due.load;d.reverse=Boolean(d.seed%2);
+  const used=new Set(w.history.filter(r=>r.kind===due.kind).map(r=>r.signature));
+  used.add(due.signature);
+  for(let tries=0;tries<192;tries++){
+    const signature=warmSignature(warmReviewCard(d));
+    if(!used.has(signature))return;
+    d.seed++;d.reverse=!d.reverse;
+  }
+  // All variants seen recently. Require a different item from the one
+  // scheduled and mark any familiar item as repeated in the evidence.
+  for(let i=0;i<192 && warmSignature(warmReviewCard(d))===due.signature;i++){d.seed++;d.reverse=!d.reverse;}
+}
+function warmSchedule(w,row){
+  if(!row.load&&!['story','relation'].includes(row.kind))return;
+  const load=row.load||2;
+  const reviews=w.reviews||(w.reviews=[]);
+  const idx=reviews.findIndex(r=>r.kind===row.kind&&r.load===load);
+  if(row.delayed && idx>=0)reviews.splice(idx,1);
+  if(row.delayed&&!row.help&&!row.miss&&!row.prompted&&!row.repeat&&!row.setAside)return;
+  if(idx<0||row.delayed)reviews.push({kind:row.kind,load,due:row.time+WARM_DAY,signature:row.signature});
+}
+function warmCountTask(card,load){
+  if(!['times','share'].includes(card.kind)||card.story)return null;
+  const pieces=(card.math||card.q).match(/^(\d+(?:\.\d+)?) ([×÷]) (\d+(?:\.\d+)?)$/);
+  if(!pieces)return null;
+  const [,left,op,right]=pieces,a=Number(left),b=Number(right);
+  const digits=s=>(s.split('.')[1]||'').length;
+  // A printed total can lose a trailing zero: 0.10 becomes 0.1.
+  // Keep the unit taught by the question when sharing that total.
+  const places=op==='×'?digits(left)+digits(right):load===1?1:2;
+  if(places<1||places>3)return null;
+  const leftPlaces=op==='×'?digits(left):places+digits(right);
+  const x=Math.round(a*10**leftPlaces),y=Math.round(b*10**digits(right));
+  const count=op==='×'?x*y:x/y;
+  if(!Number.isInteger(count))return null;
+  return {q:op==='×'?`Try the counting part first. What is ${x} × ${y}?`:`Try the counting part first. What is ${x} ÷ ${y}?`,count,unit:WARM_PLACES[places],op,x,y};
+}
+
 function warmCount(n){return Number.isSafeInteger(n)&&n>=0?n:0;}
 function warmNormalize(raw){
   const src=raw&&typeof raw==='object'?raw:{};
   const history=(Array.isArray(src.history)?src.history:[]).filter(r=>r&&Object.hasOwn(WARMUP_NAMES,r.kind)&&Number.isFinite(r.time)).slice(-90)
-    .map(r=>({kind:r.kind,time:r.time,help:!!r.help,miss:!!r.miss,seed:warmCount(r.seed),load:[1,2,3].includes(r.load)?r.load:null,key:String(r.key||"").slice(0,160),prompted:!!r.prompted,repeat:!!r.repeat,setAside:!!r.setAside}));
-  const state={enabled:src.enabled===true,serial:warmCount(src.serial),history};
+    .map(r=>({kind:r.kind,time:r.time,help:!!r.help,miss:!!r.miss,seed:warmCount(r.seed),load:[1,2,3].includes(r.load)?r.load:null,key:String(r.key||"").slice(0,160),prompted:!!r.prompted,repeat:!!r.repeat,setAside:!!r.setAside,delayed:!!r.delayed,signature:String(r.signature||'').slice(0,80),observed:warmObservations(r.observed)}));
+  const reviewKinds=[...WARMUP_ROTATION,'story','relation'];
+  const reviews=(Array.isArray(src.reviews)?src.reviews:[]).filter(r=>r&&reviewKinds.includes(r.kind)&&Number.isFinite(r.due)).slice(0,30)
+    .map(r=>({kind:r.kind,load:warmLoad(r.load),due:r.due,signature:String(r.signature||'').slice(0,80)}));
+  const state={enabled:src.enabled===true,serial:warmCount(src.serial),history,reviews};
   const d=src.draft;
   const length=d?.length===WARMUP_LENGTH?WARMUP_LENGTH:3;
   if(d&&Number.isSafeInteger(d.index)&&d.index>=0&&d.index<=length&&WARMUP_ROTATION.includes(d.topic)){
     state.draft={length,load:warmLoad(d.load),kind:WARMUP_ROTATION.includes(d.kind)?d.kind:d.topic,index:d.index,seed:warmCount(d.seed),topic:d.topic,reverse:!!d.reverse,
+      newCoach:d.newCoach===true && length===8,storySeed:warmCount(d.storySeed),storyReverse:!!d.storyReverse,
+      reviewKind:reviewKinds.includes(d.reviewKind)?d.reviewKind:'',reviewLoad:warmLoad(d.reviewLoad),
+      observed:warmObservations(d.observed),pieceEntry:String(d.pieceEntry||'').slice(0,12),pieceOpen:!!d.pieceOpen,
+      selectedPlace:WARM_PLACES.includes(d.selectedPlace)?d.selectedPlace:'',pieceMiss:!!d.pieceMiss,dots:Math.min(999,warmCount(d.dots)),
       entry:String(d.entry??'').slice(0,24),miss:!!d.miss,checked:!!d.checked,
       canSetAside:!!d.canSetAside,factSetAside:!!d.factSetAside,fractionHelp:!!d.fractionHelp,
       moves:Object.keys(WARMUP_MOVES).filter(k=>Array.isArray(d.moves)&&d.moves.includes(k)),
@@ -4880,17 +4975,31 @@ function warmBegin(){
     let seed=Math.floor(Math.random()*60000);
     const last=state.history.filter(row=>row.kind===topic).at(-1);
     if(last&&seed%6===last.seed%6)seed++;
-    state.draft={length:WARMUP_LENGTH,load:2,kind:topic,index:0,topic,seed,reverse:serial%2===1,entry:'',checked:false,miss:false,moves:[],last:''};
+    state.draft={newCoach:true,storySeed:seed,storyReverse:!!(serial%2),observed:[],length:WARMUP_LENGTH,load:2,kind:topic,index:0,topic,seed,reverse:serial%2===1,entry:'',checked:false,miss:false,moves:[],last:''};
+    warmReviewReady(state,state.draft,now);
     save();
   }
   warmRender();
 }
+function warmObservations(list){
+  return ['count','place','unknown','expression','expression-retry','unknown-retry','count-help','picture'].filter(k=>Array.isArray(list)&&list.includes(k));
+}
 function warmCard(d){
+  if(d.newCoach){
+    if(d.index===0&&d.reviewKind)return warmReviewCard(d);
+    if(d.index===3||d.index===7)return warmStory(d.storySeed,d.index===3?d.storyReverse:!d.storyReverse);
+  }
   const adaptive=d.length===WARMUP_LENGTH&&d.index>=2;
   const base=warmBaseCard(adaptive?{...d,topic:d.kind}:d);
+  if(d.newCoach&&d.index===1){
+    const digit=2+d.seed%6;
+    base.moveDigit=digit;
+    base.place=d.reverse?'hundredths':'tenths';
+    base.q=`The ${digit} is worth ${d.reverse?digit/10:digit/100}. Move it so it is worth ${d.reverse?'one tenth as much':'ten times as much'}. What will it be worth?`;
+  }
   if(!adaptive)return base;
   if(d.load!==2)return warmLoadCard(d,base);
-  if(d.index!==2||d.factSetAside)base.bridge='';
+  if(d.index!==2||d.factSetAside||d.reviewKind)base.bridge='';
   return base;
 }
 function warmBaseCard(d){
@@ -4909,7 +5018,7 @@ function warmBaseCard(d){
     case 'relation':return {kind,q:d.reverse?'One '+digit+' in '+text(value)+' is worth '+text(tenth)+'. Divide that value by 10. What is the new value?':'In '+text(value)+', the right-hand '+digit+' is worth '+text(small)+'. What is ten times that value?',goal:d.reverse?small:tenth,givens:digitChart,hint:d.reverse?'Locate the tenths digit. A piece one-tenth its size is one column to the right. Read its value.':'Locate the hundredths digit. Ten of those pieces make a piece one column to the left. Read its value.',example:d.reverse?'Different example: a tenth of 0.8 is 0.08. Eight tenths become eight hundredths.':'Different example: ten groups of 0.09 make 0.9. Nine hundredths become nine tenths.'};
     case 'times':return {kind,q:groups+' × '+text(small),goal:numerator,givens:[small],hint:'Use your whole-number multiplication fact. What unit did you multiply: ones, tenths, or hundredths?',example:'Different example: 9 × 0.09 is 81 hundredths, or 0.81.',bridge:groups+' × '+digit+' = '+product};
     case 'share':return {kind,q:text(numerator)+' ÷ '+groups,goal:small,givens:[numerator],hint:'Read the total as hundredths. Share those hundredths equally, then write one share as a decimal.',example:'Different example: 0.45 ÷ 5 means sharing 45 hundredths. Each share is 9 hundredths, or 0.09.',bridge:product+' ÷ '+groups+' = '+digit};
-    case 'power':return {kind,q:d.reverse?text(amount)+' ÷ 10²':text(small)+' × 10²',goal:d.reverse?amount/100:digit,givens:[d.reverse?amount:small],hint:'The exponent tells how many factors of ten to use. Move each digit one place per factor. Multiplication makes its value larger. Division makes it smaller.',example:'Different example: 8 × 10² = 8 × 10 × 10 = 800.'};
+    case 'power':return {kind,q:d.reverse?text(amount)+' ÷ 10²':text(small)+' × 10²',goal:d.reverse?amount/100:digit,givens:[d.reverse?amount:small],hint:'The little raised number tells you how many tens to use. Move each digit one place per factor. Multiplication makes its value larger. Division makes it smaller.',example:'Different example: 8 × 10² = 8 × 10 × 10 = 800.'};
     case 'compare':return {kind,q:'Which is greater, '+(d.reverse?text(longer)+' or '+text(value):text(value)+' or '+text(longer))+'?',goal:Math.max(value,longer),givens:[value,longer],hint:'Line up the decimal points. Compare one column at a time, starting on the left. An empty place at the end can hold a zero.',example:'Different example: 0.81 and 0.809 both have eight tenths. At the hundredths place, one is greater than zero, so 0.81 is greater.'};
     case 'round':return {kind,q:'Round '+text(amount)+' to the nearest tenth.',goal:Math.round((whole*100+digit*11)/10)/10,givens:[amount],hint:'Find the two tenths on either side of the number. Look at the hundredths digit to decide which tenth is nearer. At halfway, choose the higher tenth.',example:'Different example: 8.93 is between 8.9 and 9.0. It is closer to 8.9.'};
     case 'add':return {kind,q:text(tenth)+' + '+text(small),goal:value,givens:[tenth,small],hint:'Line up the points. Count hundredths together and tenths together.',example:'Different example: 0.8 + 0.03 is eight tenths and three hundredths, or 0.83.'};
@@ -4921,7 +5030,8 @@ function warmChart(card){
     const count=card.groups;
     return '<p>Use these circles as groups. On paper, put dots in each group or share the total one dot at a time.</p><div class="warm-groups" role="img" aria-label="'+count+' empty groups">'+'<span aria-hidden="true"></span>'.repeat(count)+'</div>';
   }
-  if(card.kind==='relation'){
+  if(card.story)return '<p>'+esc(card.picture)+'</p><div class="warm-story-bar"><span>At the start</span><span>Added</span></div><p>The two parts make the amount at the end.</p>';
+  if(card.kind==='relation' && !card.review){
     const unit=card.givens[0].toFixed(2), rows=Number(unit[2]), boxes=Number(unit[3]);
     const grid=count=>'<span class="warm-grid" aria-hidden="true">'+Array.from({length:100},(_,i)=>'<i'+(i<count?' class="filled"':'')+'></i>').join('')+'</span>';
     return '<p>Each square is one whole. Point to one shaded row. How many little boxes fit inside that row?</p><div class="warm-model"><figure>'+grid(rows*10)+'<figcaption>'+rows+' tenths</figcaption></figure><figure>'+grid(boxes)+'<figcaption>'+boxes+' hundredths</figcaption></figure></div>';
@@ -4933,15 +5043,62 @@ function warmChart(card){
     const digits=[...(hasTens?[whole.at(-2)]:[]),whole.at(-1),...fraction.replace(/0+$/,'')];
     return '<tr>'+places.map((_,i)=>'<td>'+(digits[i]??'·')+'</td>').join('')+'</tr>';
   }).join('');
-  return '<p>'+(card.picture||'Point to each given digit and name its place. A dot marks an empty place.')+'</p><table class="warm-chart"><caption>Place-value chart</caption><thead><tr>'+places.map(p=>'<th scope="col">'+p+'</th>').join('')+'</tr></thead><tbody>'+cells+'</tbody></table>';
+  return '<p>'+(card.picture||'Point to each given digit and name its place. An empty spot has a dot.')+'</p><table class="warm-chart"><caption>Place-value chart</caption><thead><tr>'+places.map(p=>'<th scope="col">'+p+'</th>').join('')+'</tr></thead><tbody>'+cells+'</tbody></table>';
 }
+function warmTaskHTML(card,d){
+  if(!d.newCoach||d.checked)return '';
+  const seen=d.observed||[];
+  if(card.moveDigit){
+    if(seen.includes('place'))return '<p>You put the '+card.moveDigit+' in the '+card.place+' place. Now write its value.</p>';
+    const direction=d.selectedPlace?'You put the '+card.moveDigit+' in the '+d.selectedPlace+' place. Write its value below, then tap Check.':'Tap a place to move the '+card.moveDigit+'.';
+    return '<fieldset><legend>'+direction+'</legend><div class="warm-place-track">'+
+      WARM_PLACES.map(place=>`<button type="button" class="btn quiet" data-place="${place}" ${d.selectedPlace===place?'disabled':''} aria-pressed="${d.selectedPlace===place}">${place}${(d.selectedPlace||(d.reverse?'tenths':'hundredths'))===place?' · '+card.moveDigit:''}</button>`).join('')+'</div></fieldset>';
+  }
+  if(card.story&&!(d.reviewKind&&d.index===0)){
+    if(!seen.includes('unknown'))return '<fieldset><legend>Which amount are you looking for?</legend><div class="actions"><button class="btn" data-unknown="start">At the start</button><button class="btn" data-unknown="end">At the end</button></div></fieldset>';
+    if(!seen.includes('expression')){
+      const {A,B}=card.story;
+      return '<fieldset><legend>Which math sentence finds it?</legend><div class="actions">'+
+        (d.storySeed%2?['plus','minus']:['minus','plus']).map(k=>`<button class="btn" data-expression="${k}">${A} ${k==='plus'?'+':'−'} ${B}</button>`).join('')+'</div></fieldset>';
+    }
+    return `<p>Your math sentence: <b>${card.story.A} ${card.story.startMissing?'−':'+'} ${card.story.B}</b>. Now work it out.</p>`;
+  }
+  return '';
+}
+function warmCountPicture(task,d){
+  const groups=task.op==='×'?task.x:task.y;
+  if(groups>10)return '<p>Break the numbers into parts that are easy to work with on paper.</p>';
+  const dots=d.dots||0;
+  const marks=dots<=10?'●'.repeat(dots):Math.floor(dots/10)+' tens + '+dots%10+' ones';
+  return '<div class="warm-groups" role="img" aria-label="'+groups+' groups, each with '+dots+(dots===1?' dot':' dots')+'">'+
+    Array.from({length:groups},()=>'<span aria-hidden="true">'+marks+'</span>').join('')+
+    '</div><div class="actions"><button class="btn quiet small" id="warm-dot-add">Put a dot in each group</button>'+
+    '<button class="btn quiet small" id="warm-dot-ten">Put ten in each group</button>'+
+    '<button class="btn quiet small" id="warm-dot-take" '+(!dots?'disabled':'')+'>Take one from each</button></div>';
+}
+function warmParentRow(r){
+  const o=r.observed||[];
+  const result=r.setAside?'set aside after trying':r.help?'with help':r.miss?'after another try':r.prompted?'with a checked fact':r.repeat?'on a familiar problem':'on the first try';
+  const parts=[];
+  if(o.includes('count'))parts.push('checked the counting part');
+  if(o.includes('place'))parts.push('placed the digit');
+  if(o.includes('expression'))parts.push(o.includes('expression-retry')?'chose the math sentence after a prompt':'chose the math sentence');
+  if(o.includes('picture'))parts.push('used a picture');
+  const date=new Date(r.time).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  return `<li>${date} · ${WARMUP_NAMES[r.kind]}${r.load?' · '+WARMUP_LOAD[r.load]:''} · ${r.delayed?'later check · ':''}${r.delayed&&result==='on the first try'?'solved independently':result}${parts.length?' ('+parts.join(', ')+')':''}</li>`;
+}
+
 function warmSettings(){
   const w=S.decimalWarmup, recent=w.history.slice(-WARMUP_LENGTH);
-  const practiced=recent.filter(r=>r.load).at(-1);
+  const earlierCheck=w.history.slice(0,-WARMUP_LENGTH).filter(r=>r.delayed).at(-1);
+  const d=w.draft;
+  const unfinished=d&&!d.checked&&(d.moves?.length||d.pieceOpen||d.fractionHelp||d.miss)?
+    '<p>Paused question: '+WARMUP_NAMES[warmCard(d).kind]+'. '+(d.moves?.length||d.pieceOpen||d.fractionHelp?'Walter gave help.':'Another try is still open.')+'</p>':'';
+  const practiced=recent.filter(r=>r.load&&WARMUP_ROTATION.includes(r.kind)).at(-1);
   const planned=practiced?warmNextLoad(w.history,practiced.kind):null;
   const next=practiced?'<p>Next time Walter asks about '+WARMUP_NAMES[practiced.kind].toLowerCase()+', he’ll '+(planned>practiced.load?'try a stretch question':planned<practiced.load?'start with a smaller step':'stay at the same difficulty with new numbers')+'.</p>':'';
-  return '<section class="card"><h2>Warm-up with Walter</h2><label><input type="checkbox" id="warm-enable" '+(w.enabled?'checked':'')+'> Show the decimal warm-up for '+esc(S.name)+'</label><p>Eight questions connect place value with decimal calculations. Two fresh first-try answers on the same skill and difficulty can bring a stretch. Two different problems needing retries can bring a smaller step.</p>'+
-    (recent.length?'<p>Recent warm-up work</p><ul>'+recent.map(r=>'<li>'+WARMUP_NAMES[r.kind]+(r.load?' · '+WARMUP_LOAD[r.load]:'')+' · '+(r.setAside?'set aside after trying':r.help?'with Walter’s help':r.miss?'after another try':r.prompted?'using a checked fact':r.repeat?'revisited on the first try':'on the first try')+'</li>').join('')+'</ul>':'')+next+'</section>';
+  return '<section class="card"><h2>Warm-up with Walter</h2><label><input type="checkbox" id="warm-enable" '+(w.enabled?'checked':'')+'> Show the decimal warm-up for '+esc(S.name)+'</label><p>Eight questions connect place value with decimal calculations. Two fresh first-try answers on the same skill and difficulty can bring a stretch. Two different problems needing retries can bring a smaller step. On a later day, Walter offers a fresh question at the difficulty already practiced.</p>'+
+    (recent.length?'<p>Recent warm-up work</p><ul>'+(earlierCheck?[earlierCheck,...recent]:recent).map(warmParentRow).join('')+'</ul>':'')+unfinished+next+'</section>';
 }
 function warmHome(){
   const w=S.decimalWarmup;
@@ -4960,9 +5117,20 @@ function warmRender(){
     delete w.draft;save();app.querySelector('#warm-unit').onclick=warmUnitFive;app.querySelector('#warm-home').onclick=home;app.querySelector('#warm-unit').focus();return;
   }
   const card=warmCard(d),q=s=>app.querySelector(s);
-  app.innerHTML='<div class="topbar"><button class="btn quiet" id="warm-home">Pause &amp; Home</button><span>Warm-up · '+(d.index+1)+' of '+(d.length||3)+'</span></div>'+warnHTML()+'<section class="card"><h1 tabindex="-1">'+WARMUP_NAMES[card.kind]+'</h1>'+
+  const delayed=!!(d.newCoach&&d.reviewKind&&d.index===0);
+  const seen=d.observed||(d.observed=[]);
+  const note=key=>{if(!seen.includes(key))seen.push(key);};
+  const storyPlan=!!(card.story&&!delayed);
+  const countTask=d.newCoach?warmCountTask(card,delayed?d.reviewLoad:d.load):null;
+  const planOpen=!d.checked&&storyPlan&&!seen.includes('expression');
+  const pieceHTML=countTask&&!d.checked?(seen.includes('count')
+    ? '<p>You checked the count: <b>'+countTask.count+' '+countTask.unit+'</b>. Write that amount as a decimal.</p>'
+    : d.pieceOpen?'<form id="warm-piece-form"><label for="warm-piece">'+esc(countTask.q)+'</label><div class="actions"><input class="ans" id="warm-piece" inputmode="numeric" maxlength="12" value="'+esc(d.pieceEntry||'')+'"><button class="btn">Check the count</button></div></form>'+
+      (d.pieceMiss?'<p>'+ (countTask.op==='×'?'Draw a circle for each group. Put the same number of dots in each circle, then count them.':'Draw a circle for each group. Share the dots equally. Count the dots in one circle.')+'</p>'+warmCountPicture(countTask,d):'')
+    : '<button class="btn quiet small" id="warm-piece-open">Help me with the counting part</button>'):'';
+  app.innerHTML='<div class="topbar"><button class="btn quiet" id="warm-home">Pause &amp; Home</button><span>Warm-up · '+(d.index+1)+' of '+(d.length||3)+'</span></div>'+warnHTML()+'<section class="card"><h1 tabindex="-1">'+(delayed?'Try this one your way':card.story?'A ribbon story':WARMUP_NAMES[card.kind])+'</h1>'+
     (card.bridge?'<p>You already checked <b>'+card.bridge+'</b>.</p>':'')+'<p class="big-num" id="warm-prompt">'+esc(card.q)+'</p>'+readAloudButton(card.q,'warm-read')+
-    '<form id="warm-form"><label for="warm-answer">My answer</label><div class="actions"><input class="ans" id="warm-answer" aria-describedby="warm-prompt" inputmode="decimal" maxlength="24" value="'+esc(d.entry)+'" '+(d.checked?'readonly':'')+'><button class="btn primary">'+(d.checked?'Next':'Check')+'</button></div></form><div id="warm-status" role="status"></div>'+
+    warmTaskHTML(card,d)+pieceHTML+'<form id="warm-form" '+(planOpen?'hidden':'')+'><label for="warm-answer">My answer</label><div class="actions"><input class="ans" id="warm-answer" aria-describedby="warm-prompt" inputmode="decimal" maxlength="24" value="'+esc(d.entry)+'" '+(d.checked?'readonly':'')+'><button class="btn primary">'+(d.checked?'Next':'Check')+'</button></div></form><div id="warm-status" role="status"></div>'+
     (d.checked?'':'<div class="actions">'+Object.entries(WARMUP_MOVES).map(([k,label])=>'<button class="btn quiet small" data-warm-help="'+k+'">'+(k==='picture'&&card.kind==='fact'?'Show equal groups':k==='picture'&&card.kind==='relation'?'Show both squares':label)+'</button>').join('')+'</div>')+
     (!d.checked&&d.length===WARMUP_LENGTH?'<button class="btn quiet small" id="warm-aside" '+(d.canSetAside?'':'hidden')+'>Set this one aside</button>':'')+
     '<div id="warm-reply" aria-live="polite"></div></section>';
@@ -4971,24 +5139,61 @@ function warmRender(){
     const reply=q('#warm-reply');
     reply.innerHTML=k==='picture'?warmChart(card):walterNote('clue',esc(card[k]),true)+readAloudButton(card[k],'warm-read-clue');
   };
-  if(d.checked)feedback('Yes. '+d.entry+' fits this question.');
+  if(d.checked){
+    feedback('Yes. '+d.entry+' fits this question.');
+    if(card.moveDigit)q('#warm-reply').innerHTML=warmChart(card);
+  }
   else if(d.last)show(d.last);
   q('#warm-home').onclick=home;
   const input=q('#warm-answer');
+  const markMiss=()=>{
+    if(d.miss)d.canSetAside=true;
+    d.miss=true;
+    if(d.canSetAside&&q('#warm-aside'))q('#warm-aside').hidden=false;
+  };
+  for(const b of app.querySelectorAll('[data-place]'))b.onclick=()=>{
+    if(seen.includes('place'))return;d.selectedPlace=b.dataset.place;save();warmRender();
+    app.querySelector('#warm-answer').focus();
+  };
+  for(const b of app.querySelectorAll('[data-unknown],[data-expression]'))b.onclick=()=>{
+    const picking=!!b.dataset.unknown;
+    const good=picking?b.dataset.unknown===(card.story.startMissing?'start':'end'):
+      b.dataset.expression===(card.story.startMissing?'minus':'plus');
+    const key=picking?'unknown':'expression';
+    if(good){note(key);save();warmRender();app.querySelector('[data-expression],#warm-answer')?.focus();}
+    else{markMiss();note(key+'-retry');feedback(picking?'Read the last sentence again. Is it asking about before Jo added some, or after?':'Imagine covering the missing part of your ribbon. Does your math sentence find that part?');save();}
+  };
+  if(q('#warm-piece-open'))q('#warm-piece-open').onclick=()=>{
+    d.pieceOpen=true;note('count-help');save();warmRender();app.querySelector('#warm-piece').focus();
+  };
+  if(q('#warm-piece-form')){
+    const part=q('#warm-piece');
+    for(const [id,change] of [['#warm-dot-add',1],['#warm-dot-ten',10],['#warm-dot-take',-1]]){
+      if(q(id))q(id).onclick=()=>{d.dots=Math.max(0,Math.min(999,(d.dots||0)+change));save();warmRender();(app.querySelector(id+':not([disabled])')||app.querySelector('#warm-piece')).focus();};
+    }
+    part.oninput=()=>{d.pieceEntry=part.value.slice(0,12);save();};
+    q('#warm-piece-form').onsubmit=e=>{
+      e.preventDefault();d.pieceEntry=part.value.slice(0,12);
+      if(!/^\d+$/.test(part.value.trim())){feedback('Type a whole number to check your count.');return;}
+      if(Number(part.value)!==countTask.count){markMiss();d.pieceMiss=true;save();warmRender();app.querySelector('#warm-piece').focus();return;}
+      note('count');save();warmRender();app.querySelector('#warm-answer').focus();
+    };
+  }
   input.oninput=()=>{d.entry=input.value.slice(0,24);q('#warm-status').textContent='';save();};
   q('[tabindex="-1"]').focus();
   app.querySelectorAll('[data-warm-help]').forEach(b=>b.onclick=()=>{
-    const k=b.dataset.warmHelp;d.last=k;if(!d.moves.includes(k))d.moves.push(k);save();show(k);
+    const k=b.dataset.warmHelp;if(k==='picture')note('picture');d.last=k;if(!d.moves.includes(k))d.moves.push(k);save();show(k);
   });
   const advance=()=>{
-    Object.assign(d,{index:d.index+1,entry:'',checked:false,miss:false,canSetAside:false,fractionHelp:false,moves:[],last:''});
+    Object.assign(d,{index:d.index+1,entry:'',checked:false,miss:false,canSetAside:false,fractionHelp:false,observed:[],pieceEntry:'',pieceMiss:false,pieceOpen:false,dots:0,selectedPlace:'',moves:[],last:''});
     if(d.length===WARMUP_LENGTH&&d.index>=2&&d.index<d.length)warmPrepareNext(d,w.history);
     save();warmRender();
   };
   const record=setAside=>{
-    const key=warmItemKey(card),load=d.length===WARMUP_LENGTH&&d.index>=2?d.load:null;
-    const repeat=w.history.filter(r=>r.kind===card.kind&&r.load===load).slice(-12).some(r=>r.key===key);
-    w.history.push({kind:card.kind,seed:d.seed,time:Date.now(),help:d.moves.length>0||!!d.fractionHelp,miss:d.miss,load,key,repeat,prompted:!!card.bridge,setAside});
+    const key=warmItemKey(card),load=delayed?d.reviewLoad:card.story?2:d.length===WARMUP_LENGTH&&d.index>=2?d.load:null;
+    const repeat=w.history.filter(r=>r.kind===card.kind&&(delayed||r.load===load)).slice(delayed?-90:-12).some(r=>r.key===key||(delayed&&r.signature===warmSignature(card)));
+    const row={kind:card.kind,seed:d.seed,time:Date.now(),help:d.moves.length>0||!!d.fractionHelp||seen.includes('count-help'),miss:d.miss,load,key,repeat,prompted:!!card.bridge,setAside,signature:warmSignature(card),observed:seen.slice(),delayed};
+    w.history.push(row);if(d.newCoach)warmSchedule(w,row);
     w.history=w.history.slice(-90);
   };
   const aside=q('#warm-aside');
@@ -5000,6 +5205,13 @@ function warmRender(){
   q('#warm-form').onsubmit=e=>{
     e.preventDefault();
     if(d.checked){advance();return;}
+    if(planOpen)return;
+    if(card.moveDigit&&!seen.includes('place')){
+      if(!d.selectedPlace){feedback('Tap a place for the digit, then type what it will be worth.');return;}
+      if(d.selectedPlace!==card.place){markMiss();feedback('Look at the place you started in. Which next-door place makes the digit worth the amount you want?');save();return;}
+      note('place');save();
+      const track=q('.warm-place-track')?.closest('fieldset');if(track)track.outerHTML=warmTaskHTML(card,d);
+    }
     d.entry=input.value.trim().slice(0,24);
     const fraction=d.entry.match(/^(\d{1,9})\s*\/\s*(\d{1,9})$/);
     if(fraction&&Number(fraction[2])>0){
@@ -5011,7 +5223,18 @@ function warmRender(){
     if(/^\d+\.$/.test(d.entry)){feedback('Did you mean to add digits after the point? Finish the decimal, or remove the point for a whole number.');save();return;}
     if(!/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(d.entry)){feedback('Type a whole number or a decimal, such as 3 or 0.25.');save();return;}
     if(Number(d.entry)!==Number(card.goal.toFixed(6))){
-      if(d.miss){d.canSetAside=true;if(aside)aside.hidden=false;d.last='picture';if(!d.moves.includes('picture'))d.moves.push('picture');show('picture');}
+      if(countTask && !seen.includes('count')&&card.bridge){
+        markMiss();note('count');save();warmRender();
+        app.querySelector('#warm-status').textContent='You already checked the whole-number fact. Which place holds those pieces?';
+        app.querySelector('#warm-answer').focus();return;
+      }
+      if(countTask && !seen.includes('count')){
+        markMiss();d.pieceOpen=true;note('count-help');save();warmRender();
+        app.querySelector('#warm-status').textContent='Let’s check the whole-number fact first. Your decimal answer is still here.';
+        app.querySelector('#warm-piece').focus();return;
+      }
+      if(countTask && seen.includes('count')){markMiss();feedback('Your count is right. Use the place chart to write those '+countTask.unit+' as a decimal.');save();return;}
+      if(d.miss){d.canSetAside=true;if(aside)aside.hidden=false;d.last='picture';note('picture');if(!d.moves.includes('picture'))d.moves.push('picture');show('picture');}
       d.miss=true;
       const sameWhole=warmLoad(d.load)===2&&['times','share'].includes(card.kind)&&Number(d.entry)===Math.round(card.goal*100);
       feedback(sameWhole?'That matches the whole-number fact. What is one unit in this problem worth? Write the count in hundredths.':card.hint);save();return;
@@ -8247,10 +8470,10 @@ function render(){
     const walterStepDone=!struggling && sc && sc.state==="ok" && sc.tries>0 ? walterNote("nice",walterStepMessage(step,sc.helped),true) : "";
     const walkStart=cur.skippedTo||0;
     const walterWalk=!struggling && !walterStepDone && stepIdx===walkStart && !stepRes[stepIdx] ? walterNote(cur.voluntaryWalkthrough?"work":"keep",cur.voluntaryWalkthrough?"Let's check one step at a time.":"Let's find the step that needs another look.",true) : "";
-    right=`<div class="banner ${cur.voluntaryWalkthrough?"learn":"no"}" style="margin-top:0" role="status" aria-live="polite"><span class="mark" aria-hidden="true">${cur.voluntaryWalkthrough?"→":"✕"}</span><div>${head}${noteHTML}<small>${cur.hwDivision?`Checked work step ${stepIdx+1}; the next card follows your trial.`:`Step ${stepIdx+1} of ${total}`}</small>${downHTML}</div></div>
+    right=`<div class="banner ${cur.voluntaryWalkthrough?"learn":"no"}" style="margin-top:0" role="status" aria-live="polite"><span class="mark" aria-hidden="true">${cur.voluntaryWalkthrough?"→":"✕"}</span><div>${head}${noteHTML}<small>${cur.hwDivision?`Choose how many groups to take at a time.`:`Step ${stepIdx+1} of ${total}`}</small>${downHTML}</div></div>
       ${walterWalk}${breakHTML}${cur.hwDivision?'':`<div class="progress" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${stepIdx+1}" aria-label="Walkthrough progress"><i style="width:${Math.round(100*(stepIdx+1)/total)}%"></i></div>`}
       ${cur.hwDivision?hwCheckedLedger():cur.divMap?divPlaceMap(cur):""}
-      <div class="wt" id="wt">${cur.steps.slice(0,stepIdx+1).map((s,i)=>stepHTML(s,i,i<stepIdx,true)).join("")}</div>${walterStepDone}${exampleOpen?exampleHTML():""}
+      <div class="wt" id="wt">${cur.hwDivision?stepHTML(step,stepIdx,false,true):cur.steps.slice(0,stepIdx+1).map((s,i)=>stepHTML(s,i,i<stepIdx,true)).join("")}</div>${walterStepDone}${exampleOpen?exampleHTML():""}
       <div class="actions">${(open || (sc && sc.state==="explain"))?"":(!last?`<button class="btn primary" id="step">Next step</button>`:`<button class="btn primary" id="retry">Try one like it</button>`)}</div>`; /* the reason question must be answered before moving on */
   }
   if(phase==="q"&&hwWalterEligible()){
@@ -8489,65 +8712,85 @@ function hwCheckGuide(ctx,p=cur,at=phase,workspace=ws){
 }
 function hwDivisionGuide(stage){
   const guides={
-    trial:['Choose your own number of groups to test. It does not have to be the biggest possible chunk.',
-      'Explain how you chose your trial count. An easy multiplication or your own estimate can give you a starting point.',
-      'On scratch paper, multiply the divisor by your trial count. Keep the count and the amount it uses separate.',
-      'Compare your trial product with the amount left. Will those groups fit, or would they use too much?',
-      'Revise your trial if needed. Enter a count you want to test; we will check its product together.'],
-    product:['Choose a way to multiply your trial count by the divisor.',
-      'The count tells how many groups. The product tells how much those groups use.',
-      'Break either factor into parts you choose, calculate their products, and combine them.',
-      'Check your product with another multiplication method or by adding equal groups.',
-      'Find and repair any disagreement between your calculations. Enter your product; we will check it before using it.'],
-    fit:['Compare the product you checked with the amount left.',
-      'A trial fits if it uses no more than the available amount. It can leave some still to share.',
-      'Line up the places in both amounts and compare from the largest place.',
-      'Explain whether your groups fit using that comparison. You do not need to guess the final quotient.',
-      'If they do not fit, choose a new count next. If they fit, we will check the amount left after using them.'],
-    subtract:['Choose how to subtract the checked product from the amount left.',
-      'Subtract the amount used, rather than the group count. The remainder is what still needs sharing.',
-      'Line up matching places. Work through your subtraction and make any equal-value exchanges you need.',
-      'Add your remainder back to the checked product. Does it make the previous amount left?',
-      'Repair a subtraction or exchange if the check disagrees. Enter your remainder; we will check it together.'],
-    total:['Choose how to combine all the group counts you accepted.',
-      'Each accepted count is part of the quotient. Products are amounts used, not counts to add to the quotient.',
-      'List every accepted count once, then add them on scratch paper.',
-      'Multiply your total count by the original divisor. Does it reproduce the original dividend?',
-      'Check that nothing remains and no count was missed or counted twice. Revise if needed, then enter your total.']
+    trial:['Pick a number of groups to try. You can start small.',
+      'Pick a number you find easy to multiply.',
+      'Draw a group. How much goes in each group?',
+      'Work out how much your groups use. Look at how much is left.',
+      'Try your own number. You can change it after you check.'],
+    product:['Multiply your number of groups by the amount in each group.',
+      'One number tells how many groups. The other tells how much goes in each.',
+      'Break a number into two easy parts. Multiply each part, then add.',
+      'Try adding equal groups to check your multiplication.',
+      'Write how much your groups use altogether.'],
+    fit:['Look at how much your groups use. Compare that with how much is left.',
+      'The groups fit if you have enough for all of them.',
+      'Line up the two numbers. Start at the left and compare their digits.',
+      'Would you have enough, some left over, or too little?',
+      'If those groups use too much, you can try fewer.'],
+    subtract:['Take away the amount your groups used.',
+      'Use the amount in all those groups when you subtract.',
+      'Line up ones with ones and tens with tens.',
+      'Add what is left to what you used. Do you get the amount you started with?',
+      'Write the amount you still have to put into groups.'],
+    total:['Add the group counts you used.',
+      'Each count tells how many groups you took that time.',
+      'Write down each count you used. If you used one twice, include it twice.',
+      'Multiply your total number of groups by the amount in each group.',
+      'Does that give you the amount in the original problem?']
   };return guides[stage];
 }
 function hwDivisionSteps(p){
   const {N,d}=p.meta,L=n=>n.toLocaleString('en-US');
-  const state=p.hwDivision={remaining:N,bands:[],trial:null,product:null};
+  const state=p.hwDivision={remaining:N,bands:[],trial:null,product:null,known:new Map(),limit:null};
   const add=st=>p.steps.push(st);
   const make=(stage,t,c,accept)=>({t,check:c,hwGuide:hwDivisionGuide(stage),hwStage:stage,onAccept:accept});
   const trial=()=>{
-    const c=ci(`What number of groups of ${d} do you want to test?`,0);
+    const c=ci(`How many groups of ${d} would you like to try?`,0);
     c.validate=v=>Number.isInteger(parseAnswer(v))&&parseAnswer(v)>0&&parseAnswer(v)<=100000;
-    c.issue=v=>inputIssue(c,v)||(!String(v).trim()?'Type your trial count.':!Number.isInteger(parseAnswer(v))||parseAnswer(v)<=0||parseAnswer(v)>100000?'Choose a positive whole-number count up to 100,000.':'');
-    add(make('trial',`<b>Your trial.</b> ${L(state.remaining)} is left. Choose a count to test; we will check the product before using it.`,c,v=>{state.trial=parseAnswer(v);c.display=L(state.trial);product();}));
+    c.issue=v=>inputIssue(c,v)||(!c.validate(v)?'Type a whole number from 1 to 100,000.':'');
+    c.tryAgain=v=>{
+      const count=parseAnswer(v);
+      const used=state.known.get(count);
+      if(used>state.remaining)return `You checked this already: ${L(count)} groups use ${L(used)}. Only ${L(state.remaining)} is left. Try fewer groups.`;
+      if(state.limit && count>=state.limit.count)return `${L(state.limit.count)} groups already used more than you have left. Try fewer groups.`;
+      return '';
+    };
+    const cue=state.limit?`You tried ${L(state.limit.count)} groups. They used ${L(state.limit.used)}. Try fewer groups this time.`:'You can take a few groups or a big bunch.';
+    add(make('trial',`<b>${L(state.remaining)} left.</b> ${cue}`,c,v=>{
+      state.trial=parseAnswer(v);c.display=L(state.trial);
+      if(state.known.has(state.trial)){
+        state.product=state.known.get(state.trial);
+        subtract(state.remaining,state.trial,state.product);
+      }else product();
+    }));
   };
   const product=()=>{const count=state.trial,rem=state.remaining;
-    add(make('product',`<b>Test your count.</b> You chose ${L(count)} groups. Work out the amount they use.`,ci(`${d} × ${L(count)} = ?`,d*count,L(d*count)),()=>{state.product=d*count;fit(rem,count);}));
+    add(make('product',`<b>Test your count.</b> You chose ${L(count)} groups. Work out the amount they use.`,ci(`${d} × ${L(count)} = ?`,d*count,L(d*count)),()=>{state.product=d*count;state.known.set(count,state.product);fit(rem,count);}));
   };
   const fit=(rem,count)=>{const used=state.product,yes=used<=rem;
-    add(make('fit',`<b>Compare your checked product.</b> ${L(used)} would be used; ${L(rem)} is available.`,cm('Does your trial fit without using more than is available?',['Yes','No'],yes?0:1),()=>{
-      if(!yes){state.trial=null;state.product=null;trial();}else subtract(rem,count,used);
+    add(make('fit',`Your groups use ${L(used)}. You have ${L(rem)} left.`,cm('Do those groups fit?',['Yes','No'],yes?0:1),()=>{
+      if(!yes){state.limit={count,used};state.trial=null;state.product=null;trial();}else subtract(rem,count,used);
     }));
   };
   const subtract=(rem,count,used)=>{
-    add(make('subtract',`<b>Use your accepted count.</b> Find what remains after this chunk.`,ci(`${L(rem)} − ${L(used)} = ?`,rem-used,L(rem-used)),()=>{
+    add(make('subtract',`Your ${L(count)} groups use ${L(used)}. How much is left?`,ci(`${L(rem)} − ${L(used)} = ?`,rem-used,L(rem-used)),()=>{
       state.bands.push({q:count,piece:used});state.remaining=rem-used;state.trial=null;state.product=null;
       if(state.remaining)trial();else total();
     }));
   };
-  const total=()=>add(make('total','<b>Combine your checked work.</b> Nothing remains. Add your accepted group counts and check against the original division.',wc(finalCheck(p),'add-partials')));
+  const total=()=>add(make('total','Everything is in a group. Add up your groups.',wc(finalCheck(p),'add-partials')));
   p.steps=[];trial();p.divMap=false;
 }
 function hwCheckedLedger(){
   const s=cur.hwDivision;if(!s)return '';
   const L=n=>n.toLocaleString('en-US');
-  return `<div class="chart" aria-label="Your checked division work"><b>${cur.meta.variant==='area'?'Your accepted bands':'Your accepted friendly parts'}</b>${s.bands.length?(cur.meta.variant==='area'?s.bands.map(b=>`<div class="lpband"><span class="lpnote">Height ${cur.meta.d}</span><div class="lprect">Area ${L(b.piece)}</div><span class="lpq">Width ${L(b.q)}</span></div>`).join('')+'<p class="muted">Bands shown without a scale.</p>':`<ul>${s.bands.map(b=>`<li>${cur.meta.d} × ${L(b.q)} = ${L(b.piece)}; ${L(b.piece)} ÷ ${cur.meta.d} = ${L(b.q)}</li>`).join('')}</ul>`):'<p>No chunk accepted yet.</p>'}<p>Amount left: ${L(s.remaining)}.</p></div>`;
+  const batches=new Map();
+  for(const band of s.bands)batches.set(band.q,(batches.get(band.q)||0)+1);
+  const rows=Array.from(batches,([count,times])=>`<li>${L(count)} groups of ${L(cur.meta.d)}${times>1?' · taken '+L(times)+' times':''}</li>`).join('');
+  const bands=cur.meta.variant==='area'?Array.from(batches,([count,times])=>`<div class="lpband"><span class="lpnote">Height ${cur.meta.d}</span><div class="lprect">Area ${L(count*cur.meta.d)}</div><span class="lpq">Width ${L(count)}${times>1?' · '+times+' bands':''}</span></div>`).join(''):'';
+
+
+  return `<div class="chart" aria-label="Your checked division work">${rows?`<b>Groups you’ve taken</b>${bands||'<ul>'+rows+'</ul>'}`:''}<p>Amount left: ${L(s.remaining)}.</p></div>`;
 }
 function hwPrepare(p){
   if(!p||p.adaptivePrepared)return;p.adaptivePrepared=true;
@@ -8876,6 +9119,7 @@ function stepHTML(s,i,dim,withCheck){
       const helpLbl=focused?(hasModel?(mixed?'Read the strip':'Look at the model'):hasCue?'Still stuck':'Help me'):stepHelpLabel(s,c);
       const inlineModel=!focused&&sc.organicHelp?.lastReply?.move==='smaller'?sc.organicHelp.lastReply:null;
       sub=`<div class="substep ${sc.state==="ok"?"ok":sc.state==="revealed"?"bad":sc.state==="confirm"||sc.state==="explain"?"confirm":""}">${mixed&&open?mixedWalkReminder():s.unit5&&open?`<p class="muted" style="margin:0 0 8px">Given <b>${esc(cur.unit5Given||plain(cur.prompt))}</b></p>`:''}<div class="cq">${c.q}</div>${typeof readAloudButton==='function'?readAloudButton(focused&&sc.msg?[c.q,sc.msg,hasModel?(mixed?mixedWalkStripAction(s.mixedRole,sc.mixedFocus):u5Model(u5ModelForEntry(s.unit5,sc.lastCheck?.draft)).action):''].join(' '):c.q,'step-prompt'):''}${checkCtlHTML(c)}
+        ${open&&s.hwStage==='trial'?'<button class="btn quiet small" id="division-finish">I know the whole answer</button>':open&&s.hwStage==='direct'?'<button class="btn quiet small" id="division-groups">Back to my groups</button>':''}
         <div class="inline-msg${sc.unit5BlockReview?' block-review':''}" id="cmsg" role="status" aria-live="polite" tabindex="-1">${focused&&open&&hasCue&&sc.msg?'<b>Walter:</b> ':''}${sc.msg}</div>
         ${mixed&&open?mixedWalkForm(s.mixedRole):''}${settled && s.after && !sc.xdone?`<div class="res after">${s.after}</div>`:""}${explainHTML}
         ${open?`<div class="actions" style="margin-top:10px"><button class="btn primary" id="cstep">Check</button>${sc.state==="open"?`<button class="btn quiet" id="stephelp" title="Get the next clue for this step. You can ask before you try.">${helpLbl}</button>`:""}${sc.unit5BlockReview?'<button type="button" class="btn quiet" id="keepblockanswer">Continue without the picture</button>':''}</div>`:""}
@@ -8888,7 +9132,7 @@ function stepHTML(s,i,dim,withCheck){
   const answered = !s.check || i<stepIdx || phase==="reveal" || (sc && ["ok","revealed","explain"].includes(sc.state)); // the full-solution screen shows everything
   const visual = (s.visAfter && !answered) ? "" : chartsHTML(s)+(s.vis||"");
   if(phase==="reveal" && !withCheck && s.after && !sub) sub=`<div class="res after">${s.after}</div>`; // v9.18: the full solution includes each step's explanation (several pictures now live there)
-  return `<div class="step ${dim?"dim":""}"><span class="n">${i+1}.</span>${s.t}${s.more&&!dim?moreHTML(s.more):""}${visual}${sub}</div>`;
+  return `<div class="step ${dim?"dim":""}">${s.hwStage?'':'<span class="n">'+(i+1)+'.</span>'}${s.t}${s.more&&!dim?moreHTML(s.more):""}${visual}${sub}</div>`;
 }
 function checkCtlHTML(c){return u5WorkBeside(u5PracticeWorkspaceCard(),baseCheckCtlHTML(c));}
 function baseCheckCtlHTML(c){ // the entry control for a check, driven by sc. In confirm state it stays enabled with the right answer marked
@@ -8915,6 +9159,14 @@ function beginWalkthrough(){
 function bind(){
   const q=id=>app.querySelector("#"+id);
   hwWalterBind();
+  if(q('division-finish'))q('division-finish').onclick=()=>{
+    cur.hwDivision.savedTrial=sc;
+    cur.steps.push({hwStage:'direct',hwGuide:hwDivisionGuide('total'),t:'Use any way you like to finish the original problem.',check:finalCheck(cur)});
+    stepIdx++;initStepCheck();render();
+  };
+  if(q('division-groups'))q('division-groups').onclick=()=>{
+    cur.steps.pop();stepIdx--;sc=cur.hwDivision.savedTrial;delete cur.hwDivision.savedTrial;render();
+  };
   q("back").onclick=home;
   if(q("watchvideo")) q("watchvideo").onclick=()=>{ cur.videoOpen=!cur.videoOpen; q("watchvideo").setAttribute("aria-expanded",String(cur.videoOpen)); q("videochoices").hidden=!cur.videoOpen; };
   app.querySelectorAll(".video-link").forEach(a=>a.onclick=()=>{ if(phase==="q"){ cur.studied=true; if(S&&S.pendingQ){ S.pendingQ.studied=true; S.pendingQ.engaged=true; } save(); } });
@@ -9318,6 +9570,10 @@ function checkStep(){
   if(c.type==="mc"){ if(sc.sel<0){ if(u5BlockPracticeReply('Choose an answer above, then press Check.','blank')){save();render();return;} const f=app.querySelector("#copts .opt"); if(f) f.focus(); return; } ok = sc.sel===c.answer; }
   else { const inp=app.querySelector("#cans"); const v=inp.value; sc.val=v; if(!v.trim()){ if(u5BlockPracticeReply('Put your count in the answer box above, then press Check.','blank')){save();render();return;} if(mixedWalkActive()&&!sc.mixedCueShown)mixedWalkHelp();else inp.focus(); return; }
     const issue=issueFor(c,v); if(issue){ hwWalterNextCheck(walterContext,'format');sc.lastFormat={draft:v};const formatCue=mixedWalkActive()?mixedFormatCue(cur.steps[stepIdx].mixedRole,v,cur.mixedWalk):issue;if(!u5BlockPracticeReply(u5BlockFormatBase(u5PracticeWorkspaceCard(),v,formatCue),'format'))sc.msg=esc(formatCue);if(mixedWalkActive())sc.mixedFocus=c.text?'format':'';save();render(); return; } delete sc.lastFormat;ok = stepAccepts(c,v); }
+  if(phase==='wt' && c.tryAgain && ok){
+    const reminder=c.tryAgain(sc.val);
+    if(reminder){sc.msg=esc(reminder)+' You can also tap “I know the whole answer.”';save();render();return;}
+  }
   if(phase==="reveal"){ // copying the shown answer in unlocks Next. Logged as "finished with the answer shown": not a right answer, not a guided completion, never independent
     if(ok){ sc.state="ok"; sc.msg=`<span aria-hidden="true">✓</span> That's it.`;
       if(!cur.shownLogged){ cur.shownLogged=true; S.shown=(S.shown||0)+1;
@@ -9338,7 +9594,7 @@ function checkStep(){
     else { sc.msg=`${shown} ${lockIn}`; sc.val=""; sc.sel=-1; }
   }
   else if(ok){ sc.state="ok"; sc.msg=`<span aria-hidden="true">✓</span> That's it.`; passed++; stepRes[stepIdx]="ok"; noteStepComp(c, sc, true);
-    if(cur.steps[stepIdx].hwStage==='trial')sc.msg='Trial recorded. Now test its product.';
+    if(cur.steps[stepIdx].hwStage==='trial')sc.msg=cur.hwDivision.known.has(parseAnswer(sc.val))?'You already checked that multiplication.':'Let’s see how much those groups use.';
     if(role&&!last)(cur.mixedWalkChecked??={})[role]=parseAnswer(sc.val);
     const accept=cur.steps[stepIdx].onAccept;if(accept)accept(c.type==='mc'?String(sc.sel):sc.val); }
   else { sc.tries++;
